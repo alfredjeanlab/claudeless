@@ -15,6 +15,7 @@ use crate::state::session::SessionManager;
 use crate::time::ClockHandle;
 
 use super::streaming::{StreamingConfig, StreamingResponse};
+use super::widgets::permission::{PermissionSelection, PermissionType, RichPermissionDialog};
 use super::widgets::thinking::{ThinkingDialog, ThinkingMode};
 use super::widgets::trust::TrustChoice;
 
@@ -127,19 +128,28 @@ pub struct RenderState {
     pub is_compacted: bool,
 }
 
-/// Permission request state
+/// Permission request state using the rich permission dialog
 #[derive(Clone, Debug)]
 pub struct PermissionRequest {
-    pub tool_name: String,
-    pub action: String,
-    pub context: String,
-    pub selected: PermissionChoice,
+    pub dialog: RichPermissionDialog,
 }
 
+/// Legacy permission choice (for compatibility)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PermissionChoice {
     Allow,
+    AllowSession,
     Deny,
+}
+
+impl From<PermissionSelection> for PermissionChoice {
+    fn from(selection: PermissionSelection) -> Self {
+        match selection {
+            PermissionSelection::Yes => PermissionChoice::Allow,
+            PermissionSelection::YesSession => PermissionChoice::AllowSession,
+            PermissionSelection::No => PermissionChoice::Deny,
+        }
+    }
 }
 
 /// Reason for app exit
@@ -539,13 +549,17 @@ impl TuiAppState {
     fn handle_permission_key(&self, key: KeyEvent) {
         let mut inner = self.inner.lock();
         match key.code {
-            // Left/Right - Toggle selection
-            KeyCode::Left | KeyCode::Right | KeyCode::Tab => {
+            // Up - Move selection up
+            KeyCode::Up => {
                 if let Some(ref mut perm) = inner.pending_permission {
-                    perm.selected = match perm.selected {
-                        PermissionChoice::Allow => PermissionChoice::Deny,
-                        PermissionChoice::Deny => PermissionChoice::Allow,
-                    };
+                    perm.dialog.selected = perm.dialog.selected.prev();
+                }
+            }
+
+            // Down - Move selection down
+            KeyCode::Down => {
+                if let Some(ref mut perm) = inner.pending_permission {
+                    perm.dialog.selected = perm.dialog.selected.next();
                 }
             }
 
@@ -555,28 +569,55 @@ impl TuiAppState {
                 self.confirm_permission();
             }
 
-            // Y/y - Allow
+            // 1 - Select Yes and confirm
+            KeyCode::Char('1') => {
+                if let Some(ref mut perm) = inner.pending_permission {
+                    perm.dialog.selected = PermissionSelection::Yes;
+                }
+                drop(inner);
+                self.confirm_permission();
+            }
+
+            // Y/y - Select Yes and confirm
             KeyCode::Char('y') | KeyCode::Char('Y') => {
                 if let Some(ref mut perm) = inner.pending_permission {
-                    perm.selected = PermissionChoice::Allow;
+                    perm.dialog.selected = PermissionSelection::Yes;
                 }
                 drop(inner);
                 self.confirm_permission();
             }
 
-            // N/n - Deny
+            // 2 - Select Yes for session and confirm
+            KeyCode::Char('2') => {
+                if let Some(ref mut perm) = inner.pending_permission {
+                    perm.dialog.selected = PermissionSelection::YesSession;
+                }
+                drop(inner);
+                self.confirm_permission();
+            }
+
+            // 3 - Select No and confirm
+            KeyCode::Char('3') => {
+                if let Some(ref mut perm) = inner.pending_permission {
+                    perm.dialog.selected = PermissionSelection::No;
+                }
+                drop(inner);
+                self.confirm_permission();
+            }
+
+            // N/n - Select No and confirm
             KeyCode::Char('n') | KeyCode::Char('N') => {
                 if let Some(ref mut perm) = inner.pending_permission {
-                    perm.selected = PermissionChoice::Deny;
+                    perm.dialog.selected = PermissionSelection::No;
                 }
                 drop(inner);
                 self.confirm_permission();
             }
 
-            // Escape - Cancel (deny)
+            // Escape - Cancel (select No)
             KeyCode::Esc => {
                 if let Some(ref mut perm) = inner.pending_permission {
-                    perm.selected = PermissionChoice::Deny;
+                    perm.dialog.selected = PermissionSelection::No;
                 }
                 drop(inner);
                 self.confirm_permission();
@@ -608,7 +649,7 @@ impl TuiAppState {
             AppMode::Permission => {
                 // Deny and return to input
                 if let Some(ref mut perm) = inner.pending_permission {
-                    perm.selected = PermissionChoice::Deny;
+                    perm.dialog.selected = PermissionSelection::No;
                 }
                 drop(inner);
                 self.confirm_permission();
@@ -744,6 +785,11 @@ impl TuiAppState {
 
     /// Process a prompt and generate response
     fn process_prompt(&self, prompt: String) {
+        // Check for test permission triggers first (before acquiring inner lock)
+        if self.handle_test_permission_triggers(&prompt) {
+            return;
+        }
+
         let mut inner = self.inner.lock();
 
         // If there's previous response content, add it to conversation history first
@@ -800,6 +846,57 @@ impl TuiAppState {
         Self::start_streaming_inner(&mut inner, response_text);
     }
 
+    /// Handle test permission triggers for TUI fixture tests
+    /// Returns true if a permission dialog was triggered, false otherwise
+    fn handle_test_permission_triggers(&self, prompt: &str) -> bool {
+        use super::widgets::permission::{DiffKind, DiffLine};
+
+        // Test trigger: "test bash permission"
+        if prompt.contains("test bash permission") {
+            self.show_bash_permission(
+                "cat /etc/passwd | head -5".to_string(),
+                Some("Display first 5 lines of /etc/passwd".to_string()),
+            );
+            return true;
+        }
+
+        // Test trigger: "test edit permission"
+        if prompt.contains("test edit permission") {
+            let diff_lines = vec![
+                DiffLine {
+                    line_num: Some(1),
+                    kind: DiffKind::Removed,
+                    content: "Hello World".to_string(),
+                },
+                DiffLine {
+                    line_num: Some(1),
+                    kind: DiffKind::NoNewline,
+                    content: " No newline at end of file".to_string(),
+                },
+                DiffLine {
+                    line_num: Some(2),
+                    kind: DiffKind::Added,
+                    content: "Hello Universe".to_string(),
+                },
+                DiffLine {
+                    line_num: Some(3),
+                    kind: DiffKind::NoNewline,
+                    content: " No newline at end of file".to_string(),
+                },
+            ];
+            self.show_edit_permission("hello.txt".to_string(), diff_lines);
+            return true;
+        }
+
+        // Test trigger: "test write permission"
+        if prompt.contains("test write permission") {
+            self.show_write_permission("hello.txt".to_string(), vec!["Hello World".to_string()]);
+            return true;
+        }
+
+        false
+    }
+
     /// Start streaming a response
     fn start_streaming_inner(inner: &mut TuiAppStateInner, text: String) {
         inner.mode = AppMode::Responding;
@@ -836,17 +933,30 @@ impl TuiAppState {
         inner.mode = AppMode::Input;
 
         if let Some(perm) = perm {
-            match perm.selected {
-                PermissionChoice::Allow => {
-                    // Continue with tool execution
+            let tool_name = match &perm.dialog.permission_type {
+                PermissionType::Bash { command, .. } => format!("Bash: {}", command),
+                PermissionType::Edit { file_path, .. } => format!("Edit: {}", file_path),
+                PermissionType::Write { file_path, .. } => format!("Write: {}", file_path),
+            };
+
+            match perm.dialog.selected {
+                PermissionSelection::Yes => {
+                    // Continue with tool execution (single request)
                     inner
                         .response_content
-                        .push_str(&format!("\n[Permission granted for {}]\n", perm.tool_name));
+                        .push_str(&format!("\n[Permission granted for {}]\n", tool_name));
                 }
-                PermissionChoice::Deny => {
+                PermissionSelection::YesSession => {
+                    // Continue with tool execution (session-level grant)
+                    inner.response_content.push_str(&format!(
+                        "\n[Permission granted for session: {}]\n",
+                        tool_name
+                    ));
+                }
+                PermissionSelection::No => {
                     inner
                         .response_content
-                        .push_str(&format!("\n[Permission denied for {}]\n", perm.tool_name));
+                        .push_str(&format!("\n[Permission denied for {}]\n", tool_name));
                 }
             }
         }
@@ -966,16 +1076,41 @@ impl TuiAppState {
         }
     }
 
-    /// Show a permission request
-    pub fn show_permission_request(&self, tool_name: String, action: String, context: String) {
+    /// Show a permission request with rich dialog
+    pub fn show_permission_request(&self, permission_type: PermissionType) {
         let mut inner = self.inner.lock();
         inner.pending_permission = Some(PermissionRequest {
-            tool_name,
-            action,
-            context,
-            selected: PermissionChoice::Allow, // Default to allow
+            dialog: RichPermissionDialog::new(permission_type),
         });
         inner.mode = AppMode::Permission;
+    }
+
+    /// Show a bash command permission request
+    pub fn show_bash_permission(&self, command: String, description: Option<String>) {
+        self.show_permission_request(PermissionType::Bash {
+            command,
+            description,
+        });
+    }
+
+    /// Show an edit file permission request
+    pub fn show_edit_permission(
+        &self,
+        file_path: String,
+        diff_lines: Vec<super::widgets::permission::DiffLine>,
+    ) {
+        self.show_permission_request(PermissionType::Edit {
+            file_path,
+            diff_lines,
+        });
+    }
+
+    /// Show a write file permission request
+    pub fn show_write_permission(&self, file_path: String, content_lines: Vec<String>) {
+        self.show_permission_request(PermissionType::Write {
+            file_path,
+            content_lines,
+        });
     }
 }
 
@@ -1072,6 +1207,13 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
         }
     }
 
+    // If in permission mode, render just the permission dialog (full-screen)
+    if state.mode == AppMode::Permission {
+        if let Some(ref perm) = state.pending_permission {
+            return render_permission_dialog(perm);
+        }
+    }
+
     // Format header lines
     let (header_line1, header_line2, header_line3) = format_header_lines(state);
 
@@ -1114,9 +1256,6 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
 
             // Status bar
             Text(content: format_status_bar(state))
-
-            // Permission dialog (overlay style)
-            #(render_modal_dialogs(state))
         }
     }
     .into()
@@ -1297,21 +1436,6 @@ fn render_trust_prompt(prompt: &TrustPromptState) -> AnyElement<'static> {
     }.into()
 }
 
-/// Render modal dialogs (permission only - thinking is handled as a full replacement)
-fn render_modal_dialogs(state: &RenderState) -> AnyElement<'static> {
-    if state.pending_permission.is_some() {
-        if let Some(ref perm) = state.pending_permission {
-            return render_permission_dialog(perm);
-        }
-    }
-
-    // Empty element if no modal
-    element! {
-        View {}
-    }
-    .into()
-}
-
 /// Render thinking toggle dialog
 fn render_thinking_dialog(dialog: &ThinkingDialog) -> AnyElement<'static> {
     let enabled_indicator = if dialog.selected == ThinkingMode::Enabled {
@@ -1357,44 +1481,20 @@ fn render_thinking_dialog(dialog: &ThinkingDialog) -> AnyElement<'static> {
     }.into()
 }
 
-/// Render permission dialog
+/// Render rich permission dialog
 fn render_permission_dialog(perm: &PermissionRequest) -> AnyElement<'static> {
-    let allow_style = if perm.selected == PermissionChoice::Allow {
-        "[Allow]"
-    } else {
-        " Allow "
-    };
-    let deny_style = if perm.selected == PermissionChoice::Deny {
-        "[Deny]"
-    } else {
-        " Deny "
-    };
+    // Render the dialog content using the widget
+    let content = perm.dialog.render(120);
 
     element! {
         View(
-            position: Position::Absolute,
+            flex_direction: FlexDirection::Column,
             width: 100pct,
-            height: 100pct,
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
         ) {
-            View(
-                width: 60u32,
-                border_style: BorderStyle::Round,
-                border_color: Color::Yellow,
-                flex_direction: FlexDirection::Column,
-                padding: 1u32,
-            ) {
-                Text(content: format!("Permission Required: {}", perm.tool_name), weight: Weight::Bold)
-                Text(content: "")
-                Text(content: perm.action.clone())
-                Text(content: "")
-                Text(content: perm.context.clone(), color: Color::DarkGrey)
-                Text(content: "")
-                Text(content: format!("  {}     {}", allow_style, deny_style))
-            }
+            Text(content: content)
         }
-    }.into()
+    }
+    .into()
 }
 
 /// Format header lines with Claude branding (returns 3 lines)
@@ -1437,13 +1537,29 @@ fn format_status_bar(state: &RenderState) -> String {
         PermissionMode::DontAsk => "  don't ask mode (shift+tab to cycle)".to_string(),
     };
 
-    // Add "Thinking off" indicator when thinking is disabled
-    if state.thinking_enabled {
-        mode_text
-    } else {
-        // Pad to align "Thinking off" to the right side of the status bar
-        let padding = 120 - mode_text.len() - "Thinking off".len();
-        format!("{}{:width$}Thinking off", mode_text, "", width = padding)
+    // For non-default modes, show "Use meta+t to toggle thinking" on the right
+    // For default mode, just show the shortcuts hint (or "Thinking off" if disabled)
+    match &state.permission_mode {
+        PermissionMode::Default => {
+            if state.thinking_enabled {
+                mode_text
+            } else {
+                // Pad to align "Thinking off" to the right side
+                let padding = 120 - mode_text.len() - "Thinking off".len();
+                format!("{}{:width$}Thinking off", mode_text, "", width = padding)
+            }
+        }
+        _ => {
+            // Non-default modes show "Use meta+t to toggle thinking" on the right
+            let right_text = "Use meta+t to toggle thinking";
+            // Use 120 char width to match the default SEPARATOR width
+            let total_width: usize = 120;
+            // Calculate visual width of mode_text (accounting for multi-byte chars)
+            let mode_visual_width = mode_text.chars().count();
+            let right_width = right_text.len();
+            let padding = total_width.saturating_sub(mode_visual_width + right_width);
+            format!("{}{:width$}{}", mode_text, "", right_text, width = padding)
+        }
     }
 }
 
@@ -1575,8 +1691,23 @@ impl TuiApp {
         self.state.render_state().pending_permission
     }
 
-    pub fn show_permission_request(&mut self, tool_name: String, action: String, context: String) {
-        self.state
-            .show_permission_request(tool_name, action, context);
+    pub fn show_permission_request(&mut self, permission_type: PermissionType) {
+        self.state.show_permission_request(permission_type);
+    }
+
+    pub fn show_bash_permission(&mut self, command: String, description: Option<String>) {
+        self.state.show_bash_permission(command, description);
+    }
+
+    pub fn show_edit_permission(
+        &mut self,
+        file_path: String,
+        diff_lines: Vec<super::widgets::permission::DiffLine>,
+    ) {
+        self.state.show_edit_permission(file_path, diff_lines);
+    }
+
+    pub fn show_write_permission(&mut self, file_path: String, content_lines: Vec<String>) {
+        self.state.show_write_permission(file_path, content_lines);
     }
 }

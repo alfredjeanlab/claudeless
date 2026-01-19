@@ -129,7 +129,6 @@ fn test_permission_plan_matches_fixture() {
 // =============================================================================
 
 #[test]
-#[ignore] // TODO(implement): Implement rich permission dialog for bash commands
 fn test_permission_bash_command_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -143,7 +142,11 @@ fn test_permission_bash_command_matches_fixture() {
     let session = "claudeless-fixture-perm-bash";
     start_tui(session, &scenario);
 
-    // Would need tool use that triggers bash permission prompt
+    // Type the trigger prompt
+    tmux::send_keys(session, "test bash permission");
+    tmux::send_keys(session, "Enter");
+
+    // Wait for bash permission dialog to appear
     let capture = tmux::wait_for_content(session, "Bash command");
 
     tmux::kill_session(session);
@@ -152,7 +155,6 @@ fn test_permission_bash_command_matches_fixture() {
 }
 
 #[test]
-#[ignore] // TODO(implement): Implement rich permission dialog for file edits
 fn test_permission_edit_file_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -166,7 +168,11 @@ fn test_permission_edit_file_matches_fixture() {
     let session = "claudeless-fixture-perm-edit";
     start_tui(session, &scenario);
 
-    // Would need tool use that triggers edit file permission prompt
+    // Type the trigger prompt
+    tmux::send_keys(session, "test edit permission");
+    tmux::send_keys(session, "Enter");
+
+    // Wait for edit permission dialog to appear
     let capture = tmux::wait_for_content(session, "Edit file");
 
     tmux::kill_session(session);
@@ -175,7 +181,6 @@ fn test_permission_edit_file_matches_fixture() {
 }
 
 #[test]
-#[ignore] // TODO(implement): Implement rich permission dialog for file writes
 fn test_permission_write_file_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -189,7 +194,11 @@ fn test_permission_write_file_matches_fixture() {
     let session = "claudeless-fixture-perm-write";
     start_tui(session, &scenario);
 
-    // Would need tool use that triggers write file permission prompt
+    // Type the trigger prompt
+    tmux::send_keys(session, "test write permission");
+    tmux::send_keys(session, "Enter");
+
+    // Wait for write permission dialog to appear
     let capture = tmux::wait_for_content(session, "Create file");
 
     tmux::kill_session(session);
@@ -198,7 +207,6 @@ fn test_permission_write_file_matches_fixture() {
 }
 
 #[test]
-#[ignore] // TODO(implement): Implement trust folder security dialog
 fn test_permission_trust_folder_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -219,21 +227,20 @@ fn test_permission_trust_folder_matches_fixture() {
 }
 
 #[test]
-#[ignore] // TODO(implement): Implement extended status bar with file stats
 fn test_status_bar_extended_matches_fixture() {
     let scenario = write_scenario(
         r#"
         {
             "default_response": "Hello!",
             "trusted": true,
-            "permission_mode": "accept_edits"
+            "permission_mode": "accept-edits"
         }
         "#,
     );
 
     let session = "claudeless-fixture-status-extended";
     // Accept edits mode should show extended status bar
-    let capture = start_tui_ext(session, &scenario, 140, 40, "accept edits");
+    let capture = start_tui_ext(session, &scenario, 120, 40, "accept edits");
 
     tmux::kill_session(session);
 

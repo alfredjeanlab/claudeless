@@ -8,7 +8,8 @@
 //! Claude Code uses patterns like:
 //! - `"Read"` - matches all Read tool calls
 //! - `"Bash(npm test)"` - matches Bash with specific command
-//! - `"Bash(npm *)"` - glob pattern for command
+//! - `"Bash(npm:*)"` - prefix pattern matching commands starting with "npm"
+//! - `"Write(*.md)"` - glob pattern for file paths
 //! - `"Edit"` - matches all Edit tool calls
 
 use crate::state::PermissionSettings;
@@ -28,7 +29,9 @@ pub struct ToolPattern {
 pub enum CompiledPattern {
     /// Exact string match
     Exact(String),
-    /// Glob pattern
+    /// Prefix match (for :* patterns like "Bash(npm:*)")
+    Prefix(String),
+    /// Glob pattern (for file patterns like "Write(*.md)")
     Glob(Pattern),
 }
 
@@ -46,9 +49,12 @@ impl ToolPattern {
                 let tool = s[..paren_start].to_string();
                 let arg = &s[paren_start + 1..s.len() - 1];
 
-                // Determine if it's a glob or exact match
-                let pattern = if arg.contains('*') || arg.contains('?') || arg.contains('[') {
-                    // Glob pattern
+                // Check for :* suffix (prefix matching) - Claude's actual syntax
+                // e.g., "Bash(npm:*)" means match any command starting with "npm"
+                let pattern = if let Some(prefix) = arg.strip_suffix(":*") {
+                    Some(CompiledPattern::Prefix(prefix.to_string()))
+                } else if arg.contains('*') || arg.contains('?') || arg.contains('[') {
+                    // Glob pattern (for file paths like "*.md")
                     Pattern::new(arg).ok().map(CompiledPattern::Glob)
                 } else {
                     // Exact match
@@ -92,6 +98,7 @@ impl ToolPattern {
 
         match arg_pattern {
             CompiledPattern::Exact(exact) => input == exact,
+            CompiledPattern::Prefix(prefix) => input.starts_with(prefix),
             CompiledPattern::Glob(glob) => glob.matches(input),
         }
     }

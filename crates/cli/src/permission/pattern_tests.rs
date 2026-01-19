@@ -23,9 +23,19 @@ fn test_parse_tool_with_exact_arg() {
 }
 
 #[test]
-fn test_parse_tool_with_glob() {
-    let pattern = ToolPattern::parse("Bash(npm *)").unwrap();
+fn test_parse_tool_with_prefix() {
+    let pattern = ToolPattern::parse("Bash(npm:*)").unwrap();
     assert_eq!(pattern.tool, "Bash");
+    assert!(matches!(
+        pattern.argument,
+        Some(CompiledPattern::Prefix(ref s)) if s == "npm"
+    ));
+}
+
+#[test]
+fn test_parse_tool_with_glob() {
+    let pattern = ToolPattern::parse("Write(*.md)").unwrap();
+    assert_eq!(pattern.tool, "Write");
     assert!(matches!(pattern.argument, Some(CompiledPattern::Glob(_))));
 }
 
@@ -90,13 +100,26 @@ fn test_matches_exact_arg() {
 }
 
 #[test]
-fn test_matches_glob_star() {
-    let pattern = ToolPattern::parse("Bash(npm *)").unwrap();
+fn test_matches_prefix() {
+    let pattern = ToolPattern::parse("Bash(npm:*)").unwrap();
+    assert!(pattern.matches("Bash", Some("npm")));
     assert!(pattern.matches("Bash", Some("npm test")));
     assert!(pattern.matches("Bash", Some("npm install")));
     assert!(pattern.matches("Bash", Some("npm run build")));
     assert!(!pattern.matches("Bash", Some("cargo test")));
-    assert!(!pattern.matches("Bash", Some("npm")));
+    // Prefix doesn't match partial word matches
+    assert!(!pattern.matches("Bash", Some("npx")));
+    assert!(!pattern.matches("Bash", Some("pnpm")));
+}
+
+#[test]
+fn test_matches_prefix_with_space() {
+    // Prefix can include space for more specific matching
+    let pattern = ToolPattern::parse("Bash(npm run :*)").unwrap();
+    assert!(pattern.matches("Bash", Some("npm run build")));
+    assert!(pattern.matches("Bash", Some("npm run test")));
+    assert!(!pattern.matches("Bash", Some("npm test")));
+    assert!(!pattern.matches("Bash", Some("npm install")));
 }
 
 #[test]
@@ -122,7 +145,7 @@ fn test_matches_tool_name_case_with_arg() {
 fn test_patterns_from_settings() {
     let settings = PermissionSettings {
         allow: vec!["Read".to_string(), "Bash(npm test)".to_string()],
-        deny: vec!["Bash(rm *)".to_string()],
+        deny: vec!["Bash(rm:*)".to_string()],
         additional_directories: vec![],
     };
 
@@ -135,7 +158,7 @@ fn test_patterns_from_settings() {
 #[test]
 fn test_patterns_is_allowed() {
     let settings = PermissionSettings {
-        allow: vec!["Read".to_string(), "Bash(npm *)".to_string()],
+        allow: vec!["Read".to_string(), "Bash(npm:*)".to_string()],
         deny: vec![],
         additional_directories: vec![],
     };
@@ -145,6 +168,7 @@ fn test_patterns_is_allowed() {
     assert!(patterns.is_allowed("Read", None));
     assert!(patterns.is_allowed("Read", Some("/any/path")));
     assert!(patterns.is_allowed("Bash", Some("npm test")));
+    assert!(patterns.is_allowed("Bash", Some("npm")));
     assert!(!patterns.is_allowed("Write", None));
     assert!(!patterns.is_allowed("Bash", Some("cargo build")));
 }
@@ -153,7 +177,7 @@ fn test_patterns_is_allowed() {
 fn test_patterns_is_denied() {
     let settings = PermissionSettings {
         allow: vec![],
-        deny: vec!["Bash(rm *)".to_string(), "Bash(sudo *)".to_string()],
+        deny: vec!["Bash(rm:*)".to_string(), "Bash(sudo:*)".to_string()],
         additional_directories: vec![],
     };
 
@@ -169,7 +193,7 @@ fn test_patterns_is_denied() {
 fn test_patterns_allow_and_deny_both_checked() {
     let settings = PermissionSettings {
         allow: vec!["Bash".to_string()],
-        deny: vec!["Bash(rm *)".to_string()],
+        deny: vec!["Bash(rm:*)".to_string()],
         additional_directories: vec![],
     };
 
@@ -255,8 +279,8 @@ fn test_glob_with_path() {
 }
 
 #[test]
-fn test_glob_complex_pattern() {
-    let pattern = ToolPattern::parse("Bash(npm run *)").unwrap();
+fn test_prefix_complex_pattern() {
+    let pattern = ToolPattern::parse("Bash(npm run :*)").unwrap();
     assert!(pattern.matches("Bash", Some("npm run build")));
     assert!(pattern.matches("Bash", Some("npm run test")));
     assert!(pattern.matches("Bash", Some("npm run dev")));
