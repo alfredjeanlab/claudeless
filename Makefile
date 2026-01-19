@@ -47,7 +47,6 @@ lint-shell:
 		exit 1; \
 	fi
 	@shellcheck -x -S warning scripts/*
-	@echo "All scripts pass ShellCheck!"
 
 # Check policy enforcement (allow attributes, deny.toml, shellcheck exceptions)
 lint-policy:

@@ -37,8 +37,6 @@ ERRORS=0
 # Check 1: Allow attributes policy
 # =============================================================================
 check_allow_attributes() {
-    echo "Checking allow attributes policy..."
-
     local pattern
     pattern=$(printf '%s\\|' "${FORBIDDEN_LINTS[@]}")
     pattern="${pattern%\\|}"  # Remove trailing \|
@@ -64,20 +62,15 @@ check_allow_attributes() {
     violations=$(echo "$violations" | tr ' ' '\n' | sort -u | grep -v '^$' || true)
 
     if [[ -n "$violations" ]]; then
-        echo "ERROR: Found forbidden allow attributes in production code:"
+        echo "ERROR: Forbidden allow attributes in production code:"
         echo "$violations" | while read -r file; do
             if [[ -n "$file" ]]; then
                 echo "  $file"
                 grep -n "#\[allow\|#!\[allow" "$file" | grep -E "$(printf '%s|' "${FORBIDDEN_LINTS[@]}" | sed 's/|$//')" | sed 's/^/    /'
             fi
         done
-        echo ""
-        echo "These lints are only allowed in:"
-        echo "  - Files in tests/ directories"
-        echo "  - Files ending with _test.rs or _tests.rs"
+        echo "Allowed only in: tests/ directories, *_test.rs, *_tests.rs"
         ERRORS=$((ERRORS + 1))
-    else
-        echo "  OK: No forbidden allow attributes in production code"
     fi
 }
 
@@ -85,69 +78,37 @@ check_allow_attributes() {
 # Check 2: deny.toml policy
 # =============================================================================
 check_deny_toml() {
-    echo "Checking deny.toml policy..."
-
     local deny_file="$ROOT_DIR/deny.toml"
+    [[ ! -f "$deny_file" ]] && return
+    git -C "$ROOT_DIR" rev-parse --git-dir >/dev/null 2>&1 || return
+    git -C "$ROOT_DIR" rev-parse "$BASE_BRANCH" >/dev/null 2>&1 || return
 
-    if [[ ! -f "$deny_file" ]]; then
-        echo "  SKIP: deny.toml not found"
-        return
-    fi
-
-    # Check if we're in a git repo and base branch exists
-    if ! git -C "$ROOT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
-        echo "  SKIP: Not a git repository"
-        return
-    fi
-
-    if ! git -C "$ROOT_DIR" rev-parse "$BASE_BRANCH" >/dev/null 2>&1; then
-        echo "  SKIP: Base branch '$BASE_BRANCH' not found"
-        return
-    fi
-
-    # Get base version of deny.toml
     local base_deny
     base_deny=$(git -C "$ROOT_DIR" show "$BASE_BRANCH:deny.toml" 2>/dev/null || echo "")
+    [[ -z "$base_deny" ]] && return
 
-    if [[ -z "$base_deny" ]]; then
-        echo "  SKIP: deny.toml not present in base branch"
-        return
-    fi
-
-    # Extract allow list from both versions
-    local current_allows base_allows
+    # Check license allow list
+    local current_allows base_allows new_allows
     current_allows=$(grep -A 100 '^\[licenses\]' "$deny_file" | grep -A 50 '^allow = \[' | grep -E '^\s+"' | tr -d ' ",' | sort)
     base_allows=$(echo "$base_deny" | grep -A 100 '^\[licenses\]' | grep -A 50 '^allow = \[' | grep -E '^\s+"' | tr -d ' ",' | sort)
-
-    local new_allows
     new_allows=$(comm -23 <(echo "$current_allows") <(echo "$base_allows") || true)
 
     if [[ -n "$new_allows" ]]; then
-        echo "ERROR: New license exceptions added to deny.toml:"
+        echo "ERROR: New license exceptions in deny.toml:"
         echo "$new_allows" | sed 's/^/  /'
-        echo ""
-        echo "Adding licenses requires human review. See deny.toml for instructions."
         ERRORS=$((ERRORS + 1))
-    else
-        echo "  OK: No new license exceptions"
     fi
 
-    # Extract skip list from both versions
-    local current_skips base_skips
+    # Check ban skip list
+    local current_skips base_skips new_skips
     current_skips=$(grep -A 100 '^\[bans\]' "$deny_file" | grep -A 50 '^skip = \[' | grep 'crate = ' | sed 's/.*crate = "\([^"]*\)".*/\1/' | sort)
     base_skips=$(echo "$base_deny" | grep -A 100 '^\[bans\]' | grep -A 50 '^skip = \[' | grep 'crate = ' | sed 's/.*crate = "\([^"]*\)".*/\1/' | sort)
-
-    local new_skips
     new_skips=$(comm -23 <(echo "$current_skips") <(echo "$base_skips") || true)
 
     if [[ -n "$new_skips" ]]; then
-        echo "ERROR: New skip exceptions added to deny.toml [bans]:"
+        echo "ERROR: New skip exceptions in deny.toml [bans]:"
         echo "$new_skips" | sed 's/^/  /'
-        echo ""
-        echo "Adding skip exceptions requires human review."
         ERRORS=$((ERRORS + 1))
-    else
-        echo "  OK: No new ban skip exceptions"
     fi
 }
 
@@ -155,33 +116,20 @@ check_deny_toml() {
 # Check 3: Shellcheck exceptions policy
 # =============================================================================
 check_shellcheck_exceptions() {
-    echo "Checking shellcheck exceptions policy..."
-
     local scripts_dir="$ROOT_DIR/scripts"
-
-    if [[ ! -d "$scripts_dir" ]]; then
-        echo "  SKIP: scripts/ directory not found"
-        return
-    fi
+    [[ ! -d "$scripts_dir" ]] && return
 
     local violations
-    # Note: exclude this script itself from the search
     violations=$(grep -rn "# shellcheck disable=" "$scripts_dir" --exclude="lint-policy" 2>/dev/null || true)
 
     if [[ -n "$violations" ]]; then
-        echo "ERROR: Found shellcheck disable comments:"
+        echo "ERROR: shellcheck disable comments found:"
         echo "$violations" | sed 's/^/  /'
-        echo ""
-        echo "Fix the shellcheck warnings instead of disabling them."
         ERRORS=$((ERRORS + 1))
-    else
-        echo "  OK: No shellcheck disable comments"
     fi
 
-    # Also check for .shellcheckrc
     if [[ -f "$ROOT_DIR/.shellcheckrc" ]]; then
-        echo "ERROR: Found .shellcheckrc file (global shellcheck exceptions)"
-        echo "  Remove the file and fix warnings instead."
+        echo "ERROR: .shellcheckrc file found (global exceptions not allowed)"
         ERRORS=$((ERRORS + 1))
     fi
 }
@@ -190,63 +138,24 @@ check_shellcheck_exceptions() {
 # Check 4: cargo audit ignore policy
 # =============================================================================
 check_audit_toml() {
-    echo "Checking .cargo/audit.toml policy..."
-
     local audit_file="$ROOT_DIR/.cargo/audit.toml"
+    [[ ! -f "$audit_file" ]] && return
+    git -C "$ROOT_DIR" rev-parse --git-dir >/dev/null 2>&1 || return
+    git -C "$ROOT_DIR" rev-parse "$BASE_BRANCH" >/dev/null 2>&1 || return
 
-    if [[ ! -f "$audit_file" ]]; then
-        echo "  OK: No .cargo/audit.toml file"
-        return
-    fi
-
-    # Check if we're in a git repo and base branch exists
-    if ! git -C "$ROOT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
-        echo "  SKIP: Not a git repository"
-        return
-    fi
-
-    if ! git -C "$ROOT_DIR" rev-parse "$BASE_BRANCH" >/dev/null 2>&1; then
-        echo "  SKIP: Base branch '$BASE_BRANCH' not found"
-        return
-    fi
-
-    # Get base version
     local base_audit
     base_audit=$(git -C "$ROOT_DIR" show "$BASE_BRANCH:.cargo/audit.toml" 2>/dev/null || echo "")
+    [[ -z "$base_audit" ]] && return
 
-    if [[ -z "$base_audit" ]]; then
-        echo "  SKIP: .cargo/audit.toml not present in base branch"
-        return
-    fi
-
-    # Check for new [advisories.ignore] entries
-    local current_ignores base_ignores
+    local current_ignores base_ignores new_ignores
     current_ignores=$(grep -E '^\s*"RUSTSEC-' "$audit_file" 2>/dev/null | tr -d ' ",' | sort || true)
     base_ignores=$(echo "$base_audit" | grep -E '^\s*"RUSTSEC-' 2>/dev/null | tr -d ' ",' | sort || true)
-
-    local new_ignores
     new_ignores=$(comm -23 <(echo "$current_ignores") <(echo "$base_ignores") 2>/dev/null || true)
 
     if [[ -n "$new_ignores" ]]; then
-        echo "ERROR: New advisory ignores added to .cargo/audit.toml:"
+        echo "ERROR: New advisory ignores in .cargo/audit.toml:"
         echo "$new_ignores" | sed 's/^/  /'
-        echo ""
-        echo "Adding security advisory ignores requires human review."
         ERRORS=$((ERRORS + 1))
-    else
-        echo "  OK: No new advisory ignores"
-    fi
-
-    # Check for new informational_warnings suppressions
-    local current_info base_info
-    current_info=$(grep 'informational_warnings' "$audit_file" 2>/dev/null || true)
-    base_info=$(echo "$base_audit" | grep 'informational_warnings' 2>/dev/null || true)
-
-    if [[ "$current_info" != "$base_info" ]]; then
-        echo "WARNING: informational_warnings changed in .cargo/audit.toml"
-        echo "  Was: $base_info"
-        echo "  Now: $current_info"
-        # Not an error, just a warning - the Makefile handles this for CI
     fi
 }
 
@@ -254,20 +163,9 @@ check_audit_toml() {
 # Check 5: Cargo.toml lints policy
 # =============================================================================
 check_cargo_lints() {
-    echo "Checking Cargo.toml lints policy..."
+    git -C "$ROOT_DIR" rev-parse --git-dir >/dev/null 2>&1 || return
+    git -C "$ROOT_DIR" rev-parse "$BASE_BRANCH" >/dev/null 2>&1 || return
 
-    # Check if we're in a git repo and base branch exists
-    if ! git -C "$ROOT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
-        echo "  SKIP: Not a git repository"
-        return
-    fi
-
-    if ! git -C "$ROOT_DIR" rev-parse "$BASE_BRANCH" >/dev/null 2>&1; then
-        echo "  SKIP: Base branch '$BASE_BRANCH' not found"
-        return
-    fi
-
-    # Find all Cargo.toml files
     local cargo_files
     cargo_files=$(find "$ROOT_DIR" -name "Cargo.toml" -type f ! -path "*/target/*")
 
@@ -335,36 +233,19 @@ check_cargo_lints() {
             ERRORS=$((ERRORS + 1))
         fi
     done
-
-    if [[ $ERRORS -eq 0 ]]; then
-        echo "  OK: No weakened lints in Cargo.toml files"
-    fi
 }
 
 # =============================================================================
 # Main
 # =============================================================================
-echo "=== Policy Lint Checks ==="
-echo ""
-
 check_allow_attributes
-echo ""
-
 check_deny_toml
-echo ""
-
 check_shellcheck_exceptions
-echo ""
-
 check_audit_toml
-echo ""
-
 check_cargo_lints
-echo ""
 
 if [[ $ERRORS -gt 0 ]]; then
-    echo "=== FAILED: $ERRORS policy violation(s) found ==="
+    echo ""
+    echo "=== FAILED: $ERRORS policy violation(s) ==="
     exit 1
-else
-    echo "=== All policy checks passed ==="
 fi
