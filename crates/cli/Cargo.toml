@@ -31,6 +31,10 @@ iocraft = "0.7"
 unicode-width = "0.2"
 textwrap = "0.16"
 
+# Signal handling (for ignoring SIGINT in TUI mode)
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.30", features = ["signal"] }
+
 [dev-dependencies]
 proptest = "1"
 yare = "3"
@@ -40,7 +44,8 @@ assert_cmd = "2"
 predicates = "3"
 
 [lints.rust]
-unsafe_code = "forbid"
+# unsafe_code normally forbid, but main.rs needs it for SIGINT handling in TUI mode
+# unsafe_code = "forbid"
 
 [lints.clippy]
 unwrap_used = "deny"

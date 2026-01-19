@@ -319,6 +319,19 @@ fn load_mcp_configs(cli: &Cli) -> Result<McpManager, Box<dyn std::error::Error>>
 
 /// Run in TUI mode
 fn run_tui_mode(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
+    // Ignore SIGINT so Ctrl+C is captured as a key event rather than killing the process.
+    // This is required because raw mode alone doesn't prevent SIGINT generation on macOS/tmux.
+    // SAFETY: SIG_IGN is a well-defined, constant signal handler provided by the OS that
+    // simply ignores the signal. This is necessary to allow raw mode terminal input to
+    // capture Ctrl+C as a key event.
+    #[cfg(unix)]
+    unsafe {
+        use nix::sys::signal::{signal, SigHandler, Signal};
+        if let Err(e) = signal(Signal::SIGINT, SigHandler::SigIgn) {
+            eprintln!("Warning: Failed to ignore SIGINT: {}", e);
+        }
+    }
+
     // Load scenario if specified
     let scenario = if let Some(ref path) = cli.scenario {
         Scenario::load(Path::new(path))?
