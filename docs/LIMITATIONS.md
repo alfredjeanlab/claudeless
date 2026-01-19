@@ -57,9 +57,7 @@ Run: `cargo test -- --ignored`
 - [ ] **JSON output format**: `usage` and `modelUsage` fields empty
   - `test_json_output_uses_result_wrapper_format`
   - `test_json_output_result_contains_response_text`
-- [ ] **TUI /clear command**: Not implemented
-  - `test_clear_after_matches_fixture`
-- [ ] **TUI /compact**: Rendering differs from real Claude
+- [ ] **TUI /compact fixture matching**: Fixture tests need tool_calls recorded in session
   - `test_compact_before_matches_fixture`
   - `test_compact_during_matches_fixture`
   - `test_compact_after_matches_fixture`

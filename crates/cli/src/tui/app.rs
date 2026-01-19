@@ -26,6 +26,8 @@ pub struct TuiConfig {
     pub model: String,
     pub working_directory: PathBuf,
     pub permission_mode: PermissionMode,
+    /// Delay in milliseconds before compact completes (default: 500)
+    pub compact_delay_ms: Option<u64>,
 }
 
 impl Default for TuiConfig {
@@ -36,6 +38,7 @@ impl Default for TuiConfig {
             model: DEFAULT_MODEL.to_string(),
             working_directory: std::env::current_dir().unwrap_or_default(),
             permission_mode: PermissionMode::Default,
+            compact_delay_ms: None,
         }
     }
 }
@@ -73,6 +76,7 @@ impl TuiConfig {
                 .map(PathBuf::from)
                 .unwrap_or_else(|| std::env::current_dir().unwrap_or_default()),
             permission_mode,
+            compact_delay_ms: config.compact_delay_ms,
         }
     }
 }
@@ -120,6 +124,7 @@ pub struct RenderState {
     pub permission_mode: PermissionMode,
     pub is_command_output: bool,
     pub conversation_display: String,
+    pub is_compacted: bool,
 }
 
 /// Permission request state
@@ -240,6 +245,9 @@ struct TuiAppStateInner {
 
     /// Visible conversation history (accumulates turns, cleared on /compact)
     pub conversation_display: String,
+
+    /// Whether conversation has been compacted (for showing separator)
+    pub is_compacted: bool,
 }
 
 impl TuiAppState {
@@ -294,6 +302,7 @@ impl TuiAppState {
                 is_command_output: false,
                 compacting_started: None,
                 conversation_display: String::new(),
+                is_compacted: false,
                 config,
             })),
         }
@@ -317,6 +326,7 @@ impl TuiAppState {
             permission_mode: inner.permission_mode.clone(),
             is_command_output: inner.is_command_output,
             conversation_display: inner.conversation_display.clone(),
+            is_compacted: inner.is_compacted,
         }
     }
 
@@ -687,24 +697,41 @@ impl TuiAppState {
         }
     }
 
-    /// Handle slash commands like /compact
+    /// Handle slash commands like /compact and /clear
     fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
         let cmd = input.trim().to_lowercase();
         inner.is_command_output = true;
 
+        // Add the command to conversation display
+        inner.conversation_display = format!("❯ {}", input.trim());
+
         match cmd.as_str() {
+            "/clear" => {
+                // Clear session turns
+                {
+                    let mut sessions = inner.sessions.lock();
+                    sessions.current_session().turns.clear();
+                }
+
+                // Reset token counts
+                inner.status.input_tokens = 0;
+                inner.status.output_tokens = 0;
+
+                // Set response content (will be rendered with elbow connector)
+                inner.response_content = "(no content)".to_string();
+            }
             "/compact" => {
                 // Show compacting in progress message
                 inner.mode = AppMode::Responding;
                 inner.is_compacting = true;
                 inner.compacting_started = Some(std::time::Instant::now());
+                // Use correct symbol (✻) and ellipsis (…)
                 inner.response_content =
-                    "* Compacting conversation... (ctrl+c to interrupt)".to_string();
-                // Clear conversation history (will be replaced with compacted summary)
-                inner.conversation_display.clear();
+                    "✻ Compacting conversation… (ctrl+c to interrupt)".to_string();
             }
             "/help" | "/?" => {
                 inner.response_content = "Available commands:\n\
+                    /clear   - Clear conversation history\n\
                     /compact - Compact conversation history\n\
                     /help    - Show this help\n"
                     .to_string();
@@ -911,17 +938,29 @@ impl TuiAppState {
         let mut inner = self.inner.lock();
         if inner.is_compacting {
             if let Some(started) = inner.compacting_started {
-                // Complete after 500ms delay
-                if started.elapsed() >= std::time::Duration::from_millis(500) {
+                let delay_ms = inner.config.compact_delay_ms.unwrap_or(500);
+                if started.elapsed() >= std::time::Duration::from_millis(delay_ms) {
                     inner.is_compacting = false;
                     inner.compacting_started = None;
                     inner.mode = AppMode::Input;
+                    inner.is_compacted = true;
 
-                    // Show compacted message with separator
-                    inner.response_content = "\
-════ Conversation compacted · ctrl+o for history ════\n\n\
-Compacted (ctrl+o to see full summary)"
-                        .to_string();
+                    // Build tool summary from session turns
+                    let tool_summary = build_tool_summary(&inner.sessions);
+
+                    // Set response with elbow connector format
+                    inner.response_content = format!(
+                        "Compacted (ctrl+o to see full summary){}",
+                        if tool_summary.is_empty() {
+                            String::new()
+                        } else {
+                            format!("\n{}", tool_summary)
+                        }
+                    );
+                    inner.is_command_output = true;
+
+                    // Set conversation display to show the /compact command
+                    inner.conversation_display = "❯ /compact".to_string();
                 }
             }
         }
@@ -1087,6 +1126,12 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
 fn render_conversation_area(state: &RenderState) -> AnyElement<'static> {
     let mut content = String::new();
 
+    // Add compact separator if conversation has been compacted
+    if state.is_compacted {
+        content.push_str(COMPACT_SEPARATOR);
+        content.push('\n');
+    }
+
     // Add conversation display (includes user prompts and past responses)
     if !state.conversation_display.is_empty() {
         content.push_str(&state.conversation_display);
@@ -1094,12 +1139,32 @@ fn render_conversation_area(state: &RenderState) -> AnyElement<'static> {
 
     // Add current response if present
     if !state.response_content.is_empty() {
-        if !content.is_empty() {
-            content.push_str("\n\n");
-        }
-        if state.is_command_output {
+        // Check if this is a compacting-in-progress message (✻ symbol)
+        let is_compacting_in_progress = state.response_content.starts_with('✻');
+
+        if is_compacting_in_progress {
+            // During compacting, show message on its own line after blank line
+            if !content.is_empty() {
+                content.push_str("\n\n");
+            }
             content.push_str(&state.response_content);
+        } else if state.is_command_output {
+            // Completed command output uses elbow connector format
+            if !content.is_empty() {
+                content.push('\n');
+            }
+            // Format each line with elbow connector (2 spaces + ⎿ + 2 spaces)
+            for (i, line) in state.response_content.lines().enumerate() {
+                if i > 0 {
+                    content.push('\n');
+                }
+                content.push_str(&format!("  ⎿  {}", line));
+            }
         } else {
+            // Normal response with ⏺ prefix
+            if !content.is_empty() {
+                content.push_str("\n\n");
+            }
             content.push_str(&format!("⏺ {}", state.response_content));
         }
     }
@@ -1124,6 +1189,69 @@ fn render_conversation_area(state: &RenderState) -> AnyElement<'static> {
 
 /// Full-width horizontal separator (120 chars)
 const SEPARATOR: &str = "────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────";
+
+/// Compact separator with centered text (matches real Claude CLI)
+const COMPACT_SEPARATOR: &str = "══════════════════════════════════════ Conversation compacted · ctrl+o for history ═════════════════════════════════════";
+
+/// Build tool summary from session turns for /compact output
+fn build_tool_summary(sessions: &Arc<Mutex<SessionManager>>) -> String {
+    let sessions = sessions.lock();
+    let Some(session) = sessions.get_current() else {
+        return String::new();
+    };
+
+    let mut summaries = Vec::new();
+    for turn in &session.turns {
+        for tool_call in &turn.tool_calls {
+            if let Some(summary) = format_tool_summary(tool_call) {
+                summaries.push(summary);
+            }
+        }
+    }
+    summaries.join("\n")
+}
+
+/// Format a single tool call for the compact summary
+fn format_tool_summary(tool: &crate::state::session::TurnToolCall) -> Option<String> {
+    match tool.tool.as_str() {
+        "Read" => {
+            let path = tool.input.get("file_path")?.as_str()?;
+            // Extract just the filename from the path
+            let filename = std::path::Path::new(path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or(path);
+            let lines = tool.output.as_ref().map(|o| o.lines().count()).unwrap_or(0);
+            Some(format!("Read {} ({} lines)", filename, lines))
+        }
+        "Write" => {
+            let path = tool.input.get("file_path")?.as_str()?;
+            let filename = std::path::Path::new(path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or(path);
+            Some(format!("Wrote {}", filename))
+        }
+        "Edit" => {
+            let path = tool.input.get("file_path")?.as_str()?;
+            let filename = std::path::Path::new(path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or(path);
+            Some(format!("Edited {}", filename))
+        }
+        "Bash" => {
+            let cmd = tool.input.get("command")?.as_str()?;
+            let short_cmd = if cmd.len() > 30 {
+                format!("{}...", &cmd[..27])
+            } else {
+                cmd.to_string()
+            };
+            Some(format!("Ran `{}`", short_cmd))
+        }
+        _ => None,
+    }
+}
 
 /// Render trust prompt dialog
 fn render_trust_prompt(prompt: &TrustPromptState) -> AnyElement<'static> {

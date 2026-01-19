@@ -44,7 +44,6 @@ fn test_clear_before_matches_fixture() {
 
 /// Compare conversation state after /clear against fixture
 #[test]
-#[ignore] // TODO(implement): Implement /clear command in simulator
 fn test_clear_after_matches_fixture() {
     let scenario = write_scenario(
         r#"
