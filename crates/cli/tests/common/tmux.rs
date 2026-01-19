@@ -156,6 +156,35 @@ pub fn wait_for_any(session: &str, patterns: &[&str]) -> String {
     }
 }
 
+/// Assert that pane content remains unchanged for the specified duration.
+/// Polls periodically and panics if content changes during the wait period.
+/// Returns the final capture (which should match `previous`).
+pub fn assert_unchanged_ms(session: &str, previous: &str, duration_ms: u64) -> String {
+    let duration = Duration::from_millis(duration_ms);
+    let poll = poll_interval();
+    let start = Instant::now();
+
+    while start.elapsed() < duration {
+        let capture = capture_pane(session);
+
+        if capture != previous {
+            panic!(
+                "Content unexpectedly changed in tmux session '{}' after {:?}\n\
+                 Expected:\n{}\n\n\
+                 Got:\n{}",
+                session,
+                start.elapsed(),
+                previous,
+                capture
+            );
+        }
+
+        sleep(poll);
+    }
+
+    capture_pane(session)
+}
+
 /// Wait for pane content to change from a previous state.
 /// Returns the new captured pane content when it differs, or panics on timeout.
 pub fn wait_for_change(session: &str, previous: &str) -> String {
