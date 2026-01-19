@@ -8,7 +8,7 @@
   "result": "<RESPONSE_TEXT>",
   "session_id": "<SESSION_ID>",
   "subtype": "success",
-  "total_cost_usd": "<COST>",
+  "cost_usd": "<COST>",
   "type": "result",
   "usage": "<USAGE>",
   "uuid": "<UUID>"

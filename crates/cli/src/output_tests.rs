@@ -458,3 +458,77 @@ fn test_real_stream_json_event_sequence() {
     let result_event: serde_json::Value = serde_json::from_str(lines[2]).unwrap();
     assert_eq!(result_event["subtype"], "success");
 }
+
+// =========================================================================
+// Result Output Usage Tests
+// =========================================================================
+
+#[test]
+fn test_result_output_has_usage_fields() {
+    let result = ResultOutput::success("Hello!".to_string(), "session-123".to_string(), 1000);
+
+    let json = serde_json::to_string(&result).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+    // Verify usage is populated (not empty object)
+    assert!(parsed["usage"].is_object());
+    assert!(parsed["usage"]["input_tokens"].is_number());
+    assert!(parsed["usage"]["output_tokens"].is_number());
+    assert!(parsed["usage"]["cost_usd"].is_number());
+
+    // Verify modelUsage is populated
+    assert!(parsed["modelUsage"].is_object());
+}
+
+#[test]
+fn test_result_output_uses_cost_usd() {
+    let result = ResultOutput::success("Hello!".to_string(), "session-123".to_string(), 1000);
+
+    let json = serde_json::to_string(&result).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+    // Field should be cost_usd not total_cost_usd
+    assert!(parsed["cost_usd"].is_number());
+    assert!(parsed.get("total_cost_usd").is_none());
+}
+
+#[test]
+fn test_result_output_with_custom_usage() {
+    let result = ResultOutput::success_with_usage(
+        "Test".to_string(),
+        "session-123".to_string(),
+        500,
+        50, // input tokens
+        25, // output tokens
+        "claude-test",
+    );
+
+    let json = serde_json::to_string(&result).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+    assert_eq!(parsed["usage"]["input_tokens"], 50);
+    assert_eq!(parsed["usage"]["output_tokens"], 25);
+    assert!(parsed["modelUsage"]["claude-test"].is_object());
+}
+
+#[test]
+fn test_result_usage_cost_estimation() {
+    // Test the cost estimation formula:
+    // $3/M input + $15/M output
+    let usage = ResultUsage::from_tokens(1_000_000, 1_000_000);
+
+    // Expected: 1M * $3/M + 1M * $15/M = $3 + $15 = $18
+    assert!((usage.cost_usd - 18.0).abs() < 0.001);
+}
+
+#[test]
+fn test_result_output_error_has_zero_usage() {
+    let result = ResultOutput::error("Error".to_string(), "session-123".to_string(), 100);
+
+    let json = serde_json::to_string(&result).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+    assert_eq!(parsed["usage"]["input_tokens"], 0);
+    assert_eq!(parsed["usage"]["output_tokens"], 0);
+    assert_eq!(parsed["cost_usd"], 0.0);
+}

@@ -54,9 +54,6 @@ Built-in tools execute in a sandbox and scenarios control responses.
 Known divergences with failing tests.  
 Run: `cargo test -- --ignored`
 
-- [ ] **JSON output format**: `usage` and `modelUsage` fields empty
-  - `test_json_output_uses_result_wrapper_format`
-  - `test_json_output_result_contains_response_text`
 - [ ] **TUI /compact fixture matching**: Fixture tests need tool_calls recorded in session
   - `test_compact_before_matches_fixture`
   - `test_compact_during_matches_fixture`
@@ -113,9 +110,9 @@ Run: `cargo test -- --ignored`
 
 | Field | Real Claude | Claudeless |
 |-------|-------------|------------|
-| `usage` | Rich cache/server metrics | Empty `{}` |
-| `modelUsage` | Per-model detailed metrics | Empty `{}` |
-| `total_cost_usd` | Actual API cost | Always `0` |
+| `usage` | Rich cache/server metrics | Simulated token-based usage |
+| `modelUsage` | Per-model detailed metrics | Simulated per-model usage |
+| `cost_usd` | Actual API cost | Simulated (~$3/M in, $15/M out) |
 | `duration_ms` | Actual timing | Simulated |
 
 ### Stream-JSON System Init Event

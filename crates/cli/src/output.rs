@@ -8,13 +8,52 @@ use crate::config::{ResponseSpec, ToolCallSpec, UsageSpec};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 
+/// Detailed usage statistics for result output
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ResultUsage {
+    pub input_tokens: u32,
+    pub output_tokens: u32,
+    pub cache_creation_input_tokens: u32,
+    pub cache_read_input_tokens: u32,
+    /// Cost breakdown for this request
+    pub cost_usd: f64,
+}
+
+impl ResultUsage {
+    /// Create usage from basic token counts
+    pub fn from_tokens(input: u32, output: u32) -> Self {
+        Self {
+            input_tokens: input,
+            output_tokens: output,
+            cache_creation_input_tokens: 0,
+            cache_read_input_tokens: 0,
+            cost_usd: estimate_cost(input, output),
+        }
+    }
+}
+
+/// Per-model usage breakdown
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct ModelUsage {
+    #[serde(flatten)]
+    pub models: std::collections::HashMap<String, ResultUsage>,
+}
+
+/// Estimate cost based on token counts (simulated Claude Sonnet pricing)
+fn estimate_cost(input_tokens: u32, output_tokens: u32) -> f64 {
+    // Approximate Claude Sonnet pricing: $3/M input, $15/M output
+    let input_cost = (input_tokens as f64) * 0.000003;
+    let output_cost = (output_tokens as f64) * 0.000015;
+    input_cost + output_cost
+}
+
 /// Result wrapper for JSON output matching real Claude's `--output-format json`
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ResultOutput {
     #[serde(rename = "type")]
     pub output_type: String,
     pub subtype: String,
-    pub total_cost_usd: f64,
+    pub cost_usd: f64,
     pub is_error: bool,
     pub duration_ms: u64,
     pub duration_api_ms: u64,
@@ -28,18 +67,28 @@ pub struct ResultOutput {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub retry_after: Option<u64>,
     #[serde(rename = "modelUsage")]
-    pub model_usage: serde_json::Value,
-    pub usage: serde_json::Value,
+    pub model_usage: ModelUsage,
+    pub usage: ResultUsage,
     pub permission_denials: Vec<String>,
 }
 
 impl ResultOutput {
-    /// Create a success result
+    /// Create a success result with usage based on response
     pub fn success(result: String, session_id: String, duration_ms: u64) -> Self {
+        let output_tokens = estimate_tokens(&result);
+        let input_tokens = 100; // Default simulated input tokens
+        let usage = ResultUsage::from_tokens(input_tokens, output_tokens);
+
+        let mut model_usage = ModelUsage::default();
+        model_usage.models.insert(
+            "claude-sonnet-4-20250514".to_string(),
+            ResultUsage::from_tokens(input_tokens, output_tokens),
+        );
+
         Self {
             output_type: "result".to_string(),
             subtype: "success".to_string(),
-            total_cost_usd: 0.0, // Simulator doesn't track real costs
+            cost_usd: usage.cost_usd,
             is_error: false,
             duration_ms,
             duration_api_ms: duration_ms.saturating_sub(50),
@@ -49,8 +98,44 @@ impl ResultOutput {
             session_id,
             uuid: uuid_stub(),
             retry_after: None,
-            model_usage: serde_json::json!({}),
-            usage: serde_json::json!({}),
+            model_usage,
+            usage,
+            permission_denials: vec![],
+        }
+    }
+
+    /// Create a success result with custom usage
+    pub fn success_with_usage(
+        result: String,
+        session_id: String,
+        duration_ms: u64,
+        input_tokens: u32,
+        output_tokens: u32,
+        model: &str,
+    ) -> Self {
+        let usage = ResultUsage::from_tokens(input_tokens, output_tokens);
+
+        let mut model_usage = ModelUsage::default();
+        model_usage.models.insert(
+            model.to_string(),
+            ResultUsage::from_tokens(input_tokens, output_tokens),
+        );
+
+        Self {
+            output_type: "result".to_string(),
+            subtype: "success".to_string(),
+            cost_usd: usage.cost_usd,
+            is_error: false,
+            duration_ms,
+            duration_api_ms: duration_ms.saturating_sub(50),
+            num_turns: 1,
+            result: Some(result),
+            error: None,
+            session_id,
+            uuid: uuid_stub(),
+            retry_after: None,
+            model_usage,
+            usage,
             permission_denials: vec![],
         }
     }
@@ -60,7 +145,7 @@ impl ResultOutput {
         Self {
             output_type: "result".to_string(),
             subtype: "error".to_string(),
-            total_cost_usd: 0.0,
+            cost_usd: 0.0,
             is_error: true,
             duration_ms,
             duration_api_ms: duration_ms.saturating_sub(10),
@@ -70,8 +155,8 @@ impl ResultOutput {
             session_id,
             uuid: uuid_stub(),
             retry_after: None,
-            model_usage: serde_json::json!({}),
-            usage: serde_json::json!({}),
+            model_usage: ModelUsage::default(),
+            usage: ResultUsage::from_tokens(0, 0),
             permission_denials: vec![],
         }
     }
@@ -81,7 +166,7 @@ impl ResultOutput {
         Self {
             output_type: "result".to_string(),
             subtype: "error".to_string(),
-            total_cost_usd: 0.0,
+            cost_usd: 0.0,
             is_error: true,
             duration_ms: 50,
             duration_api_ms: 50,
@@ -94,8 +179,8 @@ impl ResultOutput {
             session_id,
             uuid: uuid_stub(),
             retry_after: Some(retry_after),
-            model_usage: serde_json::json!({}),
-            usage: serde_json::json!({}),
+            model_usage: ModelUsage::default(),
+            usage: ResultUsage::from_tokens(0, 0),
             permission_denials: vec![],
         }
     }
@@ -695,12 +780,24 @@ impl<W: Write> OutputWriter<W> {
         response: &ResponseSpec,
         session_id: &str,
     ) -> std::io::Result<()> {
-        let text = match response {
-            ResponseSpec::Simple(s) => s.clone(),
-            ResponseSpec::Detailed { text, .. } => text.clone(),
+        let (text, usage_spec) = match response {
+            ResponseSpec::Simple(s) => (s.clone(), None),
+            ResponseSpec::Detailed { text, usage, .. } => (text.clone(), usage.clone()),
         };
 
-        let result = ResultOutput::success(text, session_id.to_string(), 1000);
+        let result = if let Some(usage) = usage_spec {
+            ResultOutput::success_with_usage(
+                text,
+                session_id.to_string(),
+                1000,
+                usage.input_tokens,
+                usage.output_tokens,
+                &self.model,
+            )
+        } else {
+            ResultOutput::success(text, session_id.to_string(), 1000)
+        };
+
         self.write_result(&result)
     }
 
@@ -749,8 +846,15 @@ impl<W: Write> OutputWriter<W> {
         let assistant = CondensedAssistantEvent::new(message, session_id);
         self.write_json_line(&assistant)?;
 
-        // 3. Final result
-        let result = ResultOutput::success(text, session_id.to_string(), 1000);
+        // 3. Final result with usage
+        let result = ResultOutput::success_with_usage(
+            text,
+            session_id.to_string(),
+            1000,
+            usage_spec.input_tokens,
+            usage_spec.output_tokens,
+            &self.model,
+        );
         self.write_json_line(&result)
     }
 

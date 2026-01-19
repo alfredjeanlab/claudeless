@@ -54,7 +54,7 @@ fn test_json_output_has_required_result_fields() {
     let required_fields = [
         "type",
         "subtype",
-        "total_cost_usd",
+        "cost_usd",
         "is_error",
         "duration_ms",
         "duration_api_ms",
@@ -80,7 +80,7 @@ fn test_json_error_has_required_fields() {
     let required_fields = [
         "type",
         "subtype",
-        "total_cost_usd",
+        "cost_usd",
         "is_error",
         "duration_ms",
         "duration_api_ms",
@@ -337,13 +337,7 @@ fn test_error_result_is_parseable_as_success_result() {
     .unwrap();
 
     // Both should have these fields
-    for field in [
-        "type",
-        "subtype",
-        "total_cost_usd",
-        "is_error",
-        "duration_ms",
-    ] {
+    for field in ["type", "subtype", "cost_usd", "is_error", "duration_ms"] {
         assert!(success.get(field).is_some());
         assert!(error.get(field).is_some());
     }

@@ -126,7 +126,7 @@ mod text_output {
 ///   "subtype": "success",
 ///   "result": "response text",
 ///   "session_id": "...",
-///   "total_cost_usd": 0.001,
+///   "cost_usd": 0.001,
 ///   ...
 /// }
 /// ```
@@ -136,10 +136,7 @@ mod json_output {
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
     ///
     /// Real Claude returns a result wrapper, not raw API message format.
-    ///
-    /// FIXME: epic-05x-fix-cli - enable after fixing output format
     #[test]
-    #[ignore]
     fn test_json_output_uses_result_wrapper_format() {
         let scenario = write_scenario(
             r#"
@@ -186,16 +183,13 @@ mod json_output {
         assert!(parsed["session_id"].is_string());
         assert!(parsed["duration_ms"].is_number());
         assert!(
-            parsed["total_cost_usd"].is_number(),
-            "Real Claude includes total_cost_usd"
+            parsed["cost_usd"].is_number(),
+            "Real Claude includes cost_usd"
         );
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
-    ///
-    /// FIXME: epic-05x-fix-cli - enable after fixing output format
     #[test]
-    #[ignore]
     fn test_json_output_result_contains_response_text() {
         let scenario = write_scenario(
             r#"
