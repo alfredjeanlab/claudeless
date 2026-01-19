@@ -1,5 +1,7 @@
 # Plan: Fix Ctrl+C and Ctrl+D Exit Confirmation
 
+**Root Feature:** `cl-07a3`
+
 ## Overview
 
 Implement double-press exit confirmation with timeout for Ctrl+C and Ctrl+D in the TUI, matching real Claude CLI v2.1.12 behavior. The first press shows an exit hint in the status bar; a second press within ~2 seconds exits. The hint times out and returns to the normal status bar after the timeout period.

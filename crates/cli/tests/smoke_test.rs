@@ -364,10 +364,7 @@ mod stream_json_output {
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
     ///
     /// Real Claude ends stream with {"type":"result","subtype":"success",...}
-    ///
-    /// FIXME: epic-05x-fix-cli - enable after fixing output format
     #[test]
-    #[ignore]
     fn test_stream_json_ends_with_result() {
         let scenario = write_scenario(
             r#"
