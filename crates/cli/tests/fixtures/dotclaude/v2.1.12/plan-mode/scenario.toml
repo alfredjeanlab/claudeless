@@ -1,0 +1,20 @@
+# Scenario matching capture-state.sh plan mode prompt
+# Produces: ExitPlanMode tool call that creates plan.md
+
+[default_response]
+text = "I'll create a plan for implementing user authentication."
+
+[[default_response.tool_calls]]
+tool = "ExitPlanMode"
+
+[default_response.tool_calls.input]
+# Load plan content from the captured fixture file
+plan_content = { "$file" = "plan.md" }
+
+permission_mode = "plan"
+
+[tool_execution]
+mode = "simulated"
+
+[tool_execution.tools.ExitPlanMode]
+auto_approve = true

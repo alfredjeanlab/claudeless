@@ -1,0 +1,18 @@
+# Scenario matching capture-state.sh TodoWrite prompt
+# Produces: queue-operation, user, assistant (text), assistant (tool_use), user (tool_result), assistant (final)
+
+[default_response]
+text = "I'll create a todo list with those 3 items for you."
+
+[[default_response.tool_calls]]
+tool = "TodoWrite"
+
+[default_response.tool_calls.input]
+# Load todos from the captured fixture file
+todos = { "$file" = "todo.json" }
+
+[tool_execution]
+mode = "simulated"
+
+[tool_execution.tools.TodoWrite]
+auto_approve = true

@@ -1,0 +1,327 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC
+
+//! Multi-file settings loading with precedence.
+//!
+//! Loads settings from multiple locations and merges them with correct precedence:
+//! 1. Global (~/.claude/settings.json) - lowest priority
+//! 2. Project (.claude/settings.json) - medium priority
+//! 3. Local (.claude/settings.local.json) - highest priority
+
+use super::settings::ClaudeSettings;
+use std::path::{Path, PathBuf};
+
+/// Paths to search for settings files.
+#[derive(Clone, Debug)]
+pub struct SettingsPaths {
+    /// Global settings (~/.claude/settings.json)
+    pub global: Option<PathBuf>,
+    /// Project settings (.claude/settings.json)
+    pub project: Option<PathBuf>,
+    /// Local overrides (.claude/settings.local.json)
+    pub local: Option<PathBuf>,
+}
+
+impl SettingsPaths {
+    /// Resolve settings paths for a given working directory.
+    ///
+    /// # Arguments
+    /// * `state_dir` - The ~/.claude equivalent (or CLAUDELESS_STATE_DIR)
+    /// * `working_dir` - The project working directory
+    pub fn resolve(state_dir: &Path, working_dir: &Path) -> Self {
+        Self {
+            global: Some(state_dir.join("settings.json")),
+            project: Some(working_dir.join(".claude").join("settings.json")),
+            local: Some(working_dir.join(".claude").join("settings.local.json")),
+        }
+    }
+
+    /// Create paths for testing (no global).
+    pub fn project_only(working_dir: &Path) -> Self {
+        Self {
+            global: None,
+            project: Some(working_dir.join(".claude").join("settings.json")),
+            local: Some(working_dir.join(".claude").join("settings.local.json")),
+        }
+    }
+}
+
+/// Loads and merges settings from multiple files.
+pub struct SettingsLoader {
+    paths: SettingsPaths,
+}
+
+impl SettingsLoader {
+    /// Create a new settings loader.
+    pub fn new(paths: SettingsPaths) -> Self {
+        Self { paths }
+    }
+
+    /// Load and merge all settings files.
+    ///
+    /// Precedence (later overrides earlier):
+    /// 1. Global (~/.claude/settings.json)
+    /// 2. Project (.claude/settings.json)
+    /// 3. Local (.claude/settings.local.json)
+    ///
+    /// Missing files are silently skipped.
+    pub fn load(&self) -> ClaudeSettings {
+        let mut settings = ClaudeSettings::default();
+
+        // Load in precedence order
+        for path in [&self.paths.global, &self.paths.project, &self.paths.local]
+            .into_iter()
+            .flatten()
+        {
+            if path.exists() {
+                match ClaudeSettings::load(path) {
+                    Ok(file_settings) => {
+                        settings.merge(file_settings);
+                    }
+                    Err(e) => {
+                        // Log warning but continue - don't fail on invalid settings
+                        eprintln!(
+                            "Warning: Failed to load settings from {}: {}",
+                            path.display(),
+                            e
+                        );
+                    }
+                }
+            }
+        }
+
+        settings
+    }
+
+    /// Check which settings files exist.
+    pub fn existing_files(&self) -> Vec<&Path> {
+        [&self.paths.global, &self.paths.project, &self.paths.local]
+            .into_iter()
+            .flatten()
+            .filter(|path| path.exists())
+            .map(|path| path.as_path())
+            .collect()
+    }
+
+    /// Get the paths being used.
+    pub fn paths(&self) -> &SettingsPaths {
+        &self.paths
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_settings_paths_resolve() {
+        let state_dir = Path::new("/home/user/.claude");
+        let working_dir = Path::new("/home/user/project");
+
+        let paths = SettingsPaths::resolve(state_dir, working_dir);
+
+        assert_eq!(
+            paths.global,
+            Some(PathBuf::from("/home/user/.claude/settings.json"))
+        );
+        assert_eq!(
+            paths.project,
+            Some(PathBuf::from("/home/user/project/.claude/settings.json"))
+        );
+        assert_eq!(
+            paths.local,
+            Some(PathBuf::from(
+                "/home/user/project/.claude/settings.local.json"
+            ))
+        );
+    }
+
+    #[test]
+    fn test_settings_paths_project_only() {
+        let working_dir = Path::new("/home/user/project");
+
+        let paths = SettingsPaths::project_only(working_dir);
+
+        assert!(paths.global.is_none());
+        assert_eq!(
+            paths.project,
+            Some(PathBuf::from("/home/user/project/.claude/settings.json"))
+        );
+        assert_eq!(
+            paths.local,
+            Some(PathBuf::from(
+                "/home/user/project/.claude/settings.local.json"
+            ))
+        );
+    }
+
+    #[test]
+    fn test_loader_no_files() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = SettingsPaths::project_only(temp.path());
+        let loader = SettingsLoader::new(paths);
+
+        let settings = loader.load();
+
+        // Should get defaults
+        assert!(settings.permissions.allow.is_empty());
+        assert!(settings.permissions.deny.is_empty());
+    }
+
+    #[test]
+    fn test_loader_global_only() {
+        let temp = tempfile::tempdir().unwrap();
+        let state_dir = temp.path();
+        let work_dir = tempfile::tempdir().unwrap();
+
+        // Create global settings
+        fs::write(
+            state_dir.join("settings.json"),
+            r#"{"permissions": {"allow": ["Read"]}}"#,
+        )
+        .unwrap();
+
+        let paths = SettingsPaths::resolve(state_dir, work_dir.path());
+        let loader = SettingsLoader::new(paths);
+        let settings = loader.load();
+
+        assert_eq!(settings.permissions.allow, vec!["Read"]);
+    }
+
+    #[test]
+    fn test_loader_project_overrides_global() {
+        let global_dir = tempfile::tempdir().unwrap();
+        let work_dir = tempfile::tempdir().unwrap();
+
+        // Global settings
+        fs::write(
+            global_dir.path().join("settings.json"),
+            r#"{"permissions": {"allow": ["Read"]}}"#,
+        )
+        .unwrap();
+
+        // Project settings (should override)
+        let project_claude = work_dir.path().join(".claude");
+        fs::create_dir_all(&project_claude).unwrap();
+        fs::write(
+            project_claude.join("settings.json"),
+            r#"{"permissions": {"allow": ["Write"]}}"#,
+        )
+        .unwrap();
+
+        let paths = SettingsPaths::resolve(global_dir.path(), work_dir.path());
+        let loader = SettingsLoader::new(paths);
+        let settings = loader.load();
+
+        assert_eq!(settings.permissions.allow, vec!["Write"]);
+    }
+
+    #[test]
+    fn test_loader_local_highest_priority() {
+        let global_dir = tempfile::tempdir().unwrap();
+        let work_dir = tempfile::tempdir().unwrap();
+
+        // Global, project, and local settings
+        fs::write(
+            global_dir.path().join("settings.json"),
+            r#"{"permissions": {"allow": ["Read"]}}"#,
+        )
+        .unwrap();
+
+        let project_claude = work_dir.path().join(".claude");
+        fs::create_dir_all(&project_claude).unwrap();
+        fs::write(
+            project_claude.join("settings.json"),
+            r#"{"permissions": {"allow": ["Write"]}}"#,
+        )
+        .unwrap();
+        fs::write(
+            project_claude.join("settings.local.json"),
+            r#"{"permissions": {"allow": ["Bash"]}}"#,
+        )
+        .unwrap();
+
+        let paths = SettingsPaths::resolve(global_dir.path(), work_dir.path());
+        let loader = SettingsLoader::new(paths);
+        let settings = loader.load();
+
+        // Local wins
+        assert_eq!(settings.permissions.allow, vec!["Bash"]);
+    }
+
+    #[test]
+    fn test_loader_env_vars_merged() {
+        let global_dir = tempfile::tempdir().unwrap();
+        let work_dir = tempfile::tempdir().unwrap();
+
+        // Global with one env var
+        fs::write(
+            global_dir.path().join("settings.json"),
+            r#"{"env": {"GLOBAL": "1"}}"#,
+        )
+        .unwrap();
+
+        // Project with another
+        let project_claude = work_dir.path().join(".claude");
+        fs::create_dir_all(&project_claude).unwrap();
+        fs::write(
+            project_claude.join("settings.json"),
+            r#"{"env": {"PROJECT": "2"}}"#,
+        )
+        .unwrap();
+
+        let paths = SettingsPaths::resolve(global_dir.path(), work_dir.path());
+        let loader = SettingsLoader::new(paths);
+        let settings = loader.load();
+
+        // Both should be present
+        assert_eq!(settings.env.get("GLOBAL"), Some(&"1".to_string()));
+        assert_eq!(settings.env.get("PROJECT"), Some(&"2".to_string()));
+    }
+
+    #[test]
+    fn test_loader_invalid_json_skipped() {
+        let global_dir = tempfile::tempdir().unwrap();
+        let work_dir = tempfile::tempdir().unwrap();
+
+        // Invalid global settings
+        fs::write(global_dir.path().join("settings.json"), "not valid json").unwrap();
+
+        // Valid project settings
+        let project_claude = work_dir.path().join(".claude");
+        fs::create_dir_all(&project_claude).unwrap();
+        fs::write(
+            project_claude.join("settings.json"),
+            r#"{"permissions": {"allow": ["Read"]}}"#,
+        )
+        .unwrap();
+
+        let paths = SettingsPaths::resolve(global_dir.path(), work_dir.path());
+        let loader = SettingsLoader::new(paths);
+        let settings = loader.load();
+
+        // Project settings should still load
+        assert_eq!(settings.permissions.allow, vec!["Read"]);
+    }
+
+    #[test]
+    fn test_loader_existing_files() {
+        let global_dir = tempfile::tempdir().unwrap();
+        let work_dir = tempfile::tempdir().unwrap();
+
+        // Create only global and local files
+        fs::write(global_dir.path().join("settings.json"), "{}").unwrap();
+
+        let project_claude = work_dir.path().join(".claude");
+        fs::create_dir_all(&project_claude).unwrap();
+        fs::write(project_claude.join("settings.local.json"), "{}").unwrap();
+
+        let paths = SettingsPaths::resolve(global_dir.path(), work_dir.path());
+        let loader = SettingsLoader::new(paths);
+        let existing = loader.existing_files();
+
+        // Should only list files that exist
+        assert_eq!(existing.len(), 2);
+    }
+}

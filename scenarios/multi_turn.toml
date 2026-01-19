@@ -1,0 +1,21 @@
+# Multi-turn conversation scenario
+name = "multi-turn"
+
+[conversations.login-flow]
+turns = [
+    { expect = { type = "contains", text = "login" }, response = "Please enter your username:" },
+    { expect = { type = "any" }, response = "Please enter your password:" },
+    { expect = { type = "any" }, response = "Login successful! Welcome." }
+]
+
+[conversations.code-review]
+turns = [
+    { expect = { type = "contains", text = "review" }, response = "I'll review your code. Please share it." },
+    { expect = { type = "any" }, response = "I found a few issues. Let me explain..." },
+    { expect = { type = "contains", text = "fix" }, response = "Here's the corrected code." }
+]
+
+# Fallback responses for non-conversation prompts
+[[responses]]
+pattern = { type = "any" }
+response = "Please start a conversation by asking me to login or review code."

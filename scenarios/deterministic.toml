@@ -1,0 +1,20 @@
+# Deterministic Scenario for Reproducible Tests
+# All dynamic values are fixed for consistent test output
+
+name = "deterministic"
+
+# Fixed identity for reproducible state directory paths
+session_id = "00000000-0000-0000-0000-000000000001"
+project_path = "/test/project"
+
+# Fixed timestamp for reproducible file mtimes
+launch_timestamp = "2025-01-01T00:00:00Z"
+
+# Fixed user for consistent display
+user_name = "TestUser"
+
+# Trusted to skip trust prompt
+trusted = true
+
+# Simple response for testing
+default_response = "Test response"

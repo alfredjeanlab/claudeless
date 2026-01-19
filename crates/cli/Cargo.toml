@@ -1,0 +1,40 @@
+[package]
+name = "claudeless"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Claude CLI simulator for integration testing"
+
+[[bin]]
+name = "claudeless"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive", "env"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.9"
+json5 = "1"
+thiserror = "2"
+regex = "1"
+glob = "0.3"
+tokio = { version = "1", features = ["fs", "io-std", "io-util", "time", "sync", "rt-multi-thread", "macros", "process"] }
+tempfile = "3"
+sha2 = "0.10"
+hex = "0.4"
+parking_lot = "0.12"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+
+# TUI dependencies
+iocraft = "0.7"
+unicode-width = "0.2"
+textwrap = "0.16"
+
+[dev-dependencies]
+proptest = "1"
+yare = "3"
+insta = { version = "1", features = ["json"] }
+rstest = "0.26"
+assert_cmd = "2"
+predicates = "3"

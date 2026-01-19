@@ -1,0 +1,41 @@
+# Failure injection scenarios for testing error handling
+name = "failure-scenarios"
+
+[[responses]]
+pattern = { type = "contains", text = "trigger-timeout" }
+response = ""
+failure = { type = "connection_timeout", after_ms = 100 }
+
+[[responses]]
+pattern = { type = "contains", text = "trigger-auth-error" }
+response = ""
+failure = { type = "auth_error", message = "API key expired" }
+
+[[responses]]
+pattern = { type = "contains", text = "trigger-rate-limit" }
+response = ""
+failure = { type = "rate_limit", retry_after = 30 }
+
+[[responses]]
+pattern = { type = "contains", text = "trigger-network-error" }
+response = ""
+failure = { type = "network_unreachable" }
+
+[[responses]]
+pattern = { type = "contains", text = "trigger-credits" }
+response = ""
+failure = { type = "out_of_credits" }
+
+[[responses]]
+pattern = { type = "contains", text = "trigger-partial" }
+response = ""
+failure = { type = "partial_response", partial_text = "I was about to say something important..." }
+
+[[responses]]
+pattern = { type = "contains", text = "trigger-malformed" }
+response = ""
+failure = { type = "malformed_json", raw = "{\"type\":\"message\",\"content\":[{" }
+
+[[responses]]
+pattern = { type = "any" }
+response = "Normal response - no failure triggered"

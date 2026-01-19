@@ -1,0 +1,27 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Alfred Jean LLC
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+INSTALL_DIR="$HOME/.local/bin"
+
+# Ensure install directory exists
+mkdir -p "$INSTALL_DIR"
+
+# Build claudeless CLI
+echo "Building claudeless..."
+cd "$ROOT_DIR"
+cargo build --release -p claudeless
+
+# Install to ~/.local/bin/
+echo "Installing to $INSTALL_DIR/claudeless..."
+/bin/cp "$ROOT_DIR/target/release/claudeless" "$INSTALL_DIR/claudeless"
+
+# Re-sign the binary after copying (required on macOS for adhoc-signed binaries)
+if [[ "$(uname)" == "Darwin" ]]; then
+    codesign --force --sign - "$INSTALL_DIR/claudeless"
+fi
+
+echo "Done."

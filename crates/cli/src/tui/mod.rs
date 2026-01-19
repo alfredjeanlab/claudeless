@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC
+
+//! Terminal user interface for Claudeless.
+//!
+//! This module provides a simplified TUI that matches Claude Code's
+//! visual layout for testing oj's integration with Claude's interactive mode.
+//!
+//! The TUI is built using the iocraft framework with a declarative component model.
+//! All rendering is handled in app.rs via the element! macro.
+
+mod app;
+mod screenshot;
+mod streaming;
+mod test_helpers;
+
+pub mod widgets;
+
+pub use app::{
+    AppMode, ExitReason, PermissionChoice, PermissionRequest, RenderState, StatusInfo, TuiApp,
+    TuiConfig,
+};
+pub use screenshot::{LineDiff, Screenshot, ScreenshotCapture, ScreenshotMetadata};
+pub use streaming::{StreamingConfig, StreamingResponse, TokenStream};
+pub use test_helpers::{TuiAppState, TuiTestHarness};

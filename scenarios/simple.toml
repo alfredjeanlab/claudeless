@@ -1,0 +1,17 @@
+# Simple scenario for basic response testing
+name = "basic-responses"
+
+[[responses]]
+pattern = { type = "contains", text = "hello" }
+response = "Hello! How can I help you today?"
+
+[[responses]]
+pattern = { type = "regex", pattern = "(?i)fix.*bug" }
+response = { text = "I'll help you fix that bug.", delay_ms = 100 }
+
+[[responses]]
+pattern = { type = "any" }
+response = "I understand. Let me help with that."
+
+[default_response]
+text = "I'm not sure how to help with that."

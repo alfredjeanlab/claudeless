@@ -1,0 +1,22 @@
+# Build artifacts
+target/
+.build/
+
+# v0 build state
+.v0/
+.wok/
+.worktrees/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cargo
+Cargo.lock
