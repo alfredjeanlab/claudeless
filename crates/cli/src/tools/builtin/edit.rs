@@ -52,7 +52,7 @@ impl BuiltinToolExecutor for EditExecutor {
         &self,
         call: &ToolCallSpec,
         tool_use_id: &str,
-        ctx: &BuiltinContext,
+        _ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
         let path = match Self::extract_path(&call.input) {
             Some(p) => p,
@@ -84,7 +84,7 @@ impl BuiltinToolExecutor for EditExecutor {
             }
         };
 
-        let resolved_path = ctx.resolve_path(path);
+        let resolved_path = std::path::PathBuf::from(path);
 
         // Read the file
         let content = match fs::read_to_string(&resolved_path) {

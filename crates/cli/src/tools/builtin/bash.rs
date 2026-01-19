@@ -11,9 +11,6 @@ use crate::tools::result::ToolExecutionResult;
 use super::{BuiltinContext, BuiltinToolExecutor};
 
 /// Executor for Bash commands.
-///
-/// Supports both mock mode (returning simulated output) and real execution
-/// when `allow_real_bash` is enabled in the context.
 #[derive(Clone, Debug, Default)]
 pub struct BashExecutor;
 
@@ -36,8 +33,6 @@ impl BashExecutor {
         // Set working directory if specified
         if let Some(ref cwd) = ctx.cwd {
             cmd.current_dir(cwd);
-        } else if let Some(ref sandbox) = ctx.sandbox_root {
-            cmd.current_dir(sandbox);
         }
 
         match cmd.output() {
@@ -78,20 +73,9 @@ impl BuiltinToolExecutor for BashExecutor {
             }
         };
 
-        if ctx.allow_real_bash {
-            let mut result = Self::execute_real(command, ctx);
-            result.tool_use_id = tool_use_id.to_string();
-            result
-        } else {
-            ToolExecutionResult::error(
-                tool_use_id,
-                format!(
-                    "Real bash execution is disabled. Command: {}. \
-                     Enable with allow_real_bash=true or provide a mock result.",
-                    command
-                ),
-            )
-        }
+        let mut result = Self::execute_real(command, ctx);
+        result.tool_use_id = tool_use_id.to_string();
+        result
     }
 
     fn tool_name(&self) -> &'static str {

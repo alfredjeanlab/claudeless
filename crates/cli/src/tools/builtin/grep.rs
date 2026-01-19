@@ -116,9 +116,8 @@ impl BuiltinToolExecutor for GrepExecutor {
 
         // Get search path
         let search_path = Self::extract_path(&call.input)
-            .map(|p| ctx.resolve_path(p))
+            .map(PathBuf::from)
             .or_else(|| ctx.cwd.clone())
-            .or_else(|| ctx.sandbox_root.clone())
             .unwrap_or_else(|| PathBuf::from("."));
 
         // Get glob filter

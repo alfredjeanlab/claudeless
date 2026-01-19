@@ -39,7 +39,7 @@ impl BuiltinToolExecutor for WriteExecutor {
         &self,
         call: &ToolCallSpec,
         tool_use_id: &str,
-        ctx: &BuiltinContext,
+        _ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
         let path = match Self::extract_path(&call.input) {
             Some(p) => p,
@@ -61,7 +61,7 @@ impl BuiltinToolExecutor for WriteExecutor {
             }
         };
 
-        let resolved_path = ctx.resolve_path(path);
+        let resolved_path = std::path::PathBuf::from(path);
 
         // Create parent directories if needed
         if let Some(parent) = resolved_path.parent() {

@@ -50,20 +50,6 @@ fn test_disabled_executor() {
 }
 
 #[test]
-fn test_execution_context_from_config() {
-    let config = ToolExecutionConfig {
-        mode: ToolExecutionMode::Simulated,
-        sandbox_root: Some("/tmp/sandbox".to_string()),
-        allow_real_bash: true,
-        ..Default::default()
-    };
-    let ctx = ExecutionContext::from_config(&config);
-
-    assert_eq!(ctx.sandbox_root, Some(PathBuf::from("/tmp/sandbox")));
-    assert!(ctx.allow_real_bash);
-}
-
-#[test]
 fn test_execution_context_builder() {
     let ctx = ExecutionContext::default()
         .with_cwd("/home/user")

@@ -192,8 +192,6 @@ result = "file1.txt\nfile2.txt"
     assert!(config.tool_execution.is_some());
     let tool_exec = config.tool_execution.unwrap();
     assert_eq!(tool_exec.mode, ToolExecutionMode::Mock);
-    assert!(tool_exec.sandbox_root.is_none());
-    assert!(!tool_exec.allow_real_bash);
 
     // Check tool call has result
     let rule = &config.responses[0];
@@ -209,21 +207,14 @@ result = "file1.txt\nfile2.txt"
 }
 
 #[test]
-fn test_parse_tool_execution_simulated() {
+fn test_parse_tool_execution_live() {
     let toml_str = r#"
 [tool_execution]
-mode = "simulated"
-sandbox_root = "/tmp/claudeless-sandbox"
-allow_real_bash = true
+mode = "live"
 "#;
     let config: ScenarioConfig = toml::from_str(toml_str).unwrap();
     let tool_exec = config.tool_execution.unwrap();
-    assert_eq!(tool_exec.mode, ToolExecutionMode::Simulated);
-    assert_eq!(
-        tool_exec.sandbox_root,
-        Some("/tmp/claudeless-sandbox".to_string())
-    );
-    assert!(tool_exec.allow_real_bash);
+    assert_eq!(tool_exec.mode, ToolExecutionMode::Live);
 }
 
 #[test]
@@ -302,7 +293,7 @@ permission_mode = "plan"
 fn test_parse_per_tool_config() {
     let toml_str = r#"
 [tool_execution]
-mode = "simulated"
+mode = "live"
 
 [tool_execution.tools.Bash]
 auto_approve = true
@@ -317,7 +308,7 @@ error = "Permission denied"
     let config: ScenarioConfig = toml::from_str(toml_str).unwrap();
     let tool_exec = config.tool_execution.unwrap();
 
-    assert_eq!(tool_exec.mode, ToolExecutionMode::Simulated);
+    assert_eq!(tool_exec.mode, ToolExecutionMode::Live);
     assert_eq!(tool_exec.tools.len(), 3);
 
     let bash = tool_exec.tools.get("Bash").unwrap();

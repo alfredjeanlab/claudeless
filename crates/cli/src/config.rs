@@ -114,14 +114,6 @@ pub struct ToolExecutionConfig {
     #[serde(default)]
     pub mode: ToolExecutionMode,
 
-    /// Root directory for sandboxed execution (simulated mode)
-    #[serde(default)]
-    pub sandbox_root: Option<String>,
-
-    /// Allow real bash execution in simulated mode
-    #[serde(default)]
-    pub allow_real_bash: bool,
-
     /// Per-tool configuration overrides
     #[serde(default)]
     pub tools: HashMap<String, ToolConfig>,
@@ -153,10 +145,8 @@ pub enum ToolExecutionMode {
     Disabled,
     /// Return pre-configured results from scenario config
     Mock,
-    /// Execute built-in tools in a sandbox
-    Simulated,
-    /// Spawn real MCP servers for tool execution
-    RealMcp,
+    /// Execute built-in tools directly
+    Live,
 }
 
 /// A single response rule

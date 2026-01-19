@@ -39,8 +39,7 @@ input = { file_path = "/src/main.rs" }
 
 # Tool execution configuration
 [tool_execution]
-mode = "simulated"
-sandbox_root = "/tmp/claudeless-sandbox"
+mode = "live"
 
 # Per-tool settings
 [tool_execution.tools.Bash]

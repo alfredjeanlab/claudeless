@@ -297,16 +297,13 @@ Configure how tools are executed during simulation.
 |------|-------------|
 | `disabled` | No tool execution (default) |
 | `mock` | Return pre-configured results from scenario |
-| `simulated` | Execute built-in tools in a sandbox |
-| `real_mcp` | Spawn real MCP servers |
+| `live` | Execute built-in tools directly |
 
 ### Configuration
 
 ```toml
 [tool_execution]
-mode = "simulated"
-sandbox_root = "/tmp/claudeless-sandbox"
-allow_real_bash = false
+mode = "live"
 
 [tool_execution.tools.Bash]
 auto_approve = true

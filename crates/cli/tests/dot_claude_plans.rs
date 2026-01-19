@@ -39,7 +39,7 @@ fn create_plan_scenario(dir: &TempDir) -> PathBuf {
         },
         "permission_mode": "plan",
         "tool_execution": {
-            "mode": "simulated",
+            "mode": "live",
             "tools": {
                 "ExitPlanMode": {
                     "auto_approve": true

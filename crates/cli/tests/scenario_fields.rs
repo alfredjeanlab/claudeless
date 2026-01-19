@@ -370,7 +370,7 @@ mod tool_config {
             response = "ok"
 
             [tool_execution]
-            mode = "simulated"
+            mode = "live"
 
             [tool_execution.tools.Bash]
             auto_approve = true
@@ -454,7 +454,7 @@ mod tool_config {
             response = "ok"
 
             [tool_execution]
-            mode = "simulated"
+            mode = "live"
 
             [tool_execution.tools.Bash]
             auto_approve = true
@@ -520,8 +520,7 @@ mod full_featured {
 
             # Tool execution
             [tool_execution]
-            mode = "simulated"
-            sandbox_root = "/tmp/test-sandbox"
+            mode = "live"
 
             [tool_execution.tools.Bash]
             auto_approve = true

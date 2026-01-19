@@ -36,9 +36,7 @@ fn default_cli() -> Cli {
         delay_ms: None,
         tui: false,
         no_tui: false,
-        tool_execution_mode: None,
-        sandbox_root: None,
-        allow_real_bash: false,
+        tool_mode: None,
     }
 }
 

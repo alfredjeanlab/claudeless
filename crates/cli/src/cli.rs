@@ -141,16 +141,8 @@ pub struct Cli {
     pub no_tui: bool,
 
     /// Tool execution mode (overrides scenario config)
-    #[arg(long, value_enum, env = "CLAUDELESS_TOOL_EXECUTION_MODE")]
-    pub tool_execution_mode: Option<CliToolExecutionMode>,
-
-    /// Root directory for sandboxed tool execution
-    #[arg(long, env = "CLAUDELESS_SANDBOX_ROOT")]
-    pub sandbox_root: Option<String>,
-
-    /// Allow real Bash execution in simulated mode
-    #[arg(long, env = "CLAUDELESS_ALLOW_REAL_BASH")]
-    pub allow_real_bash: bool,
+    #[arg(long, value_enum, env = "CLAUDELESS_TOOL_MODE")]
+    pub tool_mode: Option<CliToolExecutionMode>,
 }
 
 /// CLI-friendly tool execution mode enum
@@ -160,10 +152,8 @@ pub enum CliToolExecutionMode {
     Disabled,
     /// Return pre-configured results from scenario
     Mock,
-    /// Execute built-in tools in sandbox
-    Simulated,
-    /// Spawn real MCP servers
-    RealMcp,
+    /// Execute built-in tools directly
+    Live,
 }
 
 impl From<CliToolExecutionMode> for ToolExecutionMode {
@@ -171,8 +161,7 @@ impl From<CliToolExecutionMode> for ToolExecutionMode {
         match mode {
             CliToolExecutionMode::Disabled => ToolExecutionMode::Disabled,
             CliToolExecutionMode::Mock => ToolExecutionMode::Mock,
-            CliToolExecutionMode::Simulated => ToolExecutionMode::Simulated,
-            CliToolExecutionMode::RealMcp => ToolExecutionMode::RealMcp,
+            CliToolExecutionMode::Live => ToolExecutionMode::Live,
         }
     }
 }

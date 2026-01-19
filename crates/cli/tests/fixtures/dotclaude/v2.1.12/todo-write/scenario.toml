@@ -12,7 +12,7 @@ tool = "TodoWrite"
 todos = { "$file" = "todo.json" }
 
 [tool_execution]
-mode = "simulated"
+mode = "live"
 
 [tool_execution.tools.TodoWrite]
 auto_approve = true

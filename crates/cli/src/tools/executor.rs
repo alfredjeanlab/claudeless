@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 
-use crate::config::{ToolCallSpec, ToolExecutionConfig, ToolExecutionMode};
+use crate::config::{ToolCallSpec, ToolExecutionMode};
 use crate::permission::{PermissionChecker, PermissionResult};
 
 use super::result::ToolExecutionResult;
@@ -16,27 +16,11 @@ pub struct ExecutionContext {
     /// Working directory for tool execution.
     pub cwd: Option<PathBuf>,
 
-    /// Sandbox root directory (for simulated mode).
-    pub sandbox_root: Option<PathBuf>,
-
-    /// Whether real bash execution is allowed.
-    pub allow_real_bash: bool,
-
     /// Session ID for tracking.
     pub session_id: Option<String>,
 }
 
 impl ExecutionContext {
-    /// Create context from tool execution config.
-    pub fn from_config(config: &ToolExecutionConfig) -> Self {
-        Self {
-            cwd: None,
-            sandbox_root: config.sandbox_root.as_ref().map(PathBuf::from),
-            allow_real_bash: config.allow_real_bash,
-            session_id: None,
-        }
-    }
-
     /// Set the working directory.
     pub fn with_cwd(mut self, cwd: impl Into<PathBuf>) -> Self {
         self.cwd = Some(cwd.into());
@@ -184,8 +168,7 @@ pub fn create_executor(mode: ToolExecutionMode) -> Box<dyn ToolExecutor> {
     match mode {
         ToolExecutionMode::Disabled => Box::new(DisabledExecutor::new()),
         ToolExecutionMode::Mock => Box::new(MockExecutor::new()),
-        ToolExecutionMode::Simulated => Box::new(super::builtin::BuiltinExecutor::new()),
-        ToolExecutionMode::RealMcp => Box::new(super::mcp::McpExecutor::new()),
+        ToolExecutionMode::Live => Box::new(super::builtin::BuiltinExecutor::new()),
     }
 }
 

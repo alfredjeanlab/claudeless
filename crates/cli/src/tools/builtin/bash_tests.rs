@@ -12,24 +12,6 @@ fn test_extract_command() {
 }
 
 #[test]
-fn test_bash_without_real_execution() {
-    let executor = BashExecutor::new();
-    let call = ToolCallSpec {
-        tool: "Bash".to_string(),
-        input: json!({ "command": "ls" }),
-        result: None,
-    };
-    let ctx = BuiltinContext {
-        allow_real_bash: false,
-        ..Default::default()
-    };
-    let result = executor.execute(&call, "toolu_123", &ctx);
-
-    assert!(result.is_error);
-    assert!(result.text().unwrap().contains("disabled"));
-}
-
-#[test]
 fn test_bash_missing_command() {
     let executor = BashExecutor::new();
     let call = ToolCallSpec {
@@ -53,10 +35,7 @@ fn test_bash_real_execution() {
         input: json!({ "command": "echo hello" }),
         result: None,
     };
-    let ctx = BuiltinContext {
-        allow_real_bash: true,
-        ..Default::default()
-    };
+    let ctx = BuiltinContext::default();
     let result = executor.execute(&call, "toolu_123", &ctx);
 
     assert!(!result.is_error);

@@ -34,7 +34,7 @@ impl BuiltinToolExecutor for ReadExecutor {
         &self,
         call: &ToolCallSpec,
         tool_use_id: &str,
-        ctx: &BuiltinContext,
+        _ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
         let path = match Self::extract_path(&call.input) {
             Some(p) => p,
@@ -46,7 +46,7 @@ impl BuiltinToolExecutor for ReadExecutor {
             }
         };
 
-        let resolved_path = ctx.resolve_path(path);
+        let resolved_path = std::path::PathBuf::from(path);
 
         match fs::read_to_string(&resolved_path) {
             Ok(content) => ToolExecutionResult::success(tool_use_id, content),

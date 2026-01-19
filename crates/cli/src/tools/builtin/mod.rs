@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Built-in tool executors for simulated mode.
+//! Built-in tool executors for live mode.
 //!
-//! This module provides sandboxed executors for Claude's built-in tools:
+//! This module provides executors for Claude's built-in tools:
 //! - Bash - Command execution
 //! - Read - File reading
 //! - Write - File writing
@@ -39,8 +39,6 @@ pub use write::WriteExecutor;
 /// Registry of built-in tool executors.
 pub struct BuiltinExecutor {
     executors: HashMap<String, Box<dyn BuiltinToolExecutor>>,
-    sandbox_root: Option<PathBuf>,
-    allow_real_bash: bool,
     /// Optional state writer for TodoWrite/ExitPlanMode tools.
     state_writer: Option<Arc<parking_lot::RwLock<StateWriter>>>,
 }
@@ -66,22 +64,8 @@ impl BuiltinExecutor {
 
         Self {
             executors,
-            sandbox_root: None,
-            allow_real_bash: false,
             state_writer: None,
         }
-    }
-
-    /// Set the sandbox root directory.
-    pub fn with_sandbox_root(mut self, root: impl Into<PathBuf>) -> Self {
-        self.sandbox_root = Some(root.into());
-        self
-    }
-
-    /// Enable real bash execution.
-    pub fn with_real_bash(mut self, allow: bool) -> Self {
-        self.allow_real_bash = allow;
-        self
     }
 
     /// Set the state writer for stateful tools (TodoWrite, ExitPlanMode).
@@ -124,15 +108,10 @@ impl ToolExecutor for BuiltinExecutor {
 
         // Look up the tool executor
         if let Some(executor) = self.executors.get(&call.tool) {
-            let sandbox_ctx = BuiltinContext {
-                sandbox_root: self
-                    .sandbox_root
-                    .clone()
-                    .or_else(|| ctx.sandbox_root.clone()),
-                allow_real_bash: self.allow_real_bash || ctx.allow_real_bash,
+            let builtin_ctx = BuiltinContext {
                 cwd: ctx.cwd.clone(),
             };
-            executor.execute(call, tool_use_id, &sandbox_ctx)
+            executor.execute(call, tool_use_id, &builtin_ctx)
         } else {
             // Return mock result for unknown stateful tools
             if call.tool == "TodoWrite" || call.tool == "ExitPlanMode" {
@@ -158,35 +137,8 @@ impl ToolExecutor for BuiltinExecutor {
 /// Context for built-in tool execution.
 #[derive(Clone, Debug, Default)]
 pub struct BuiltinContext {
-    /// Sandbox root directory for path resolution.
-    pub sandbox_root: Option<PathBuf>,
-    /// Whether real bash execution is allowed.
-    pub allow_real_bash: bool,
     /// Working directory.
     pub cwd: Option<PathBuf>,
-}
-
-impl BuiltinContext {
-    /// Resolve a path within the sandbox, preventing traversal.
-    pub fn resolve_path(&self, path: &str) -> PathBuf {
-        if let Some(ref root) = self.sandbox_root {
-            // Normalize and prevent path traversal
-            // Filter out ParentDir (..) and RootDir (/) to keep paths within sandbox
-            let path = PathBuf::from(path);
-            let normalized: PathBuf = path
-                .components()
-                .filter(|c| {
-                    !matches!(
-                        c,
-                        std::path::Component::ParentDir | std::path::Component::RootDir
-                    )
-                })
-                .collect();
-            root.join(normalized)
-        } else {
-            PathBuf::from(path)
-        }
-    }
 }
 
 /// Trait for individual built-in tool executors.

@@ -48,7 +48,7 @@ fn create_todo_scenario(dir: &TempDir) -> PathBuf {
             ]
         },
         "tool_execution": {
-            "mode": "simulated",
+            "mode": "live",
             "tools": {
                 "TodoWrite": {
                     "auto_approve": true

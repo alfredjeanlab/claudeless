@@ -43,7 +43,6 @@ Built-in tools execute in a sandbox and scenarios control responses.
 
 ## Future Work
 
-- **MCP Server Execution**: Protocol ready, but tools registered manually instead of discovered from running servers
 - **MCP Resources/Prompts**: Only tools protocol supported; resources and prompts not implemented
 - **Slash Commands**: Wider `/command` support
 - **Unimplemented CLI Flags**: See CLI Flags section below

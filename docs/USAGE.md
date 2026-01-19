@@ -29,9 +29,7 @@ These flags and environment variables are unique to claudeless (not in the real 
 | `--delay-ms <MS>` | `CLAUDELESS_DELAY_MS` | Response delay in milliseconds |
 | `--tui` | `CLAUDELESS_TUI` | Force TUI mode |
 | `--no-tui` | — | Force non-TUI mode |
-| `--tool-execution-mode <MODE>` | `CLAUDELESS_TOOL_EXECUTION_MODE` | Tool execution mode |
-| `--sandbox-root <DIR>` | `CLAUDELESS_SANDBOX_ROOT` | Root for sandboxed tools |
-| `--allow-real-bash` | `CLAUDELESS_ALLOW_REAL_BASH` | Allow real bash in simulated mode |
+| `--tool-mode <MODE>` | `CLAUDELESS_TOOL_MODE` | Tool execution mode |
 
 ### Environment Variables
 
@@ -57,8 +55,7 @@ claudeless --failure malformed-json -p "test"
 |------|-------------|
 | `disabled` | No tool execution (default) |
 | `mock` | Return pre-configured results from scenario |
-| `simulated` | Execute built-in tools in sandbox |
-| `real-mcp` | Spawn real MCP servers |
+| `live` | Execute built-in tools directly |
 
 ## Scenario Files
 
@@ -135,8 +132,7 @@ user_name = "TestUser"
 
 ```toml
 [tool_execution]
-mode = "simulated"
-sandbox_root = "/tmp/sandbox"
+mode = "live"
 
 [tool_execution.tools.Bash]
 auto_approve = true
@@ -185,11 +181,10 @@ claudeless --failure rate-limit -p "test" || echo "Handled rate limit"
 claudeless --scenario test.toml --capture /tmp/log.jsonl -p "hello"
 ```
 
-**Sandboxed tool execution:**
+**Live tool execution:**
 ```bash
 claudeless --scenario tools.toml \
-           --tool-execution-mode simulated \
-           --sandbox-root /tmp/sandbox \
+           --tool-mode live \
            -p "edit the file"
 ```
 

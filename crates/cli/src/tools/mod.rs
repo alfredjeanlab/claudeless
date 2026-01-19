@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Tool execution module for simulated tool calls.
+//! Tool execution module for tool calls.
 //!
-//! This module provides tool execution capabilities with three levels:
-//! - **Mock Results** - Return pre-configured results from scenario config
-//! - **Simulated Built-in Tools** - Sandboxed execution of Bash, Read, Write, etc.
-//! - **Real MCP Server Execution** - Spawn actual MCP servers
+//! This module provides tool execution capabilities with three modes:
+//! - **Disabled** - No tool execution
+//! - **Mock** - Return pre-configured results from scenario config
+//! - **Live** - Execute built-in tools directly (Bash, Read, Write, etc.)
 //!
 //! # Example
 //!
@@ -27,7 +27,6 @@
 
 pub mod builtin;
 pub mod executor;
-pub mod mcp;
 pub mod result;
 
 pub use executor::{

@@ -214,7 +214,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Determine execution mode (CLI flag overrides scenario config)
         let execution_mode = cli
-            .tool_execution_mode
+            .tool_mode
             .clone()
             .map(ToolExecutionMode::from)
             .or_else(|| {
@@ -231,14 +231,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ref cwd) = cli.cwd {
                 ctx = ctx.with_cwd(cwd);
             }
-            if let Some(ref sandbox_root) = cli.sandbox_root {
-                ctx.sandbox_root = Some(std::path::PathBuf::from(sandbox_root));
-            }
-            ctx.allow_real_bash = cli.allow_real_bash;
 
             // Create executor with state writer for stateful tools
             let executor: Box<dyn ToolExecutor> = match execution_mode {
-                ToolExecutionMode::Simulated => {
+                ToolExecutionMode::Live => {
                     Box::new(BuiltinExecutor::new().with_state_writer(Arc::clone(&state_writer)))
                 }
                 _ => create_executor(execution_mode),

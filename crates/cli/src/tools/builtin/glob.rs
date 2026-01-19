@@ -55,15 +55,14 @@ impl BuiltinToolExecutor for GlobExecutor {
 
         // Get the base directory
         let base_dir = Self::extract_path(&call.input)
-            .map(|p| ctx.resolve_path(p))
+            .map(PathBuf::from)
             .or_else(|| ctx.cwd.clone())
-            .or_else(|| ctx.sandbox_root.clone())
             .unwrap_or_else(|| PathBuf::from("."));
 
         // Construct full pattern
         let full_pattern = if pattern.starts_with('/') || pattern.contains(':') {
             // Absolute pattern or Windows path
-            ctx.resolve_path(pattern).to_string_lossy().to_string()
+            pattern.to_string()
         } else {
             // Relative pattern
             base_dir.join(pattern).to_string_lossy().to_string()
