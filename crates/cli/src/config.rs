@@ -83,6 +83,11 @@ pub struct ScenarioConfig {
     /// Values: "default", "plan", "bypass-permissions", "accept-edits", "dont-ask", "delegate"
     #[serde(default)]
     pub permission_mode: Option<String>,
+
+    /// Delay in milliseconds before compact completes (default: 500)
+    /// Used for deterministic testing of /compact command
+    #[serde(default)]
+    pub compact_delay_ms: Option<u64>,
 }
 
 impl Default for ScenarioConfig {
@@ -102,6 +107,7 @@ impl Default for ScenarioConfig {
             working_directory: None,
             trusted: true, // Default to trusted
             permission_mode: None,
+            compact_delay_ms: None,
         }
     }
 }
