@@ -1,5 +1,7 @@
 # Plan: Remove Sandbox and Simplify Tool Execution Modes
 
+**Root Feature:** `cl-54cc`
+
 ## Summary
 
 Remove all sandbox-related code and simplify tool execution to three modes: `disabled`, `mock`, `live`.

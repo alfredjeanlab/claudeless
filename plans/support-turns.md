@@ -1,5 +1,7 @@
 # Refactor: Merge Conversations into Response Turns
 
+**Root Feature:** `cl-d735`
+
 ## Overview
 
 Simplify the scenario format by removing the separate `conversations` map and instead allowing response rules to have optional follow-up `turns`. This provides multi-turn conversation support with a simpler, more intuitive API.

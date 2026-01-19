@@ -1,5 +1,7 @@
 # Plan: Fix /clear and /compact Support
 
+**Root Feature:** `cl-58e6`
+
 ## Overview
 
 Implement and fix the `/clear` and `/compact` slash commands in the TUI to match the real Claude CLI v2.1.12 behavior. The `/clear` command is currently unimplemented, and `/compact` has rendering discrepancies.

@@ -1,5 +1,7 @@
 # Fix JSON Output Format
 
+**Root Feature:** `cl-693d`
+
 ## Overview
 
 Fix the JSON output format to match real Claude CLI v2.1.12 behavior. The main issues are:

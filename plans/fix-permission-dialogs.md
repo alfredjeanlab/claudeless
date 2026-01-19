@@ -1,5 +1,7 @@
 # Implementation Plan: Fix Permission Dialogs
 
+**Root Feature:** `cl-cbf7`
+
 ## Overview
 
 Fix and implement the TUI permission dialogs system to match real Claude Code behavior. This involves:
