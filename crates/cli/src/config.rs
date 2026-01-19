@@ -166,8 +166,10 @@ pub struct ResponseRule {
     /// Pattern to match against prompt
     pub pattern: PatternSpec,
 
-    /// Response to return when pattern matches
-    pub response: ResponseSpec,
+    /// Response to return when pattern matches.
+    /// Optional when `failure` is set (failures don't produce responses).
+    #[serde(default)]
+    pub response: Option<ResponseSpec>,
 
     /// Optional failure to inject instead of responding
     #[serde(default)]

@@ -235,27 +235,21 @@ Inject failures instead of normal responses for error handling tests.
 
 ### Examples
 
-Note: `response` is still required when using failures (use empty string `""`).
-
 ```toml
 [[responses]]
 pattern = { type = "contains", text = "timeout" }
-response = ""
 failure = { type = "connection_timeout", after_ms = 100 }
 
 [[responses]]
 pattern = { type = "contains", text = "auth" }
-response = ""
 failure = { type = "auth_error", message = "API key expired" }
 
 [[responses]]
 pattern = { type = "contains", text = "rate" }
-response = ""
 failure = { type = "rate_limit", retry_after = 30 }
 
 [[responses]]
 pattern = { type = "contains", text = "partial" }
-response = ""
 failure = { type = "partial_response", partial_text = "I was about to..." }
 ```
 
@@ -423,17 +417,14 @@ name = "failures"
 
 [[responses]]
 pattern = { type = "contains", text = "network" }
-response = ""
 failure = { type = "network_unreachable" }
 
 [[responses]]
 pattern = { type = "contains", text = "timeout" }
-response = ""
 failure = { type = "connection_timeout", after_ms = 5000 }
 
 [[responses]]
 pattern = { type = "contains", text = "rate" }
-response = ""
 failure = { type = "rate_limit", retry_after = 60 }
 
 [[responses]]

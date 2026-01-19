@@ -118,7 +118,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 FailureExecutor::execute(failure_spec, &mut stderr).await?;
                 return Ok(());
             }
-            (Some(rule.response.clone()), Some("matched".to_string()))
+            (rule.response.clone(), Some("matched".to_string()))
         } else if let Some(default) = s.default_response() {
             (Some(default.clone()), Some("default".to_string()))
         } else {

@@ -207,7 +207,9 @@ fn resolve_file_references_in_config(
 
     // Resolve in responses
     for rule in &mut config.responses {
-        resolve_file_references_in_response(&mut rule.response, base_dir)?;
+        if let Some(ref mut response) = rule.response {
+            resolve_file_references_in_response(response, base_dir)?;
+        }
     }
 
     // Resolve in conversations

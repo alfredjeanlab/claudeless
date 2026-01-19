@@ -36,12 +36,12 @@ input = { command = "ls" }
     let config: ScenarioConfig = toml::from_str(toml_str).unwrap();
     let rule = &config.responses[0];
     match &rule.response {
-        ResponseSpec::Detailed {
+        Some(ResponseSpec::Detailed {
             text,
             delay_ms,
             tool_calls,
             ..
-        } => {
+        }) => {
             assert_eq!(text, "Response text");
             assert_eq!(*delay_ms, Some(100));
             assert_eq!(tool_calls.len(), 1);
@@ -197,7 +197,7 @@ result = "file1.txt\nfile2.txt"
 
     // Check tool call has result
     let rule = &config.responses[0];
-    if let ResponseSpec::Detailed { tool_calls, .. } = &rule.response {
+    if let Some(ResponseSpec::Detailed { tool_calls, .. }) = &rule.response {
         assert_eq!(tool_calls.len(), 1);
         assert_eq!(
             tool_calls[0].result,

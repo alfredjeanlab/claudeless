@@ -68,7 +68,7 @@ impl SimulatorBuilder {
             pattern: PatternSpec::Contains {
                 text: pattern.to_string(),
             },
-            response: ResponseSpec::Simple(response.to_string()),
+            response: Some(ResponseSpec::Simple(response.to_string())),
             failure: None,
             max_matches: None,
         });
@@ -81,7 +81,7 @@ impl SimulatorBuilder {
             pattern: PatternSpec::Exact {
                 text: pattern.to_string(),
             },
-            response: ResponseSpec::Simple(response.to_string()),
+            response: Some(ResponseSpec::Simple(response.to_string())),
             failure: None,
             max_matches: None,
         });
@@ -94,7 +94,7 @@ impl SimulatorBuilder {
             pattern: PatternSpec::Regex {
                 pattern: pattern.to_string(),
             },
-            response: ResponseSpec::Simple(response.to_string()),
+            response: Some(ResponseSpec::Simple(response.to_string())),
             failure: None,
             max_matches: None,
         });
@@ -205,8 +205,9 @@ impl SimulatorHandle {
 
                 let (text, matched_rule) = if let Some(rule) = s.match_prompt(prompt) {
                     let text = match &rule.response {
-                        ResponseSpec::Simple(text) => text.clone(),
-                        ResponseSpec::Detailed { text, .. } => text.clone(),
+                        Some(ResponseSpec::Simple(text)) => text.clone(),
+                        Some(ResponseSpec::Detailed { text, .. }) => text.clone(),
+                        None => String::new(),
                     };
                     (text, Some("matched".to_string()))
                 } else if let Some(default) = s.default_response() {

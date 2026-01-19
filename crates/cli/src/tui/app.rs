@@ -755,8 +755,9 @@ impl TuiAppState {
             let mut scenario = inner.scenario.lock();
             if let Some(rule) = scenario.match_prompt(&prompt) {
                 match &rule.response {
-                    crate::config::ResponseSpec::Simple(text) => text.clone(),
-                    crate::config::ResponseSpec::Detailed { text, .. } => text.clone(),
+                    Some(crate::config::ResponseSpec::Simple(text)) => text.clone(),
+                    Some(crate::config::ResponseSpec::Detailed { text, .. }) => text.clone(),
+                    None => String::new(),
                 }
             } else if let Some(default) = scenario.default_response() {
                 match default {

@@ -19,7 +19,7 @@ fn test_exact_match() {
         pattern: PatternSpec::Exact {
             text: "hello".to_string(),
         },
-        response: ResponseSpec::Simple("Hi!".to_string()),
+        response: Some(ResponseSpec::Simple("Hi!".to_string())),
         failure: None,
         max_matches: None,
     }]);
@@ -37,7 +37,7 @@ fn test_regex_match() {
         pattern: PatternSpec::Regex {
             pattern: r"(?i)^hello\s+\w+$".to_string(),
         },
-        response: ResponseSpec::Simple("Matched!".to_string()),
+        response: Some(ResponseSpec::Simple("Matched!".to_string())),
         failure: None,
         max_matches: None,
     }]);
@@ -56,7 +56,7 @@ fn test_glob_match() {
         pattern: PatternSpec::Glob {
             pattern: "*.txt".to_string(),
         },
-        response: ResponseSpec::Simple("File!".to_string()),
+        response: Some(ResponseSpec::Simple("File!".to_string())),
         failure: None,
         max_matches: None,
     }]);
@@ -74,7 +74,7 @@ fn test_contains_match() {
         pattern: PatternSpec::Contains {
             text: "error".to_string(),
         },
-        response: ResponseSpec::Simple("Found error!".to_string()),
+        response: Some(ResponseSpec::Simple("Found error!".to_string())),
         failure: None,
         max_matches: None,
     }]);
@@ -90,7 +90,7 @@ fn test_contains_match() {
 fn test_any_match() {
     let config = simple_config(vec![ResponseRule {
         pattern: PatternSpec::Any,
-        response: ResponseSpec::Simple("Anything!".to_string()),
+        response: Some(ResponseSpec::Simple("Anything!".to_string())),
         failure: None,
         max_matches: None,
     }]);
@@ -106,7 +106,7 @@ fn test_any_match() {
 fn test_max_matches() {
     let config = simple_config(vec![ResponseRule {
         pattern: PatternSpec::Any,
-        response: ResponseSpec::Simple("Limited!".to_string()),
+        response: Some(ResponseSpec::Simple("Limited!".to_string())),
         failure: None,
         max_matches: Some(2),
     }]);
@@ -125,7 +125,7 @@ fn test_rule_ordering() {
             pattern: PatternSpec::Exact {
                 text: "specific".to_string(),
             },
-            response: ResponseSpec::Simple("Exact!".to_string()),
+            response: Some(ResponseSpec::Simple("Exact!".to_string())),
             failure: None,
             max_matches: None,
         },
@@ -133,13 +133,13 @@ fn test_rule_ordering() {
             pattern: PatternSpec::Contains {
                 text: "spec".to_string(),
             },
-            response: ResponseSpec::Simple("Contains!".to_string()),
+            response: Some(ResponseSpec::Simple("Contains!".to_string())),
             failure: None,
             max_matches: None,
         },
         ResponseRule {
             pattern: PatternSpec::Any,
-            response: ResponseSpec::Simple("Any!".to_string()),
+            response: Some(ResponseSpec::Simple("Any!".to_string())),
             failure: None,
             max_matches: None,
         },
@@ -149,15 +149,15 @@ fn test_rule_ordering() {
 
     // Exact match takes priority
     let rule = scenario.match_prompt("specific").unwrap();
-    assert!(matches!(&rule.response, ResponseSpec::Simple(s) if s == "Exact!"));
+    assert!(matches!(&rule.response, Some(ResponseSpec::Simple(s)) if s == "Exact!"));
 
     // Contains match for non-exact
     let rule = scenario.match_prompt("specification").unwrap();
-    assert!(matches!(&rule.response, ResponseSpec::Simple(s) if s == "Contains!"));
+    assert!(matches!(&rule.response, Some(ResponseSpec::Simple(s)) if s == "Contains!"));
 
     // Any match for other
     let rule = scenario.match_prompt("other").unwrap();
-    assert!(matches!(&rule.response, ResponseSpec::Simple(s) if s == "Any!"));
+    assert!(matches!(&rule.response, Some(ResponseSpec::Simple(s)) if s == "Any!"));
 }
 
 #[test]
@@ -169,7 +169,7 @@ fn test_default_response() {
             pattern: PatternSpec::Exact {
                 text: "match".to_string(),
             },
-            response: ResponseSpec::Simple("Matched!".to_string()),
+            response: Some(ResponseSpec::Simple("Matched!".to_string())),
             failure: None,
             max_matches: None,
         }],
@@ -192,7 +192,7 @@ fn test_default_response() {
 fn test_reset_counts() {
     let config = simple_config(vec![ResponseRule {
         pattern: PatternSpec::Any,
-        response: ResponseSpec::Simple("Limited!".to_string()),
+        response: Some(ResponseSpec::Simple("Limited!".to_string())),
         failure: None,
         max_matches: Some(1),
     }]);
@@ -213,7 +213,7 @@ fn test_invalid_regex() {
         pattern: PatternSpec::Regex {
             pattern: "[invalid".to_string(),
         },
-        response: ResponseSpec::Simple("Never!".to_string()),
+        response: Some(ResponseSpec::Simple("Never!".to_string())),
         failure: None,
         max_matches: None,
     }]);
@@ -229,7 +229,7 @@ fn test_invalid_glob() {
         pattern: PatternSpec::Glob {
             pattern: "[invalid".to_string(),
         },
-        response: ResponseSpec::Simple("Never!".to_string()),
+        response: Some(ResponseSpec::Simple("Never!".to_string())),
         failure: None,
         max_matches: None,
     }]);
