@@ -9,7 +9,7 @@ Scenarios define how the Claudeless simulator responds to prompts. They are TOML
 - [Pattern Specifications](#pattern-specifications)
 - [Response Specifications](#response-specifications)
 - [Failure Injection](#failure-injection)
-- [Multi-Turn Conversations](#multi-turn-conversations)
+- [Turn Sequences](#turn-sequences)
 - [Tool Execution](#tool-execution)
 - [Validation Rules](#validation-rules)
 - [Examples](#examples)
@@ -87,7 +87,6 @@ response = "Hello from Claudeless!"
 |-------|------|-------------|
 | `responses` | array | Response rules (evaluated in order) |
 | `default_response` | object | Fallback when no pattern matches |
-| `conversations` | object | Multi-turn conversation specs |
 | `tool_execution` | object | Tool execution configuration |
 
 ---
@@ -255,27 +254,29 @@ failure = { type = "partial_response", partial_text = "I was about to..." }
 
 ---
 
-## Multi-Turn Conversations
+## Turn Sequences
 
-Define conversation sequences with multiple exchanges.
+Response rules can have follow-up `turns` for multi-step interactions.
 
-### Structure
+### Basic Turn Sequence
 
 ```toml
-[conversations.login-flow]
+[[responses]]
+pattern = { type = "contains", text = "login" }
+response = "Enter username:"
 turns = [
-    { expect = { type = "contains", text = "login" }, response = "Enter username:" },
     { expect = { type = "any" }, response = "Enter password:" },
     { expect = { type = "any" }, response = "Login successful!" }
 ]
-
-[conversations.code-review]
-turns = [
-    { expect = { type = "contains", text = "review" }, response = "I'll review your code." },
-    { expect = { type = "any" }, response = "Here are the issues..." },
-    { expect = { type = "contains", text = "fix" }, response = "Here's the corrected code." }
-]
 ```
+
+### How Turn Sequences Work
+
+1. When `pattern` matches, return `response` and activate the turn sequence
+2. Subsequent prompts match against the current turn's `expect` pattern
+3. If turn matches, return its `response` and advance to next turn
+4. When all turns complete, sequence deactivates
+5. If a turn doesn't match, sequence deactivates and normal matching resumes
 
 ### Turn Fields
 
@@ -284,6 +285,17 @@ turns = [
 | `expect` | pattern | Pattern to match for this turn |
 | `response` | string/object | Response for this turn |
 | `failure` | object | Optional failure for this turn |
+
+### Turns with Failures
+
+```toml
+[[responses]]
+pattern = { type = "contains", text = "auth" }
+response = "Authenticating..."
+turns = [
+    { expect = { type = "any" }, response = "", failure = { type = "auth_error", message = "Invalid token" } }
+]
+```
 
 ---
 

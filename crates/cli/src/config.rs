@@ -33,10 +33,6 @@ pub struct ScenarioConfig {
     #[serde(default)]
     pub responses: Vec<ResponseRule>,
 
-    /// Multi-turn conversation sequences
-    #[serde(default)]
-    pub conversations: HashMap<String, ConversationSpec>,
-
     /// Tool execution configuration
     #[serde(default)]
     pub tool_execution: Option<ToolExecutionConfig>,
@@ -91,7 +87,6 @@ impl Default for ScenarioConfig {
             name: String::new(),
             default_response: None,
             responses: Vec::new(),
-            conversations: HashMap::new(),
             tool_execution: None,
             default_model: None,
             claude_version: None,
@@ -153,7 +148,7 @@ pub enum ToolExecutionMode {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ResponseRule {
-    /// Pattern to match against prompt
+    /// Pattern to match against prompt (entry pattern for turn sequences)
     pub pattern: PatternSpec,
 
     /// Response to return when pattern matches.
@@ -168,6 +163,11 @@ pub struct ResponseRule {
     /// How many times this rule can match (None = unlimited)
     #[serde(default)]
     pub max_matches: Option<u32>,
+
+    /// Optional follow-up turns after initial match.
+    /// When present, subsequent prompts match against turns in sequence.
+    #[serde(default)]
+    pub turns: Vec<ConversationTurn>,
 }
 
 /// Pattern specification for matching prompts
@@ -247,14 +247,6 @@ pub enum FailureSpec {
     OutOfCredits,
     PartialResponse { partial_text: String },
     MalformedJson { raw: String },
-}
-
-/// Multi-turn conversation specification
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct ConversationSpec {
-    /// Ordered turns in the conversation
-    pub turns: Vec<ConversationTurn>,
 }
 
 /// A single turn in a multi-turn conversation

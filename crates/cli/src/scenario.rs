@@ -3,7 +3,7 @@
 
 //! Scenario matching and loading.
 
-use crate::config::{PatternSpec, ResponseRule, ResponseSpec, ScenarioConfig, ToolCallSpec};
+use crate::config::{FailureSpec, PatternSpec, ResponseSpec, ScenarioConfig, ToolCallSpec};
 use std::path::Path;
 use std::sync::Arc;
 use thiserror::Error;
@@ -37,12 +37,44 @@ pub enum ScenarioError {
     },
 }
 
+/// Result of matching a prompt
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MatchResult {
+    /// Matched a top-level response rule
+    Response { rule_index: usize },
+    /// Matched a turn within an active sequence
+    Turn {
+        rule_index: usize,
+        turn_index: usize,
+    },
+}
+
 /// Compiled scenario ready for matching
-#[derive(Debug)]
 pub struct Scenario {
     config: ScenarioConfig,
     compiled_patterns: Vec<CompiledRule>,
     match_counts: Vec<u32>,
+
+    // Turn sequence state
+    /// Index of the response rule with an active turn sequence (None = no active sequence)
+    active_rule: Option<usize>,
+    /// Current turn index within the active rule's turns (0-indexed)
+    current_turn: usize,
+    /// Compiled matchers for turns (indexed by rule_index, then turn_index)
+    compiled_turns: Vec<Vec<Matcher>>,
+}
+
+impl std::fmt::Debug for Scenario {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Scenario")
+            .field("config", &self.config)
+            .field("compiled_patterns", &self.compiled_patterns)
+            .field("match_counts", &self.match_counts)
+            .field("active_rule", &self.active_rule)
+            .field("current_turn", &self.current_turn)
+            .field("compiled_turns_count", &self.compiled_turns.len())
+            .finish()
+    }
 }
 
 /// Compiled matcher type for pattern matching
@@ -126,25 +158,68 @@ impl Scenario {
             }
         }
 
-        // Compile response patterns
+        // Compile response patterns and turn patterns
         let mut compiled = Vec::new();
+        let mut compiled_turns = Vec::new();
+
         for (idx, rule) in config.responses.iter().enumerate() {
             let matcher = compile_pattern(&rule.pattern)?;
             compiled.push(CompiledRule {
                 matcher,
                 rule_index: idx,
             });
+
+            // Compile turn patterns for this rule
+            let mut turn_matchers = Vec::new();
+            for turn in &rule.turns {
+                turn_matchers.push(compile_pattern(&turn.expect)?);
+            }
+            compiled_turns.push(turn_matchers);
         }
+
         let match_counts = vec![0; config.responses.len()];
+
         Ok(Self {
             config,
             compiled_patterns: compiled,
             match_counts,
+            active_rule: None,
+            current_turn: 0,
+            compiled_turns,
         })
     }
 
     /// Find matching response for a prompt
-    pub fn match_prompt(&mut self, prompt: &str) -> Option<&ResponseRule> {
+    pub fn match_prompt(&mut self, prompt: &str) -> Option<MatchResult> {
+        // If we have an active turn sequence, try to match the current turn
+        if let Some(rule_idx) = self.active_rule {
+            let turn_idx = self.current_turn;
+            let rule = &self.config.responses[rule_idx];
+
+            if turn_idx < rule.turns.len() {
+                let matcher = &self.compiled_turns[rule_idx][turn_idx];
+                if matcher(prompt) {
+                    self.current_turn += 1;
+
+                    // Deactivate if we've completed all turns
+                    if self.current_turn >= rule.turns.len() {
+                        self.active_rule = None;
+                        self.current_turn = 0;
+                    }
+
+                    return Some(MatchResult::Turn {
+                        rule_index: rule_idx,
+                        turn_index: turn_idx,
+                    });
+                }
+            }
+
+            // Turn didn't match - deactivate sequence and fall through to normal matching
+            self.active_rule = None;
+            self.current_turn = 0;
+        }
+
+        // Normal response matching
         for compiled in &self.compiled_patterns {
             let rule = &self.config.responses[compiled.rule_index];
 
@@ -157,11 +232,59 @@ impl Scenario {
 
             if (compiled.matcher)(prompt) {
                 self.match_counts[compiled.rule_index] += 1;
-                return Some(rule);
+
+                // If this rule has turns, activate the sequence
+                if !rule.turns.is_empty() {
+                    self.active_rule = Some(compiled.rule_index);
+                    self.current_turn = 0;
+                }
+
+                return Some(MatchResult::Response {
+                    rule_index: compiled.rule_index,
+                });
             }
         }
 
         None
+    }
+
+    /// Get response for a match result
+    pub fn get_response(&self, result: &MatchResult) -> Option<&ResponseSpec> {
+        match result {
+            MatchResult::Response { rule_index } => {
+                self.config.responses[*rule_index].response.as_ref()
+            }
+            MatchResult::Turn {
+                rule_index,
+                turn_index,
+            } => Some(&self.config.responses[*rule_index].turns[*turn_index].response),
+        }
+    }
+
+    /// Get failure for a match result (if any)
+    pub fn get_failure(&self, result: &MatchResult) -> Option<&FailureSpec> {
+        match result {
+            MatchResult::Response { rule_index } => {
+                self.config.responses[*rule_index].failure.as_ref()
+            }
+            MatchResult::Turn {
+                rule_index,
+                turn_index,
+            } => self.config.responses[*rule_index].turns[*turn_index]
+                .failure
+                .as_ref(),
+        }
+    }
+
+    /// Check if a turn sequence is active
+    pub fn has_active_sequence(&self) -> bool {
+        self.active_rule.is_some()
+    }
+
+    /// Reset turn state (useful for tests)
+    pub fn reset_turns(&mut self) {
+        self.active_rule = None;
+        self.current_turn = 0;
     }
 
     /// Get the default response if configured
@@ -179,11 +302,12 @@ impl Scenario {
         &self.config
     }
 
-    /// Reset match counts (useful for tests)
+    /// Reset all state including match counts and turns
     pub fn reset_counts(&mut self) {
         for count in &mut self.match_counts {
             *count = 0;
         }
+        self.reset_turns();
     }
 }
 
@@ -205,16 +329,13 @@ fn resolve_file_references_in_config(
         resolve_file_references_in_response(response, base_dir)?;
     }
 
-    // Resolve in responses
+    // Resolve in responses and their turns
     for rule in &mut config.responses {
         if let Some(ref mut response) = rule.response {
             resolve_file_references_in_response(response, base_dir)?;
         }
-    }
-
-    // Resolve in conversations
-    for conv in config.conversations.values_mut() {
-        for turn in &mut conv.turns {
+        // Resolve in turns
+        for turn in &mut rule.turns {
             resolve_file_references_in_response(&mut turn.response, base_dir)?;
         }
     }

@@ -100,9 +100,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Match prompt to get response
     let (response, matched_rule) = if let Some(ref mut s) = scenario {
-        if let Some(rule) = s.match_prompt(&prompt) {
+        if let Some(result) = s.match_prompt(&prompt) {
             // Check for failure in rule
-            if let Some(ref failure_spec) = rule.failure {
+            if let Some(failure_spec) = s.get_failure(&result) {
                 let mut stderr = io::stderr();
 
                 if let Some(ref log) = capture {
@@ -118,7 +118,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 FailureExecutor::execute(failure_spec, &mut stderr).await?;
                 return Ok(());
             }
-            (rule.response.clone(), Some("matched".to_string()))
+            (
+                s.get_response(&result).cloned(),
+                Some("matched".to_string()),
+            )
         } else if let Some(default) = s.default_response() {
             (Some(default.clone()), Some("default".to_string()))
         } else {

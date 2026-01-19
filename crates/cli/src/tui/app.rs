@@ -753,8 +753,8 @@ impl TuiAppState {
         // Match scenario
         let response_text = {
             let mut scenario = inner.scenario.lock();
-            if let Some(rule) = scenario.match_prompt(&prompt) {
-                match &rule.response {
+            if let Some(result) = scenario.match_prompt(&prompt) {
+                match scenario.get_response(&result) {
                     Some(crate::config::ResponseSpec::Simple(text)) => text.clone(),
                     Some(crate::config::ResponseSpec::Detailed { text, .. }) => text.clone(),
                     None => String::new(),

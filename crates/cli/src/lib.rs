@@ -29,8 +29,8 @@ pub use api::{BinarySimulatorHandle, SimulatorBuilder, SimulatorHandle};
 pub use capture::{CaptureLog, CapturedArgs, CapturedInteraction, CapturedOutcome};
 pub use cli::{Cli, FailureMode, OutputFormat};
 pub use config::{
-    ConversationSpec, ConversationTurn, FailureSpec, PatternSpec, ResponseRule, ResponseSpec,
-    ScenarioConfig, ToolCallSpec, ToolExecutionConfig, ToolExecutionMode, UsageSpec,
+    ConversationTurn, FailureSpec, PatternSpec, ResponseRule, ResponseSpec, ScenarioConfig,
+    ToolCallSpec, ToolExecutionConfig, ToolExecutionMode, UsageSpec,
 };
 pub use failure::FailureExecutor;
 pub use mcp::{
@@ -42,7 +42,7 @@ pub use output::{
     Usage,
 };
 pub use permission::{PermissionBypass, PermissionChecker, PermissionMode, PermissionResult};
-pub use scenario::{Scenario, ScenarioError};
+pub use scenario::{MatchResult, Scenario, ScenarioError};
 pub use session::SessionContext;
 pub use state::StateWriter;
 pub use tools::{

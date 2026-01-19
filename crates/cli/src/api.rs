@@ -5,7 +5,7 @@
 
 use crate::capture::{CaptureLog, CapturedArgs, CapturedInteraction, CapturedOutcome};
 use crate::config::{PatternSpec, ResponseRule, ResponseSpec, ScenarioConfig};
-use crate::scenario::{Scenario, ScenarioError};
+use crate::scenario::{MatchResult, Scenario, ScenarioError};
 use parking_lot::Mutex;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -71,6 +71,7 @@ impl SimulatorBuilder {
             response: Some(ResponseSpec::Simple(response.to_string())),
             failure: None,
             max_matches: None,
+            turns: Vec::new(),
         });
         self
     }
@@ -84,6 +85,7 @@ impl SimulatorBuilder {
             response: Some(ResponseSpec::Simple(response.to_string())),
             failure: None,
             max_matches: None,
+            turns: Vec::new(),
         });
         self
     }
@@ -97,6 +99,7 @@ impl SimulatorBuilder {
             response: Some(ResponseSpec::Simple(response.to_string())),
             failure: None,
             max_matches: None,
+            turns: Vec::new(),
         });
         self
     }
@@ -203,13 +206,31 @@ impl SimulatorHandle {
                     cwd: None,
                 };
 
-                let (text, matched_rule) = if let Some(rule) = s.match_prompt(prompt) {
-                    let text = match &rule.response {
-                        Some(ResponseSpec::Simple(text)) => text.clone(),
-                        Some(ResponseSpec::Detailed { text, .. }) => text.clone(),
-                        None => String::new(),
-                    };
-                    (text, Some("matched".to_string()))
+                let (text, matched_rule) = if let Some(result) = s.match_prompt(prompt) {
+                    // Check for failure first
+                    if s.get_failure(&result).is_some() {
+                        // TODO: Handle failure injection
+                        (String::new(), Some("failure".to_string()))
+                    } else {
+                        let response = s.get_response(&result);
+                        let text = match response {
+                            Some(ResponseSpec::Simple(text)) => text.clone(),
+                            Some(ResponseSpec::Detailed { text, .. }) => text.clone(),
+                            None => String::new(),
+                        };
+                        let matched = match result {
+                            MatchResult::Response { rule_index } => {
+                                format!("response[{}]", rule_index)
+                            }
+                            MatchResult::Turn {
+                                rule_index,
+                                turn_index,
+                            } => {
+                                format!("response[{}].turn[{}]", rule_index, turn_index)
+                            }
+                        };
+                        (text, Some(matched))
+                    }
                 } else if let Some(default) = s.default_response() {
                     let text = match default {
                         ResponseSpec::Simple(text) => text.clone(),

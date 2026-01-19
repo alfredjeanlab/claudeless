@@ -70,18 +70,19 @@ failure = { type = "rate_limit", retry_after = 30 }
 }
 
 #[test]
-fn test_parse_conversation() {
+fn test_parse_turns() {
     let toml_str = r#"
-[conversations.auth-flow]
+[[responses]]
+pattern = { type = "contains", text = "login" }
+response = "Enter username:"
 turns = [
-    { expect = { type = "contains", text = "login" }, response = "Enter password:" },
+    { expect = { type = "any" }, response = "Enter password:" },
     { expect = { type = "any" }, response = "Logged in successfully" }
 ]
 "#;
     let config: ScenarioConfig = toml::from_str(toml_str).unwrap();
-    assert!(config.conversations.contains_key("auth-flow"));
-    let conv = &config.conversations["auth-flow"];
-    assert_eq!(conv.turns.len(), 2);
+    assert_eq!(config.responses.len(), 1);
+    assert_eq!(config.responses[0].turns.len(), 2);
 }
 
 #[test]

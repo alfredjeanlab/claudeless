@@ -155,7 +155,6 @@ fn test_scenario_from_config() {
         name: "test".to_string(),
         default_response: Some(ResponseSpec::Simple("default".to_string())),
         responses: vec![],
-        conversations: Default::default(),
         tool_execution: None,
         ..Default::default()
     };
