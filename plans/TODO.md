@@ -33,3 +33,116 @@ The `PermissionSelection::YesSession` choice is implemented in the UI but the ac
 3. Clear session grants when session ends
 
 **Location:** `crates/cli/src/tui/app.rs:949-954`
+
+## Input Shortcuts
+
+### '?' Shortcut Handling
+
+Implement support for '?' input (e.g., '? for shortcuts').
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### '!' Shell Mode Handling
+
+Implement support for '!' prefix (e.g., shell mode).
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### Double-Tap Escape to Clear Input
+
+Implement support for double-tapping Escape to clear input.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### Ctrl+T to Show Todos
+
+Implement support for Ctrl+T to show todos.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### Meta+P to Switch Model
+
+Implement support for Meta+P (Option+P on macOS) to switch models.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### Ctrl+_ to Undo
+
+Implement support for Ctrl+_ to undo.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### Ctrl+Z to Suspend
+
+Implement support for Ctrl+Z to suspend.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### Ctrl+S to Stash Prompt
+
+Implement support for Ctrl+S to stash prompt.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+## Slash Commands
+
+### /fork
+
+Implement the `/fork` command.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### /todos
+
+Implement the `/todos` command.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### /tasks
+
+Implement the `/tasks` command.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### /context
+
+Implement the `/context` command.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### /exit
+
+Implement the `/exit` command.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### /export
+
+Implement the `/export` command.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### /help
+
+Implement the `/help` command.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### /hooks
+
+Implement the `/hooks` command.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### /memory
+
+Implement the `/memory` command.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+
+### Slash Command Search
+
+Implement incremental search/filtering for slash commands by typing `/[key][key][...]`. Includes type-ahead filtering, arrow key navigation, and tab completion.
+
+Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+

@@ -20,3 +20,7 @@ Thumbs.db
 
 # Cargo
 Cargo.lock
+
+# Workdir
+checkout/
+
