@@ -1,0 +1,233 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC
+
+//! Hook message protocol types.
+
+use serde::{Deserialize, Serialize};
+
+/// Hook event types
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HookEvent {
+    /// Before tool execution
+    PreToolExecution,
+    /// After tool execution
+    PostToolExecution,
+    /// Notification to user
+    Notification,
+    /// Permission request
+    PermissionRequest,
+    /// Session start
+    SessionStart,
+    /// Session end
+    SessionEnd,
+    /// Prompt submitted (before processing)
+    PromptSubmit,
+}
+
+/// Hook message sent to hook script
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct HookMessage {
+    /// Event type
+    pub event: HookEvent,
+
+    /// Session ID
+    pub session_id: String,
+
+    /// Event-specific payload
+    pub payload: HookPayload,
+}
+
+impl HookMessage {
+    /// Create a tool execution message
+    pub fn tool_execution(
+        session_id: impl Into<String>,
+        event: HookEvent,
+        tool_name: impl Into<String>,
+        tool_input: serde_json::Value,
+        tool_output: Option<String>,
+    ) -> Self {
+        Self {
+            event,
+            session_id: session_id.into(),
+            payload: HookPayload::ToolExecution {
+                tool_name: tool_name.into(),
+                tool_input,
+                tool_output,
+            },
+        }
+    }
+
+    /// Create a notification message
+    pub fn notification(
+        session_id: impl Into<String>,
+        level: NotificationLevel,
+        title: impl Into<String>,
+        message: impl Into<String>,
+    ) -> Self {
+        Self {
+            event: HookEvent::Notification,
+            session_id: session_id.into(),
+            payload: HookPayload::Notification {
+                level,
+                title: title.into(),
+                message: message.into(),
+            },
+        }
+    }
+
+    /// Create a permission request message
+    pub fn permission(
+        session_id: impl Into<String>,
+        tool_name: impl Into<String>,
+        action: impl Into<String>,
+        context: serde_json::Value,
+    ) -> Self {
+        Self {
+            event: HookEvent::PermissionRequest,
+            session_id: session_id.into(),
+            payload: HookPayload::Permission {
+                tool_name: tool_name.into(),
+                action: action.into(),
+                context,
+            },
+        }
+    }
+
+    /// Create a session lifecycle message
+    pub fn session(
+        session_id: impl Into<String>,
+        event: HookEvent,
+        project_path: Option<String>,
+    ) -> Self {
+        Self {
+            event,
+            session_id: session_id.into(),
+            payload: HookPayload::Session { project_path },
+        }
+    }
+
+    /// Create a prompt submit message
+    pub fn prompt_submit(session_id: impl Into<String>, prompt: impl Into<String>) -> Self {
+        Self {
+            event: HookEvent::PromptSubmit,
+            session_id: session_id.into(),
+            payload: HookPayload::Prompt {
+                prompt: prompt.into(),
+            },
+        }
+    }
+}
+
+/// Hook payload variants
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum HookPayload {
+    /// Tool execution context
+    ToolExecution {
+        tool_name: String,
+        tool_input: serde_json::Value,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        tool_output: Option<String>,
+    },
+
+    /// Notification content
+    Notification {
+        level: NotificationLevel,
+        title: String,
+        message: String,
+    },
+
+    /// Permission request
+    Permission {
+        tool_name: String,
+        action: String,
+        context: serde_json::Value,
+    },
+
+    /// Session lifecycle
+    Session {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        project_path: Option<String>,
+    },
+
+    /// Prompt submission
+    Prompt { prompt: String },
+}
+
+/// Notification severity levels
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NotificationLevel {
+    Info,
+    Warning,
+    Error,
+}
+
+/// Hook response from hook script
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct HookResponse {
+    /// Whether to proceed (for pre-hooks)
+    #[serde(default = "default_proceed")]
+    pub proceed: bool,
+
+    /// Modified payload (optional)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modified_payload: Option<serde_json::Value>,
+
+    /// Error message if hook failed
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+
+    /// Additional data returned by hook
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data: Option<serde_json::Value>,
+}
+
+fn default_proceed() -> bool {
+    true
+}
+
+impl HookResponse {
+    /// Create a successful proceed response
+    pub fn proceed() -> Self {
+        Self {
+            proceed: true,
+            modified_payload: None,
+            error: None,
+            data: None,
+        }
+    }
+
+    /// Create a blocking response
+    pub fn block(reason: impl Into<String>) -> Self {
+        Self {
+            proceed: false,
+            modified_payload: None,
+            error: Some(reason.into()),
+            data: None,
+        }
+    }
+
+    /// Create a response with modified payload
+    pub fn with_modified(mut self, payload: serde_json::Value) -> Self {
+        self.modified_payload = Some(payload);
+        self
+    }
+
+    /// Create a response with additional data
+    pub fn with_data(mut self, data: serde_json::Value) -> Self {
+        self.data = Some(data);
+        self
+    }
+}
+
+impl Default for HookResponse {
+    fn default() -> Self {
+        Self::proceed()
+    }
+}
+
+#[cfg(test)]
+#[path = "protocol_tests.rs"]
+mod tests;

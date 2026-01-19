@@ -1,0 +1,3 @@
+# Raw fixture files - only normalized versions are committed
+*.raw.json
+*.raw.jsonl

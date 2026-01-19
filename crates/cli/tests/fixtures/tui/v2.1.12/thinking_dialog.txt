@@ -1,0 +1,8 @@
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Toggle thinking mode
+ Enable or disable thinking for this session.
+
+ ❯ 1. Enabled ✔  Claude will think before responding
+   2. Disabled   Claude will respond without extended thinking
+
+ Enter to confirm · escape to exit

@@ -1,0 +1,15 @@
+{
+  "duration_api_ms": "<DURATION>",
+  "duration_ms": "<DURATION>",
+  "is_error": false,
+  "modelUsage": "<MODEL_USAGE>",
+  "num_turns": 1,
+  "permission_denials": [],
+  "result": "<RESPONSE_TEXT>",
+  "session_id": "<SESSION_ID>",
+  "subtype": "success",
+  "total_cost_usd": "<COST>",
+  "type": "result",
+  "usage": "<USAGE>",
+  "uuid": "<UUID>"
+}

@@ -1,0 +1,14 @@
+# v0 project configuration
+# See: https://github.com/alfredjeanlab/v0
+
+# Required: Project identity
+PROJECT="claudeless"
+ISSUE_PREFIX="cl"    # Issue IDs: cs-abc123
+
+# Optional: Override defaults
+# V0_BUILD_DIR=".v0/build"      # Build state directory
+# V0_PLANS_DIR="plans"          # Implementation plans
+# V0_FEATURE_BRANCH="feature/{name}"
+# V0_BUGFIX_BRANCH="fix/{id}"
+# V0_CHORE_BRANCH="chore/{id}"
+# DISABLE_NOTIFICATIONS=1       # Disable macOS notifications

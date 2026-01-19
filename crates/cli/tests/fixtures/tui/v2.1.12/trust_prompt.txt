@@ -1,0 +1,30 @@
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Do you trust the files in this folder?
+
+ /private/var/folders/t5/6tq8cxtj20z035rv8hsnzwvh0000gn/T/tmp.WGSAfa6ySq
+
+ Claude Code may read, write, or execute files contained in this directory. This can pose security risks, so only use
+ files from trusted sources.
+
+ Learn more
+
+ ❯ 1. Yes, proceed
+   2. No, exit
+
+ Enter to confirm · Esc to cancel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

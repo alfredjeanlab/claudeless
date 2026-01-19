@@ -1,0 +1,53 @@
+# Full-Featured Scenario Example
+# Demonstrates all available configuration options
+
+name = "full-featured-demo"
+
+# Session Identity
+default_model = "claude-sonnet-4-20250514"  # Overridden by --model CLI flag
+claude_version = "2.1.12"
+user_name = "Alfred"
+session_id = "550e8400-e29b-41d4-a716-446655440000"  # Fixed UUID for deterministic tests
+project_path = "/Users/test/myproject"               # Override for state directory naming
+
+# Timing
+launch_timestamp = "2025-01-15T10:30:00Z"  # ISO 8601 for deterministic tests
+
+# Environment
+working_directory = "/Users/test/myproject"
+trusted = true                              # Set to false to trigger trust prompt
+permission_mode = "default"                 # Options: default, plan, bypass-permissions, accept-edits, dont-ask, delegate
+
+# Default response when no pattern matches
+[default_response]
+text = "I'm not sure how to help with that."
+delay_ms = 100
+
+# Response rules (evaluated in order)
+[[responses]]
+pattern = { type = "contains", text = "hello" }
+response = "Hello! How can I help you today?"
+
+[[responses]]
+pattern = { type = "regex", pattern = "(?i)fix.*bug" }
+[responses.response]
+text = "I'll help you fix that bug. Let me read the file first."
+delay_ms = 200
+[[responses.response.tool_calls]]
+tool = "Read"
+input = { file_path = "/src/main.rs" }
+
+# Tool execution configuration
+[tool_execution]
+mode = "simulated"
+sandbox_root = "/tmp/claudeless-sandbox"
+
+# Per-tool settings
+[tool_execution.tools.Bash]
+auto_approve = true
+
+[tool_execution.tools.Read]
+auto_approve = true
+
+[tool_execution.tools.Write]
+auto_approve = false

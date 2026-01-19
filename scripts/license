@@ -1,0 +1,138 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Alfred Jean LLC
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Get current year
+YEAR=$(date +%Y)
+COPYRIGHT="Copyright (c) $YEAR Alfred Jean LLC"
+
+# License headers
+RUST_HEADER="// SPDX-License-Identifier: MIT
+// $COPYRIGHT"
+
+BASH_HEADER="# SPDX-License-Identifier: MIT
+# $COPYRIGHT"
+
+# Add or replace license header in a Rust file
+add_rust_header() {
+    local file="$1"
+
+    # Check if file already has correct header
+    if head -2 "$file" | grep -q "SPDX-License-Identifier: MIT" && \
+       head -2 "$file" | grep -q "$COPYRIGHT"; then
+        return 0
+    fi
+
+    # Strip old header if present (lines starting with // SPDX or // Copyright)
+    local content
+    if head -1 "$file" | grep -qE "^// (SPDX-License-Identifier|Copyright)"; then
+        # Skip header lines and any following blank line
+        local skip=0
+        while IFS= read -r line; do
+            if [[ "$line" =~ ^//\ (SPDX-License-Identifier|Copyright) ]] || [[ -z "$line" && $skip -lt 3 ]]; then
+                ((skip++))
+            else
+                break
+            fi
+        done < "$file"
+        content=$(tail -n +$((skip + 1)) "$file")
+    else
+        content=$(cat "$file")
+    fi
+
+    # Write new header + content
+    {
+        echo "$RUST_HEADER"
+        echo ""
+        echo "$content"
+    } > "$file.tmp"
+    mv "$file.tmp" "$file"
+    echo "Updated header: $file"
+}
+
+# Add or replace license header in a bash file (after shebang)
+add_bash_header() {
+    local file="$1"
+
+    # Check if file already has correct header
+    if grep -q "SPDX-License-Identifier: MIT" "$file" && \
+       grep -q "$COPYRIGHT" "$file"; then
+        return 0
+    fi
+
+    # Extract shebang if present
+    local shebang=""
+    local start_line=1
+    if head -1 "$file" | grep -q "^#!"; then
+        shebang=$(head -1 "$file")
+        start_line=2
+    fi
+
+    # Get content, skipping old header lines
+    local content
+    content=$(tail -n +$start_line "$file" | sed '/^# SPDX-License-Identifier/d; /^# Copyright/d' | sed '1{/^$/d;}')
+
+    # Reconstruct file
+    {
+        if [[ -n "$shebang" ]]; then
+            echo "$shebang"
+        fi
+        echo "$BASH_HEADER"
+        echo "$content"
+    } > "$file.tmp"
+    mv "$file.tmp" "$file"
+    echo "Updated header: $file"
+}
+
+# Update copyright year in LICENSE file
+update_license_file() {
+    local file="$ROOT_DIR/LICENSE"
+    if [[ -f "$file" ]]; then
+        if grep -q "$COPYRIGHT" "$file"; then
+            return 0
+        fi
+        sed -i '' "s/Copyright (c) [0-9]* Alfred Jean LLC/$COPYRIGHT/" "$file"
+        echo "Updated: LICENSE"
+    fi
+}
+
+# Update copyright year in README.md
+update_readme() {
+    local file="$ROOT_DIR/README.md"
+    if [[ -f "$file" ]]; then
+        if grep -q "MIT - $COPYRIGHT" "$file"; then
+            return 0
+        fi
+        sed -i '' "s/MIT - Copyright (c) [0-9]* Alfred Jean LLC/MIT - $COPYRIGHT/" "$file"
+        echo "Updated: README.md"
+    fi
+}
+
+cd "$ROOT_DIR"
+
+echo "Using copyright year: $YEAR"
+echo ""
+
+# Update LICENSE and README
+update_license_file
+update_readme
+
+# Process Rust files
+echo "Processing Rust files..."
+find crates -name "*.rs" -type f | while read -r file; do
+    add_rust_header "$file"
+done
+
+# Process bash scripts in scripts/
+echo "Processing bash scripts..."
+find scripts -name "*.sh" -type f | while read -r file; do
+    if head -1 "$file" | grep -qE "^#!.*(bash|sh)"; then
+        add_bash_header "$file"
+    fi
+done
+
+echo "Done."

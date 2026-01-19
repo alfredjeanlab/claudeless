@@ -1,0 +1,3 @@
+[advisories]
+# Suppress unsound warnings locally (CI overrides this via Makefile)
+informational_warnings = ["unmaintained", "notice"]

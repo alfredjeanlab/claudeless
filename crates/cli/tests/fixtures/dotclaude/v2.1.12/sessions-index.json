@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "sessionId": "<UUID>",
+      "fullPath": "<PATH>",
+      "fileMtime": "<MTIME>",
+      "firstPrompt": "what is 2 + 2?",
+      "messageCount": 4,
+      "created": "<TIMESTAMP>",
+      "modified": "<TIMESTAMP>",
+      "gitBranch": "main",
+      "projectPath": "<PATH>",
+      "isSidechain": false
+    },
+    {
+      "sessionId": "<UUID>",
+      "fullPath": "<PATH>",
+      "fileMtime": "<MTIME>",
+      "firstPrompt": "Fix any linter warnings",
+      "messageCount": 8,
+      "created": "<TIMESTAMP>",
+      "modified": "<TIMESTAMP>",
+      "gitBranch": "feature-branch",
+      "projectPath": "<PATH>",
+      "isSidechain": false
+    },
+    {
+      "sessionId": "<UUID>",
+      "fullPath": "<PATH>",
+      "fileMtime": "<MTIME>",
+      "firstPrompt": "Review the README and suggest improvements",
+      "messageCount": 12,
+      "created": "<TIMESTAMP>",
+      "modified": "<TIMESTAMP>",
+      "gitBranch": "main",
+      "projectPath": "<PATH>",
+      "isSidechain": false
+    },
+    {
+      "sessionId": "<UUID>",
+      "fullPath": "<PATH>",
+      "fileMtime": "<MTIME>",
+      "firstPrompt": "commit and push changes",
+      "messageCount": 33,
+      "created": "<TIMESTAMP>",
+      "modified": "<TIMESTAMP>",
+      "gitBranch": "main",
+      "projectPath": "<PATH>",
+      "isSidechain": true
+    }
+  ]
+}
