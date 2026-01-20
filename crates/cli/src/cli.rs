@@ -143,6 +143,11 @@ pub struct Cli {
     /// Tool execution mode (overrides scenario config)
     #[arg(long, value_enum, env = "CLAUDELESS_TOOL_MODE")]
     pub tool_mode: Option<CliToolExecutionMode>,
+
+    /// Claude version to simulate (e.g., "2.1.12")
+    /// When not set, displays "Claudeless" branding instead of "Claude Code"
+    #[arg(long, env = "CLAUDELESS_CLAUDE_VERSION")]
+    pub claude_version: Option<String>,
 }
 
 /// CLI-friendly tool execution mode enum

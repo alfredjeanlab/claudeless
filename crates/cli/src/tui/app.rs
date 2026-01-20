@@ -31,6 +31,8 @@ pub struct TuiConfig {
     pub allow_bypass_permissions: bool,
     /// Delay in milliseconds before compact completes (default: 500)
     pub compact_delay_ms: Option<u64>,
+    /// Explicit Claude version, or None for Claudeless-native mode
+    pub claude_version: Option<String>,
 }
 
 impl Default for TuiConfig {
@@ -43,6 +45,7 @@ impl Default for TuiConfig {
             permission_mode: PermissionMode::Default,
             allow_bypass_permissions: false,
             compact_delay_ms: None,
+            claude_version: None,
         }
     }
 }
@@ -53,6 +56,7 @@ impl TuiConfig {
         cli_model: Option<&str>,
         cli_permission_mode: &PermissionMode,
         allow_bypass_permissions: bool,
+        cli_claude_version: Option<&str>,
     ) -> Self {
         // CLI permission mode overrides scenario (unless CLI is default)
         let permission_mode = if *cli_permission_mode != PermissionMode::Default {
@@ -64,6 +68,11 @@ impl TuiConfig {
                 .and_then(|s| clap::ValueEnum::from_str(s, true).ok())
                 .unwrap_or_default()
         };
+
+        // CLI claude_version overrides scenario
+        let claude_version = cli_claude_version
+            .map(|s| s.to_string())
+            .or_else(|| config.claude_version.clone());
 
         Self {
             trusted: config.trusted,
@@ -83,6 +92,7 @@ impl TuiConfig {
             permission_mode,
             allow_bypass_permissions,
             compact_delay_ms: config.compact_delay_ms,
+            claude_version,
         }
     }
 }
@@ -132,6 +142,8 @@ pub struct RenderState {
     pub conversation_display: String,
     pub is_compacted: bool,
     pub exit_hint: Option<ExitHint>,
+    /// Explicit Claude version, or None for Claudeless-native mode
+    pub claude_version: Option<String>,
 }
 
 /// Permission request state using the rich permission dialog
@@ -368,6 +380,7 @@ impl TuiAppState {
             conversation_display: inner.conversation_display.clone(),
             is_compacted: inner.is_compacted,
             exit_hint: inner.exit_hint.clone(),
+            claude_version: inner.config.claude_version.clone(),
         }
     }
 
@@ -1594,8 +1607,11 @@ fn format_header_lines(state: &RenderState) -> (String, String, String) {
         })
         .unwrap_or_else(|_| "~".to_string());
 
-    // Claude Code logo header
-    let line1 = format!(" ▐▛███▜▌   Claude Code v{}", env!("CARGO_PKG_VERSION"));
+    // Header line 1: Conditional branding based on claude_version
+    let line1 = match &state.claude_version {
+        Some(version) => format!(" ▐▛███▜▌   Claude Code v{}", version),
+        None => format!(" ▐▛███▜▌   Claudeless {}", env!("CARGO_PKG_VERSION")),
+    };
     let line2 = format!("▝▜█████▛▘  {} · Claude Max", model_name);
     let line3 = format!("  ▘▘ ▝▝    {}", working_dir);
 

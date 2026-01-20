@@ -18,6 +18,7 @@ fn test_clear_before_matches_fixture() {
         r#"
         {
             "trusted": true,
+            "claude_version": "2.1.12",
             "responses": [
                 { "pattern": { "type": "contains", "text": "2 + 2" }, "response": "2 + 2 = 4" },
                 { "pattern": { "type": "contains", "text": "3 + 3" }, "response": "3 + 3 = 6" },
@@ -49,6 +50,7 @@ fn test_clear_after_matches_fixture() {
         r#"
         {
             "trusted": true,
+            "claude_version": "2.1.12",
             "responses": [
                 { "pattern": { "type": "contains", "text": "2 + 2" }, "response": "2 + 2 = 4" },
                 { "pattern": { "type": "any" }, "response": "ok" }

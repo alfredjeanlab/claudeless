@@ -350,6 +350,7 @@ fn run_tui_mode(
         Some(&cli.model),
         &cli.permission_mode,
         allow_bypass_permissions,
+        cli.claude_version.as_deref(),
     );
 
     let sessions = SessionManager::new();

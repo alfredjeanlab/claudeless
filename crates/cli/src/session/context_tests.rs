@@ -37,6 +37,7 @@ fn default_cli() -> Cli {
         tui: false,
         no_tui: false,
         tool_mode: None,
+        claude_version: None,
     }
 }
 

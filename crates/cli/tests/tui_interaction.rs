@@ -88,7 +88,8 @@ fn test_response_format_matches_fixture() {
         r#"
         {
             "default_response": "Hello there friend.",
-            "trusted": true
+            "trusted": true,
+            "claude_version": "2.1.12"
         }
         "#,
     );

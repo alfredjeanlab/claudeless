@@ -32,7 +32,8 @@ fn test_initial_state_matches_fixture() {
         r#"
         {
             "default_response": "Hello!",
-            "trusted": true
+            "trusted": true,
+            "claude_version": "2.1.12"
         }
         "#,
     );

@@ -94,7 +94,8 @@ fn test_permission_default_matches_fixture() {
         r#"
         {
             "default_response": "Hello!",
-            "trusted": true
+            "trusted": true,
+            "claude_version": "2.1.12"
         }
         "#,
     );
@@ -115,7 +116,8 @@ fn test_permission_plan_matches_fixture() {
         {
             "default_response": "Hello!",
             "trusted": true,
-            "permission_mode": "plan"
+            "permission_mode": "plan",
+            "claude_version": "2.1.12"
         }
         "#,
     );
@@ -238,7 +240,8 @@ fn test_status_bar_extended_matches_fixture() {
         {
             "default_response": "Hello!",
             "trusted": true,
-            "permission_mode": "accept-edits"
+            "permission_mode": "accept-edits",
+            "claude_version": "2.1.12"
         }
         "#,
     );

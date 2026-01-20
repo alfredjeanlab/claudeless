@@ -187,3 +187,62 @@ fn status_bar_shows_ctrl_d_hint() {
     let status = format_status_bar(&render);
     assert!(status.contains("Press Ctrl-D again to exit"));
 }
+
+// Version display tests
+
+#[test]
+fn tui_config_default_has_no_claude_version() {
+    let config = TuiConfig::default();
+    assert!(config.claude_version.is_none());
+}
+
+#[test]
+fn header_shows_claudeless_when_no_version_specified() {
+    let state = create_test_app();
+    let render = state.render_state();
+
+    assert!(render.claude_version.is_none());
+
+    let (line1, _, _) = format_header_lines(&render);
+    assert!(line1.contains("Claudeless"));
+    assert!(!line1.contains("Claude Code"));
+}
+
+#[test]
+fn header_shows_claude_code_when_version_specified() {
+    let config = ScenarioConfig {
+        claude_version: Some("2.1.12".to_string()),
+        ..Default::default()
+    };
+    let scenario = Scenario::from_config(config).unwrap();
+    let sessions = SessionManager::new();
+    let clock = ClockHandle::fake_at_epoch();
+
+    let tui_config =
+        TuiConfig::from_scenario(scenario.config(), None, &PermissionMode::Default, None);
+    let state = TuiAppState::new(scenario, sessions, clock, tui_config);
+    let render = state.render_state();
+
+    assert_eq!(render.claude_version, Some("2.1.12".to_string()));
+
+    let (line1, _, _) = format_header_lines(&render);
+    assert!(line1.contains("Claude Code v2.1.12"));
+    assert!(!line1.contains("Claudeless"));
+}
+
+#[test]
+fn cli_version_overrides_scenario() {
+    let scenario_config = ScenarioConfig {
+        claude_version: Some("1.0.0".to_string()),
+        ..Default::default()
+    };
+
+    let tui_config = TuiConfig::from_scenario(
+        &scenario_config,
+        None,
+        &PermissionMode::Default,
+        Some("2.0.0"), // CLI override
+    );
+
+    assert_eq!(tui_config.claude_version, Some("2.0.0".to_string()));
+}
