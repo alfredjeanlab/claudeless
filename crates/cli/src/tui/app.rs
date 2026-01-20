@@ -27,6 +27,8 @@ pub struct TuiConfig {
     pub model: String,
     pub working_directory: PathBuf,
     pub permission_mode: PermissionMode,
+    /// Whether bypass permissions mode is allowed (requires --dangerously-skip-permissions)
+    pub allow_bypass_permissions: bool,
     /// Delay in milliseconds before compact completes (default: 500)
     pub compact_delay_ms: Option<u64>,
 }
@@ -39,6 +41,7 @@ impl Default for TuiConfig {
             model: DEFAULT_MODEL.to_string(),
             working_directory: std::env::current_dir().unwrap_or_default(),
             permission_mode: PermissionMode::Default,
+            allow_bypass_permissions: false,
             compact_delay_ms: None,
         }
     }
@@ -49,6 +52,7 @@ impl TuiConfig {
         config: &ScenarioConfig,
         cli_model: Option<&str>,
         cli_permission_mode: &PermissionMode,
+        allow_bypass_permissions: bool,
     ) -> Self {
         // CLI permission mode overrides scenario (unless CLI is default)
         let permission_mode = if *cli_permission_mode != PermissionMode::Default {
@@ -77,6 +81,7 @@ impl TuiConfig {
                 .map(PathBuf::from)
                 .unwrap_or_else(|| std::env::current_dir().unwrap_or_default()),
             permission_mode,
+            allow_bypass_permissions,
             compact_delay_ms: config.compact_delay_ms,
         }
     }
@@ -257,6 +262,9 @@ struct TuiAppStateInner {
     /// Current permission mode
     pub permission_mode: PermissionMode,
 
+    /// Whether bypass permissions is allowed (requires --dangerously-skip-permissions)
+    pub allow_bypass_permissions: bool,
+
     /// Whether compacting is in progress
     pub is_compacting: bool,
 
@@ -327,6 +335,7 @@ impl TuiAppState {
                 thinking_enabled: true, // Default to enabled
                 thinking_dialog: None,
                 permission_mode: config.permission_mode.clone(),
+                allow_bypass_permissions: config.allow_bypass_permissions,
                 is_compacting: false,
                 is_command_output: false,
                 compacting_started: None,
@@ -457,7 +466,9 @@ impl TuiAppState {
 
             // Shift+Tab - Cycle permission mode
             (m, KeyCode::BackTab) if m.contains(KeyModifiers::SHIFT) => {
-                inner.permission_mode = inner.permission_mode.cycle_next();
+                inner.permission_mode = inner
+                    .permission_mode
+                    .cycle_next(inner.allow_bypass_permissions);
             }
 
             // Enter - Submit input

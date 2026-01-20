@@ -46,7 +46,9 @@ fn capture_after_shift_tabs(session: &str, num_tabs: usize) -> String {
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
-/// Shift+Tab cycles through permission modes: default -> plan -> acceptEdits -> bypass -> default
+/// Shift+Tab cycles through permission modes:
+/// - Without --dangerously-skip-permissions: default -> plan -> acceptEdits -> default (3 modes)
+/// - With --dangerously-skip-permissions: default -> plan -> acceptEdits -> bypass -> default (4 modes)
 #[test]
 fn test_shift_tab_cycles_to_plan_mode() {
     let capture = capture_after_shift_tabs("claudeless-shift-tab-1", 1);
@@ -71,13 +73,16 @@ fn test_shift_tab_cycles_to_accept_edits_mode() {
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
+///
+/// Without --dangerously-skip-permissions, the cycle is 3 modes:
+/// default -> plan -> acceptEdits -> default
 #[test]
 fn test_shift_tab_cycles_back_to_default() {
-    let capture = capture_after_shift_tabs("claudeless-shift-tab-4", 4);
+    let capture = capture_after_shift_tabs("claudeless-shift-tab-3", 3);
 
     assert!(
         capture.contains("?") && capture.to_lowercase().contains("shortcut"),
-        "After 4 shift+tabs, should cycle back to default mode.\nCapture:\n{}",
+        "After 3 shift+tabs, should cycle back to default mode.\nCapture:\n{}",
         capture
     );
 }
