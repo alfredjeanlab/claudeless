@@ -61,13 +61,15 @@ impl HookRegistry {
 
     /// Register a hook that always proceeds
     pub fn register_passthrough(&mut self, event: HookEvent) -> std::io::Result<()> {
-        self.register_script(event, r#"echo '{"proceed": true}'"#, false)
+        // Must consume stdin first to avoid broken pipe when executor writes
+        self.register_script(event, r#"cat > /dev/null; echo '{"proceed": true}'"#, false)
     }
 
     /// Register a hook that blocks with a reason
     pub fn register_blocking(&mut self, event: HookEvent, reason: &str) -> std::io::Result<()> {
+        // Must consume stdin first to avoid broken pipe when executor writes
         let script = format!(
-            r#"echo '{{"proceed": false, "error": "{}"}}'"#,
+            r#"cat > /dev/null; echo '{{"proceed": false, "error": "{}"}}'"#,
             reason.replace('\"', "\\\"").replace('\'', "\\'")
         );
         self.register_script(event, &script, true)
@@ -101,8 +103,10 @@ echo '{{"proceed": true}}'
 
     /// Register a hook that delays for a specified duration
     pub fn register_delayed(&mut self, event: HookEvent, delay_secs: f32) -> std::io::Result<()> {
+        // Must consume stdin first to avoid broken pipe when executor writes
         let script = format!(
             r#"
+cat > /dev/null
 sleep {}
 echo '{{"proceed": true}}'
 "#,
