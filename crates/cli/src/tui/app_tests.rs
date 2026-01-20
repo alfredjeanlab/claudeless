@@ -218,8 +218,13 @@ fn header_shows_claude_code_when_version_specified() {
     let sessions = SessionManager::new();
     let clock = ClockHandle::fake_at_epoch();
 
-    let tui_config =
-        TuiConfig::from_scenario(scenario.config(), None, &PermissionMode::Default, false, None);
+    let tui_config = TuiConfig::from_scenario(
+        scenario.config(),
+        None,
+        &PermissionMode::Default,
+        false,
+        None,
+    );
     let state = TuiAppState::new(scenario, sessions, clock, tui_config);
     let render = state.render_state();
 
