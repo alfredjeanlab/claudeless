@@ -11,8 +11,13 @@
 
 mod app;
 mod screenshot;
+pub mod separator;
 mod streaming;
 mod test_helpers;
+
+#[cfg(test)]
+#[path = "responsive_tests.rs"]
+mod responsive_tests;
 
 pub mod widgets;
 

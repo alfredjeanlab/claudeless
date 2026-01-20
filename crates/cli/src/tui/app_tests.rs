@@ -172,7 +172,7 @@ fn status_bar_shows_exit_hint() {
     state.handle_key_event(key_event(KeyCode::Char('c'), KeyModifiers::CONTROL));
 
     let render = state.render_state();
-    let status = format_status_bar(&render);
+    let status = format_status_bar(&render, render.terminal_width as usize);
     assert!(status.contains("Press Ctrl-C again to exit"));
 }
 
@@ -184,7 +184,7 @@ fn status_bar_shows_ctrl_d_hint() {
     state.handle_key_event(key_event(KeyCode::Char('d'), KeyModifiers::CONTROL));
 
     let render = state.render_state();
-    let status = format_status_bar(&render);
+    let status = format_status_bar(&render, render.terminal_width as usize);
     assert!(status.contains("Press Ctrl-D again to exit"));
 }
 
@@ -219,7 +219,7 @@ fn header_shows_claude_code_when_version_specified() {
     let clock = ClockHandle::fake_at_epoch();
 
     let tui_config =
-        TuiConfig::from_scenario(scenario.config(), None, &PermissionMode::Default, None);
+        TuiConfig::from_scenario(scenario.config(), None, &PermissionMode::Default, false, None);
     let state = TuiAppState::new(scenario, sessions, clock, tui_config);
     let render = state.render_state();
 
@@ -241,6 +241,7 @@ fn cli_version_overrides_scenario() {
         &scenario_config,
         None,
         &PermissionMode::Default,
+        false,
         Some("2.0.0"), // CLI override
     );
 

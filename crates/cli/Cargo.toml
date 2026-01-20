@@ -30,6 +30,8 @@ uuid = { version = "1", features = ["v4"] }
 iocraft = "0.7"
 unicode-width = "0.2"
 textwrap = "0.16"
+# Terminal size detection (used by iocraft transitively, but we need direct access)
+crossterm = "0.28"
 
 # Signal handling (for ignoring SIGINT in TUI mode)
 [target.'cfg(unix)'.dependencies]

@@ -14,6 +14,7 @@ use crate::scenario::Scenario;
 use crate::state::session::SessionManager;
 use crate::time::{Clock, ClockHandle};
 
+use super::separator::{make_compact_separator, make_separator};
 use super::streaming::{StreamingConfig, StreamingResponse};
 use super::widgets::permission::{PermissionSelection, PermissionType, RichPermissionDialog};
 use super::widgets::thinking::{ThinkingDialog, ThinkingMode};
@@ -144,6 +145,7 @@ pub struct RenderState {
     pub exit_hint: Option<ExitHint>,
     /// Explicit Claude version, or None for Claudeless-native mode
     pub claude_version: Option<String>,
+    pub terminal_width: u16,
 }
 
 /// Permission request state using the rich permission dialog
@@ -190,6 +192,9 @@ pub enum ExitHint {
 
 /// Exit hint timeout in milliseconds (2 seconds)
 const EXIT_HINT_TIMEOUT_MS: u64 = 2000;
+
+/// Default terminal width when not detected
+pub const DEFAULT_TERMINAL_WIDTH: u16 = 120;
 
 /// Trust prompt state (simplified for iocraft)
 #[derive(Clone, Debug)]
@@ -297,6 +302,9 @@ struct TuiAppStateInner {
 
     /// When exit hint was shown (milliseconds from clock)
     pub exit_hint_shown_at: Option<u64>,
+
+    /// Current terminal width
+    pub terminal_width: u16,
 }
 
 impl TuiAppState {
@@ -355,6 +363,9 @@ impl TuiAppState {
                 is_compacted: false,
                 exit_hint: None,
                 exit_hint_shown_at: None,
+                terminal_width: crossterm::terminal::size()
+                    .map(|(w, _)| w)
+                    .unwrap_or(DEFAULT_TERMINAL_WIDTH),
                 config,
             })),
         }
@@ -381,7 +392,18 @@ impl TuiAppState {
             is_compacted: inner.is_compacted,
             exit_hint: inner.exit_hint.clone(),
             claude_version: inner.config.claude_version.clone(),
+            terminal_width: inner.terminal_width,
         }
+    }
+
+    /// Get terminal width
+    pub fn terminal_width(&self) -> u16 {
+        self.inner.lock().terminal_width
+    }
+
+    /// Update terminal width (called on resize)
+    pub fn set_terminal_width(&self, width: u16) {
+        self.inner.lock().terminal_width = width;
     }
 
     /// Check if app should exit
@@ -1230,7 +1252,7 @@ pub fn App(mut hooks: Hooks, props: &AppProps) -> impl Into<AnyElement<'static>>
     let mut timer_counter = hooks.use_state(|| 0u64);
     let state_clone = state.clone();
 
-    // Handle terminal events (keyboard input)
+    // Handle terminal events (keyboard input and resize)
     hooks.use_terminal_events({
         let state = state.clone();
         move |event| match event {
@@ -1242,6 +1264,12 @@ pub fn App(mut hooks: Hooks, props: &AppProps) -> impl Into<AnyElement<'static>>
                 if state.should_exit() {
                     should_exit.set(true);
                 }
+            }
+            TerminalEvent::Resize(width, _height) => {
+                state.set_terminal_width(width);
+                // Increment counter to trigger re-render
+                let current = *render_counter.read();
+                render_counter.set(current.wrapping_add(1));
             }
             _ => {}
         }
@@ -1285,24 +1313,26 @@ pub fn App(mut hooks: Hooks, props: &AppProps) -> impl Into<AnyElement<'static>>
 
 /// Render the main content based on current mode
 fn render_main_content(state: &RenderState) -> AnyElement<'static> {
+    let width = state.terminal_width as usize;
+
     // If in trust mode, render trust prompt
     if state.mode == AppMode::Trust {
         if let Some(ref prompt) = state.trust_prompt {
-            return render_trust_prompt(prompt);
+            return render_trust_prompt(prompt, width);
         }
     }
 
     // If in thinking toggle mode, render just the thinking dialog
     if state.mode == AppMode::ThinkingToggle {
         if let Some(ref dialog) = state.thinking_dialog {
-            return render_thinking_dialog(dialog);
+            return render_thinking_dialog(dialog, width);
         }
     }
 
     // If in permission mode, render just the permission dialog (full-screen)
     if state.mode == AppMode::Permission {
         if let Some(ref perm) = state.pending_permission {
-            return render_permission_dialog(perm);
+            return render_permission_dialog(perm, width);
         }
     }
 
@@ -1342,12 +1372,12 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
             #(render_conversation_area(state))
 
             // Input area with separators
-            Text(content: SEPARATOR)
+            Text(content: make_separator(state.terminal_width as usize))
             Text(content: input_display)
-            Text(content: SEPARATOR)
+            Text(content: make_separator(state.terminal_width as usize))
 
             // Status bar
-            Text(content: format_status_bar(state))
+            Text(content: format_status_bar(state, state.terminal_width as usize))
         }
     }
     .into()
@@ -1359,7 +1389,11 @@ fn render_conversation_area(state: &RenderState) -> AnyElement<'static> {
 
     // Add compact separator if conversation has been compacted
     if state.is_compacted {
-        content.push_str(COMPACT_SEPARATOR);
+        let compact_text = "Conversation compacted · ctrl+o for history";
+        content.push_str(&make_compact_separator(
+            compact_text,
+            state.terminal_width as usize,
+        ));
         content.push('\n');
     }
 
@@ -1417,12 +1451,6 @@ fn render_conversation_area(state: &RenderState) -> AnyElement<'static> {
         .into()
     }
 }
-
-/// Full-width horizontal separator (120 chars)
-const SEPARATOR: &str = "────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────";
-
-/// Compact separator with centered text (matches real Claude CLI)
-const COMPACT_SEPARATOR: &str = "══════════════════════════════════════ Conversation compacted · ctrl+o for history ═════════════════════════════════════";
 
 /// Build tool summary from session turns for /compact output
 fn build_tool_summary(sessions: &Arc<Mutex<SessionManager>>) -> String {
@@ -1485,7 +1513,7 @@ fn format_tool_summary(tool: &crate::state::session::TurnToolCall) -> Option<Str
 }
 
 /// Render trust prompt dialog
-fn render_trust_prompt(prompt: &TrustPromptState) -> AnyElement<'static> {
+fn render_trust_prompt(prompt: &TrustPromptState, width: usize) -> AnyElement<'static> {
     let yes_indicator = if prompt.selected == TrustChoice::Yes {
         " ❯ "
     } else {
@@ -1504,7 +1532,7 @@ fn render_trust_prompt(prompt: &TrustPromptState) -> AnyElement<'static> {
             height: 100pct,
         ) {
             // Horizontal rule separator
-            Text(content: SEPARATOR)
+            Text(content: make_separator(width))
             // Title
             Text(content: " Do you trust the files in this folder?")
             Text(content: "")
@@ -1529,7 +1557,7 @@ fn render_trust_prompt(prompt: &TrustPromptState) -> AnyElement<'static> {
 }
 
 /// Render thinking toggle dialog
-fn render_thinking_dialog(dialog: &ThinkingDialog) -> AnyElement<'static> {
+fn render_thinking_dialog(dialog: &ThinkingDialog, width: usize) -> AnyElement<'static> {
     let enabled_indicator = if dialog.selected == ThinkingMode::Enabled {
         " ❯ "
     } else {
@@ -1557,7 +1585,7 @@ fn render_thinking_dialog(dialog: &ThinkingDialog) -> AnyElement<'static> {
             width: 100pct,
         ) {
             // Horizontal rule separator at top
-            Text(content: SEPARATOR)
+            Text(content: make_separator(width))
             // Title
             Text(content: " Toggle thinking mode")
             // Subtitle
@@ -1574,9 +1602,9 @@ fn render_thinking_dialog(dialog: &ThinkingDialog) -> AnyElement<'static> {
 }
 
 /// Render rich permission dialog
-fn render_permission_dialog(perm: &PermissionRequest) -> AnyElement<'static> {
+fn render_permission_dialog(perm: &PermissionRequest, width: usize) -> AnyElement<'static> {
     // Render the dialog content using the widget
-    let content = perm.dialog.render(120);
+    let content = perm.dialog.render(width);
 
     element! {
         View(
@@ -1619,7 +1647,7 @@ fn format_header_lines(state: &RenderState) -> (String, String, String) {
 }
 
 /// Format status bar content
-fn format_status_bar(state: &RenderState) -> String {
+pub(crate) fn format_status_bar(state: &RenderState, width: usize) -> String {
     // Check for exit hint first (takes precedence)
     if let Some(hint) = &state.exit_hint {
         return match hint {
@@ -1648,19 +1676,17 @@ fn format_status_bar(state: &RenderState) -> String {
                 mode_text
             } else {
                 // Pad to align "Thinking off" to the right side
-                let padding = 120 - mode_text.len() - "Thinking off".len();
+                let padding = width.saturating_sub(mode_text.len() + "Thinking off".len());
                 format!("{}{:width$}Thinking off", mode_text, "", width = padding)
             }
         }
         _ => {
             // Non-default modes show "Use meta+t to toggle thinking" on the right
             let right_text = "Use meta+t to toggle thinking";
-            // Use 120 char width to match the default SEPARATOR width
-            let total_width: usize = 120;
             // Calculate visual width of mode_text (accounting for multi-byte chars)
             let mode_visual_width = mode_text.chars().count();
             let right_width = right_text.len();
-            let padding = total_width.saturating_sub(mode_visual_width + right_width);
+            let padding = width.saturating_sub(mode_visual_width + right_width);
             format!("{}{:width$}{}", mode_text, "", right_text, width = padding)
         }
     }
