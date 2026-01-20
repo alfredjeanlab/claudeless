@@ -358,9 +358,11 @@ pub fn capture_key_sequence(session: &str, keys: &[&str]) -> Vec<String> {
         previous = capture;
     }
 
-    // Cleanup: first C-c cancels operation, wait for effect, second C-c exits
+    // Cleanup: Escape closes any open dialog, then double C-c exits TUI
+    tmux::send_keys(session, "Escape");
+    std::thread::sleep(std::time::Duration::from_millis(100));
     tmux::send_keys(session, "C-c");
-    let _ = tmux::wait_for_change(session, &previous);
+    std::thread::sleep(std::time::Duration::from_millis(100));
     tmux::send_keys(session, "C-c");
     tmux::kill_session(session);
 

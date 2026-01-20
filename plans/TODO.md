@@ -146,3 +146,19 @@ Implement incremental search/filtering for slash commands by typing `/[key][key]
 
 Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
 
+## Scenario Configuration
+
+### Subscription Level in Header
+
+Add scenario-level configuration for the subscription text displayed in the header (e.g., "Opus 4.5 · Claude Max").
+
+Examples: `Claude Max`, `Claude Pro`, `API`
+
+### Fix Model Version String Rendering
+
+Model versions render incorrectly (e.g., "Sonnet 4" instead of "Sonnet 4.5").
+
+### Default Model
+
+Default model should be Opus 4.5 when not specified via `--model` or scenario configuration.
+

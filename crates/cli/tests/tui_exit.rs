@@ -20,6 +20,8 @@
 
 mod common;
 
+use std::time::Duration;
+
 use common::{start_tui, tmux, write_scenario};
 
 // =============================================================================
@@ -127,7 +129,9 @@ fn test_tui_ctrl_c_exit_hint_times_out() {
     );
 
     // Wait for timeout (~2 seconds) and check it returns to normal
-    let after_timeout = tmux::wait_for_content(session, "? for shortcuts");
+    // Use 3 second timeout to allow for the ~2 second hint timeout plus buffer
+    let after_timeout =
+        tmux::wait_for_content_timeout(session, "? for shortcuts", Duration::from_secs(3));
 
     tmux::kill_session(session);
 
@@ -246,7 +250,9 @@ fn test_tui_ctrl_d_exit_hint_times_out() {
     );
 
     // Wait for timeout (~2 seconds) and check it returns to normal
-    let after_timeout = tmux::wait_for_content(session, "? for shortcuts");
+    // Use 3 second timeout to allow for the ~2 second hint timeout plus buffer
+    let after_timeout =
+        tmux::wait_for_content_timeout(session, "? for shortcuts", Duration::from_secs(3));
 
     tmux::kill_session(session);
 

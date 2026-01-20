@@ -107,7 +107,12 @@ pub fn capture_pane(session: &str) -> String {
 /// Wait for specific content to appear in the tmux pane.
 /// Returns the captured pane content when found, or panics on timeout.
 pub fn wait_for_content(session: &str, pattern: &str) -> String {
-    let timeout = timeout();
+    wait_for_content_timeout(session, pattern, timeout())
+}
+
+/// Wait for specific content to appear in the tmux pane with a custom timeout.
+/// Returns the captured pane content when found, or panics on timeout.
+pub fn wait_for_content_timeout(session: &str, pattern: &str, timeout: Duration) -> String {
     let poll = poll_interval();
     let start = Instant::now();
 
