@@ -18,9 +18,6 @@ target/
 .DS_Store
 Thumbs.db
 
-# Cargo
-Cargo.lock
-
 # Workdir
 checkout/
 
