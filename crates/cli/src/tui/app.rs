@@ -12,7 +12,7 @@ use crate::config::{ScenarioConfig, DEFAULT_MODEL, DEFAULT_USER_NAME};
 use crate::permission::PermissionMode;
 use crate::scenario::Scenario;
 use crate::state::session::SessionManager;
-use crate::time::ClockHandle;
+use crate::time::{Clock, ClockHandle};
 
 use super::streaming::{StreamingConfig, StreamingResponse};
 use super::widgets::permission::{PermissionSelection, PermissionType, RichPermissionDialog};
@@ -126,6 +126,7 @@ pub struct RenderState {
     pub is_command_output: bool,
     pub conversation_display: String,
     pub is_compacted: bool,
+    pub exit_hint: Option<ExitHint>,
 }
 
 /// Permission request state using the rich permission dialog
@@ -160,6 +161,18 @@ pub enum ExitReason {
     Completed,     // Normal completion
     Error(String), // Error occurred
 }
+
+/// Type of exit hint being shown
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ExitHint {
+    /// "Press Ctrl-C again to exit"
+    CtrlC,
+    /// "Press Ctrl-D again to exit"
+    CtrlD,
+}
+
+/// Exit hint timeout in milliseconds (2 seconds)
+const EXIT_HINT_TIMEOUT_MS: u64 = 2000;
 
 /// Trust prompt state (simplified for iocraft)
 #[derive(Clone, Debug)]
@@ -258,6 +271,12 @@ struct TuiAppStateInner {
 
     /// Whether conversation has been compacted (for showing separator)
     pub is_compacted: bool,
+
+    /// Active exit hint (if any)
+    pub exit_hint: Option<ExitHint>,
+
+    /// When exit hint was shown (milliseconds from clock)
+    pub exit_hint_shown_at: Option<u64>,
 }
 
 impl TuiAppState {
@@ -313,6 +332,8 @@ impl TuiAppState {
                 compacting_started: None,
                 conversation_display: String::new(),
                 is_compacted: false,
+                exit_hint: None,
+                exit_hint_shown_at: None,
                 config,
             })),
         }
@@ -337,6 +358,7 @@ impl TuiAppState {
             is_command_output: inner.is_command_output,
             conversation_display: inner.conversation_display.clone(),
             is_compacted: inner.is_compacted,
+            exit_hint: inner.exit_hint.clone(),
         }
     }
 
@@ -399,12 +421,27 @@ impl TuiAppState {
                 self.handle_interrupt();
             }
 
-            // Ctrl+D - Exit
+            // Ctrl+D - Exit (only on empty input)
             (m, KeyCode::Char('d')) if m.contains(KeyModifiers::CONTROL) => {
                 if inner.input_buffer.is_empty() {
-                    inner.should_exit = true;
-                    inner.exit_reason = Some(ExitReason::UserQuit);
+                    let now = inner.clock.now_millis();
+                    let within_timeout = inner.exit_hint == Some(ExitHint::CtrlD)
+                        && inner
+                            .exit_hint_shown_at
+                            .map(|t| now.saturating_sub(t) < EXIT_HINT_TIMEOUT_MS)
+                            .unwrap_or(false);
+
+                    if within_timeout {
+                        // Second Ctrl+D within timeout - exit
+                        inner.should_exit = true;
+                        inner.exit_reason = Some(ExitReason::UserQuit);
+                    } else {
+                        // First Ctrl+D - show hint
+                        inner.exit_hint = Some(ExitHint::CtrlD);
+                        inner.exit_hint_shown_at = Some(now);
+                    }
                 }
+                // With text in input: ignored (do nothing)
             }
 
             // Ctrl+L - Clear screen (keep input)
@@ -425,6 +462,9 @@ impl TuiAppState {
 
             // Enter - Submit input
             (_, KeyCode::Enter) => {
+                // Clear exit hint on Enter
+                inner.exit_hint = None;
+                inner.exit_hint_shown_at = None;
                 if !inner.input_buffer.is_empty() {
                     drop(inner);
                     self.submit_input();
@@ -522,6 +562,9 @@ impl TuiAppState {
                 inner.cursor_pos = pos + 1;
                 // Reset history browsing on new input
                 inner.history_index = None;
+                // Clear exit hint on typing
+                inner.exit_hint = None;
+                inner.exit_hint_shown_at = None;
             }
 
             _ => {}
@@ -632,12 +675,24 @@ impl TuiAppState {
         let mut inner = self.inner.lock();
         match inner.mode {
             AppMode::Input => {
-                if inner.input_buffer.is_empty() {
+                // Check if within exit hint timeout
+                let now = inner.clock.now_millis();
+                let within_timeout = inner.exit_hint == Some(ExitHint::CtrlC)
+                    && inner
+                        .exit_hint_shown_at
+                        .map(|t| now.saturating_sub(t) < EXIT_HINT_TIMEOUT_MS)
+                        .unwrap_or(false);
+
+                if within_timeout {
+                    // Second Ctrl+C within timeout - exit
                     inner.should_exit = true;
                     inner.exit_reason = Some(ExitReason::Interrupted);
                 } else {
+                    // First Ctrl+C - clear input (if any) and show hint
                     inner.input_buffer.clear();
                     inner.cursor_pos = 0;
+                    inner.exit_hint = Some(ExitHint::CtrlC);
+                    inner.exit_hint_shown_at = Some(now);
                 }
             }
             AppMode::Responding | AppMode::Thinking => {
@@ -1043,6 +1098,18 @@ impl TuiAppState {
         }
     }
 
+    /// Check if exit hint has timed out and clear it
+    pub fn check_exit_hint_timeout(&self) {
+        let mut inner = self.inner.lock();
+        if let (Some(_hint), Some(shown_at)) = (&inner.exit_hint, inner.exit_hint_shown_at) {
+            let now = inner.clock.now_millis();
+            if now.saturating_sub(shown_at) >= EXIT_HINT_TIMEOUT_MS {
+                inner.exit_hint = None;
+                inner.exit_hint_shown_at = None;
+            }
+        }
+    }
+
     /// Check for async compacting completion
     pub fn check_compacting(&self) {
         let mut inner = self.inner.lock();
@@ -1167,8 +1234,9 @@ pub fn App(mut hooks: Hooks, props: &AppProps) -> impl Into<AnyElement<'static>>
         }
     });
 
-    // Check for compacting completion
+    // Check for timeouts (both compacting and exit hint)
     state_clone.check_compacting();
+    state_clone.check_exit_hint_timeout();
 
     // Get current render state
     let render_state = state_clone.render_state();
@@ -1525,6 +1593,14 @@ fn format_header_lines(state: &RenderState) -> (String, String, String) {
 
 /// Format status bar content
 fn format_status_bar(state: &RenderState) -> String {
+    // Check for exit hint first (takes precedence)
+    if let Some(hint) = &state.exit_hint {
+        return match hint {
+            ExitHint::CtrlC => "  Press Ctrl-C again to exit".to_string(),
+            ExitHint::CtrlD => "  Press Ctrl-D again to exit".to_string(),
+        };
+    }
+
     // Status bar format matches real Claude CLI
     let mode_text = match &state.permission_mode {
         PermissionMode::Default => "  ? for shortcuts".to_string(),
@@ -1642,13 +1718,23 @@ impl TuiApp {
             // Already in a runtime - use block_in_place to run async code
             tokio::task::block_in_place(|| {
                 tokio::runtime::Handle::current().block_on(async {
-                    element!(App(state: Some(state.clone()))).fullscreen().await
+                    // ignore_ctrl_c() prevents iocraft from exiting on Ctrl+C - we handle it ourselves
+                    element!(App(state: Some(state.clone())))
+                        .fullscreen()
+                        .ignore_ctrl_c()
+                        .await
                 })
             })?;
         } else {
             // No runtime - create a new one
             let rt = tokio::runtime::Runtime::new()?;
-            rt.block_on(async { element!(App(state: Some(state.clone()))).fullscreen().await })?;
+            // ignore_ctrl_c() prevents iocraft from exiting on Ctrl+C - we handle it ourselves
+            rt.block_on(async {
+                element!(App(state: Some(state.clone())))
+                    .fullscreen()
+                    .ignore_ctrl_c()
+                    .await
+            })?;
         }
         Ok(self.state.exit_reason().unwrap_or(ExitReason::Completed))
     }
@@ -1711,3 +1797,7 @@ impl TuiApp {
         self.state.show_write_permission(file_path, content_lines);
     }
 }
+
+#[cfg(test)]
+#[path = "app_tests.rs"]
+mod tests;

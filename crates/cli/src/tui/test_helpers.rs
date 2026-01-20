@@ -3,8 +3,11 @@
 
 //! TUI testing utilities.
 
-use super::app::{AppMode, ExitReason};
-use crate::time::FakeClock;
+use super::app::{AppMode, ExitHint, ExitReason};
+use crate::time::{Clock, FakeClock};
+
+/// Exit hint timeout in milliseconds (2 seconds)
+const EXIT_HINT_TIMEOUT_MS: u64 = 2000;
 
 /// App state without terminal (for headless testing)
 pub struct TuiAppState {
@@ -16,6 +19,8 @@ pub struct TuiAppState {
     pub history: Vec<String>,
     pub should_exit: bool,
     pub exit_reason: Option<ExitReason>,
+    pub exit_hint: Option<ExitHint>,
+    pub exit_hint_shown_at: Option<u64>,
 }
 
 /// Test harness for TUI testing
@@ -41,6 +46,8 @@ impl TuiTestHarness {
                 history: Vec::new(),
                 should_exit: false,
                 exit_reason: None,
+                exit_hint: None,
+                exit_hint_shown_at: None,
             },
         }
     }
@@ -66,25 +73,53 @@ impl TuiTestHarness {
 
     /// Simulate pressing Ctrl+C
     pub fn press_ctrl_c(&mut self) {
-        match self.app_state.mode {
-            AppMode::Input if self.app_state.input_buffer.is_empty() => {
-                self.app_state.should_exit = true;
-                self.app_state.exit_reason = Some(ExitReason::Interrupted);
-            }
-            AppMode::Input => {
-                self.app_state.input_buffer.clear();
-                self.app_state.cursor_pos = 0;
-            }
-            _ => {}
+        if self.app_state.mode != AppMode::Input {
+            return;
+        }
+
+        let now = self.clock.now_millis();
+        let within_timeout = self.app_state.exit_hint == Some(ExitHint::CtrlC)
+            && self
+                .app_state
+                .exit_hint_shown_at
+                .map(|t| now.saturating_sub(t) < EXIT_HINT_TIMEOUT_MS)
+                .unwrap_or(false);
+
+        if within_timeout {
+            // Second Ctrl+C within timeout - exit
+            self.app_state.should_exit = true;
+            self.app_state.exit_reason = Some(ExitReason::Interrupted);
+        } else {
+            // First Ctrl+C - clear input (if any) and show hint
+            self.app_state.input_buffer.clear();
+            self.app_state.cursor_pos = 0;
+            self.app_state.exit_hint = Some(ExitHint::CtrlC);
+            self.app_state.exit_hint_shown_at = Some(now);
         }
     }
 
     /// Simulate pressing Ctrl+D
     pub fn press_ctrl_d(&mut self) {
         if self.app_state.input_buffer.is_empty() {
-            self.app_state.should_exit = true;
-            self.app_state.exit_reason = Some(ExitReason::UserQuit);
+            let now = self.clock.now_millis();
+            let within_timeout = self.app_state.exit_hint == Some(ExitHint::CtrlD)
+                && self
+                    .app_state
+                    .exit_hint_shown_at
+                    .map(|t| now.saturating_sub(t) < EXIT_HINT_TIMEOUT_MS)
+                    .unwrap_or(false);
+
+            if within_timeout {
+                // Second Ctrl+D within timeout - exit
+                self.app_state.should_exit = true;
+                self.app_state.exit_reason = Some(ExitReason::UserQuit);
+            } else {
+                // First Ctrl+D - show hint
+                self.app_state.exit_hint = Some(ExitHint::CtrlD);
+                self.app_state.exit_hint_shown_at = Some(now);
+            }
         }
+        // With text in input: ignored (do nothing)
     }
 
     /// Simulate pressing Backspace
@@ -140,6 +175,24 @@ impl TuiTestHarness {
     /// Advance time
     pub fn advance_time(&self, ms: u64) {
         self.clock.advance_ms(ms);
+    }
+
+    /// Check if exit hint has timed out and clear it
+    pub fn check_exit_hint_timeout(&mut self) {
+        if let (Some(_hint), Some(shown_at)) =
+            (&self.app_state.exit_hint, self.app_state.exit_hint_shown_at)
+        {
+            let now = self.clock.now_millis();
+            if now.saturating_sub(shown_at) >= EXIT_HINT_TIMEOUT_MS {
+                self.app_state.exit_hint = None;
+                self.app_state.exit_hint_shown_at = None;
+            }
+        }
+    }
+
+    /// Get current exit hint
+    pub fn exit_hint(&self) -> Option<ExitHint> {
+        self.app_state.exit_hint.clone()
     }
 }
 

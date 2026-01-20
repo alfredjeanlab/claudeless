@@ -27,7 +27,7 @@ fn test_harness_enter_adds_to_history() {
 }
 
 #[test]
-fn test_ctrl_c_clears_input() {
+fn test_ctrl_c_clears_input_and_shows_hint() {
     let mut harness = TuiTestHarness::new();
 
     harness.type_input("Some text");
@@ -36,12 +36,28 @@ fn test_ctrl_c_clears_input() {
     harness.press_ctrl_c();
     assert!(harness.app_state.input_buffer.is_empty());
     assert!(!harness.app_state.should_exit);
+    assert_eq!(harness.app_state.exit_hint, Some(ExitHint::CtrlC));
 }
 
 #[test]
-fn test_ctrl_c_exits_on_empty() {
+fn test_ctrl_c_shows_hint_on_empty() {
     let mut harness = TuiTestHarness::new();
 
+    // First Ctrl+C shows exit hint
+    harness.press_ctrl_c();
+    assert!(!harness.app_state.should_exit);
+    assert_eq!(harness.app_state.exit_hint, Some(ExitHint::CtrlC));
+}
+
+#[test]
+fn test_double_ctrl_c_exits() {
+    let mut harness = TuiTestHarness::new();
+
+    // First Ctrl+C shows exit hint
+    harness.press_ctrl_c();
+    assert!(!harness.app_state.should_exit);
+
+    // Second Ctrl+C exits
     harness.press_ctrl_c();
     assert!(harness.app_state.should_exit);
     assert!(matches!(

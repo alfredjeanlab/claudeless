@@ -17,8 +17,8 @@ mod test_helpers;
 pub mod widgets;
 
 pub use app::{
-    AppMode, ExitReason, PermissionChoice, PermissionRequest, RenderState, StatusInfo, TuiApp,
-    TuiConfig,
+    AppMode, ExitHint, ExitReason, PermissionChoice, PermissionRequest, RenderState, StatusInfo,
+    TuiApp, TuiConfig,
 };
 pub use screenshot::{LineDiff, Screenshot, ScreenshotCapture, ScreenshotMetadata};
 pub use streaming::{StreamingConfig, StreamingResponse, TokenStream};

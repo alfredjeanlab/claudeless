@@ -29,9 +29,7 @@ use common::{start_tui, tmux, write_scenario};
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// First Ctrl+C on empty input shows "Press Ctrl-C again to exit" in status bar
-// TODO(implement): requires double-press exit confirmation with timeout
 #[test]
-#[ignore]
 fn test_tui_ctrl_c_shows_exit_hint_on_empty_input() {
     let scenario = write_scenario(
         r#"
@@ -61,9 +59,7 @@ fn test_tui_ctrl_c_shows_exit_hint_on_empty_input() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// First Ctrl+C with text in input clears input AND shows exit hint
-// TODO(implement): requires double-press exit confirmation with timeout
 #[test]
-#[ignore]
 fn test_tui_ctrl_c_clears_input_and_shows_exit_hint() {
     let scenario = write_scenario(
         r#"
@@ -107,9 +103,7 @@ fn test_tui_ctrl_c_clears_input_and_shows_exit_hint() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Exit hint times out and returns to normal status bar
-// TODO(implement): requires double-press exit confirmation with timeout
 #[test]
-#[ignore]
 fn test_tui_ctrl_c_exit_hint_times_out() {
     let scenario = write_scenario(
         r#"
@@ -198,9 +192,7 @@ fn test_tui_ctrl_c_double_press_exits() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Ctrl+D on empty input shows "Press Ctrl-D again to exit" in status bar
-// TODO(implement): requires double-press exit confirmation with timeout
 #[test]
-#[ignore]
 fn test_tui_ctrl_d_shows_exit_hint_on_empty_input() {
     let scenario = write_scenario(
         r#"
@@ -230,9 +222,7 @@ fn test_tui_ctrl_d_shows_exit_hint_on_empty_input() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Ctrl+D exit hint times out and returns to normal status bar
-// TODO(implement): requires double-press exit confirmation with timeout
 #[test]
-#[ignore]
 fn test_tui_ctrl_d_exit_hint_times_out() {
     let scenario = write_scenario(
         r#"
