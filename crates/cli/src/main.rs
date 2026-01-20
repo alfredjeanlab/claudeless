@@ -42,7 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Check for TUI mode first
     if cli.should_use_tui() {
-        return run_tui_mode(&cli);
+        return run_tui_mode(&cli, bypass.is_active());
     }
 
     // Initialize capture log if requested
@@ -318,7 +318,10 @@ fn load_mcp_configs(cli: &Cli) -> Result<McpManager, Box<dyn std::error::Error>>
 }
 
 /// Run in TUI mode
-fn run_tui_mode(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
+fn run_tui_mode(
+    cli: &Cli,
+    allow_bypass_permissions: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     // Ignore SIGINT so Ctrl+C is captured as a key event rather than killing the process.
     // This is required because raw mode alone doesn't prevent SIGINT generation on macOS/tmux.
     // SAFETY: SIG_IGN is a well-defined, constant signal handler provided by the OS that
@@ -342,8 +345,12 @@ fn run_tui_mode(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Create TUI config from scenario
-    let tui_config =
-        TuiConfig::from_scenario(scenario.config(), Some(&cli.model), &cli.permission_mode);
+    let tui_config = TuiConfig::from_scenario(
+        scenario.config(),
+        Some(&cli.model),
+        &cli.permission_mode,
+        allow_bypass_permissions,
+    );
 
     let sessions = SessionManager::new();
     let clock = ClockHandle::system();

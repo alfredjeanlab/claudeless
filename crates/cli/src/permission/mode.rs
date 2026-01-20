@@ -50,11 +50,24 @@ impl PermissionMode {
     }
 
     /// Cycle to the next permission mode (for TUI shift+tab)
-    pub fn cycle_next(&self) -> Self {
+    ///
+    /// The `allow_bypass` parameter controls whether BypassPermissions is included
+    /// in the cycle. In Claude Code, bypass mode is only available when the
+    /// `--dangerously-skip-permissions` flag is passed.
+    ///
+    /// Without bypass: Default → Plan → AcceptEdits → Default
+    /// With bypass: Default → Plan → AcceptEdits → BypassPermissions → Default
+    pub fn cycle_next(&self, allow_bypass: bool) -> Self {
         match self {
             Self::Default => Self::Plan,
             Self::Plan => Self::AcceptEdits,
-            Self::AcceptEdits => Self::BypassPermissions,
+            Self::AcceptEdits => {
+                if allow_bypass {
+                    Self::BypassPermissions
+                } else {
+                    Self::Default
+                }
+            }
             Self::BypassPermissions => Self::Default,
             Self::Delegate => Self::Default,
             Self::DontAsk => Self::Default,
