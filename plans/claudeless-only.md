@@ -1,5 +1,7 @@
 # Implementation Plan: Claudeless-Only Version Display
 
+**Root Feature:** `cl-fcbd`
+
 ## Overview
 
 When no Claude Code version is specified in the scenario file or as a CLI argument, Claudeless should display its own version string ("Claudeless 0.1.0") in the TUI header instead of "Claude Code vX.Y.Z". This allows users to distinguish between simulating a specific Claude Code version versus running Claudeless in its native mode.

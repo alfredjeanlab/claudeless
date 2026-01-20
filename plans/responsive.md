@@ -1,5 +1,7 @@
 # Plan: Responsive Terminal Width Rendering
 
+**Root Feature:** `cl-e9c5`
+
 ## Overview
 
 Update the claudeless TUI renderer to be responsive to terminal width. Currently, all separators (`────`) and status bar formatting are hardcoded to 120 characters. This plan adds dynamic width detection and separate unit/integration tests for claudeless's responsive behavior, independent of the fixture-based comparison tests (which remain at 120 chars).
