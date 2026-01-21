@@ -87,7 +87,7 @@ fn test_parse_resume() {
 #[test]
 fn test_default_model() {
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
-    assert_eq!(cli.model, "claude-sonnet-4-20250514");
+    assert_eq!(cli.model, "claude-opus-4-5-20251101");
 }
 
 #[test]

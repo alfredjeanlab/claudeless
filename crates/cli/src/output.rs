@@ -81,7 +81,7 @@ impl ResultOutput {
 
         let mut model_usage = ModelUsage::default();
         model_usage.models.insert(
-            "claude-sonnet-4-20250514".to_string(),
+            "claude-opus-4-5-20251101".to_string(),
             ResultUsage::from_tokens(input_tokens, output_tokens),
         );
 
