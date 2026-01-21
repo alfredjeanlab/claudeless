@@ -28,6 +28,27 @@ TUI state after Claude responds:
 - New empty input field ready for next prompt
 - Help shortcut hint returns
 
+### shortcuts_display.txt
+TUI state after pressing '?' on empty input:
+- Header remains
+- Shows shortcuts panel with keyboard shortcuts in columns:
+  - `! for bash mode` - enter shell command mode
+  - `/ for commands` - slash commands
+  - `@ for file paths` - file path completion
+  - `& for background` - background task mode
+  - `double tap esc to clear input` - clear the input field
+  - `shift + tab to auto-accept edits` - cycle permission modes
+  - `ctrl + o for verbose output` - toggle verbose mode
+  - `ctrl + t to show todos` - display todo list
+  - `backslash (\) + return (⏎) for newline` - insert newline
+  - `ctrl + _ to undo` - undo last action
+  - `ctrl + z to suspend` - suspend Claude
+  - `cmd + v to paste images` - paste image from clipboard
+  - `meta + p to switch model` - change AI model
+  - `ctrl + s to stash prompt` - save prompt for later
+- Pressing Escape dismisses the shortcuts panel
+- Note: '?' only shows shortcuts when input is empty; otherwise types literal '?'
+
 ### Model Variants
 - **model_haiku.txt**: Shows "Haiku 4.5 · Claude Max"
 - **model_sonnet.txt**: Shows "Sonnet 4.5 · Claude Max"
