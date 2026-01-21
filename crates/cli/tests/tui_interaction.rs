@@ -309,3 +309,135 @@ fn test_tui_escape_clear_hint_timeout() {
         capture
     );
 }
+
+// ============================================================================
+// Ctrl+_ to undo input
+// ============================================================================
+
+/// Behavior observed with: claude --version 2.1.14 (Claude Code)
+///
+/// Pressing Ctrl+_ (undo) when input has text removes the last typed "word" or segment.
+/// When multiple words are typed with pauses, each undo removes the most recent segment.
+/// Example: "first second third" → Ctrl+_ → "first second" → Ctrl+_ → empty
+// TODO(implement): requires Ctrl+_ undo handling
+#[test]
+#[ignore]
+fn test_tui_ctrl_underscore_undoes_last_word() {
+    let scenario = write_scenario(
+        r#"
+        {
+            "default_response": "Hello!",
+            "trusted": true
+        }
+        "#,
+    );
+
+    let session = "claudeless-ctrl-underscore-word";
+    let previous = start_tui(session, &scenario);
+
+    // Type words with pauses
+    tmux::send_keys(session, "first");
+    std::thread::sleep(std::time::Duration::from_millis(200));
+    tmux::send_keys(session, " second");
+    std::thread::sleep(std::time::Duration::from_millis(200));
+    tmux::send_keys(session, " third");
+    let _ = tmux::wait_for_change(session, &previous);
+
+    // Press Ctrl+_ to undo
+    tmux::send_keys(session, "C-_");
+    let after_first_undo = tmux::wait_for_content(session, "first second");
+
+    tmux::kill_session(session);
+
+    // Should have removed "third"
+    assert!(
+        after_first_undo.contains("first second"),
+        "First undo should keep 'first second'.\nCapture:\n{}",
+        after_first_undo
+    );
+    assert!(
+        !after_first_undo.contains("third"),
+        "First undo should remove 'third'.\nCapture:\n{}",
+        after_first_undo
+    );
+}
+
+/// Behavior observed with: claude --version 2.1.14 (Claude Code)
+///
+/// Pressing Ctrl+_ repeatedly undoes all input, returning to empty state
+// TODO(implement): requires Ctrl+_ undo handling
+#[test]
+#[ignore]
+fn test_tui_ctrl_underscore_clears_all_input() {
+    let scenario = write_scenario(
+        r#"
+        {
+            "default_response": "Hello!",
+            "trusted": true
+        }
+        "#,
+    );
+
+    let session = "claudeless-ctrl-underscore-clear";
+    let previous = start_tui(session, &scenario);
+
+    // Type some text
+    tmux::send_keys(session, "Hello world");
+    let _ = tmux::wait_for_change(session, &previous);
+
+    // Press Ctrl+_ multiple times to clear all
+    tmux::send_keys(session, "C-_");
+    std::thread::sleep(std::time::Duration::from_millis(100));
+    tmux::send_keys(session, "C-_");
+    let capture = tmux::wait_for_content(session, "? for shortcuts");
+
+    tmux::kill_session(session);
+
+    // Input should be cleared
+    assert!(
+        !capture.contains("Hello world"),
+        "All input should be cleared after multiple Ctrl+_.\nCapture:\n{}",
+        capture
+    );
+    // Should show placeholder
+    assert!(
+        capture.contains("Try") || capture.contains("? for shortcuts"),
+        "Should show initial placeholder after clearing.\nCapture:\n{}",
+        capture
+    );
+}
+
+/// Behavior observed with: claude --version 2.1.14 (Claude Code)
+///
+/// Pressing Ctrl+_ on empty input does nothing
+// TODO(implement): requires Ctrl+_ undo handling
+#[test]
+#[ignore]
+fn test_tui_ctrl_underscore_on_empty_input_does_nothing() {
+    let scenario = write_scenario(
+        r#"
+        {
+            "default_response": "Hello!",
+            "trusted": true
+        }
+        "#,
+    );
+
+    let session = "claudeless-ctrl-underscore-empty";
+    let initial = start_tui(session, &scenario);
+
+    // Press Ctrl+_ on empty input
+    tmux::send_keys(session, "C-_");
+
+    // Use assert_unchanged to verify nothing happens
+    let capture = tmux::assert_unchanged_ms(session, &initial, 200);
+
+    tmux::kill_session(session);
+
+    // Should still show initial state
+    assert!(
+        capture.contains("? for shortcuts") || capture.contains("Try"),
+        "Empty input should remain unchanged after Ctrl+_.\nCapture:\n{}",
+        capture
+    );
+}
