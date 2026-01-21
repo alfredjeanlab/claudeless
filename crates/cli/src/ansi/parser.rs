@@ -11,13 +11,14 @@ use std::sync::LazyLock;
 /// Regex for matching ANSI SGR (Select Graphic Rendition) escape sequences.
 /// Matches ESC [ followed by semicolon-separated numbers, ending with 'm'.
 ///
-/// This is a compile-time constant regex pattern that is guaranteed to be valid,
-/// so the unwrap is safe. We use unwrap_or_else to avoid clippy's expect_used warning.
-static ANSI_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    // SAFETY: This regex pattern is a compile-time constant and is guaranteed to be valid
-    #[allow(clippy::expect_used)]
-    Regex::new(r"\x1b\[([0-9;]*)m").expect("ANSI regex pattern is invalid")
-});
+/// This is a compile-time constant regex pattern that is guaranteed to be valid.
+/// Uses Option to satisfy lint rules; None case is unreachable for valid patterns.
+static ANSI_REGEX: LazyLock<Option<Regex>> = LazyLock::new(|| Regex::new(r"\x1b\[([0-9;]*)m").ok());
+
+/// Get the ANSI regex, returning None if pattern compilation failed (unreachable for valid patterns).
+fn ansi_regex() -> Option<&'static Regex> {
+    ANSI_REGEX.as_ref()
+}
 
 /// Represents a parsed ANSI escape sequence.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -134,16 +135,26 @@ impl AnsiSpan {
 /// Each span contains the text content and the ANSI sequences that preceded it.
 /// This preserves the exact sequence of ANSI codes and text for comparison.
 pub fn parse_ansi(input: &str) -> Vec<AnsiSpan> {
+    let Some(regex) = ansi_regex() else {
+        // Regex compilation failed (unreachable for valid patterns)
+        // Return input as plain text
+        return if input.is_empty() {
+            Vec::new()
+        } else {
+            vec![AnsiSpan::plain(input)]
+        };
+    };
+
     let mut spans = Vec::new();
     let mut current_sequences = Vec::new();
     let mut last_end = 0;
 
-    for cap in ANSI_REGEX.captures_iter(input) {
+    for cap in regex.captures_iter(input) {
         // cap.get(0) is the full match, which is always present when the regex matches
         let Some(full_match) = cap.get(0) else {
             continue;
         };
-        let params = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+        let params = cap.get(1).map_or("", |m| m.as_str());
 
         // Text before this escape sequence
         let text_before = &input[last_end..full_match.start()];
@@ -178,7 +189,10 @@ pub fn parse_ansi(input: &str) -> Vec<AnsiSpan> {
 
 /// Strip all ANSI escape sequences, returning plain text.
 pub fn strip_ansi(input: &str) -> String {
-    ANSI_REGEX.replace_all(input, "").to_string()
+    match ansi_regex() {
+        Some(regex) => regex.replace_all(input, "").to_string(),
+        None => input.to_string(), // Regex failed (unreachable), return as-is
+    }
 }
 
 /// Extract only the ANSI sequences with their byte positions.
@@ -186,12 +200,16 @@ pub fn strip_ansi(input: &str) -> String {
 /// Returns pairs of (position, sequence) where position is the byte offset
 /// in the original string where the sequence started.
 pub fn extract_sequences(input: &str) -> Vec<(usize, AnsiSequence)> {
-    ANSI_REGEX
+    let Some(regex) = ansi_regex() else {
+        return Vec::new(); // Regex failed (unreachable), return empty
+    };
+
+    regex
         .captures_iter(input)
         .filter_map(|cap| {
             // cap.get(0) is the full match, which is always present when the regex matches
             let full_match = cap.get(0)?;
-            let params = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+            let params = cap.get(1).map_or("", |m| m.as_str());
             Some((full_match.start(), AnsiSequence::from_params(params)))
         })
         .collect()

@@ -135,6 +135,31 @@ Implement incremental search/filtering for slash commands by typing `/[key][key]
 
 Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
 
+## TUI Color Rendering
+
+### ANSI Color Output
+
+Implement ANSI color output in the TUI to match real Claude Code's color scheme.
+
+**Test:** `test_initial_state_ansi_matches_fixture` in `tui_snapshot.rs` (currently `#[ignore]`).
+
+**Colors to implement** (from `initial_state_ansi.txt` fixture):
+- **Orange** `(215, 119, 87)`: Logo characters
+- **Black** `(0, 0, 0)`: Logo background
+- **Gray** `(153, 153, 153)`: Version, model, path, shortcuts
+- **Dark gray** `(136, 136, 136)`: Separator lines (with dim attribute)
+
+**Key elements to style:**
+- Logo (foreground + background colors)
+- Version text (gray)
+- Model name (gray)
+- Working directory path (gray)
+- Separator lines (dim + dark gray)
+- Status bar shortcuts (gray)
+- Prompt placeholder (dim)
+
+**Location:** `crates/cli/src/tui/app.rs` - Add iocraft styles to components.
+
 ## Scenario Configuration
 
 ### Subscription Level in Header
