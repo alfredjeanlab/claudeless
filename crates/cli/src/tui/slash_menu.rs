@@ -149,6 +149,11 @@ pub static COMMANDS: &[SlashCommand] = &[
         argument_hint: None,
     },
     SlashCommand {
+        name: "todos",
+        description: "Show the current todo list",
+        argument_hint: None,
+    },
+    SlashCommand {
         name: "vim",
         description: "Toggle vim keybindings mode",
         argument_hint: None,

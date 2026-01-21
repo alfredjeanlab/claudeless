@@ -13,6 +13,7 @@ use crate::config::{ScenarioConfig, DEFAULT_MODEL, DEFAULT_USER_NAME};
 use crate::permission::PermissionMode;
 use crate::scenario::Scenario;
 use crate::state::session::SessionManager;
+use crate::state::todos::{TodoState, TodoStatus};
 use crate::time::{Clock, ClockHandle};
 
 use super::colors::{
@@ -342,6 +343,9 @@ struct TuiAppStateInner {
 
     /// Whether shell mode is currently active (user typed '!' at empty input)
     pub shell_mode: bool,
+
+    /// Todo list state
+    pub todos: TodoState,
 }
 
 impl TuiAppState {
@@ -408,6 +412,7 @@ impl TuiAppState {
                 show_shortcuts_panel: false,
                 slash_menu: None,
                 shell_mode: false,
+                todos: TodoState::new(),
             })),
         }
     }
@@ -583,6 +588,16 @@ impl TuiAppState {
             (m, KeyCode::Char('t')) if m.contains(KeyModifiers::ALT) => {
                 inner.thinking_dialog = Some(ThinkingDialog::new(inner.thinking_enabled));
                 inner.mode = AppMode::ThinkingToggle;
+            }
+
+            // Ctrl+T - Show todos (only when todos exist)
+            (m, KeyCode::Char('t')) if m.contains(KeyModifiers::CONTROL) => {
+                if !inner.todos.is_empty() {
+                    inner.response_content = Self::format_todos(&inner.todos);
+                    inner.is_command_output = true;
+                    inner.conversation_display = "Todo List".to_string();
+                }
+                // When no todos, do nothing (no visible change)
             }
 
             // Shift+Tab - Cycle permission mode
@@ -1004,6 +1019,27 @@ impl TuiAppState {
         inner.cursor_pos = word_start;
     }
 
+    /// Format todo items for display.
+    fn format_todos(todos: &TodoState) -> String {
+        if todos.is_empty() {
+            "No todos currently tracked".to_string()
+        } else {
+            todos
+                .items
+                .iter()
+                .map(|item| {
+                    let status = match item.status {
+                        TodoStatus::Pending => "[ ]",
+                        TodoStatus::InProgress => "[*]",
+                        TodoStatus::Completed => "[x]",
+                    };
+                    format!("{} {}", status, item.content)
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+    }
+
     /// Submit the current input
     fn submit_input(&self) {
         let mut inner = self.inner.lock();
@@ -1164,6 +1200,9 @@ impl TuiAppState {
                     /compact - Compact conversation history\n\
                     /help    - Show this help\n"
                     .to_string();
+            }
+            "/todos" => {
+                inner.response_content = Self::format_todos(&inner.todos);
             }
             _ => {
                 inner.response_content = format!("Unknown command: {}", input);

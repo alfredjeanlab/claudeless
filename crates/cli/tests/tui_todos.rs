@@ -27,7 +27,6 @@ use common::{start_tui, tmux, write_scenario};
 /// The shortcut only shows content when there are active todos to display.
 // TODO(implement): requires Ctrl+T shortcut handling
 #[test]
-#[ignore]
 fn test_tui_ctrl_t_no_change_when_no_todos() {
     let scenario = write_scenario(
         r#"
@@ -61,7 +60,6 @@ fn test_tui_ctrl_t_no_change_when_no_todos() {
 /// The shortcuts panel lists "ctrl + t to show todos" as an available shortcut.
 // TODO(implement): requires shortcuts panel display
 #[test]
-#[ignore]
 fn test_tui_shortcuts_shows_ctrl_t_for_todos() {
     let scenario = write_scenario(
         r#"
@@ -98,7 +96,6 @@ fn test_tui_shortcuts_shows_ctrl_t_for_todos() {
 /// The /todos command displays "No todos currently tracked" when no todos exist.
 // TODO(implement): requires /todos slash command
 #[test]
-#[ignore]
 fn test_tui_todos_command_shows_empty_message() {
     let scenario = write_scenario(
         r#"
@@ -135,7 +132,6 @@ fn test_tui_todos_command_shows_empty_message() {
 /// When todos exist, Ctrl+T displays the todo list.
 // TODO(implement): requires TodoWrite tool support and Ctrl+T display
 #[test]
-#[ignore]
 fn test_tui_ctrl_t_shows_active_todos() {
     let scenario = write_scenario(
         r#"
@@ -163,7 +159,6 @@ fn test_tui_ctrl_t_shows_active_todos() {
 /// The /todos command shows active todo items with their status.
 // TODO(implement): requires /todos slash command with active todos
 #[test]
-#[ignore]
 fn test_tui_todos_command_shows_active_items() {
     let scenario = write_scenario(
         r#"
