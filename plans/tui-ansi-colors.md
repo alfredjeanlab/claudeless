@@ -1,5 +1,7 @@
 # TUI ANSI Color Implementation Plan
 
+**Root Feature:** `cl-8411`
+
 ## Overview
 
 Add ANSI color output to the TUI initial screen to make `test_initial_state_ansi_matches_fixture` pass. This involves styling the logo, version text, model name, working directory, separators, status bar, and prompt placeholder with specific colors matching the real Claude CLI.

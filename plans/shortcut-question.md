@@ -1,5 +1,7 @@
 # Implementation Plan: '?' Shortcut Panel Display
 
+**Root Feature:** `cl-95c5`
+
 **Test File:** `crates/cli/tests/tui_shortcuts.rs` (4 tests, currently `#[ignore]`)
 
 ## Overview

@@ -1,5 +1,7 @@
 # Implementation Plan: Slash Command Incremental Search
 
+**Root Feature:** `cl-1560`
+
 **Test File:** `crates/cli/tests/tui_slash_search.rs` (26 tests, currently `#[ignore]`)
 
 ## Overview
