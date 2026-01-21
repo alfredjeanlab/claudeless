@@ -1694,25 +1694,26 @@ pub(crate) fn format_status_bar(state: &RenderState, width: usize) -> String {
 
 /// Map model ID to display name
 fn model_display_name(model: &str) -> String {
-    // Handle short aliases (from --model flag)
     let model_lower = model.to_lowercase();
-    let base_name = match model_lower.as_str() {
-        "haiku" | "claude-haiku" => "Haiku",
-        "sonnet" | "claude-sonnet" => "Sonnet",
-        "opus" | "claude-opus" => "Opus",
-        _ => {
-            // Parse full model ID like "claude-sonnet-4-20250514"
-            if model_lower.contains("haiku") {
-                "Haiku"
-            } else if model_lower.contains("opus") {
-                "Opus"
-            } else if model_lower.contains("sonnet") {
-                "Sonnet"
-            } else {
-                // Unknown model, show as-is
-                return model.to_string();
-            }
-        }
+
+    // Short aliases default to current version (4.5)
+    match model_lower.as_str() {
+        "haiku" | "claude-haiku" => return "Haiku 4.5".to_string(),
+        "sonnet" | "claude-sonnet" => return "Sonnet 4.5".to_string(),
+        "opus" | "claude-opus" => return "Opus 4.5".to_string(),
+        _ => {}
+    }
+
+    // Parse full model ID like "claude-sonnet-4-20250514"
+    let base_name = if model_lower.contains("haiku") {
+        "Haiku"
+    } else if model_lower.contains("opus") {
+        "Opus"
+    } else if model_lower.contains("sonnet") {
+        "Sonnet"
+    } else {
+        // Unknown model, show as-is
+        return model.to_string();
     };
 
     // Extract version if present (e.g., "4.5" from "claude-opus-4-5-...")
