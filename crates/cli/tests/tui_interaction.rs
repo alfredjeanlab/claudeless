@@ -142,9 +142,7 @@ fn test_input_display_matches_fixture() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// When input has text and Escape is pressed once, shows "Esc to clear again" hint
-// TODO(implement): requires escape key handling with clear hint
 #[test]
-#[ignore]
 fn test_tui_escape_shows_clear_hint_with_input() {
     let scenario = write_scenario(
         r#"
@@ -183,9 +181,7 @@ fn test_tui_escape_shows_clear_hint_with_input() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Double-tap Escape clears the input field
-// TODO(implement): requires escape key handling with clear functionality
 #[test]
-#[ignore]
 fn test_tui_double_escape_clears_input() {
     let scenario = write_scenario(
         r#"
@@ -229,9 +225,7 @@ fn test_tui_double_escape_clears_input() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Escape on empty input does nothing (no hint shown)
-// TODO(implement): requires escape key handling
 #[test]
-#[ignore]
 fn test_tui_escape_on_empty_input_does_nothing() {
     let scenario = write_scenario(
         r#"
@@ -263,9 +257,7 @@ fn test_tui_escape_on_empty_input_does_nothing() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// The "Esc to clear again" hint times out after ~2 seconds
-// TODO(implement): requires escape key handling with timeout
 #[test]
-#[ignore]
 fn test_tui_escape_clear_hint_timeout() {
     let scenario = write_scenario(
         r#"

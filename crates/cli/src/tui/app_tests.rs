@@ -648,3 +648,88 @@ fn test_deleting_slash_closes_menu() {
     assert!(render.slash_menu.is_none());
     assert_eq!(render.input_buffer, "");
 }
+
+// ============================================================================
+// Escape to clear input
+// ============================================================================
+
+#[test]
+fn escape_with_text_shows_clear_hint() {
+    let state = create_test_app();
+
+    // Type some text
+    state.handle_key_event(key_event(KeyCode::Char('x'), KeyModifiers::empty()));
+
+    // Press Escape
+    state.handle_key_event(key_event(KeyCode::Esc, KeyModifiers::empty()));
+
+    let render = state.render_state();
+    assert_eq!(render.exit_hint, Some(ExitHint::Escape));
+    assert_eq!(render.input_buffer, "x"); // Input still present
+}
+
+#[test]
+fn double_escape_clears_input() {
+    let state = create_test_app();
+
+    // Type some text
+    state.handle_key_event(key_event(KeyCode::Char('x'), KeyModifiers::empty()));
+
+    // Double-tap Escape
+    state.handle_key_event(key_event(KeyCode::Esc, KeyModifiers::empty()));
+    state.handle_key_event(key_event(KeyCode::Esc, KeyModifiers::empty()));
+
+    let render = state.render_state();
+    assert!(render.input_buffer.is_empty());
+    assert_eq!(render.exit_hint, None);
+}
+
+#[test]
+fn escape_on_empty_input_does_nothing() {
+    let state = create_test_app();
+
+    // Escape on empty input
+    state.handle_key_event(key_event(KeyCode::Esc, KeyModifiers::empty()));
+
+    let render = state.render_state();
+    assert_eq!(render.exit_hint, None);
+    assert!(render.input_buffer.is_empty());
+}
+
+#[test]
+fn escape_clear_hint_times_out() {
+    let state = create_test_app();
+    let clock = state.inner.lock().clock.as_fake().unwrap().clone();
+
+    // Type text and press Escape
+    state.handle_key_event(key_event(KeyCode::Char('x'), KeyModifiers::empty()));
+    state.handle_key_event(key_event(KeyCode::Esc, KeyModifiers::empty()));
+
+    assert_eq!(state.render_state().exit_hint, Some(ExitHint::Escape));
+
+    // Advance time past timeout
+    clock.advance_ms(2100);
+    state.check_exit_hint_timeout();
+
+    assert_eq!(state.render_state().exit_hint, None);
+    assert_eq!(state.render_state().input_buffer, "x"); // Input not cleared
+}
+
+#[test]
+fn escape_after_timeout_shows_hint_again() {
+    let state = create_test_app();
+    let clock = state.inner.lock().clock.as_fake().unwrap().clone();
+
+    // Type text, press Escape, wait for timeout
+    state.handle_key_event(key_event(KeyCode::Char('x'), KeyModifiers::empty()));
+    state.handle_key_event(key_event(KeyCode::Esc, KeyModifiers::empty()));
+    clock.advance_ms(2100);
+    state.check_exit_hint_timeout();
+
+    // Press Escape again - should show hint (not clear)
+    state.handle_key_event(key_event(KeyCode::Esc, KeyModifiers::empty()));
+
+    let render = state.render_state();
+    assert_eq!(render.exit_hint, Some(ExitHint::Escape));
+    assert_eq!(render.input_buffer, "x"); // Still present
+}

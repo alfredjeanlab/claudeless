@@ -597,7 +597,7 @@ impl TuiAppState {
                 }
             }
 
-            // Escape - Dismiss shortcuts panel first, then exit shell mode, then clear input
+            // Escape - Dismiss shortcuts panel first, then exit shell mode, then check for clear
             // Note: slash menu escape is handled above in the slash_menu.is_some() block
             (_, KeyCode::Esc) => {
                 if inner.show_shortcuts_panel {
@@ -606,15 +606,30 @@ impl TuiAppState {
                 } else if inner.shell_mode {
                     // Second priority: exit shell mode
                     inner.shell_mode = false;
-                    // Also clear any input typed in shell mode
                     inner.input_buffer.clear();
                     inner.cursor_pos = 0;
-                } else {
-                    // Normal behavior: clear input
-                    inner.input_buffer.clear();
-                    inner.cursor_pos = 0;
-                    inner.slash_menu = None;
+                } else if !inner.input_buffer.is_empty() {
+                    // Input has text - check for double-tap
+                    let now = inner.clock.now_millis();
+                    let within_timeout = inner.exit_hint == Some(ExitHint::Escape)
+                        && inner
+                            .exit_hint_shown_at
+                            .map(|t| now.saturating_sub(t) < EXIT_HINT_TIMEOUT_MS)
+                            .unwrap_or(false);
+
+                    if within_timeout {
+                        // Second Escape within timeout - clear input
+                        inner.input_buffer.clear();
+                        inner.cursor_pos = 0;
+                        inner.exit_hint = None;
+                        inner.exit_hint_shown_at = None;
+                    } else {
+                        // First Escape - show hint
+                        inner.exit_hint = Some(ExitHint::Escape);
+                        inner.exit_hint_shown_at = Some(now);
+                    }
                 }
+                // Empty input: do nothing (no else branch)
             }
 
             // Backspace - Delete character before cursor, or exit shell mode if empty
