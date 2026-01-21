@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Default model to report in output
-pub const DEFAULT_MODEL: &str = "claude-sonnet-4-20250514";
+pub const DEFAULT_MODEL: &str = "claude-opus-4-5-20251101";
 /// Default Claude version string
 pub const DEFAULT_CLAUDE_VERSION: &str = "2.1.12";
 /// Default user display name
@@ -38,7 +38,7 @@ pub struct ScenarioConfig {
     pub tool_execution: Option<ToolExecutionConfig>,
 
     // Session identity fields
-    /// Model to report in output (default: "claude-sonnet-4-20250514")
+    /// Model to report in output (default: "claude-opus-4-5-20251101")
     /// Overridden by --model CLI flag
     #[serde(default)]
     pub default_model: Option<String>,

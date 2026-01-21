@@ -21,7 +21,7 @@ pub struct Cli {
     pub print: bool,
 
     /// Model to use (ignored by simulator, accepted for compatibility)
-    #[arg(long, default_value = "claude-sonnet-4-20250514")]
+    #[arg(long, default_value = "claude-opus-4-5-20251101")]
     pub model: String,
 
     /// Output format
