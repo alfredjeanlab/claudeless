@@ -1,0 +1,24 @@
+Welcome to Claude Code v2.1.14
+…………………………………………………………………………………………………………………………………………………………
+
+     *                                       █████▓▓░
+                                 *         ███▓░     ░░
+            ░░░░░░                        ███▓░
+    ░░░   ░░░░░░░░░░                      ███▓░
+   ░░░░░░░░░░░░░░░░░░░    *                ██▓░░      ▓
+                                             ░▓▓███▓▓░
+ *                                 ░░░░
+                                 ░░░░░░░░
+                               ░░░░░░░░░░░░░░░░
+                                                      *
+      ▗ ▗     ▖ ▖                       *
+                      *
+…………………         ………………………………………………………………………………………………………………
+
+ Unable to connect to Anthropic services
+
+ Failed to connect to api.anthropic.com: FailedToOpenSocket
+
+ Please check your internet connection and network settings.
+
+ Note: Claude Code might not be available in your country. Check supported countries at https://anthropic.com/supported-countries
