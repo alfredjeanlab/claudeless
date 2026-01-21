@@ -997,6 +997,24 @@ impl TuiAppState {
                 inner.response_content =
                     "✻ Compacting conversation… (ctrl+c to interrupt)".to_string();
             }
+            "/fork" => {
+                // Check if there's a conversation to fork
+                let has_conversation = {
+                    let sessions = inner.sessions.lock();
+                    let current = sessions.get_current();
+                    current.map(|s| !s.turns.is_empty()).unwrap_or(false)
+                };
+
+                if has_conversation {
+                    // TODO: Implement actual fork functionality
+                    // For now, show a placeholder message
+                    inner.response_content = "Conversation forked".to_string();
+                } else {
+                    // No conversation to fork - show error
+                    inner.response_content =
+                        "Failed to fork conversation: No conversation to fork".to_string();
+                }
+            }
             "/help" | "/?" => {
                 inner.response_content = "Available commands:\n\
                     /clear   - Clear conversation history\n\
