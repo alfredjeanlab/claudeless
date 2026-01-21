@@ -101,6 +101,14 @@ TUI output when Ctrl+Z is pressed to suspend Claude Code:
 - The shell shows "zsh: suspended (signal) claude --model haiku" (or similar for other shells)
 - Running `fg` resumes Claude Code, which redraws its TUI with preserved state
 
+### Stash Prompt (Ctrl+S)
+- **ctrl_s_stash_active.txt**: TUI state after pressing Ctrl+S to stash input text
+  - Shows "› Stashed (auto-restores after submit)" message above the input area
+  - Input field is cleared (shows placeholder prompt again)
+  - Status bar shows "? for shortcuts"
+  - Pressing Ctrl+S again restores the stashed text
+  - After submitting a different prompt and receiving a response, the stashed text auto-restores
+
 ### Permission Mode Variants
 - **permission_default.txt**: Shows "? for shortcuts"
 - **permission_plan.txt**: Shows "⏸ plan mode on (shift+tab to cycle)"
