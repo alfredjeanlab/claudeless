@@ -19,9 +19,7 @@ use common::{assert_tui_matches_fixture, start_tui, tmux, write_scenario};
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// When /fork is executed with no conversation, it shows an error message.
-// TODO(implement): requires /fork slash command implementation
 #[test]
-#[ignore]
 fn test_fork_no_conversation_shows_error() {
     let scenario = write_scenario(
         r#"
@@ -56,9 +54,7 @@ fn test_fork_no_conversation_shows_error() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Compare /fork error state against fixture when no conversation exists.
-// TODO(implement): requires /fork slash command implementation
 #[test]
-#[ignore]
 fn test_fork_no_conversation_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -89,9 +85,7 @@ fn test_fork_no_conversation_matches_fixture() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// /fork appears in slash command autocomplete with correct description.
-// TODO(implement): requires slash command autocomplete for /fork
 #[test]
-#[ignore]
 fn test_fork_in_autocomplete() {
     let scenario = write_scenario(
         r#"

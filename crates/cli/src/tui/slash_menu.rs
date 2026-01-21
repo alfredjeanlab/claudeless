@@ -79,6 +79,11 @@ pub static COMMANDS: &[SlashCommand] = &[
         argument_hint: None,
     },
     SlashCommand {
+        name: "fork",
+        description: "Create a fork of the current conversation at this point",
+        argument_hint: None,
+    },
+    SlashCommand {
         name: "help",
         description: "Show help and available commands",
         argument_hint: None,
