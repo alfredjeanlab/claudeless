@@ -196,6 +196,30 @@ tmux capture-pane -e -t claude-tui -p > initial_state_ansi.txt
   - Shows "Memory files · /memory" section with list of loaded CLAUDE.md files
   - Returns to normal input prompt after display
 
+### /help Command
+- **help_autocomplete.txt**: TUI state showing /help in the autocomplete dropdown
+  - Shows "/help                   Show help and available commands"
+  - Autocomplete appears when typing /help
+- **help_general_tab.txt**: TUI state showing the /help dialog general tab
+  - Shows a multi-tab dialog with: general, commands, custom-commands tabs
+  - Tab navigation hint: "(←/→ or tab to cycle)"
+  - General tab shows overview text and keyboard shortcuts:
+    - "/" for commands
+    - "&" for background
+    - "ctrl + o" for verbose output
+    - "backslash (\\) + return (⏎)" for newline
+    - "cmd + v" to paste images
+    - "ctrl + s" to stash prompt
+  - Shows "For more help: https://code.claude.com/docs/en/overview" at bottom
+- **help_commands_tab.txt**: TUI state showing the /help dialog commands tab
+  - Shows browseable list of default slash commands
+  - First command shown: /add-dir with description "Add a new working directory"
+  - Arrow (❯) indicates cursor position
+  - Down arrow (↓) indicates more commands below
+  - Pressing Up/Down navigates between commands
+- Pressing Tab or arrow keys cycles between tabs
+- Pressing Escape dismisses the dialog and shows "Help dialog dismissed"
+
 ### /export Command
 - **export_autocomplete.txt**: TUI state showing /export in the autocomplete dropdown
   - Shows "/export                 Export the current conversation to a file or clipboard"
