@@ -2,6 +2,8 @@
 
 **Test File:** `crates/cli/tests/tui_shell_mode.rs` (6 tests, currently `#[ignore]`)
 
+**Root Feature:** `cl-5869`
+
 ## Overview
 
 Implement support for the '!' prefix to enter shell mode. When the user types '!' at the start of empty input, the TUI enters shell mode with a `\!` prefix displayed. The user can then type a shell command, and upon pressing Enter, the command is executed via the Bash tool. The shell command is shown as `\!command` in both the input field and conversation history.
