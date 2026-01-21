@@ -93,6 +93,14 @@ TUI state after pressing Meta+P (Option+P on macOS) to open the model picker:
 - Pressing Enter confirms selection (changes model)
 - Pressing Escape closes picker without changes
 
+### ctrl_z_suspend.txt
+TUI output when Ctrl+Z is pressed to suspend Claude Code:
+- Claude Code prints "Claude Code has been suspended. Run `fg` to bring Claude Code back."
+- Additional note: "Note: ctrl + z now suspends Claude Code, ctrl + _ undoes input."
+- The process receives SIGTSTP and suspends, returning control to the shell
+- The shell shows "zsh: suspended (signal) claude --model haiku" (or similar for other shells)
+- Running `fg` resumes Claude Code, which redraws its TUI with preserved state
+
 ### Permission Mode Variants
 - **permission_default.txt**: Shows "? for shortcuts"
 - **permission_plan.txt**: Shows "⏸ plan mode on (shift+tab to cycle)"
