@@ -38,9 +38,7 @@ use common::{assert_tui_matches_fixture, start_tui, tmux, write_scenario};
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Pressing '?' on empty input shows the shortcuts panel with all available shortcuts
-// TODO(implement): requires shortcuts panel display
 #[test]
-#[ignore]
 fn test_tui_question_mark_shows_shortcuts_on_empty_input() {
     let scenario = write_scenario(
         r#"
@@ -81,9 +79,7 @@ fn test_tui_question_mark_shows_shortcuts_on_empty_input() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Shortcuts panel matches the captured fixture
-// TODO(implement): requires shortcuts panel display
 #[test]
-#[ignore]
 fn test_tui_shortcuts_display_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -110,9 +106,7 @@ fn test_tui_shortcuts_display_matches_fixture() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Pressing Escape dismisses the shortcuts panel
-// TODO(implement): requires shortcuts panel display and dismiss
 #[test]
-#[ignore]
 fn test_tui_escape_dismisses_shortcuts_panel() {
     let scenario = write_scenario(
         r#"
@@ -163,9 +157,7 @@ fn test_tui_escape_dismisses_shortcuts_panel() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// When input is not empty, '?' types a literal '?' instead of showing shortcuts
-// TODO(implement): requires conditional '?' behavior based on input state
 #[test]
-#[ignore]
 fn test_tui_question_mark_types_literal_when_input_present() {
     let scenario = write_scenario(
         r#"
