@@ -57,6 +57,14 @@ TUI state after pressing '?' on empty input:
 - Pressing Escape dismisses the shortcuts panel
 - Note: '?' only shows shortcuts when input is empty; otherwise types literal '?'
 
+### todos_empty.txt
+TUI state after running /todos when no todos exist:
+- Header remains
+- Shows the /todos command with "❯" prefix
+- Shows "No todos currently tracked" with "⎿" prefix
+- Empty input field ready for next prompt
+- Help shortcut hint returns
+
 ### Shell Mode ('\!' prefix)
 - **shell_mode_prefix.txt**: Input field showing just `\!` after pressing '!'
 - **shell_mode_command.txt**: Input field showing `\!ls -la` after typing a command
