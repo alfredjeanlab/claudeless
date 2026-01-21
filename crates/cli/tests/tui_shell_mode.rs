@@ -17,7 +17,10 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, start_tui, tmux, write_scenario};
+use common::{assert_tui_matches_fixture, start_tui, start_tui_ext, tmux, write_scenario};
+
+/// Pattern for bypass mode status bar
+const BYPASS_MODE_PATTERN: &str = "bypass permissions on";
 
 // =============================================================================
 // Shell Mode Entry Tests
@@ -26,9 +29,7 @@ use common::{assert_tui_matches_fixture, start_tui, tmux, write_scenario};
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Typing '!' on empty input shows '\!' prefix for shell mode
-// TODO(implement): requires shell mode prefix display
 #[test]
-#[ignore]
 fn test_tui_exclamation_shows_shell_prefix() {
     let scenario = write_scenario(
         r#"
@@ -59,9 +60,7 @@ fn test_tui_exclamation_shows_shell_prefix() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Shell mode prefix display matches the captured fixture
-// TODO(implement): requires shell mode prefix display
 #[test]
-#[ignore]
 fn test_tui_shell_prefix_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -92,9 +91,7 @@ fn test_tui_shell_prefix_matches_fixture() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Typing a command after '!' shows '\!command' in the input
-// TODO(implement): requires shell mode command display
 #[test]
-#[ignore]
 fn test_tui_shell_mode_shows_command() {
     let scenario = write_scenario(
         r#"
@@ -127,9 +124,7 @@ fn test_tui_shell_mode_shows_command() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Shell mode with command matches the captured fixture
-// TODO(implement): requires shell mode command display
 #[test]
-#[ignore]
 fn test_tui_shell_command_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -162,13 +157,13 @@ fn test_tui_shell_command_matches_fixture() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Submitting a shell command executes it via Bash
-// TODO(implement): requires shell mode execution
 #[test]
-#[ignore]
 fn test_tui_shell_mode_executes_command() {
     let scenario = write_scenario(
         r#"
         name = "test"
+        trusted = true
+        permission_mode = "bypass-permissions"
         [[responses]]
         pattern = { type = "any" }
         response = "Command executed"
@@ -176,7 +171,7 @@ fn test_tui_shell_mode_executes_command() {
     );
 
     let session = "claudeless-shell-execute";
-    let previous = start_tui(session, &scenario);
+    let previous = start_tui_ext(session, &scenario, 120, 40, BYPASS_MODE_PATTERN);
 
     // Enter shell mode, type command, and submit
     tmux::send_keys(session, "!");
@@ -201,13 +196,13 @@ fn test_tui_shell_mode_executes_command() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Shell command shows as '\!command' in conversation history
-// TODO(implement): requires shell mode prompt display in history
 #[test]
-#[ignore]
 fn test_tui_shell_mode_shows_prefixed_prompt_in_history() {
     let scenario = write_scenario(
         r#"
         name = "test"
+        trusted = true
+        permission_mode = "bypass-permissions"
         [[responses]]
         pattern = { type = "any" }
         response = "Done"
@@ -215,7 +210,7 @@ fn test_tui_shell_mode_shows_prefixed_prompt_in_history() {
     );
 
     let session = "claudeless-shell-history";
-    let previous = start_tui(session, &scenario);
+    let previous = start_tui_ext(session, &scenario, 120, 40, BYPASS_MODE_PATTERN);
 
     // Enter shell mode, type command, and submit
     tmux::send_keys(session, "!");

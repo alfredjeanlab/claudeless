@@ -74,6 +74,7 @@ mod status_bar_rendering {
             terminal_width: width,
             show_shortcuts_panel: false,
             slash_menu: None,
+            shell_mode: false,
         }
     }
 

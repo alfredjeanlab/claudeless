@@ -155,6 +155,8 @@ pub struct RenderState {
     pub show_shortcuts_panel: bool,
     /// Slash command autocomplete menu state (None if menu is closed)
     pub slash_menu: Option<SlashMenuState>,
+    /// Whether shell mode is currently active
+    pub shell_mode: bool,
 }
 
 /// Permission request state using the rich permission dialog
@@ -326,6 +328,9 @@ struct TuiAppStateInner {
 
     /// Slash command autocomplete menu state (None if menu is closed)
     pub slash_menu: Option<SlashMenuState>,
+
+    /// Whether shell mode is currently active (user typed '!' at empty input)
+    pub shell_mode: bool,
 }
 
 impl TuiAppState {
@@ -391,6 +396,7 @@ impl TuiAppState {
                 session_grants: HashSet::new(),
                 show_shortcuts_panel: false,
                 slash_menu: None,
+                shell_mode: false,
             })),
         }
     }
@@ -419,6 +425,7 @@ impl TuiAppState {
             terminal_width: inner.terminal_width,
             show_shortcuts_panel: inner.show_shortcuts_panel,
             slash_menu: inner.slash_menu.clone(),
+            shell_mode: inner.shell_mode,
         }
     }
 
@@ -586,12 +593,18 @@ impl TuiAppState {
                 }
             }
 
-            // Escape - Dismiss shortcuts panel first, then clear input
+            // Escape - Dismiss shortcuts panel first, then exit shell mode, then clear input
             // Note: slash menu escape is handled above in the slash_menu.is_some() block
             (_, KeyCode::Esc) => {
                 if inner.show_shortcuts_panel {
                     // First priority: dismiss shortcuts panel
                     inner.show_shortcuts_panel = false;
+                } else if inner.shell_mode {
+                    // Second priority: exit shell mode
+                    inner.shell_mode = false;
+                    // Also clear any input typed in shell mode
+                    inner.input_buffer.clear();
+                    inner.cursor_pos = 0;
                 } else {
                     // Normal behavior: clear input
                     inner.input_buffer.clear();
@@ -600,12 +613,15 @@ impl TuiAppState {
                 }
             }
 
-            // Backspace - Delete character before cursor
+            // Backspace - Delete character before cursor, or exit shell mode if empty
             (_, KeyCode::Backspace) => {
                 if inner.cursor_pos > 0 {
                     let pos = inner.cursor_pos - 1;
                     inner.cursor_pos = pos;
                     inner.input_buffer.remove(pos);
+                } else if inner.shell_mode && inner.input_buffer.is_empty() {
+                    // Backspace on empty input in shell mode: exit shell mode
+                    inner.shell_mode = false;
                 }
                 // Update slash menu state
                 Self::update_slash_menu_inner(&mut inner);
@@ -697,6 +713,27 @@ impl TuiAppState {
                     // Non-empty input or panel already showing: type literal '?'
                     let pos = inner.cursor_pos;
                     inner.input_buffer.insert(pos, '?');
+                    inner.cursor_pos = pos + 1;
+                    // Reset history browsing on new input
+                    inner.history_index = None;
+                    // Clear exit hint on typing
+                    inner.exit_hint = None;
+                    inner.exit_hint_shown_at = None;
+                }
+            }
+
+            // '!' key - enter shell mode on empty input, otherwise type literal
+            (m, KeyCode::Char('!')) if m.is_empty() || m == KeyModifiers::SHIFT => {
+                if inner.input_buffer.is_empty() && !inner.shell_mode {
+                    // Empty input: enter shell mode
+                    inner.shell_mode = true;
+                    // Clear any exit hint
+                    inner.exit_hint = None;
+                    inner.exit_hint_shown_at = None;
+                } else {
+                    // Already in shell mode or has input: type literal '!'
+                    let pos = inner.cursor_pos;
+                    inner.input_buffer.insert(pos, '!');
                     inner.cursor_pos = pos + 1;
                     // Reset history browsing on new input
                     inner.history_index = None;
@@ -944,22 +981,101 @@ impl TuiAppState {
     fn submit_input(&self) {
         let mut inner = self.inner.lock();
         let input = std::mem::take(&mut inner.input_buffer);
+        let was_shell_mode = inner.shell_mode;
+        inner.shell_mode = false; // Reset shell mode after submit
         inner.cursor_pos = 0;
 
-        // Add to history
-        if !input.is_empty() {
-            inner.history.push(input.clone());
+        // Add to history (with shell prefix if applicable)
+        let history_entry = if was_shell_mode {
+            format!("\\!{}", input)
+        } else {
+            input.clone()
+        };
+        if !history_entry.is_empty() {
+            inner.history.push(history_entry);
         }
         inner.history_index = None;
 
-        // Check for slash commands
-        if input.starts_with('/') {
+        // Check for slash commands (not applicable in shell mode)
+        if !was_shell_mode && input.starts_with('/') {
             Self::handle_command_inner(&mut inner, &input);
+        } else if was_shell_mode {
+            // Shell mode: execute command via Bash
+            let command = input;
+            drop(inner);
+            self.execute_shell_command(command);
         } else {
             // Process the input as a prompt
             drop(inner);
             self.process_prompt(input);
         }
+    }
+
+    /// Execute a shell command via Bash tool
+    fn execute_shell_command(&self, command: String) {
+        let mut inner = self.inner.lock();
+
+        // Add previous response to conversation display if any
+        if !inner.response_content.is_empty() && !inner.is_command_output {
+            let response = inner.response_content.clone();
+            if !inner.conversation_display.is_empty() {
+                inner.conversation_display.push_str("\n\n");
+            }
+            inner
+                .conversation_display
+                .push_str(&format!("⏺ {}", response));
+        }
+
+        // Add the shell command to conversation display with \! prefix
+        if !inner.conversation_display.is_empty() {
+            inner.conversation_display.push_str("\n\n");
+        }
+        inner
+            .conversation_display
+            .push_str(&format!("❯ \\!{}", command));
+
+        // Check if bypass mode - execute directly without permission dialog
+        if inner.permission_mode.allows_all() {
+            // Show bash output directly
+            inner
+                .conversation_display
+                .push_str(&format!("\n\n⏺ Bash({})", command));
+
+            // Get scenario response for the command
+            let response_text = {
+                let mut scenario = inner.scenario.lock();
+                if let Some(result) = scenario.match_prompt(&command) {
+                    match scenario.get_response(&result) {
+                        Some(crate::config::ResponseSpec::Simple(text)) => text.clone(),
+                        Some(crate::config::ResponseSpec::Detailed { text, .. }) => text.clone(),
+                        None => String::new(),
+                    }
+                } else if let Some(default) = scenario.default_response() {
+                    match default {
+                        crate::config::ResponseSpec::Simple(text) => text.clone(),
+                        crate::config::ResponseSpec::Detailed { text, .. } => text.clone(),
+                    }
+                } else {
+                    format!("$ {}", command)
+                }
+            };
+
+            // Start streaming the response
+            inner.response_content.clear();
+            inner.is_command_output = false;
+            Self::start_streaming_inner(&mut inner, response_text);
+            return;
+        }
+
+        // Show bash permission dialog
+        inner.mode = AppMode::Thinking;
+        inner.response_content.clear();
+        inner.is_command_output = false;
+
+        drop(inner);
+
+        // Use existing bash permission flow
+        self.show_bash_permission(command.clone(), Some(format!("Execute: {}", command)));
     }
 
     /// Handle slash commands like /compact and /clear
@@ -1347,6 +1463,21 @@ impl TuiAppState {
 
     /// Show a permission request with rich dialog
     pub fn show_permission_request(&self, permission_type: PermissionType) {
+        // Check if bypass mode is enabled - auto-approve all permissions
+        {
+            let inner = self.inner.lock();
+            if inner.permission_mode.allows_all() {
+                let tool_name = match &permission_type {
+                    PermissionType::Bash { command, .. } => format!("Bash: {}", command),
+                    PermissionType::Edit { file_path, .. } => format!("Edit: {}", file_path),
+                    PermissionType::Write { file_path, .. } => format!("Write: {}", file_path),
+                };
+                drop(inner);
+                self.simulate_permission_accept(&permission_type, &tool_name);
+                return;
+            }
+        }
+
         // Check if this permission type is already granted for the session
         if self.is_session_granted(&permission_type) {
             // Auto-approve without showing dialog
@@ -1369,6 +1500,21 @@ impl TuiAppState {
             dialog: RichPermissionDialog::new(permission_type),
         });
         inner.mode = AppMode::Permission;
+    }
+
+    /// Simulate accepting a permission (for bypass mode)
+    fn simulate_permission_accept(&self, permission_type: &PermissionType, tool_name: &str) {
+        let mut inner = self.inner.lock();
+        inner
+            .response_content
+            .push_str(&format!("\n⏺ {}({})\n", tool_name, {
+                match permission_type {
+                    PermissionType::Bash { command, .. } => command.clone(),
+                    PermissionType::Edit { file_path, .. } => file_path.clone(),
+                    PermissionType::Write { file_path, .. } => file_path.clone(),
+                }
+            }));
+        inner.mode = AppMode::Input;
     }
 
     /// Show a bash command permission request
@@ -1513,8 +1659,15 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
     let (header_line1, header_line2, header_line3) = format_header_lines(state);
 
     // Format input line
-    // Show placeholder only when there's no conversation history (initial state)
-    let input_display = if state.input_buffer.is_empty() {
+    // Shell mode shows \! prefix, otherwise show normal input or placeholder
+    let input_display = if state.shell_mode {
+        // Shell mode: show \! prefix with any typed command
+        if state.input_buffer.is_empty() {
+            "❯ \\!".to_string()
+        } else {
+            format!("❯ \\!{}", state.input_buffer)
+        }
+    } else if state.input_buffer.is_empty() {
         if state.conversation_display.is_empty() && state.response_content.is_empty() {
             // Show placeholder only on initial state
             "❯ Try \"refactor mod.rs\"".to_string()
