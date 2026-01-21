@@ -5,6 +5,7 @@
 
 use iocraft::prelude::*;
 use parking_lot::Mutex;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -16,7 +17,9 @@ use crate::time::{Clock, ClockHandle};
 
 use super::separator::{make_compact_separator, make_separator};
 use super::streaming::{StreamingConfig, StreamingResponse};
-use super::widgets::permission::{PermissionSelection, PermissionType, RichPermissionDialog};
+use super::widgets::permission::{
+    PermissionSelection, PermissionType, RichPermissionDialog, SessionPermissionKey,
+};
 use super::widgets::thinking::{ThinkingDialog, ThinkingMode};
 use super::widgets::trust::TrustChoice;
 
@@ -305,6 +308,10 @@ struct TuiAppStateInner {
 
     /// Current terminal width
     pub terminal_width: u16,
+
+    /// Session-level permission grants
+    /// Permissions granted with "Yes, allow for session" are stored here
+    pub session_grants: HashSet<SessionPermissionKey>,
 }
 
 impl TuiAppState {
@@ -367,6 +374,7 @@ impl TuiAppState {
                     .map(|(w, _)| w)
                     .unwrap_or(DEFAULT_TERMINAL_WIDTH),
                 config,
+                session_grants: HashSet::new(),
             })),
         }
     }
@@ -859,6 +867,9 @@ impl TuiAppState {
                 inner.status.input_tokens = 0;
                 inner.status.output_tokens = 0;
 
+                // Clear session-level permission grants
+                inner.session_grants.clear();
+
                 // Set response content (will be rendered with elbow connector)
                 inner.response_content = "(no content)".to_string();
             }
@@ -1048,6 +1059,10 @@ impl TuiAppState {
                         .push_str(&format!("\n[Permission granted for {}]\n", tool_name));
                 }
                 PermissionSelection::YesSession => {
+                    // Store session-level grant
+                    let key = perm.dialog.session_key();
+                    inner.session_grants.insert(key);
+
                     // Continue with tool execution (session-level grant)
                     inner.response_content.push_str(&format!(
                         "\n[Permission granted for session: {}]\n",
@@ -1189,8 +1204,33 @@ impl TuiAppState {
         }
     }
 
+    /// Check if a permission is already granted for this session
+    fn is_session_granted(&self, permission_type: &PermissionType) -> bool {
+        let inner = self.inner.lock();
+        let dialog = RichPermissionDialog::new(permission_type.clone());
+        let key = dialog.session_key();
+        inner.session_grants.contains(&key)
+    }
+
     /// Show a permission request with rich dialog
     pub fn show_permission_request(&self, permission_type: PermissionType) {
+        // Check if this permission type is already granted for the session
+        if self.is_session_granted(&permission_type) {
+            // Auto-approve without showing dialog
+            let mut inner = self.inner.lock();
+            let tool_name = match &permission_type {
+                PermissionType::Bash { command, .. } => format!("Bash: {}", command),
+                PermissionType::Edit { file_path, .. } => format!("Edit: {}", file_path),
+                PermissionType::Write { file_path, .. } => format!("Write: {}", file_path),
+            };
+            inner.response_content.push_str(&format!(
+                "\n[Permission auto-granted (session): {}]\n",
+                tool_name
+            ));
+            return;
+        }
+
+        // Show dialog as normal
         let mut inner = self.inner.lock();
         inner.pending_permission = Some(PermissionRequest {
             dialog: RichPermissionDialog::new(permission_type),

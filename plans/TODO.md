@@ -23,17 +23,6 @@ The Bash permission dialog hardcodes "Yes, allow reading from etc/ from this pro
 
 **Location:** `crates/cli/src/tui/widgets/permission.rs:92-94`
 
-### Session-Level Permission Persistence
-
-The `PermissionSelection::YesSession` choice is implemented in the UI but the actual session-level grant isn't persisted. Currently it just prints "[Permission granted for session]" without actually remembering the grant.
-
-**To implement:**
-1. Track session-granted permissions in `TuiAppStateInner`
-2. Check against session grants before showing permission dialog
-3. Clear session grants when session ends
-
-**Location:** `crates/cli/src/tui/app.rs:949-954`
-
 ## Input Shortcuts
 
 ### '?' Shortcut Handling

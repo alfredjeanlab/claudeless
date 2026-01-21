@@ -216,3 +216,71 @@ fn test_make_separator() {
     assert_eq!(make_separator('─', 5), "─────");
     assert_eq!(make_separator('╌', 3), "╌╌╌");
 }
+
+// =========================================================================
+// Session Permission Key Tests
+// =========================================================================
+
+#[test]
+fn test_bash_prefix_extraction_with_path() {
+    let result = extract_bash_prefix("cat /etc/passwd | head -5");
+    assert_eq!(result, "cat /etc/");
+}
+
+#[test]
+fn test_bash_prefix_extraction_simple() {
+    let result = extract_bash_prefix("npm test");
+    assert_eq!(result, "npm");
+}
+
+#[test]
+fn test_bash_prefix_extraction_flags_before_path() {
+    // When the first argument is a flag, not a path
+    let result = extract_bash_prefix("rm -rf /tmp/foo");
+    assert_eq!(result, "rm");
+}
+
+#[test]
+fn test_bash_prefix_extraction_empty() {
+    let result = extract_bash_prefix("");
+    assert_eq!(result, "");
+}
+
+#[test]
+fn test_bash_prefix_extraction_single_command() {
+    let result = extract_bash_prefix("ls");
+    assert_eq!(result, "ls");
+}
+
+#[test]
+fn test_session_key_bash() {
+    let dialog = RichPermissionDialog::new(PermissionType::Bash {
+        command: "cat /etc/passwd".to_string(),
+        description: None,
+    });
+    assert!(matches!(
+        dialog.session_key(),
+        SessionPermissionKey::BashPrefix(_)
+    ));
+    if let SessionPermissionKey::BashPrefix(prefix) = dialog.session_key() {
+        assert_eq!(prefix, "cat /etc/");
+    }
+}
+
+#[test]
+fn test_session_key_edit() {
+    let dialog = RichPermissionDialog::new(PermissionType::Edit {
+        file_path: "foo.txt".to_string(),
+        diff_lines: vec![],
+    });
+    assert_eq!(dialog.session_key(), SessionPermissionKey::EditAll);
+}
+
+#[test]
+fn test_session_key_write() {
+    let dialog = RichPermissionDialog::new(PermissionType::Write {
+        file_path: "foo.txt".to_string(),
+        content_lines: vec![],
+    });
+    assert_eq!(dialog.session_key(), SessionPermissionKey::WriteAll);
+}
