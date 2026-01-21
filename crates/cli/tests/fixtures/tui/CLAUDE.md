@@ -276,6 +276,27 @@ tmux capture-pane -e -t claude-tui -p > initial_state_ansi.txt
   - Pressing Escape returns to main hooks list
 - Pressing Escape in main dialog shows "Hooks dialog dismissed"
 
+### Slash Command Search
+- **slash_search_menu.txt**: TUI state showing the slash command autocomplete menu
+  - Appears when typing `/` at empty input or start of line
+  - Shows commands in alphabetical order (add-dir, agents, chrome, clear, compact, config, ...)
+  - Each command shows its name and description
+  - First command is highlighted (selected) by default with a different color (light purple)
+  - Commands are shown in a dropdown below the input line
+- **slash_search_filter.txt**: TUI state showing filtered slash command menu
+  - After typing `/co`, shows commands matching "co" (compact, context, config)
+  - Uses fuzzy/subsequence matching - characters must appear in order but not consecutively
+  - Results update as each character is typed
+- **slash_search_tab_complete.txt**: TUI state after Tab completion
+  - Shows completed command in input (e.g., `/add-dir`)
+  - If command takes arguments, shows argument hint (e.g., `<path>`)
+  - Autocomplete menu closes after Tab
+- Navigation:
+  - Down arrow moves selection to next command
+  - Up arrow moves selection to previous command
+  - Tab completes input to selected command and closes menu
+  - Escape closes menu but keeps typed text, shows "Esc to clear again"
+
 ## Capture Method
 
 Captured using tmux:
