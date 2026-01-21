@@ -1,5 +1,7 @@
 # ANSI Color Test Support
 
+**Root Feature:** `cl-1aba`
+
 Add test infrastructure for matching ANSI color escape sequences in TUI output, enabling verification that claudeless color rendering matches real Claude Code.
 
 ## Overview

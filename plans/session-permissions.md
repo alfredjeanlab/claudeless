@@ -1,5 +1,7 @@
 # Implementation Plan: Session-Level Permission Persistence
 
+**Root Feature:** `cl-fd52`
+
 ## Overview
 
 Implement session-level permission persistence so that when a user selects "Yes, allow for session" (`PermissionSelection::YesSession`), the permission grant is remembered for the remainder of the session. Currently, the UI option exists but selecting it only prints a message without actually remembering the grant.

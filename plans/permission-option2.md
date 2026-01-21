@@ -1,5 +1,7 @@
 # Permission Option 2 Context-Sensitive Text
 
+**Root Feature:** `cl-5246`
+
 ## Overview
 
 Make the Bash permission dialog's option 2 text context-sensitive based on the actual command being executed. Currently, it hardcodes "Yes, allow reading from etc/ from this project" for all Bash commands. After this change, the text will reflect what the command actually does (e.g., "npm commands", "rm commands", "reading from etc/").
