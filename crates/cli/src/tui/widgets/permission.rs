@@ -87,6 +87,42 @@ pub enum PermissionSelection {
     No,         // Option 3: No
 }
 
+/// Key for identifying session-level permission grants
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum SessionPermissionKey {
+    /// Bash command matching by prefix (e.g., "cat /etc/" grants all "cat /etc/*")
+    BashPrefix(String),
+    /// Edit permission for all files (session-level edit grants apply to all edits)
+    EditAll,
+    /// Write permission for all files (session-level write grants apply to all writes)
+    WriteAll,
+}
+
+/// Extract a prefix from a bash command for permission matching
+///
+/// For commands with path arguments, extracts the directory portion.
+/// For other commands, returns just the command name.
+///
+/// Examples:
+/// - "cat /etc/passwd" -> "cat /etc/"
+/// - "npm test" -> "npm"
+/// - "rm -rf /tmp/foo" -> "rm"
+pub fn extract_bash_prefix(command: &str) -> String {
+    let parts: Vec<&str> = command.split_whitespace().collect();
+    if parts.is_empty() {
+        return command.to_string();
+    }
+
+    // If second part looks like a path, include the directory
+    if parts.len() > 1 && parts[1].starts_with('/') {
+        if let Some(dir_end) = parts[1].rfind('/') {
+            return format!("{} {}", parts[0], &parts[1][..=dir_end]);
+        }
+    }
+
+    parts[0].to_string()
+}
+
 impl PermissionSelection {
     /// Move to next selection (down)
     pub fn next(self) -> Self {
@@ -119,6 +155,17 @@ impl RichPermissionDialog {
         Self {
             permission_type,
             selected: PermissionSelection::Yes,
+        }
+    }
+
+    /// Extract the session permission key for this dialog
+    pub fn session_key(&self) -> SessionPermissionKey {
+        match &self.permission_type {
+            PermissionType::Bash { command, .. } => {
+                SessionPermissionKey::BashPrefix(extract_bash_prefix(command))
+            }
+            PermissionType::Edit { .. } => SessionPermissionKey::EditAll,
+            PermissionType::Write { .. } => SessionPermissionKey::WriteAll,
         }
     }
 
