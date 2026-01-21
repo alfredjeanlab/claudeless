@@ -170,6 +170,24 @@ tmux capture-pane -e -t claude-tui -p > initial_state_ansi.txt
 - Accept Edits: ⏵⏵
 - Bypass Permissions: ⏵⏵
 
+### /context Command
+- **context_autocomplete.txt**: TUI state showing /context in the autocomplete dropdown
+  - Shows "/context                Visualize current context usage as a colored grid"
+  - Also shows other matching commands like /clear, /compact, /status
+- **context_usage.txt**: TUI state after executing /context command
+  - Shows a 10x9 colored grid representing context usage
+  - Grid uses symbols: ⛀ (current token), ⛶ (free space), ⛝ (autocompact buffer), ⛁ (category marker)
+  - Shows "Estimated usage by category" header
+  - Lists categories with token counts and percentages:
+    - System prompt: tokens (%)
+    - System tools: tokens (%)
+    - Memory files: tokens (%)
+    - Messages: tokens (%)
+    - Free space: tokens (%)
+    - Autocompact buffer: tokens (%)
+  - Shows "Memory files · /memory" section with list of loaded CLAUDE.md files
+  - Returns to normal input prompt after display
+
 ## Capture Method
 
 Captured using tmux:
