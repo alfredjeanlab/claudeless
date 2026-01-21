@@ -170,6 +170,14 @@ tmux capture-pane -e -t claude-tui -p > initial_state_ansi.txt
 - Accept Edits: ⏵⏵
 - Bypass Permissions: ⏵⏵
 
+### /exit Command
+- **exit_autocomplete.txt**: TUI state showing /exit in the autocomplete dropdown
+  - Shows "/exit                   Exit the REPL"
+  - Also shows other matching commands like /export, /context, /clear, /compact
+- The /exit command (or partial match like /ex) exits the TUI
+- Displays a random farewell message (e.g., "Goodbye!", "Bye!", "See ya!", "Catch you later!")
+- Returns to shell prompt after exit
+
 ### /context Command
 - **context_autocomplete.txt**: TUI state showing /context in the autocomplete dropdown
   - Shows "/context                Visualize current context usage as a colored grid"

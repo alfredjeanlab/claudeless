@@ -355,3 +355,89 @@ fn test_tui_ctrl_d_double_press_exits() {
         capture
     );
 }
+
+// =============================================================================
+// /exit Slash Command Tests
+// =============================================================================
+
+/// Behavior observed with: claude --version 2.1.12 (Claude Code)
+///
+/// Typing /exit shows autocomplete dropdown with "Exit the REPL" description
+// TODO(implement): requires slash command autocomplete
+#[test]
+#[ignore]
+fn test_tui_exit_command_shows_autocomplete() {
+    let scenario = write_scenario(
+        r#"
+        name = "test"
+        [[responses]]
+        pattern = { type = "any" }
+        response = "Hello!"
+        "#,
+    );
+
+    let session = "claudeless-exit-autocomplete";
+    let previous = start_tui(session, &scenario);
+
+    // Type /exit
+    tmux::send_keys(session, "/exit");
+    let capture = tmux::wait_for_change(session, &previous);
+
+    tmux::kill_session(session);
+
+    assert!(
+        capture.contains("/exit") && capture.contains("Exit the REPL"),
+        "/exit should show autocomplete with description.\nCapture:\n{}",
+        capture
+    );
+}
+
+/// Behavior observed with: claude --version 2.1.12 (Claude Code)
+///
+/// /exit command exits the TUI and shows a farewell message
+// TODO(implement): requires /exit slash command
+#[test]
+#[ignore]
+fn test_tui_exit_command_exits_with_farewell() {
+    let scenario = write_scenario(
+        r#"
+        name = "test"
+        [[responses]]
+        pattern = { type = "any" }
+        response = "Hello!"
+        "#,
+    );
+
+    let session = "claudeless-exit-command";
+    let previous = start_tui(session, &scenario);
+
+    // Type /exit and press Enter
+    tmux::send_keys(session, "/exit");
+    let _ = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(session, "Enter");
+
+    // Wait for shell prompt to appear (indicating exit)
+    let capture = tmux::wait_for_any(session, &["$", "%", "❯"]);
+
+    tmux::kill_session(session);
+
+    // Should show a farewell message (could be "Goodbye!", "Bye!", "See ya!", "Catch you later!", etc.)
+    // The farewell is prefixed with "⎿" like other command responses
+    let has_farewell = capture.contains("Goodbye!")
+        || capture.contains("Bye!")
+        || capture.contains("See ya!")
+        || capture.contains("Catch you later!");
+
+    assert!(
+        has_farewell,
+        "/exit should display a farewell message.\nCapture:\n{}",
+        capture
+    );
+
+    // Should have exited to shell
+    assert!(
+        capture.contains("$") || capture.contains("%") || capture.contains("❯"),
+        "/exit should exit TUI and show shell prompt.\nCapture:\n{}",
+        capture
+    );
+}
