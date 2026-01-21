@@ -1,0 +1,26 @@
+Welcome to Claude Code v2.1.14 
+…………………………………………………………………………………………………………………………………………………………
+
+     *                                       █████▓▓░
+                                 *         ███▓░     ░░
+            ░░░░░░                        ███▓░
+    ░░░   ░░░░░░░░░░                      ███▓░
+   ░░░░░░░░░░░░░░░░░░░    *                ██▓░░      ▓
+                                             ░▓▓███▓▓░
+ *                                 ░░░░                   
+                                 ░░░░░░░░                 
+                               ░░░░░░░░░░░░░░░░           
+                                                      *
+      ▗ ▗     ▖ ▖                       *
+                      *
+…………………         ………………………………………………………………………………………………………………
+
+ Use Claude Code's terminal setup?
+
+ For the optimal coding experience, enable the recommended settings
+ for your terminal: Option+Enter for newlines and visual bell
+
+ ❯ 1. Yes, use recommended settings
+   2. No, maybe later with /terminal-setup
+
+ Enter to confirm · Esc to skip

@@ -1,0 +1,23 @@
+Welcome to Claude Code v2.1.14
+…………………………………………………………………………………………………………………………………………………………
+
+     *                                       █████▓▓░
+                                 *         ███▓░     ░░
+            ░░░░░░                        ███▓░
+    ░░░   ░░░░░░░░░░                      ███▓░
+   ░░░░░░░░░░░░░░░░░░░    *                ██▓░░      ▓
+                                             ░▓▓███▓▓░
+ *                                 ░░░░
+                                 ░░░░░░░░
+                               ░░░░░░░░░░░░░░░░
+                                                      *
+      ▗ ▗     ▖ ▖                       *
+                      *
+…………………         ………………………………………………………………………………………………………………
+
+ Browser didn't open? Use the url below to sign in (c to copy)
+
+https://claude.ai/oauth/authorize?code=true&client_id=<UUID>&response_type=code&redirect_uri=<URI>&code_challenge=<CODE>&code_challenge_method=<METHOD>&state=<ENCODED>
+
+
+ Paste code here if prompted >

@@ -1,0 +1,9 @@
+
+▗ ▗   ▖ ▖  Claude Code v2.1.14
+           Opus 4.5 · API Usage Billing
+  ▘▘ ▝▝    ~/Developer/claudeless
+
+  Welcome to Opus 4.5
+
+❯ /logout
+Successfully logged out from your Anthropic account.
