@@ -23,7 +23,8 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, start_tui, tmux, write_scenario};
+use common::ansi::assert_ansi_matches_fixture;
+use common::{assert_tui_matches_fixture, start_tui, tmux, write_scenario, TUI_READY_PATTERN};
 
 /// Compare initial state against real Claude fixture
 #[test]
@@ -44,4 +45,38 @@ fn test_initial_state_matches_fixture() {
     tmux::kill_session(session);
 
     assert_tui_matches_fixture(&capture, "initial_state.txt", None);
+}
+
+/// Compare ANSI-colored initial state against real Claude fixture
+#[test]
+fn test_initial_state_ansi_matches_fixture() {
+    let scenario = write_scenario(
+        r#"
+        {
+            "default_response": "Hello!",
+            "trusted": true,
+            "claude_version": "2.1.12"
+        }
+        "#,
+    );
+
+    let session = "claudeless-fixture-initial-ansi";
+
+    // Start TUI and wait for ready (using plain text pattern)
+    tmux::kill_session(session);
+    tmux::new_session(session, 120, 40);
+    let cmd = format!(
+        "{} --scenario {} --tui",
+        common::claudeless_bin(),
+        scenario.path().display()
+    );
+    tmux::send_line(session, &cmd);
+    tmux::wait_for_content(session, TUI_READY_PATTERN);
+
+    // Capture with ANSI sequences
+    let capture = tmux::capture_pane_ansi(session);
+    tmux::kill_session(session);
+
+    // Compare against ANSI fixture
+    assert_ansi_matches_fixture(&capture, "initial_state_ansi.txt", None);
 }

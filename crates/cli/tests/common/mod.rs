@@ -9,6 +9,7 @@
 
 #![allow(dead_code)]
 
+pub mod ansi;
 pub mod tmux;
 
 use std::io::Write;

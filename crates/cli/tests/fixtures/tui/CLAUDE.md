@@ -105,6 +105,30 @@ Extended status bar (visible in non-default permission modes):
 - Right: "Use meta+t to toggle thinking"
 - With file changes: Shows git diff stats like "19 files +627 -5608"
 
+## ANSI Color Fixtures
+
+Fixtures with the `_ansi.txt` suffix include ANSI escape sequences for color testing.
+
+### initial_state_ansi.txt
+Same content as `initial_state.txt` but with ANSI escape sequences preserved.
+Used for testing that claudeless color rendering matches real Claude Code.
+
+Key colors observed:
+- **Orange** `(215, 119, 87)`: Logo characters
+- **Black** `(0, 0, 0)`: Logo background
+- **Gray** `(153, 153, 153)`: Version, model, path, shortcuts
+- **Dark gray** `(136, 136, 136)`: Separator lines
+
+### ANSI Capture Method
+
+To capture ANSI-colored output from tmux, use the `-e` flag:
+```bash
+tmux new-session -d -s claude-tui -x 120 -y 40
+tmux send-keys -t claude-tui 'claude --model haiku' Enter
+sleep 3
+tmux capture-pane -e -t claude-tui -p > initial_state_ansi.txt
+```
+
 ## Key UI Elements
 
 - **Logo**: ASCII art logo with version

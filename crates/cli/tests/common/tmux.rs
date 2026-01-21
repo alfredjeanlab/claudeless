@@ -94,7 +94,7 @@ pub fn send_line(session: &str, line: &str) {
         .expect("Failed to send line");
 }
 
-/// Capture the current pane content.
+/// Capture the current pane content (plain text, no ANSI sequences).
 pub fn capture_pane(session: &str) -> String {
     let output = Command::new("tmux")
         .args(["capture-pane", "-t", session, "-p"])
@@ -104,10 +104,32 @@ pub fn capture_pane(session: &str) -> String {
     String::from_utf8_lossy(&output.stdout).to_string()
 }
 
+/// Capture pane content with ANSI escape sequences preserved.
+///
+/// Uses `tmux capture-pane -e` flag to include escape sequences in the output.
+/// This is useful for color comparison testing.
+pub fn capture_pane_ansi(session: &str) -> String {
+    let output = Command::new("tmux")
+        .args(["capture-pane", "-e", "-p", "-t", session])
+        .output()
+        .expect("Failed to capture tmux pane with ANSI");
+
+    String::from_utf8_lossy(&output.stdout).to_string()
+}
+
 /// Wait for specific content to appear in the tmux pane.
 /// Returns the captured pane content when found, or panics on timeout.
 pub fn wait_for_content(session: &str, pattern: &str) -> String {
     wait_for_content_timeout(session, pattern, timeout())
+}
+
+/// Wait for specific content to appear, then return capture with ANSI sequences.
+///
+/// Waits for the pattern using plain text matching (for reliability),
+/// then captures with ANSI escape sequences included.
+pub fn wait_for_content_ansi(session: &str, pattern: &str) -> String {
+    wait_for_content_timeout(session, pattern, timeout());
+    capture_pane_ansi(session)
 }
 
 /// Wait for specific content to appear in the tmux pane with a custom timeout.

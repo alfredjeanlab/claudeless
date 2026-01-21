@@ -151,11 +151,3 @@ Model versions render incorrectly (e.g., "Sonnet 4" instead of "Sonnet 4.5").
 
 Default model should be Opus 4.5 when not specified via `--model` or scenario configuration.
 
-## Testing
-
-### Basic ANSI Color Matching
-
-Add test support for matching ANSI color escape sequences in TUI output. Use captured fixtures (e.g., `initial_state_ansi.txt`) to verify color rendering matches real Claude Code.
-
-**Location:** `crates/cli/tests/fixtures/tui/v2.1.12/`
-

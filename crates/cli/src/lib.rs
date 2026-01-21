@@ -7,6 +7,7 @@
 //! Provides a controllable test double that responds to the same CLI interface
 //! as real Claude, enabling deterministic integration testing without API costs.
 
+pub mod ansi;
 pub mod api;
 pub mod capture;
 pub mod cli;
