@@ -16,6 +16,7 @@ use crate::state::session::SessionManager;
 use crate::time::{Clock, ClockHandle};
 
 use super::separator::{make_compact_separator, make_separator};
+use super::shortcuts::shortcuts_by_column;
 use super::streaming::{StreamingConfig, StreamingResponse};
 use super::widgets::permission::{
     PermissionSelection, PermissionType, RichPermissionDialog, SessionPermissionKey,
@@ -149,6 +150,8 @@ pub struct RenderState {
     /// Explicit Claude version, or None for Claudeless-native mode
     pub claude_version: Option<String>,
     pub terminal_width: u16,
+    /// Whether the shortcuts panel is currently visible
+    pub show_shortcuts_panel: bool,
 }
 
 /// Permission request state using the rich permission dialog
@@ -312,6 +315,9 @@ struct TuiAppStateInner {
     /// Session-level permission grants
     /// Permissions granted with "Yes, allow for session" are stored here
     pub session_grants: HashSet<SessionPermissionKey>,
+
+    /// Whether the shortcuts panel is currently visible
+    pub show_shortcuts_panel: bool,
 }
 
 impl TuiAppState {
@@ -375,6 +381,7 @@ impl TuiAppState {
                     .unwrap_or(DEFAULT_TERMINAL_WIDTH),
                 config,
                 session_grants: HashSet::new(),
+                show_shortcuts_panel: false,
             })),
         }
     }
@@ -401,6 +408,7 @@ impl TuiAppState {
             exit_hint: inner.exit_hint.clone(),
             claude_version: inner.config.claude_version.clone(),
             terminal_width: inner.terminal_width,
+            show_shortcuts_panel: inner.show_shortcuts_panel,
         }
     }
 
@@ -525,10 +533,16 @@ impl TuiAppState {
                 }
             }
 
-            // Escape - Cancel current input
+            // Escape - Dismiss shortcuts panel first, then clear input
             (_, KeyCode::Esc) => {
-                inner.input_buffer.clear();
-                inner.cursor_pos = 0;
+                if inner.show_shortcuts_panel {
+                    // First priority: dismiss shortcuts panel
+                    inner.show_shortcuts_panel = false;
+                } else {
+                    // Normal behavior: clear input
+                    inner.input_buffer.clear();
+                    inner.cursor_pos = 0;
+                }
             }
 
             // Backspace - Delete character before cursor
@@ -607,6 +621,24 @@ impl TuiAppState {
             // Ctrl+W - Delete word before cursor
             (m, KeyCode::Char('w')) if m.contains(KeyModifiers::CONTROL) => {
                 Self::delete_word_before_cursor_inner(&mut inner);
+            }
+
+            // '?' key - show shortcuts panel on empty input, otherwise type literal
+            (m, KeyCode::Char('?')) if m.is_empty() || m == KeyModifiers::SHIFT => {
+                if inner.input_buffer.is_empty() && !inner.show_shortcuts_panel {
+                    // Empty input: show shortcuts panel
+                    inner.show_shortcuts_panel = true;
+                } else {
+                    // Non-empty input or panel already showing: type literal '?'
+                    let pos = inner.cursor_pos;
+                    inner.input_buffer.insert(pos, '?');
+                    inner.cursor_pos = pos + 1;
+                    // Reset history browsing on new input
+                    inner.history_index = None;
+                    // Clear exit hint on typing
+                    inner.exit_hint = None;
+                    inner.exit_hint_shown_at = None;
+                }
             }
 
             // Regular character input
@@ -1416,8 +1448,59 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
             Text(content: input_display)
             Text(content: make_separator(state.terminal_width as usize))
 
-            // Status bar
-            Text(content: format_status_bar(state, state.terminal_width as usize))
+            // Shortcuts panel or status bar
+            #(if state.show_shortcuts_panel {
+                render_shortcuts_panel(state.terminal_width as usize)
+            } else {
+                element! {
+                    Text(content: format_status_bar(state, state.terminal_width as usize))
+                }.into()
+            })
+        }
+    }
+    .into()
+}
+
+/// Render the shortcuts panel with 3 columns
+fn render_shortcuts_panel(_width: usize) -> AnyElement<'static> {
+    let columns = shortcuts_by_column();
+
+    // Fixed column widths matching the Claude Code fixture:
+    // - Left column: 26 chars total (2-space indent + 24 content)
+    // - Center column: 35 chars
+    // - Right column: remaining space
+    const LEFT_WIDTH: usize = 24; // Content width (after 2-space indent)
+    const CENTER_WIDTH: usize = 35;
+
+    // Build the multi-column layout
+    // Each row contains entries from all 3 columns
+    let max_rows = columns.iter().map(|c| c.len()).max().unwrap_or(0);
+
+    let mut lines = Vec::new();
+    for row_idx in 0..max_rows {
+        let left = columns[0].get(row_idx).copied().unwrap_or("");
+        let center = columns[1].get(row_idx).copied().unwrap_or("");
+        let right = columns[2].get(row_idx).copied().unwrap_or("");
+
+        // Format line with 2-space indent and fixed column widths
+        let line = format!(
+            "  {:<left_w$}{:<center_w$}{}",
+            left,
+            center,
+            right,
+            left_w = LEFT_WIDTH,
+            center_w = CENTER_WIDTH
+        );
+        lines.push(line);
+    }
+
+    element! {
+        View(flex_direction: FlexDirection::Column) {
+            #(lines.into_iter().map(|line| {
+                element! {
+                    Text(content: line)
+                }
+            }).collect::<Vec<_>>())
         }
     }
     .into()

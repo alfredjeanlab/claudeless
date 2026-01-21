@@ -12,6 +12,7 @@
 mod app;
 mod screenshot;
 pub mod separator;
+pub mod shortcuts;
 mod streaming;
 mod test_helpers;
 
