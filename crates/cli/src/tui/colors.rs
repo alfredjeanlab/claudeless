@@ -55,13 +55,13 @@ mod ansi {
 ///
 /// Example output:
 /// `[orange] ▐[black bg]▛███▜[/bg]▌[/fg]   [bold]Claude Code[/bold] [gray]v2.1.12[/gray]`
-pub fn styled_logo_line1(version_str: &str) -> String {
+pub fn styled_logo_line1(product_name: &str, version: &str) -> String {
     let fg_orange = ansi::fg(LOGO_FG.0, LOGO_FG.1, LOGO_FG.2);
     let bg_black = ansi::bg(LOGO_BG.0, LOGO_BG.1, LOGO_BG.2);
     let fg_gray = ansi::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
 
     format!(
-        "{fg_orange} ▐{bg_black}▛███▜{bg_reset}▌{fg_reset}   {bold}Claude Code{reset} {fg_gray}{version_str}{fg_reset}",
+        "{fg_orange} ▐{bg_black}▛███▜{bg_reset}▌{fg_reset}   {bold}{product_name}{reset} {fg_gray}{version}{fg_reset}",
         fg_orange = fg_orange,
         bg_black = bg_black,
         bg_reset = ansi::BG_RESET,

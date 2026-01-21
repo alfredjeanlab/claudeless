@@ -2137,22 +2137,22 @@ fn format_header_lines(state: &RenderState) -> (String, String, String) {
         })
         .unwrap_or_else(|_| "~".to_string());
 
-    // Determine version string based on claude_version
-    let version_str = match &state.claude_version {
-        Some(version) => format!("v{}", version),
-        None => format!("Claudeless {}", env!("CARGO_PKG_VERSION")),
+    // Determine product name and version based on claude_version
+    let (product_name, version) = match &state.claude_version {
+        Some(v) => ("Claude Code", format!("v{}", v)),
+        None => ("Claudeless", env!("CARGO_PKG_VERSION").to_string()),
     };
     let model_str = format!("{} · Claude Max", model_name);
 
     // Use styled ANSI output when connected to a TTY
     if state.is_tty {
         (
-            styled_logo_line1(&version_str),
+            styled_logo_line1(product_name, &version),
             styled_logo_line2(&model_str),
             styled_logo_line3(&working_dir),
         )
     } else {
-        let line1 = format!(" ▐▛███▜▌   {}", version_str);
+        let line1 = format!(" ▐▛███▜▌   {} {}", product_name, version);
         let line2 = format!("▝▜█████▛▘  {}", model_str);
         let line3 = format!("  ▘▘ ▝▝    {}", working_dir);
         (line1, line2, line3)

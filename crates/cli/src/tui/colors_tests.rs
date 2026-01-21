@@ -7,7 +7,7 @@ use super::*;
 
 #[test]
 fn styled_logo_line1_contains_ansi_codes() {
-    let line = styled_logo_line1("v2.1.12");
+    let line = styled_logo_line1("Claude Code", "v2.1.12");
 
     // Should contain orange foreground
     assert!(line.contains("\x1b[38;2;215;119;87m"));
