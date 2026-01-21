@@ -65,6 +65,14 @@ TUI state after running /todos when no todos exist:
 - Empty input field ready for next prompt
 - Help shortcut hint returns
 
+### tasks_empty_dialog.txt
+TUI state after running /tasks when no background tasks exist:
+- Shows a dialog box with rounded corners (╭╮╰╯ characters)
+- Header line: "Background tasks"
+- Body: "No tasks currently running"
+- Footer: "↑/↓ to select · Enter to view · Esc to close"
+- Pressing Escape dismisses the dialog and shows "Background tasks dialog dismissed"
+
 ### Shell Mode ('\!' prefix)
 - **shell_mode_prefix.txt**: Input field showing just `\!` after pressing '!'
 - **shell_mode_command.txt**: Input field showing `\!ls -la` after typing a command
