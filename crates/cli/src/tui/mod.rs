@@ -13,6 +13,7 @@ mod app;
 mod screenshot;
 pub mod separator;
 pub mod shortcuts;
+pub mod slash_menu;
 mod streaming;
 mod test_helpers;
 
@@ -27,5 +28,6 @@ pub use app::{
     TuiApp, TuiConfig,
 };
 pub use screenshot::{LineDiff, Screenshot, ScreenshotCapture, ScreenshotMetadata};
+pub use slash_menu::{filter_commands, fuzzy_matches, SlashCommand, SlashMenuState, COMMANDS};
 pub use streaming::{StreamingConfig, StreamingResponse, TokenStream};
 pub use test_helpers::{TuiAppState, TuiTestHarness};
