@@ -196,6 +196,27 @@ tmux capture-pane -e -t claude-tui -p > initial_state_ansi.txt
   - Shows "Memory files · /memory" section with list of loaded CLAUDE.md files
   - Returns to normal input prompt after display
 
+### /export Command
+- **export_autocomplete.txt**: TUI state showing /export in the autocomplete dropdown
+  - Shows "/export                 Export the current conversation to a file or clipboard"
+  - Also shows other matching commands like /remote-env
+- **export_method_dialog.txt**: Dialog for selecting export method
+  - Shows "Export Conversation" header
+  - Two options:
+    1. Copy to clipboard - Copy the conversation to your system clipboard
+    2. Save to file - Save the conversation to a file in the current directory
+  - Shows "esc to cancel" footer
+  - Arrow (❯) indicates cursor position
+- **export_filename_dialog.txt**: Dialog for entering filename when saving to file
+  - Shows "Export Conversation" header
+  - Shows "Enter filename:" prompt
+  - Default filename is based on date and conversation content (e.g., "2026-01-20-conversation-export.txt")
+  - Shows "Enter to save · esc to go back" footer
+- Selecting clipboard shows "Conversation copied to clipboard" confirmation
+- Selecting file and pressing Enter shows "Conversation exported to: <filename>" confirmation
+- Pressing Escape in method dialog shows "Export cancelled"
+- Pressing Escape in filename dialog returns to method selection
+
 ## Capture Method
 
 Captured using tmux:
