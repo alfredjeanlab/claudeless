@@ -2,76 +2,55 @@
 
 Follow-up items from completed features.
 
-## Permission Dialogs (from fix-permission-dialogs.md)
-
-### Context-Sensitive Option 2 Text
-
-The Bash permission dialog hardcodes "Yes, allow reading from etc/ from this project" regardless of the actual command. This should be context-sensitive based on what the command does.
-
-**Current behavior:**
-```
- Do you want to proceed?
- ❯ 1. Yes
-   2. Yes, allow reading from etc/ from this project  <-- always this
-   3. No
-```
-
-**Expected behavior:**
-- For `cat /etc/passwd`: "Yes, allow reading from etc/ from this project"
-- For `npm test`: "Yes, allow npm commands from this project"
-- For `rm -rf`: "Yes, allow rm commands from this project"
-
-**Location:** `crates/cli/src/tui/widgets/permission.rs:92-94`
-
 ## Input Shortcuts
 
 ### '?' Shortcut Handling
 
 Implement support for '?' input (e.g., '? for shortcuts').
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_shortcuts.rs` (currently `#[ignore]`)
 
 ### '!' Shell Mode Handling
 
 Implement support for '!' prefix (e.g., shell mode).
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_shell_mode.rs` (currently `#[ignore]`)
 
 ### Double-Tap Escape to Clear Input
 
 Implement support for double-tapping Escape to clear input.
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_interaction.rs` escape handling tests (currently `#[ignore]`)
 
 ### Ctrl+T to Show Todos
 
 Implement support for Ctrl+T to show todos.
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_todos.rs` (currently `#[ignore]`)
 
 ### Meta+P to Switch Model
 
 Implement support for Meta+P (Option+P on macOS) to switch models.
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_model.rs` model picker tests (currently `#[ignore]`)
 
 ### Ctrl+_ to Undo
 
 Implement support for Ctrl+_ to undo.
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_interaction.rs` Ctrl+_ tests (currently `#[ignore]`)
 
 ### Ctrl+Z to Suspend
 
 Implement support for Ctrl+Z to suspend.
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_suspend.rs` (currently `#[ignore]`)
 
 ### Ctrl+S to Stash Prompt
 
 Implement support for Ctrl+S to stash prompt.
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_stash.rs` (currently `#[ignore]`)
 
 ## Slash Commands
 
@@ -79,49 +58,49 @@ Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior fro
 
 Implement the `/fork` command.
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_fork.rs` (currently `#[ignore]`)
 
 ### /todos
 
 Implement the `/todos` command.
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_todos.rs` (currently `#[ignore]`)
 
 ### /tasks
 
 Implement the `/tasks` command.
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_tasks.rs` (currently `#[ignore]`)
 
 ### /context
 
 Implement the `/context` command.
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_context.rs` (currently `#[ignore]`)
 
 ### /exit
 
 Implement the `/exit` command.
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_exit.rs` (currently `#[ignore]`)
 
 ### /export
 
 Implement the `/export` command.
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_export.rs` (currently `#[ignore]`)
 
 ### /help
 
 Implement the `/help` command.
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_help.rs` (currently `#[ignore]`)
 
 ### /hooks
 
 Implement the `/hooks` command.
 
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
+**Tests:** `tui_hooks.rs` (currently `#[ignore]`)
 
 ### /memory
 
@@ -167,12 +146,3 @@ Implement ANSI color output in the TUI to match real Claude Code's color scheme.
 Add scenario-level configuration for the subscription text displayed in the header (e.g., "Opus 4.5 · Claude Max").
 
 Examples: `Claude Max`, `Claude Pro`, `API`
-
-### Fix Model Version String Rendering
-
-Model versions render incorrectly (e.g., "Sonnet 4" instead of "Sonnet 4.5").
-
-### Default Model
-
-Default model should be Opus 4.5 when not specified via `--model` or scenario configuration.
-
