@@ -31,9 +31,7 @@ use common::{start_tui, tmux, write_scenario};
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Typing / opens the slash command autocomplete menu
-// TODO(implement): requires slash command autocomplete
 #[test]
-#[ignore]
 fn test_tui_slash_opens_command_menu() {
     let scenario = write_scenario(
         r#"
@@ -68,9 +66,7 @@ fn test_tui_slash_opens_command_menu() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Menu shows multiple commands with descriptions
-// TODO(implement): requires slash command autocomplete
 #[test]
-#[ignore]
 fn test_tui_slash_menu_shows_descriptions() {
     let scenario = write_scenario(
         r#"
@@ -110,9 +106,7 @@ fn test_tui_slash_menu_shows_descriptions() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Typing characters after / filters commands using fuzzy matching
-// TODO(implement): requires slash command filtering
 #[test]
-#[ignore]
 fn test_tui_slash_filters_commands() {
     let scenario = write_scenario(
         r#"
@@ -153,9 +147,7 @@ fn test_tui_slash_filters_commands() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Filtering narrows down results as more characters are typed
-// TODO(implement): requires slash command filtering
 #[test]
-#[ignore]
 fn test_tui_slash_filters_progressively() {
     let scenario = write_scenario(
         r#"
@@ -186,9 +178,7 @@ fn test_tui_slash_filters_progressively() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Fuzzy matching finds commands with characters in sequence, not just prefix
-// TODO(implement): requires fuzzy matching in slash command search
 #[test]
-#[ignore]
 fn test_tui_slash_fuzzy_matches() {
     let scenario = write_scenario(
         r#"
@@ -228,9 +218,7 @@ fn test_tui_slash_fuzzy_matches() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Down arrow moves selection to the next command
-// TODO(implement): requires slash command navigation
 #[test]
-#[ignore]
 fn test_tui_slash_down_arrow_navigation() {
     let scenario = write_scenario(
         r#"
@@ -269,9 +257,7 @@ fn test_tui_slash_down_arrow_navigation() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Up arrow moves selection to the previous command
-// TODO(implement): requires slash command navigation
 #[test]
-#[ignore]
 fn test_tui_slash_up_arrow_navigation() {
     let scenario = write_scenario(
         r#"
@@ -318,9 +304,7 @@ fn test_tui_slash_up_arrow_navigation() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Tab completes to the selected command
-// TODO(implement): requires slash command tab completion
 #[test]
-#[ignore]
 fn test_tui_slash_tab_completes_first_command() {
     let scenario = write_scenario(
         r#"
@@ -354,9 +338,7 @@ fn test_tui_slash_tab_completes_first_command() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Tab shows argument hint for commands that take arguments
-// TODO(implement): requires slash command argument hints
 #[test]
-#[ignore]
 fn test_tui_slash_tab_shows_argument_hint() {
     let scenario = write_scenario(
         r#"
@@ -388,9 +370,7 @@ fn test_tui_slash_tab_shows_argument_hint() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Tab closes the autocomplete menu after completion
-// TODO(implement): requires slash command menu behavior
 #[test]
-#[ignore]
 fn test_tui_slash_tab_closes_menu() {
     let scenario = write_scenario(
         r#"
@@ -436,9 +416,7 @@ fn test_tui_slash_tab_closes_menu() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Escape closes autocomplete menu but keeps typed text
-// TODO(implement): requires slash command escape handling
 #[test]
-#[ignore]
 fn test_tui_slash_escape_closes_menu_keeps_text() {
     let scenario = write_scenario(
         r#"
@@ -478,9 +456,7 @@ fn test_tui_slash_escape_closes_menu_keeps_text() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Escape from filtered search closes menu but keeps filter text
-// TODO(implement): requires slash command escape handling
 #[test]
-#[ignore]
 fn test_tui_slash_escape_from_filtered_keeps_text() {
     let scenario = write_scenario(
         r#"

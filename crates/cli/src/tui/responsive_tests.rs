@@ -73,6 +73,7 @@ mod status_bar_rendering {
             claude_version: None,
             terminal_width: width,
             show_shortcuts_panel: false,
+            slash_menu: None,
         }
     }
 

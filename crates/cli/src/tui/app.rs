@@ -17,6 +17,7 @@ use crate::time::{Clock, ClockHandle};
 
 use super::separator::{make_compact_separator, make_separator};
 use super::shortcuts::shortcuts_by_column;
+use super::slash_menu::SlashMenuState;
 use super::streaming::{StreamingConfig, StreamingResponse};
 use super::widgets::permission::{
     PermissionSelection, PermissionType, RichPermissionDialog, SessionPermissionKey,
@@ -152,6 +153,8 @@ pub struct RenderState {
     pub terminal_width: u16,
     /// Whether the shortcuts panel is currently visible
     pub show_shortcuts_panel: bool,
+    /// Slash command autocomplete menu state (None if menu is closed)
+    pub slash_menu: Option<SlashMenuState>,
 }
 
 /// Permission request state using the rich permission dialog
@@ -194,6 +197,8 @@ pub enum ExitHint {
     CtrlC,
     /// "Press Ctrl-D again to exit"
     CtrlD,
+    /// "Esc to clear again" (after closing slash menu)
+    Escape,
 }
 
 /// Exit hint timeout in milliseconds (2 seconds)
@@ -318,6 +323,9 @@ struct TuiAppStateInner {
 
     /// Whether the shortcuts panel is currently visible
     pub show_shortcuts_panel: bool,
+
+    /// Slash command autocomplete menu state (None if menu is closed)
+    pub slash_menu: Option<SlashMenuState>,
 }
 
 impl TuiAppState {
@@ -382,6 +390,7 @@ impl TuiAppState {
                 config,
                 session_grants: HashSet::new(),
                 show_shortcuts_panel: false,
+                slash_menu: None,
             })),
         }
     }
@@ -409,6 +418,7 @@ impl TuiAppState {
             claude_version: inner.config.claude_version.clone(),
             terminal_width: inner.terminal_width,
             show_shortcuts_panel: inner.show_shortcuts_panel,
+            slash_menu: inner.slash_menu.clone(),
         }
     }
 
@@ -474,6 +484,47 @@ impl TuiAppState {
     /// Handle key events in input mode
     fn handle_input_key(&self, key: KeyEvent) {
         let mut inner = self.inner.lock();
+
+        // Handle slash menu navigation when menu is open
+        if inner.slash_menu.is_some() {
+            match key.code {
+                KeyCode::Down => {
+                    if let Some(ref mut menu) = inner.slash_menu {
+                        menu.select_next();
+                    }
+                    return;
+                }
+                KeyCode::Up => {
+                    if let Some(ref mut menu) = inner.slash_menu {
+                        menu.select_prev();
+                    }
+                    return;
+                }
+                KeyCode::Tab => {
+                    // Complete the selected command
+                    if let Some(ref menu) = inner.slash_menu {
+                        if let Some(cmd) = menu.selected_command() {
+                            inner.input_buffer = cmd.full_name();
+                            inner.cursor_pos = inner.input_buffer.len();
+                        }
+                    }
+                    inner.slash_menu = None; // Close menu
+                    return;
+                }
+                KeyCode::Esc => {
+                    // Close menu but keep text, show "Esc to clear again" hint
+                    inner.slash_menu = None;
+                    let now = inner.clock.now_millis();
+                    inner.exit_hint = Some(ExitHint::Escape);
+                    inner.exit_hint_shown_at = Some(now);
+                    return;
+                }
+                _ => {
+                    // Fall through to normal key handling
+                }
+            }
+        }
+
         match (key.modifiers, key.code) {
             // Ctrl+C - Interrupt
             (m, KeyCode::Char('c')) if m.contains(KeyModifiers::CONTROL) => {
@@ -524,6 +575,8 @@ impl TuiAppState {
 
             // Enter - Submit input
             (_, KeyCode::Enter) => {
+                // Close slash menu on enter
+                inner.slash_menu = None;
                 // Clear exit hint on Enter
                 inner.exit_hint = None;
                 inner.exit_hint_shown_at = None;
@@ -534,6 +587,7 @@ impl TuiAppState {
             }
 
             // Escape - Dismiss shortcuts panel first, then clear input
+            // Note: slash menu escape is handled above in the slash_menu.is_some() block
             (_, KeyCode::Esc) => {
                 if inner.show_shortcuts_panel {
                     // First priority: dismiss shortcuts panel
@@ -542,6 +596,7 @@ impl TuiAppState {
                     // Normal behavior: clear input
                     inner.input_buffer.clear();
                     inner.cursor_pos = 0;
+                    inner.slash_menu = None;
                 }
             }
 
@@ -552,6 +607,8 @@ impl TuiAppState {
                     inner.cursor_pos = pos;
                     inner.input_buffer.remove(pos);
                 }
+                // Update slash menu state
+                Self::update_slash_menu_inner(&mut inner);
             }
 
             // Delete - Delete character at cursor
@@ -560,6 +617,8 @@ impl TuiAppState {
                 if pos < inner.input_buffer.len() {
                     inner.input_buffer.remove(pos);
                 }
+                // Update slash menu state
+                Self::update_slash_menu_inner(&mut inner);
             }
 
             // Left arrow - Move cursor left
@@ -576,12 +635,12 @@ impl TuiAppState {
                 }
             }
 
-            // Up arrow - Previous history
+            // Up arrow - Previous history (only when slash menu is closed)
             (_, KeyCode::Up) => {
                 Self::navigate_history_inner(&mut inner, -1);
             }
 
-            // Down arrow - Next history
+            // Down arrow - Next history (only when slash menu is closed)
             (_, KeyCode::Down) => {
                 Self::navigate_history_inner(&mut inner, 1);
             }
@@ -610,17 +669,23 @@ impl TuiAppState {
             (m, KeyCode::Char('u')) if m.contains(KeyModifiers::CONTROL) => {
                 inner.input_buffer = inner.input_buffer[inner.cursor_pos..].to_string();
                 inner.cursor_pos = 0;
+                // Update slash menu state
+                Self::update_slash_menu_inner(&mut inner);
             }
 
             // Ctrl+K - Clear line after cursor
             (m, KeyCode::Char('k')) if m.contains(KeyModifiers::CONTROL) => {
                 let pos = inner.cursor_pos;
                 inner.input_buffer.truncate(pos);
+                // Update slash menu state
+                Self::update_slash_menu_inner(&mut inner);
             }
 
             // Ctrl+W - Delete word before cursor
             (m, KeyCode::Char('w')) if m.contains(KeyModifiers::CONTROL) => {
                 Self::delete_word_before_cursor_inner(&mut inner);
+                // Update slash menu state
+                Self::update_slash_menu_inner(&mut inner);
             }
 
             // '?' key - show shortcuts panel on empty input, otherwise type literal
@@ -651,9 +716,27 @@ impl TuiAppState {
                 // Clear exit hint on typing
                 inner.exit_hint = None;
                 inner.exit_hint_shown_at = None;
+                // Update slash menu state
+                Self::update_slash_menu_inner(&mut inner);
             }
 
             _ => {}
+        }
+    }
+
+    /// Update slash menu state based on current input buffer
+    fn update_slash_menu_inner(inner: &mut TuiAppStateInner) {
+        if inner.input_buffer.starts_with('/') {
+            let filter = inner.input_buffer[1..].to_string();
+            if let Some(ref mut menu) = inner.slash_menu {
+                menu.set_filter(filter);
+            } else {
+                let mut menu = SlashMenuState::new();
+                menu.set_filter(filter);
+                inner.slash_menu = Some(menu);
+            }
+        } else {
+            inner.slash_menu = None;
         }
     }
 
@@ -1443,9 +1526,13 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
             // Conversation history area (if any)
             #(render_conversation_area(state))
 
+            // Slash menu (if open)
+            #(render_slash_menu(state))
+
             // Input area with separators
             Text(content: make_separator(state.terminal_width as usize))
             Text(content: input_display)
+            #(render_argument_hint(state))
             Text(content: make_separator(state.terminal_width as usize))
 
             // Shortcuts panel or status bar
@@ -1573,6 +1660,76 @@ fn render_conversation_area(state: &RenderState) -> AnyElement<'static> {
         }
         .into()
     }
+}
+
+/// Render the slash command autocomplete menu (if open)
+fn render_slash_menu(state: &RenderState) -> AnyElement<'static> {
+    let Some(ref menu) = state.slash_menu else {
+        return element! { View {} }.into();
+    };
+
+    if menu.filtered_commands.is_empty() {
+        return element! { View {} }.into();
+    }
+
+    // Build menu content
+    let max_visible = 10; // Show at most 10 commands
+    let mut content = String::new();
+
+    for (i, cmd) in menu.filtered_commands.iter().take(max_visible).enumerate() {
+        let is_selected = i == menu.selected_index;
+        let indicator = if is_selected { " ❯ " } else { "   " };
+
+        // Format: indicator + /command + spaces + description
+        // Use 14 chars for command name (including /) to align descriptions
+        let cmd_display = format!("/{}", cmd.name);
+        content.push_str(&format!(
+            "{}{:<14}  {}\n",
+            indicator, cmd_display, cmd.description
+        ));
+    }
+
+    // Remove trailing newline
+    if content.ends_with('\n') {
+        content.pop();
+    }
+
+    element! {
+        View(flex_direction: FlexDirection::Column) {
+            Text(content: content)
+            Text(content: "")
+        }
+    }
+    .into()
+}
+
+/// Render argument hint for completed slash commands
+fn render_argument_hint(state: &RenderState) -> AnyElement<'static> {
+    // Only show hint when menu is closed and input starts with a completed command
+    if state.slash_menu.is_some() || !state.input_buffer.starts_with('/') {
+        return element! { View {} }.into();
+    }
+
+    // Extract command name (without leading /)
+    let cmd_text = state.input_buffer.trim_start_matches('/');
+
+    // Find exact match
+    if let Some(cmd) = super::slash_menu::COMMANDS
+        .iter()
+        .find(|c| c.name == cmd_text)
+    {
+        if let Some(hint) = cmd.argument_hint {
+            let hint_text = format!("     {}  {}", " ".repeat(cmd_text.len()), hint);
+            return element! {
+                View(flex_direction: FlexDirection::Column) {
+                    Text(content: hint_text)
+                }
+            }
+            .into();
+        }
+    }
+
+    element! { View {} }.into()
 }
 
 /// Build tool summary from session turns for /compact output
@@ -1776,6 +1933,7 @@ pub(crate) fn format_status_bar(state: &RenderState, width: usize) -> String {
         return match hint {
             ExitHint::CtrlC => "  Press Ctrl-C again to exit".to_string(),
             ExitHint::CtrlD => "  Press Ctrl-D again to exit".to_string(),
+            ExitHint::Escape => "  Esc to clear again".to_string(),
         };
     }
 
