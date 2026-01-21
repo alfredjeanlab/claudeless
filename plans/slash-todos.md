@@ -1,5 +1,7 @@
 # Implementation Plan: /todos Slash Command
 
+**Root Feature:** `cl-c886`
+
 ## Overview
 
 Implement the `/todos` slash command and `Ctrl+T` shortcut to display the current todo list in the TUI. When no todos exist, displays "No todos currently tracked". The `TodoState` infrastructure already exists; this plan focuses on wiring it to the TUI layer.

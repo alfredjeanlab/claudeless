@@ -1,5 +1,7 @@
 # Implementation Plan: /fork Command
 
+**Root Feature:** `cl-3a79`
+
 **Test File:** `crates/cli/tests/tui_fork.rs` (3 tests, currently `#[ignore]`)
 
 ## Overview

@@ -1,5 +1,7 @@
 # Plan: Double-Tap Escape to Clear Input
 
+**Root Feature:** `cl-5218`
+
 ## Overview
 
 Implement support for double-tapping the Escape key to clear input text. When the user has text in the input field and presses Escape once, a hint message "Esc to clear again" is displayed. Pressing Escape again within a 2-second timeout clears the input. If Escape is pressed on an empty input, nothing happens.
