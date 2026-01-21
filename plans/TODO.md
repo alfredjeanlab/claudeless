@@ -145,4 +145,8 @@ Implement ANSI color output in the TUI to match real Claude Code's color scheme.
 
 Add scenario-level configuration for the subscription text displayed in the header (e.g., "Opus 4.5 · Claude Max").
 
-Examples: `Claude Max`, `Claude Pro`, `API`
+**Fixtures captured:**
+- `Claude Max` - model_haiku.txt, model_sonnet.txt, model_opus.txt
+- `API Usage Billing` - api_usage_billing.txt (v2.1.14)
+
+**Examples to capture:** `Claude Pro`, `Free`, `Enterprise` (or `Team`?)

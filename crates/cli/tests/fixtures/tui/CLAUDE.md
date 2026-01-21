@@ -86,6 +86,11 @@ TUI state after running /tasks when no background tasks exist:
 - **model_sonnet.txt**: Shows "Sonnet 4.5 · Claude Max"
 - **model_opus.txt**: Shows "Opus 4.5 · Claude Max"
 
+### Billing/Subscription Variants
+- **api_usage_billing.txt**: Shows "Haiku 4.5 · API Usage Billing" (captured from v2.1.14)
+  - Displays when using Claude Code with API Usage Billing subscription instead of Claude Max
+  - Same TUI layout as other models, only the subscription type indicator differs
+
 ### model_picker.txt
 TUI state after pressing Meta+P (Option+P on macOS) to open the model picker:
 - Shows "Select model" header
