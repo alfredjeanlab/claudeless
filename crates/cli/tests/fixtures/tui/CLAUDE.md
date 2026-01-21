@@ -49,6 +49,14 @@ TUI state after pressing '?' on empty input:
 - Pressing Escape dismisses the shortcuts panel
 - Note: '?' only shows shortcuts when input is empty; otherwise types literal '?'
 
+### Shell Mode ('\!' prefix)
+- **shell_mode_prefix.txt**: Input field showing just `\!` after pressing '!'
+- **shell_mode_command.txt**: Input field showing `\!ls -la` after typing a command
+- Shell mode is entered by typing '!' at the start of empty input
+- The '!' is displayed as `\!` (backslash-escaped) in the input field
+- Placeholder hint disappears when shell prefix is entered
+- When submitted, the prompt shows `❯ \!command` and Claude executes `Bash(command)`
+
 ### Model Variants
 - **model_haiku.txt**: Shows "Haiku 4.5 · Claude Max"
 - **model_sonnet.txt**: Shows "Sonnet 4.5 · Claude Max"
