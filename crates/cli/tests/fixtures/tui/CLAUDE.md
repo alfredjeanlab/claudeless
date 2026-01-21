@@ -28,6 +28,14 @@ TUI state after Claude responds:
 - New empty input field ready for next prompt
 - Help shortcut hint returns
 
+### escape_clear_hint.txt
+TUI state after pressing Escape once with input text:
+- Same header as with_input
+- User's typed text still in the input area
+- Status bar shows "Esc to clear again" hint (right-aligned)
+- If Escape is pressed again quickly, input is cleared
+- If user waits ~2 seconds, the hint disappears and user needs to double-tap again
+
 ### shortcuts_display.txt
 TUI state after pressing '?' on empty input:
 - Header remains
