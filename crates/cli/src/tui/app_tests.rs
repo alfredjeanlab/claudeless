@@ -4,6 +4,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use super::*;
+use crate::ansi::strip_ansi;
 use crate::config::ScenarioConfig;
 use crate::scenario::Scenario;
 use crate::state::session::SessionManager;
@@ -204,8 +205,10 @@ fn header_shows_claudeless_when_no_version_specified() {
     assert!(render.claude_version.is_none());
 
     let (line1, _, _) = format_header_lines(&render);
-    assert!(line1.contains("Claudeless"));
-    assert!(!line1.contains("Claude Code"));
+    // Strip ANSI codes for text content checks (line may have color styling)
+    let line1_plain = strip_ansi(&line1);
+    assert!(line1_plain.contains("Claudeless"));
+    assert!(!line1_plain.contains("Claude Code"));
 }
 
 #[test]
@@ -231,8 +234,10 @@ fn header_shows_claude_code_when_version_specified() {
     assert_eq!(render.claude_version, Some("2.1.12".to_string()));
 
     let (line1, _, _) = format_header_lines(&render);
-    assert!(line1.contains("Claude Code v2.1.12"));
-    assert!(!line1.contains("Claudeless"));
+    // Strip ANSI codes for text content checks (line has color styling)
+    let line1_plain = strip_ansi(&line1);
+    assert!(line1_plain.contains("Claude Code v2.1.12"));
+    assert!(!line1_plain.contains("Claudeless"));
 }
 
 #[test]

@@ -10,6 +10,7 @@
 //! All rendering is handled in app.rs via the element! macro.
 
 mod app;
+mod colors;
 mod screenshot;
 pub mod separator;
 pub mod shortcuts;

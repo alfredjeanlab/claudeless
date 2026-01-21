@@ -51,6 +51,27 @@ pub fn normalize_ansi_tui(input: &str, cwd: Option<&str>) -> String {
         result = result[..result.len() - 1].to_string();
     }
 
+    // Normalize each line:
+    // 1. Convert non-breaking spaces to regular spaces (fixture inconsistency)
+    // 2. Strip trailing whitespace (tmux may add padding)
+    // 3. Strip trailing [39m] (iocraft may optimize these away)
+    let fg_reset = "\x1b[39m";
+    result = result
+        .lines()
+        .map(|line| {
+            // Convert non-breaking space (U+00A0) to regular space
+            let l = line.replace('\u{00A0}', " ");
+            // Strip trailing whitespace
+            let mut l = l.trim_end().to_string();
+            // Strip trailing [39m] sequences
+            while l.ends_with(fg_reset) {
+                l = l[..l.len() - fg_reset.len()].to_string();
+            }
+            l
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
     result
 }
 
@@ -218,7 +239,7 @@ mod tests {
         let normalized = normalize_ansi_tui(input, None);
         assert!(normalized.contains("<VERSION>"));
         assert!(normalized.contains("\x1b[38;2;153;153;153m"));
-        assert!(normalized.contains("\x1b[39m"));
+        // Note: trailing [39m] is stripped by normalization to handle iocraft optimization
     }
 
     #[test]

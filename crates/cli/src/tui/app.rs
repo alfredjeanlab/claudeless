@@ -15,6 +15,10 @@ use crate::scenario::Scenario;
 use crate::state::session::SessionManager;
 use crate::time::{Clock, ClockHandle};
 
+use super::colors::{
+    styled_logo_line1, styled_logo_line2, styled_logo_line3, styled_placeholder, styled_separator,
+    styled_status_text,
+};
 use super::separator::{make_compact_separator, make_separator};
 use super::shortcuts::shortcuts_by_column;
 use super::slash_menu::SlashMenuState;
@@ -1658,6 +1662,9 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
     // Format header lines
     let (header_line1, header_line2, header_line3) = format_header_lines(state);
 
+    // Use styled output when claude_version is present (emulating real Claude)
+    let use_colors = state.claude_version.is_some();
+
     // Format input line
     // Shell mode shows \! prefix, otherwise show normal input or placeholder
     let input_display = if state.shell_mode {
@@ -1670,13 +1677,31 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
     } else if state.input_buffer.is_empty() {
         if state.conversation_display.is_empty() && state.response_content.is_empty() {
             // Show placeholder only on initial state
-            "❯ Try \"refactor mod.rs\"".to_string()
+            if use_colors {
+                styled_placeholder("Try \"write a test for scenario.rs\"")
+            } else {
+                "❯ Try \"refactor mod.rs\"".to_string()
+            }
         } else {
             // After conversation started, show just the cursor
             "❯".to_string()
         }
     } else {
         format!("❯ {}", state.input_buffer)
+    };
+
+    // Format separators
+    let separator = if use_colors {
+        styled_separator(width)
+    } else {
+        format!("{}\n", make_separator(width))
+    };
+
+    // Format status bar
+    let status_bar = if use_colors {
+        format_status_bar_styled(state, width)
+    } else {
+        format_status_bar(state, width)
     };
 
     // Main layout matching real Claude CLI
@@ -1687,9 +1712,12 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
             height: 100pct,
         ) {
             // Header with Claude branding (3 lines)
-            Text(content: header_line1)
-            Text(content: header_line2)
-            Text(content: header_line3)
+            // Use NoWrap to preserve trailing ANSI escape codes
+            // Note: Empty first element to work around iocraft first-element rendering issue
+            Text(content: "")
+            Text(content: header_line1, wrap: TextWrap::NoWrap)
+            Text(content: header_line2, wrap: TextWrap::NoWrap)
+            Text(content: header_line3, wrap: TextWrap::NoWrap)
 
             // Empty line after header
             Text(content: "")
@@ -1700,18 +1728,18 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
             // Slash menu (if open)
             #(render_slash_menu(state))
 
-            // Input area with separators
-            Text(content: make_separator(state.terminal_width as usize))
-            Text(content: input_display)
+            // Input area with separators (NoWrap to preserve ANSI)
+            Text(content: separator.clone(), wrap: TextWrap::NoWrap)
+            Text(content: input_display, wrap: TextWrap::NoWrap)
             #(render_argument_hint(state))
-            Text(content: make_separator(state.terminal_width as usize))
+            Text(content: separator, wrap: TextWrap::NoWrap)
 
-            // Shortcuts panel or status bar
+            // Shortcuts panel or status bar (NoWrap to preserve ANSI)
             #(if state.show_shortcuts_panel {
                 render_shortcuts_panel(state.terminal_width as usize)
             } else {
                 element! {
-                    Text(content: format_status_bar(state, state.terminal_width as usize))
+                    Text(content: status_bar.clone(), wrap: TextWrap::NoWrap)
                 }.into()
             })
         }
@@ -2086,15 +2114,25 @@ fn format_header_lines(state: &RenderState) -> (String, String, String) {
         })
         .unwrap_or_else(|_| "~".to_string());
 
-    // Header line 1: Conditional branding based on claude_version
-    let line1 = match &state.claude_version {
-        Some(version) => format!(" ▐▛███▜▌   Claude Code v{}", version),
-        None => format!(" ▐▛███▜▌   Claudeless {}", env!("CARGO_PKG_VERSION")),
-    };
-    let line2 = format!("▝▜█████▛▘  {} · Claude Max", model_name);
-    let line3 = format!("  ▘▘ ▝▝    {}", working_dir);
-
-    (line1, line2, line3)
+    // Header lines: use styled ANSI output when claude_version is present (emulating real Claude)
+    match &state.claude_version {
+        Some(version) => {
+            let version_str = format!("v{}", version);
+            let model_str = format!("{} · Claude Max", model_name);
+            (
+                styled_logo_line1(&version_str),
+                styled_logo_line2(&model_str),
+                styled_logo_line3(&working_dir),
+            )
+        }
+        None => {
+            // Claudeless-native mode: no colors
+            let line1 = format!(" ▐▛███▜▌   Claudeless {}", env!("CARGO_PKG_VERSION"));
+            let line2 = format!("▝▜█████▛▘  {} · Claude Max", model_name);
+            let line3 = format!("  ▘▘ ▝▝    {}", working_dir);
+            (line1, line2, line3)
+        }
+    }
 }
 
 /// Format status bar content
@@ -2141,6 +2179,25 @@ pub(crate) fn format_status_bar(state: &RenderState, width: usize) -> String {
             let padding = width.saturating_sub(mode_visual_width + right_width);
             format!("{}{:width$}{}", mode_text, "", right_text, width = padding)
         }
+    }
+}
+
+/// Format styled status bar content (with ANSI colors)
+fn format_status_bar_styled(state: &RenderState, _width: usize) -> String {
+    // Check for exit hint first (takes precedence)
+    if let Some(hint) = &state.exit_hint {
+        return match hint {
+            ExitHint::CtrlC => "  Press Ctrl-C again to exit".to_string(),
+            ExitHint::CtrlD => "  Press Ctrl-D again to exit".to_string(),
+            ExitHint::Escape => "  Esc to clear again".to_string(),
+        };
+    }
+
+    // For styled output, only implement default mode for now (initial state fixture)
+    // The fixture shows "? for shortcuts" in gray
+    match &state.permission_mode {
+        PermissionMode::Default => styled_status_text("? for shortcuts"),
+        _ => format_status_bar(state, _width),
     }
 }
 

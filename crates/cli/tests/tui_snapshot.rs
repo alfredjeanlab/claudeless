@@ -48,12 +48,7 @@ fn test_initial_state_matches_fixture() {
 }
 
 /// Compare ANSI-colored initial state against real Claude fixture.
-///
-/// NOTE: This test is ignored until TUI color rendering is implemented.
-/// The test infrastructure (ANSI parser, comparison utilities) is complete.
-/// Once the TUI outputs ANSI colors, remove the #[ignore] attribute.
 #[test]
-#[ignore = "TUI color rendering not yet implemented"]
 fn test_initial_state_ansi_matches_fixture() {
     let scenario = write_scenario(
         r#"

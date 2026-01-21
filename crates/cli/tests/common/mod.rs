@@ -135,6 +135,7 @@ pub fn load_versioned_fixture(version: &str, name: &str) -> String {
 /// Normalize TUI output for comparison
 ///
 /// Applies the following normalizations:
+/// - Non-breaking spaces (`\u{00A0}`) -> regular spaces (real Claude CLI uses NBSP)
 /// - Timestamps (HH:MM:SS or HH:MM) -> `<TIME>`
 /// - Session IDs (UUIDs) -> `<SESSION>`
 /// - All paths (temp dirs, working dirs) -> `<PATH>`
@@ -147,6 +148,9 @@ pub fn normalize_tui(input: &str, cwd: Option<&str>) -> String {
     use regex::Regex;
 
     let mut result = input.to_string();
+
+    // Replace non-breaking spaces with regular spaces (real Claude CLI uses NBSP after ❯)
+    result = result.replace('\u{00A0}', " ");
 
     // Timestamps (HH:MM:SS or HH:MM)
     let time_re = Regex::new(r"\d{1,2}:\d{2}(:\d{2})?").unwrap();
