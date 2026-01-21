@@ -227,6 +227,7 @@ fn header_shows_claude_code_when_version_specified() {
         &PermissionMode::Default,
         false,
         None,
+        false,
     );
     let state = TuiAppState::new(scenario, sessions, clock, tui_config);
     let render = state.render_state();
@@ -253,6 +254,7 @@ fn cli_version_overrides_scenario() {
         &PermissionMode::Default,
         false,
         Some("2.0.0"), // CLI override
+        false,
     );
 
     assert_eq!(tui_config.claude_version, Some("2.0.0".to_string()));

@@ -75,6 +75,7 @@ mod status_bar_rendering {
             show_shortcuts_panel: false,
             slash_menu: None,
             shell_mode: false,
+            is_tty: false,
         }
     }
 

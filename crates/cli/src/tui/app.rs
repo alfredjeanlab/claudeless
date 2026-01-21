@@ -43,6 +43,8 @@ pub struct TuiConfig {
     pub compact_delay_ms: Option<u64>,
     /// Explicit Claude version, or None for Claudeless-native mode
     pub claude_version: Option<String>,
+    /// Whether output is connected to a TTY
+    pub is_tty: bool,
 }
 
 impl Default for TuiConfig {
@@ -56,6 +58,7 @@ impl Default for TuiConfig {
             allow_bypass_permissions: false,
             compact_delay_ms: None,
             claude_version: None,
+            is_tty: false,
         }
     }
 }
@@ -67,6 +70,7 @@ impl TuiConfig {
         cli_permission_mode: &PermissionMode,
         allow_bypass_permissions: bool,
         cli_claude_version: Option<&str>,
+        is_tty: bool,
     ) -> Self {
         // CLI permission mode overrides scenario (unless CLI is default)
         let permission_mode = if *cli_permission_mode != PermissionMode::Default {
@@ -103,6 +107,7 @@ impl TuiConfig {
             allow_bypass_permissions,
             compact_delay_ms: config.compact_delay_ms,
             claude_version,
+            is_tty,
         }
     }
 }
@@ -161,6 +166,8 @@ pub struct RenderState {
     pub slash_menu: Option<SlashMenuState>,
     /// Whether shell mode is currently active
     pub shell_mode: bool,
+    /// Whether output is connected to a TTY
+    pub is_tty: bool,
 }
 
 /// Permission request state using the rich permission dialog
@@ -430,6 +437,7 @@ impl TuiAppState {
             show_shortcuts_panel: inner.show_shortcuts_panel,
             slash_menu: inner.slash_menu.clone(),
             shell_mode: inner.shell_mode,
+            is_tty: inner.config.is_tty,
         }
     }
 
@@ -1677,8 +1685,8 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
     // Format header lines
     let (header_line1, header_line2, header_line3) = format_header_lines(state);
 
-    // Use styled output when claude_version is present (emulating real Claude)
-    let use_colors = state.claude_version.is_some();
+    // Use styled output when connected to a TTY
+    let use_colors = state.is_tty;
 
     // Format input line
     // Shell mode shows \! prefix, otherwise show normal input or placeholder
@@ -2129,24 +2137,25 @@ fn format_header_lines(state: &RenderState) -> (String, String, String) {
         })
         .unwrap_or_else(|_| "~".to_string());
 
-    // Header lines: use styled ANSI output when claude_version is present (emulating real Claude)
-    match &state.claude_version {
-        Some(version) => {
-            let version_str = format!("v{}", version);
-            let model_str = format!("{} · Claude Max", model_name);
-            (
-                styled_logo_line1(&version_str),
-                styled_logo_line2(&model_str),
-                styled_logo_line3(&working_dir),
-            )
-        }
-        None => {
-            // Claudeless-native mode: no colors
-            let line1 = format!(" ▐▛███▜▌   Claudeless {}", env!("CARGO_PKG_VERSION"));
-            let line2 = format!("▝▜█████▛▘  {} · Claude Max", model_name);
-            let line3 = format!("  ▘▘ ▝▝    {}", working_dir);
-            (line1, line2, line3)
-        }
+    // Determine version string based on claude_version
+    let version_str = match &state.claude_version {
+        Some(version) => format!("v{}", version),
+        None => format!("Claudeless {}", env!("CARGO_PKG_VERSION")),
+    };
+    let model_str = format!("{} · Claude Max", model_name);
+
+    // Use styled ANSI output when connected to a TTY
+    if state.is_tty {
+        (
+            styled_logo_line1(&version_str),
+            styled_logo_line2(&model_str),
+            styled_logo_line3(&working_dir),
+        )
+    } else {
+        let line1 = format!(" ▐▛███▜▌   {}", version_str);
+        let line2 = format!("▝▜█████▛▘  {}", model_str);
+        let line3 = format!("  ▘▘ ▝▝    {}", working_dir);
+        (line1, line2, line3)
     }
 }
 

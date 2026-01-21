@@ -3,7 +3,7 @@
 
 //! Claude CLI Simulator binary entry point.
 
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
@@ -345,12 +345,14 @@ fn run_tui_mode(
     };
 
     // Create TUI config from scenario
+    let is_tty = std::io::stdout().is_terminal();
     let tui_config = TuiConfig::from_scenario(
         scenario.config(),
         Some(&cli.model),
         &cli.permission_mode,
         allow_bypass_permissions,
         cli.claude_version.as_deref(),
+        is_tty,
     );
 
     let sessions = SessionManager::new();
