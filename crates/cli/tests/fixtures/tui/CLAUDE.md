@@ -78,6 +78,21 @@ TUI state after running /todos when no todos exist:
 - **model_sonnet.txt**: Shows "Sonnet 4.5 · Claude Max"
 - **model_opus.txt**: Shows "Opus 4.5 · Claude Max"
 
+### model_picker.txt
+TUI state after pressing Meta+P (Option+P on macOS) to open the model picker:
+- Shows "Select model" header
+- Description: "Switch between Claude models. Applies to this session and future Claude Code sessions."
+- Three model options:
+  - 1. Default (recommended) - Opus 4.5 · Most capable for complex work
+  - 2. Sonnet - Sonnet 4.5 · Best for everyday tasks
+  - 3. Haiku - Haiku 4.5 · Fastest for quick answers
+- Arrow (❯) indicates cursor position
+- Checkmark (✔) indicates currently active model
+- Footer shows "Enter to confirm · esc to exit"
+- Pressing Up/Down navigates between options
+- Pressing Enter confirms selection (changes model)
+- Pressing Escape closes picker without changes
+
 ### Permission Mode Variants
 - **permission_default.txt**: Shows "? for shortcuts"
 - **permission_plan.txt**: Shows "⏸ plan mode on (shift+tab to cycle)"
