@@ -1,0 +1,16 @@
+ ▐▛███▜▌   Claude Code v2.1.12
+▝▜█████▛▘  Haiku 4.5 · Claude Max
+  ▘▘ ▝▝    ~/Developer/claudeless
+
+❯ /hooks
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Hooks
+ 4 hooks
+
+ ❯ 1.  PreToolUse - Before tool execution
+   2.  PostToolUse - After tool execution
+   3.  PostToolUseFailure - After tool execution fails
+   4.  Notification - When notifications are sent
+ ↓ 5.  UserPromptSubmit - When the user submits a prompt
+
+ Enter to confirm · esc to cancel

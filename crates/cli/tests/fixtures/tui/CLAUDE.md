@@ -241,6 +241,41 @@ tmux capture-pane -e -t claude-tui -p > initial_state_ansi.txt
 - Pressing Escape in method dialog shows "Export cancelled"
 - Pressing Escape in filename dialog returns to method selection
 
+### /hooks Command
+- **hooks_autocomplete.txt**: TUI state showing /hooks in the autocomplete dropdown
+  - Shows "/hooks                  Manage hook configurations for tool events"
+  - Autocomplete appears when typing /hooks
+- **hooks_dialog.txt**: TUI state showing the /hooks dialog with hook types list
+  - Shows "Hooks" header with count of active hooks (e.g., "4 hooks")
+  - Shows scrollable list of hook types with descriptions:
+    - PreToolUse - Before tool execution
+    - PostToolUse - After tool execution
+    - PostToolUseFailure - After tool execution fails
+    - Notification - When notifications are sent
+    - UserPromptSubmit - When the user submits a prompt
+    - SessionStart - When a new session is started
+    - Stop - Right before Claude concludes its response
+    - SubagentStart - When a subagent (Task tool call) is started
+    - SubagentStop - Right before a subagent (Task tool call) concludes its response
+    - PreCompact - Before conversation compaction
+    - SessionEnd - When a session is ending
+    - PermissionRequest - When a permission dialog is displayed
+    - Setup - Repo setup hooks for init and maintenance
+    - Disable all hooks (special action at end of list)
+  - Arrow (❯) indicates cursor position
+  - Up/Down arrows (↑/↓) indicate scrolling availability
+  - Footer shows "Enter to confirm · esc to cancel"
+- **hooks_matcher_dialog.txt**: TUI state after selecting a hook type
+  - Shows hook-specific header: "[HookType] - Tool Matchers"
+  - Shows help text about exit codes:
+    - Exit code 0 - stdout/stderr not shown
+    - Exit code 2 - show stderr to model and block tool call
+    - Other exit codes - show stderr to user only but continue with tool call
+  - Shows "+ Add new matcher..." option
+  - Shows "No matchers configured yet" if no matchers exist
+  - Pressing Escape returns to main hooks list
+- Pressing Escape in main dialog shows "Hooks dialog dismissed"
+
 ## Capture Method
 
 Captured using tmux:
