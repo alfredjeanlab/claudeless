@@ -2,6 +2,98 @@
 use super::*;
 
 // =========================================================================
+// Bash Command Categorization Tests
+// =========================================================================
+
+#[test]
+fn test_categorize_etc_reading() {
+    assert_eq!(
+        categorize_bash_command("cat /etc/passwd"),
+        BashCommandCategory::ReadingEtc
+    );
+    assert_eq!(
+        categorize_bash_command("cat /etc/passwd | head -5"),
+        BashCommandCategory::ReadingEtc
+    );
+    assert_eq!(
+        categorize_bash_command("ls /etc/"),
+        BashCommandCategory::ReadingEtc
+    );
+}
+
+#[test]
+fn test_categorize_named_commands() {
+    assert_eq!(
+        categorize_bash_command("npm test"),
+        BashCommandCategory::NamedCommand("npm".to_string())
+    );
+    assert_eq!(
+        categorize_bash_command("rm -rf /tmp/foo"),
+        BashCommandCategory::NamedCommand("rm".to_string())
+    );
+    assert_eq!(
+        categorize_bash_command("cargo build --release"),
+        BashCommandCategory::NamedCommand("cargo".to_string())
+    );
+    assert_eq!(
+        categorize_bash_command("git status"),
+        BashCommandCategory::NamedCommand("git".to_string())
+    );
+}
+
+#[test]
+fn test_categorize_commands_with_paths() {
+    assert_eq!(
+        categorize_bash_command("/usr/bin/npm test"),
+        BashCommandCategory::NamedCommand("npm".to_string())
+    );
+    assert_eq!(
+        categorize_bash_command("./scripts/build.sh"),
+        BashCommandCategory::NamedCommand("build.sh".to_string())
+    );
+}
+
+#[test]
+fn test_categorize_empty_or_whitespace() {
+    assert_eq!(categorize_bash_command(""), BashCommandCategory::Generic);
+    assert_eq!(categorize_bash_command("   "), BashCommandCategory::Generic);
+}
+
+// =========================================================================
+// Option 2 Text Integration Tests
+// =========================================================================
+
+#[test]
+fn test_option2_text_etc_reading() {
+    let dialog = RichPermissionDialog::new(PermissionType::Bash {
+        command: "cat /etc/passwd".to_string(),
+        description: None,
+    });
+    let output = dialog.render(120);
+    assert!(output.contains("Yes, allow reading from etc/ from this project"));
+}
+
+#[test]
+fn test_option2_text_npm_command() {
+    let dialog = RichPermissionDialog::new(PermissionType::Bash {
+        command: "npm test".to_string(),
+        description: None,
+    });
+    let output = dialog.render(120);
+    assert!(output.contains("Yes, allow npm commands from this project"));
+}
+
+#[test]
+fn test_option2_text_rm_command() {
+    let dialog = RichPermissionDialog::new(PermissionType::Bash {
+        command: "rm -rf /tmp/test".to_string(),
+        description: None,
+    });
+    let output = dialog.render(120);
+    assert!(output.contains("Yes, allow rm commands from this project"));
+}
+
+// =========================================================================
 // PermissionSelection Tests
 // =========================================================================
 
@@ -56,7 +148,7 @@ fn test_bash_dialog_render() {
     assert!(output.contains("Display first 5 lines of /etc/passwd"));
     assert!(output.contains("Do you want to proceed?"));
     assert!(output.contains("❯ 1. Yes"));
-    assert!(output.contains("2. Yes, allow reading from etc/"));
+    assert!(output.contains("2. Yes, allow reading from etc/ from this project"));
     assert!(output.contains("3. No"));
     assert!(output.contains("Esc to cancel"));
 }

@@ -6,6 +6,42 @@
 //! Renders permission dialogs for Bash commands, file edits, and file writes
 //! matching the real Claude Code TUI format.
 
+/// Categories of bash commands for permission text generation
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum BashCommandCategory {
+    /// Command reads from /etc/ directory
+    ReadingEtc,
+    /// Named command (npm, cargo, git, rm, etc.)
+    NamedCommand(String),
+    /// Fallback for complex or unrecognized commands
+    Generic,
+}
+
+/// Categorize a bash command for permission text generation.
+///
+/// Priority:
+/// 1. If command contains `/etc/` path, categorize as ReadingEtc
+/// 2. Extract first word as the command name
+/// 3. Fallback to Generic for empty or unrecognizable commands
+fn categorize_bash_command(command: &str) -> BashCommandCategory {
+    // Check for /etc/ access first (highest priority)
+    if command.contains("/etc/") {
+        return BashCommandCategory::ReadingEtc;
+    }
+
+    // Extract the first word (command name)
+    let first_word = command.split_whitespace().next().unwrap_or("");
+
+    // Handle commands with paths (e.g., /usr/bin/npm -> npm)
+    let command_name = first_word.rsplit('/').next().unwrap_or(first_word);
+
+    if command_name.is_empty() {
+        BashCommandCategory::Generic
+    } else {
+        BashCommandCategory::NamedCommand(command_name.to_string())
+    }
+}
+
 /// Type of permission being requested
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PermissionType {
@@ -87,11 +123,21 @@ impl RichPermissionDialog {
     }
 
     /// Get the option 2 text based on permission type
-    fn option2_text(&self) -> &'static str {
+    fn option2_text(&self) -> String {
         match &self.permission_type {
-            PermissionType::Bash { .. } => "Yes, allow reading from etc/ from this project",
+            PermissionType::Bash { command, .. } => match categorize_bash_command(command) {
+                BashCommandCategory::ReadingEtc => {
+                    "Yes, allow reading from etc/ from this project".to_string()
+                }
+                BashCommandCategory::NamedCommand(name) => {
+                    format!("Yes, allow {} commands from this project", name)
+                }
+                BashCommandCategory::Generic => {
+                    "Yes, allow this command from this project".to_string()
+                }
+            },
             PermissionType::Edit { .. } | PermissionType::Write { .. } => {
-                "Yes, allow all edits during this session (shift+tab)"
+                "Yes, allow all edits during this session (shift+tab)".to_string()
             }
         }
     }
