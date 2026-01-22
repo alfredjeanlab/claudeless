@@ -22,9 +22,7 @@ use common::{start_tui, tmux, write_scenario};
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// When /context is executed, it shows a context usage grid with token estimates.
-// TODO(implement): requires /context slash command implementation
 #[test]
-#[ignore]
 fn test_context_shows_usage_grid() {
     let scenario = write_scenario(
         r#"
@@ -79,9 +77,7 @@ fn test_context_shows_usage_grid() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// /context shows memory files section listing loaded CLAUDE.md files.
-// TODO(implement): requires /context slash command implementation
 #[test]
-#[ignore]
 fn test_context_shows_memory_files() {
     let scenario = write_scenario(
         r#"
@@ -117,9 +113,7 @@ fn test_context_shows_memory_files() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// /context appears in slash command autocomplete with correct description.
-// TODO(implement): requires slash command autocomplete for /context
 #[test]
-#[ignore]
 fn test_context_in_autocomplete() {
     let scenario = write_scenario(
         r#"
@@ -163,9 +157,7 @@ fn test_context_in_autocomplete() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// /context displays a visual grid using Unicode symbols.
-// TODO(implement): requires /context slash command implementation
 #[test]
-#[ignore]
 fn test_context_shows_visual_grid() {
     let scenario = write_scenario(
         r#"
@@ -202,9 +194,7 @@ fn test_context_shows_visual_grid() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// /context shows token counts with percentages for each category.
-// TODO(implement): requires /context slash command implementation
 #[test]
-#[ignore]
 fn test_context_shows_token_percentages() {
     let scenario = write_scenario(
         r#"

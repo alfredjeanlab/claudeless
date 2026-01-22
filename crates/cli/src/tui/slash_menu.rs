@@ -65,7 +65,7 @@ pub static COMMANDS: &[SlashCommand] = &[
     },
     SlashCommand {
         name: "context",
-        description: "View current context usage",
+        description: "Visualize current context usage as a colored grid",
         argument_hint: None,
     },
     SlashCommand {

@@ -6,12 +6,14 @@
 //! Note: Rendering has been moved to app.rs as part of the iocraft migration.
 //! This module provides the type definitions used by app.rs.
 
+pub mod context;
 pub mod permission;
 pub mod tasks;
 pub mod thinking;
 pub mod tool_block;
 pub mod trust;
 
+pub use context::ContextUsage;
 pub use permission::{
     DiffKind, DiffLine, PermissionSelection, PermissionType, RichPermissionDialog,
 };
