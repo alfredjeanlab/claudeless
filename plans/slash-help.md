@@ -1,5 +1,7 @@
 # Implementation Plan: /help Slash Command
 
+**Root Feature:** `cl-41b4`
+
 ## Overview
 
 Implement the `/help` slash command to show a multi-tab help dialog. When executed, it displays a dialog with three tabs:
