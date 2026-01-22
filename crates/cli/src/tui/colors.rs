@@ -5,6 +5,8 @@
 //!
 //! Colors extracted from fixtures captured from Claude Code v2.1.12.
 
+use crate::permission::PermissionMode;
+
 /// Orange for logo characters: RGB(215, 119, 87)
 pub const LOGO_FG: (u8, u8, u8) = (215, 119, 87);
 
@@ -16,6 +18,14 @@ pub const TEXT_GRAY: (u8, u8, u8) = (153, 153, 153);
 
 /// Dark gray for separator lines: RGB(136, 136, 136)
 pub const SEPARATOR_GRAY: (u8, u8, u8) = (136, 136, 136);
+
+// Permission mode colors (from v2.1.15 fixtures)
+/// Teal for plan mode: RGB(72, 150, 140)
+pub const PLAN_MODE: (u8, u8, u8) = (72, 150, 140);
+/// Purple for accept edits mode: RGB(175, 135, 255)
+pub const ACCEPT_EDITS_MODE: (u8, u8, u8) = (175, 135, 255);
+/// Red/Pink for bypass permissions mode: RGB(255, 107, 128)
+pub const BYPASS_MODE: (u8, u8, u8) = (255, 107, 128);
 
 /// ANSI escape sequence helpers
 mod ansi {
@@ -161,6 +171,68 @@ pub fn styled_status_text(text: &str) -> String {
         reset = ansi::RESET,
         fg_reset = ansi::FG_RESET,
     )
+}
+
+/// Generate styled permission status text with ANSI colors.
+///
+/// Format for default mode:
+/// `[reset]  [gray]? for shortcuts[fg_reset]`
+///
+/// Format for non-default modes:
+/// `[reset]  [mode_color][icon] [mode_text][gray] (shift+tab to cycle)[fg_reset]`
+pub fn styled_permission_status(mode: &PermissionMode) -> String {
+    let fg_gray = ansi::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
+
+    match mode {
+        PermissionMode::Default => styled_status_text("? for shortcuts"),
+        PermissionMode::Plan => {
+            let (r, g, b) = PLAN_MODE;
+            format!(
+                "{}  {}⏸ plan mode on{} (shift+tab to cycle){}",
+                ansi::RESET,
+                ansi::fg(r, g, b),
+                fg_gray,
+                ansi::FG_RESET
+            )
+        }
+        PermissionMode::AcceptEdits => {
+            let (r, g, b) = ACCEPT_EDITS_MODE;
+            format!(
+                "{}  {}⏵⏵ accept edits on{} (shift+tab to cycle){}",
+                ansi::RESET,
+                ansi::fg(r, g, b),
+                fg_gray,
+                ansi::FG_RESET
+            )
+        }
+        PermissionMode::BypassPermissions => {
+            let (r, g, b) = BYPASS_MODE;
+            format!(
+                "{}  {}⏵⏵ bypass permissions on{} (shift+tab to cycle){}",
+                ansi::RESET,
+                ansi::fg(r, g, b),
+                fg_gray,
+                ansi::FG_RESET
+            )
+        }
+        // Delegate and DontAsk modes use gray (same as default cycle hint)
+        PermissionMode::Delegate => {
+            format!(
+                "{}  {}delegate mode (shift+tab to cycle){}",
+                ansi::RESET,
+                fg_gray,
+                ansi::FG_RESET
+            )
+        }
+        PermissionMode::DontAsk => {
+            format!(
+                "{}  {}don't ask mode (shift+tab to cycle){}",
+                ansi::RESET,
+                fg_gray,
+                ansi::FG_RESET
+            )
+        }
+    }
 }
 
 #[cfg(test)]

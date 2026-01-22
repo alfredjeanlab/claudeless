@@ -120,9 +120,17 @@ fn normalize_text_content(input: &str, cwd: Option<&str>) -> String {
     result = model_re.replace_all(&result, "<MODEL>").to_string();
 
     // Placeholder prompts
+    // Note: In ANSI output, the placeholder may be split across spans:
+    // [inverse]T[reset+dim]ry "..." so we match both full and partial forms
     let placeholder_re = Regex::new(r#"Try "[^"]+""#).unwrap();
     result = placeholder_re
         .replace_all(&result, "<PLACEHOLDER>")
+        .to_string();
+
+    // Handle partial placeholder when "T" is in a separate span
+    let partial_placeholder_re = Regex::new(r#"ry "[^"]+""#).unwrap();
+    result = partial_placeholder_re
+        .replace_all(&result, "ry <PLACEHOLDER_TAIL>")
         .to_string();
 
     // Strip trailing whitespace per line (handled at line level in output)
@@ -198,6 +206,13 @@ pub fn load_ansi_fixture(name: &str) -> String {
         .unwrap_or_else(|e| panic!("Failed to load ANSI fixture {:?}: {}", path, e))
 }
 
+/// Load a versioned fixture file with ANSI sequences.
+pub fn load_versioned_ansi_fixture(version: &str, name: &str) -> String {
+    let path = super::fixtures_dir().join(version).join(name);
+    std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("Failed to load versioned ANSI fixture {:?}: {}", path, e))
+}
+
 /// Assert that ANSI-colored TUI output matches a fixture.
 ///
 /// Like `assert_tui_matches_fixture` but compares ANSI sequences.
@@ -213,6 +228,33 @@ pub fn assert_ansi_matches_fixture(actual: &str, fixture_name: &str, cwd: Option
              === DIFF (expected vs actual) ===\n{}\n\n\
              === NORMALIZED EXPECTED (escaped) ===\n{}\n\n\
              === NORMALIZED ACTUAL (escaped) ===\n{}\n",
+            fixture_name,
+            diff,
+            escape_ansi_for_display(&normalized_expected),
+            escape_ansi_for_display(&normalized_actual)
+        );
+    }
+}
+
+/// Assert that ANSI-colored TUI output matches a versioned fixture.
+pub fn assert_versioned_ansi_matches_fixture(
+    actual: &str,
+    version: &str,
+    fixture_name: &str,
+    cwd: Option<&str>,
+) {
+    let expected = load_versioned_ansi_fixture(version, fixture_name);
+    let normalized_actual = normalize_ansi_tui(actual, cwd);
+    let normalized_expected = normalize_ansi_tui(&expected, cwd);
+
+    if normalized_actual != normalized_expected {
+        let diff = diff_ansi_strings(&normalized_expected, &normalized_actual);
+        panic!(
+            "ANSI TUI output does not match fixture '{}/{}'\n\n\
+             === DIFF (expected vs actual) ===\n{}\n\n\
+             === NORMALIZED EXPECTED (escaped) ===\n{}\n\n\
+             === NORMALIZED ACTUAL (escaped) ===\n{}\n",
+            version,
             fixture_name,
             diff,
             escape_ansi_for_display(&normalized_expected),
