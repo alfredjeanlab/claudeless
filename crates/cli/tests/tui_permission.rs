@@ -12,7 +12,8 @@
 mod common;
 
 use common::{
-    assert_tui_matches_fixture, start_tui, start_tui_ext, tmux, write_scenario, TUI_READY_PATTERN,
+    ansi::assert_versioned_ansi_matches_fixture, assert_tui_matches_fixture, start_tui,
+    start_tui_ext, tmux, write_scenario, TUI_READY_PATTERN,
 };
 
 /// Helper to capture after a sequence of shift+tab presses
@@ -256,89 +257,121 @@ fn test_status_bar_extended_matches_fixture() {
 }
 
 // =============================================================================
-// Permission Mode ANSI Color Tests (v2.1.15)
+// ANSI Color Fixture Tests (v2.1.15)
 // =============================================================================
 
-/// Behavior observed with: claude --version 2.1.15 (Claude Code)
-///
-/// Plan mode ANSI output matches v2.1.15 fixture (teal colored)
-#[test]
-fn test_tui_permission_plan_ansi_matches_fixture_v2115() {
-    use common::ansi::assert_ansi_matches_fixture_v2115;
-
-    let scenario = write_scenario(
-        r#"
-        {
-            "default_response": "Hello!",
-            "trusted": true,
-            "claude_version": "2.1.15",
-            "permission_mode": "plan"
-        }
-        "#,
-    );
-
-    let session = "claudeless-perm-plan-ansi";
-    // Start with plan mode wait pattern, then capture with ANSI
-    start_tui_ext(session, &scenario, 120, 20, "plan mode on");
-    let capture = tmux::capture_pane_ansi(session);
+/// Helper to start TUI and wait for content, then capture with ANSI sequences.
+fn start_tui_ansi(
+    session: &str,
+    scenario: &tempfile::NamedTempFile,
+    width: u16,
+    height: u16,
+    wait_for: &str,
+) -> String {
+    use common::claudeless_bin;
 
     tmux::kill_session(session);
+    tmux::new_session(session, width, height);
 
-    assert_ansi_matches_fixture_v2115(&capture, "permission_plan_ansi.txt", None);
+    let cmd = format!(
+        "{} --scenario {} --tui",
+        claudeless_bin(),
+        scenario.path().display()
+    );
+    tmux::send_line(session, &cmd);
+
+    // Wait for pattern, then capture with ANSI sequences
+    tmux::wait_for_content_ansi(session, wait_for)
 }
 
-/// Behavior observed with: claude --version 2.1.15 (Claude Code)
-///
-/// Accept edits mode ANSI output matches v2.1.15 fixture (purple colored)
+/// Compare default permission mode ANSI output against v2.1.15 fixture
 #[test]
-fn test_tui_permission_accept_edits_ansi_matches_fixture_v2115() {
-    use common::ansi::assert_ansi_matches_fixture_v2115;
-
+fn test_permission_default_ansi_matches_fixture() {
     let scenario = write_scenario(
         r#"
         {
             "default_response": "Hello!",
             "trusted": true,
-            "claude_version": "2.1.15",
-            "permission_mode": "accept-edits"
+            "claude_version": "2.1.15"
         }
         "#,
     );
 
-    let session = "claudeless-perm-accept-ansi";
-    // Start with accept edits mode wait pattern, then capture with ANSI
-    start_tui_ext(session, &scenario, 120, 20, "accept edits on");
-    let capture = tmux::capture_pane_ansi(session);
+    let session = "claudeless-fixture-perm-default-ansi";
+    let capture = start_tui_ansi(session, &scenario, 120, 40, TUI_READY_PATTERN);
 
     tmux::kill_session(session);
 
-    assert_ansi_matches_fixture_v2115(&capture, "permission_accept_edits_ansi.txt", None);
+    assert_versioned_ansi_matches_fixture(&capture, "v2.1.15", "permission_default_ansi.txt", None);
 }
 
-/// Behavior observed with: claude --version 2.1.15 (Claude Code)
-///
-/// Bypass permissions mode ANSI output matches v2.1.15 fixture (red/pink colored)
+/// Compare plan mode ANSI output against v2.1.15 fixture
 #[test]
-fn test_tui_permission_bypass_ansi_matches_fixture_v2115() {
-    use common::ansi::assert_ansi_matches_fixture_v2115;
-
+fn test_permission_plan_ansi_matches_fixture() {
     let scenario = write_scenario(
         r#"
         {
             "default_response": "Hello!",
             "trusted": true,
-            "claude_version": "2.1.15",
-            "permission_mode": "bypass-permissions"
+            "permission_mode": "plan",
+            "claude_version": "2.1.15"
         }
         "#,
     );
 
-    let session = "claudeless-perm-bypass-ansi";
-    // Start with bypass permissions mode wait pattern, then capture with ANSI
-    start_tui_ext(session, &scenario, 120, 20, "bypass permissions on");
-    let capture = tmux::capture_pane_ansi(session);
+    let session = "claudeless-fixture-perm-plan-ansi";
+    let capture = start_tui_ansi(session, &scenario, 120, 40, "plan mode");
 
     tmux::kill_session(session);
 
-    assert_ansi_matches_fixture_v2115(&capture, "permission_bypass_ansi.txt", None);
+    assert_versioned_ansi_matches_fixture(&capture, "v2.1.15", "permission_plan_ansi.txt", None);
+}
+
+/// Compare accept edits mode ANSI output against v2.1.15 fixture
+#[test]
+fn test_permission_accept_edits_ansi_matches_fixture() {
+    let scenario = write_scenario(
+        r#"
+        {
+            "default_response": "Hello!",
+            "trusted": true,
+            "permission_mode": "accept-edits",
+            "claude_version": "2.1.15"
+        }
+        "#,
+    );
+
+    let session = "claudeless-fixture-perm-accept-edits-ansi";
+    let capture = start_tui_ansi(session, &scenario, 120, 40, "accept edits");
+
+    tmux::kill_session(session);
+
+    assert_versioned_ansi_matches_fixture(
+        &capture,
+        "v2.1.15",
+        "permission_accept_edits_ansi.txt",
+        None,
+    );
+}
+
+/// Compare bypass permissions mode ANSI output against v2.1.15 fixture
+#[test]
+fn test_permission_bypass_ansi_matches_fixture() {
+    let scenario = write_scenario(
+        r#"
+        {
+            "default_response": "Hello!",
+            "trusted": true,
+            "permission_mode": "bypass-permissions",
+            "claude_version": "2.1.15"
+        }
+        "#,
+    );
+
+    let session = "claudeless-fixture-perm-bypass-ansi";
+    let capture = start_tui_ansi(session, &scenario, 120, 40, "bypass permissions");
+
+    tmux::kill_session(session);
+
+    assert_versioned_ansi_matches_fixture(&capture, "v2.1.15", "permission_bypass_ansi.txt", None);
 }

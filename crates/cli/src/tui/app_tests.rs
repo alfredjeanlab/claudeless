@@ -848,3 +848,67 @@ fn ctrl_slash_also_triggers_undo() {
     state.handle_key_event(key_event(KeyCode::Char('/'), KeyModifiers::CONTROL));
     assert_eq!(state.render_state().input_buffer, "hello");
 }
+
+// ========================
+// Ctrl+Z Suspend Tests
+// ========================
+
+#[test]
+fn ctrl_z_triggers_suspend_exit() {
+    let state = create_test_app();
+
+    // Type some input first
+    for c in "hello".chars() {
+        state.handle_key_event(key_event(KeyCode::Char(c), KeyModifiers::NONE));
+    }
+
+    // Ctrl+Z should trigger exit with Suspended reason
+    state.handle_key_event(key_event(KeyCode::Char('z'), KeyModifiers::CONTROL));
+
+    assert!(state.should_exit());
+    assert_eq!(state.exit_reason(), Some(ExitReason::Suspended));
+}
+
+#[test]
+fn ctrl_z_raw_char_triggers_suspend_exit() {
+    let state = create_test_app();
+
+    // Ctrl+Z may come as raw ASCII 0x1A
+    state.handle_key_event(key_event(KeyCode::Char('\x1a'), KeyModifiers::NONE));
+
+    assert!(state.should_exit());
+    assert_eq!(state.exit_reason(), Some(ExitReason::Suspended));
+}
+
+#[test]
+fn state_preserved_after_suspend_request() {
+    let state = create_test_app();
+
+    // Type some input
+    for c in "hello world".chars() {
+        state.handle_key_event(key_event(KeyCode::Char(c), KeyModifiers::NONE));
+    }
+
+    // Trigger suspend
+    state.handle_key_event(key_event(KeyCode::Char('z'), KeyModifiers::CONTROL));
+
+    // State should be unchanged (preserved for resume)
+    assert_eq!(state.render_state().input_buffer, "hello world");
+}
+
+#[test]
+fn clear_exit_state_resets_for_resume() {
+    let state = create_test_app();
+
+    // Trigger suspend
+    state.handle_key_event(key_event(KeyCode::Char('z'), KeyModifiers::CONTROL));
+    assert!(state.should_exit());
+    assert_eq!(state.exit_reason(), Some(ExitReason::Suspended));
+
+    // Clear exit state (simulates what happens after resume)
+    state.clear_exit_state();
+
+    // Should be able to continue
+    assert!(!state.should_exit());
+    assert_eq!(state.exit_reason(), None);
+}

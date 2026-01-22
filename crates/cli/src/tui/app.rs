@@ -17,15 +17,14 @@ use crate::state::todos::{TodoState, TodoStatus};
 use crate::time::{Clock, ClockHandle};
 
 use super::colors::{
-    styled_accept_edits_status, styled_bypass_permissions_status, styled_logo_line1,
-    styled_logo_line2, styled_logo_line3, styled_placeholder, styled_plan_mode_status,
-    styled_separator, styled_status_text,
+    styled_logo_line1, styled_logo_line2, styled_logo_line3, styled_placeholder, styled_separator,
 };
 use super::separator::{make_compact_separator, make_separator};
 use super::shortcuts::shortcuts_by_column;
 use super::slash_menu::SlashMenuState;
 use super::streaming::{StreamingConfig, StreamingResponse};
 use super::widgets::context::ContextUsage;
+use super::widgets::export::{ExportDialog, ExportStep};
 use super::widgets::permission::{
     PermissionSelection, PermissionType, RichPermissionDialog, SessionPermissionKey,
 };
@@ -135,6 +134,8 @@ pub enum AppMode {
     TasksDialog,
     /// Showing model picker dialog
     ModelPicker,
+    /// Showing export dialog
+    ExportDialog,
 }
 
 /// Status bar information
@@ -178,6 +179,8 @@ pub struct RenderState {
     pub shell_mode: bool,
     /// Whether output is connected to a TTY
     pub is_tty: bool,
+    /// Export dialog state (None if not showing)
+    pub export_dialog: Option<ExportDialog>,
 }
 
 /// Permission request state using the rich permission dialog
@@ -211,6 +214,7 @@ pub enum ExitReason {
     Interrupted,   // Ctrl+C
     Completed,     // Normal completion
     Error(String), // Error occurred
+    Suspended,     // Ctrl+Z suspend (will resume)
 }
 
 /// Type of exit hint being shown
@@ -319,6 +323,9 @@ struct TuiAppStateInner {
     /// Model picker dialog state
     pub model_picker_dialog: Option<super::widgets::ModelPickerDialog>,
 
+    /// Export dialog state
+    pub export_dialog: Option<ExportDialog>,
+
     /// Current permission mode
     pub permission_mode: PermissionMode,
 
@@ -420,6 +427,7 @@ impl TuiAppState {
                 thinking_dialog: None,
                 tasks_dialog: None,
                 model_picker_dialog: None,
+                export_dialog: None,
                 permission_mode: config.permission_mode.clone(),
                 allow_bypass_permissions: config.allow_bypass_permissions,
                 is_compacting: false,
@@ -471,6 +479,7 @@ impl TuiAppState {
             slash_menu: inner.slash_menu.clone(),
             shell_mode: inner.shell_mode,
             is_tty: inner.config.is_tty,
+            export_dialog: inner.export_dialog.clone(),
         }
     }
 
@@ -526,6 +535,13 @@ impl TuiAppState {
         inner.exit_reason = Some(reason);
     }
 
+    /// Clear exit state to allow re-entry (used after suspend/resume)
+    pub fn clear_exit_state(&self) {
+        let mut inner = self.inner.lock();
+        inner.should_exit = false;
+        inner.exit_reason = None;
+    }
+
     /// Handle key event based on current mode
     pub fn handle_key_event(&self, key: KeyEvent) {
         let mode = self.mode();
@@ -537,6 +553,7 @@ impl TuiAppState {
             AppMode::ThinkingToggle => self.handle_thinking_key(key),
             AppMode::TasksDialog => self.handle_tasks_key(key),
             AppMode::ModelPicker => self.handle_model_picker_key(key),
+            AppMode::ExportDialog => self.handle_export_dialog_key(key),
         }
     }
 
@@ -589,6 +606,17 @@ impl TuiAppState {
             (m, KeyCode::Char('c')) if m.contains(KeyModifiers::CONTROL) => {
                 drop(inner);
                 self.handle_interrupt();
+            }
+
+            // Ctrl+Z - Suspend process
+            // Note: Ctrl+Z is encoded as ASCII 0x1A (substitute) in terminals
+            (_, KeyCode::Char('\x1a')) => {
+                inner.should_exit = true;
+                inner.exit_reason = Some(ExitReason::Suspended);
+            }
+            (m, KeyCode::Char('z')) if m.contains(KeyModifiers::CONTROL) => {
+                inner.should_exit = true;
+                inner.exit_reason = Some(ExitReason::Suspended);
             }
 
             // Ctrl+D - Exit (only on empty input)
@@ -1050,6 +1078,13 @@ impl TuiAppState {
                 inner.model_picker_dialog = None;
                 inner.mode = AppMode::Input;
             }
+            AppMode::ExportDialog => {
+                // Close dialog with cancellation message
+                inner.export_dialog = None;
+                inner.mode = AppMode::Input;
+                inner.response_content = "Export cancelled".to_string();
+                inner.is_command_output = true;
+            }
         }
     }
 
@@ -1390,6 +1425,10 @@ impl TuiAppState {
                 inner.mode = AppMode::TasksDialog;
                 inner.tasks_dialog = Some(TasksDialog::new());
             }
+            "/export" => {
+                inner.mode = AppMode::ExportDialog;
+                inner.export_dialog = Some(ExportDialog::new());
+            }
             _ => {
                 inner.response_content = format!("Unknown command: {}", input);
             }
@@ -1723,6 +1762,103 @@ impl TuiAppState {
         }
     }
 
+    /// Handle key events in export dialog mode
+    fn handle_export_dialog_key(&self, key: KeyEvent) {
+        let mut inner = self.inner.lock();
+
+        let Some(ref mut dialog) = inner.export_dialog else {
+            return;
+        };
+
+        match dialog.step {
+            ExportStep::MethodSelection => match key.code {
+                KeyCode::Esc => {
+                    inner.mode = AppMode::Input;
+                    inner.export_dialog = None;
+                    inner.response_content = "Export cancelled".to_string();
+                    inner.is_command_output = true;
+                }
+                KeyCode::Up => dialog.move_selection_up(),
+                KeyCode::Down => dialog.move_selection_down(),
+                KeyCode::Enter => {
+                    if dialog.confirm_selection() {
+                        // Clipboard export
+                        Self::do_clipboard_export(&mut inner);
+                    }
+                    // else: moved to filename input, dialog updated
+                }
+                _ => {}
+            },
+            ExportStep::FilenameInput => match key.code {
+                KeyCode::Esc => {
+                    dialog.go_back();
+                }
+                KeyCode::Enter => {
+                    Self::do_file_export(&mut inner);
+                }
+                KeyCode::Backspace => dialog.pop_char(),
+                KeyCode::Char(c) => dialog.push_char(c),
+                _ => {}
+            },
+        }
+    }
+
+    /// Export conversation to clipboard
+    fn do_clipboard_export(inner: &mut TuiAppStateInner) {
+        // Get conversation content
+        let content = Self::format_conversation_for_export(inner);
+
+        // Copy to clipboard
+        match arboard::Clipboard::new() {
+            Ok(mut clipboard) => match clipboard.set_text(&content) {
+                Ok(()) => {
+                    inner.response_content = "Conversation copied to clipboard".to_string();
+                }
+                Err(e) => {
+                    inner.response_content = format!("Failed to copy to clipboard: {}", e);
+                }
+            },
+            Err(e) => {
+                inner.response_content = format!("Failed to access clipboard: {}", e);
+            }
+        }
+
+        inner.mode = AppMode::Input;
+        inner.export_dialog = None;
+        inner.is_command_output = true;
+    }
+
+    /// Export conversation to file
+    fn do_file_export(inner: &mut TuiAppStateInner) {
+        let filename = inner
+            .export_dialog
+            .as_ref()
+            .map(|d| d.filename.clone())
+            .unwrap_or_else(|| "conversation.txt".to_string());
+
+        let content = Self::format_conversation_for_export(inner);
+
+        match std::fs::write(&filename, &content) {
+            Ok(()) => {
+                inner.response_content = format!("Conversation exported to: {}", filename);
+            }
+            Err(e) => {
+                inner.response_content = format!("Failed to write file: {}", e);
+            }
+        }
+
+        inner.mode = AppMode::Input;
+        inner.export_dialog = None;
+        inner.is_command_output = true;
+    }
+
+    /// Format conversation for export
+    fn format_conversation_for_export(inner: &TuiAppStateInner) -> String {
+        // Export the conversation display content
+        // This includes the visible conversation history
+        inner.conversation_display.clone()
+    }
+
     /// Check if exit hint has timed out and clear it
     pub fn check_exit_hint_timeout(&self) {
         let mut inner = self.inner.lock();
@@ -1967,6 +2103,13 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
     if state.mode == AppMode::TasksDialog {
         if let Some(ref dialog) = state.tasks_dialog {
             return render_tasks_dialog(dialog, width);
+        }
+    }
+
+    // If in export dialog mode, render just the export dialog
+    if state.mode == AppMode::ExportDialog {
+        if let Some(ref dialog) = state.export_dialog {
+            return render_export_dialog(dialog, width);
         }
     }
 
@@ -2459,6 +2602,69 @@ fn render_tasks_dialog(dialog: &TasksDialog, width: usize) -> AnyElement<'static
     .into()
 }
 
+/// Render export dialog
+fn render_export_dialog(dialog: &ExportDialog, width: usize) -> AnyElement<'static> {
+    use super::widgets::export::ExportMethod;
+
+    let inner_width = width.saturating_sub(2);
+    let h_line = "─".repeat(inner_width);
+    let top_border = format!("╭{}╮", h_line);
+    let bottom_border = format!("╰{}╯", h_line);
+
+    let pad_line = |s: &str| {
+        let visible_len = s.chars().count();
+        let padding = inner_width.saturating_sub(visible_len);
+        format!("│{}{}│", s, " ".repeat(padding))
+    };
+
+    match dialog.step {
+        ExportStep::MethodSelection => {
+            let clipboard_cursor = if dialog.selected_method == ExportMethod::Clipboard {
+                "❯"
+            } else {
+                " "
+            };
+            let file_cursor = if dialog.selected_method == ExportMethod::File {
+                "❯"
+            } else {
+                " "
+            };
+
+            element! {
+                View(
+                    flex_direction: FlexDirection::Column,
+                    width: 100pct,
+                ) {
+                    Text(content: top_border)
+                    Text(content: pad_line(" Export Conversation"))
+                    Text(content: pad_line(""))
+                    Text(content: pad_line(" Select export method:"))
+                    Text(content: pad_line(&format!(" {} 1. Copy to clipboard", clipboard_cursor)))
+                    Text(content: pad_line(&format!(" {} 2. Save to file", file_cursor)))
+                    Text(content: bottom_border)
+                    Text(content: "  ↑/↓ to select · Enter to confirm · Esc to cancel")
+                }
+            }
+            .into()
+        }
+        ExportStep::FilenameInput => element! {
+            View(
+                flex_direction: FlexDirection::Column,
+                width: 100pct,
+            ) {
+                Text(content: top_border)
+                Text(content: pad_line(" Export Conversation"))
+                Text(content: pad_line(""))
+                Text(content: pad_line(" Enter filename:"))
+                Text(content: pad_line(&format!(" {}", dialog.filename)))
+                Text(content: bottom_border)
+                Text(content: "  Enter to save · esc to go back")
+            }
+        }
+        .into(),
+    }
+}
+
 /// Render model picker dialog
 fn render_model_picker_dialog(
     dialog: &super::widgets::ModelPickerDialog,
@@ -2626,6 +2832,8 @@ pub(crate) fn format_status_bar(state: &RenderState, width: usize) -> String {
 
 /// Format styled status bar content (with ANSI colors)
 fn format_status_bar_styled(state: &RenderState, width: usize) -> String {
+    use crate::tui::colors::styled_permission_status;
+
     // Check for exit hint first (takes precedence)
     if let Some(hint) = &state.exit_hint {
         return match hint {
@@ -2635,25 +2843,39 @@ fn format_status_bar_styled(state: &RenderState, width: usize) -> String {
         };
     }
 
-    // Handle each permission mode with appropriate styling
+    // Get styled permission status
+    let status = styled_permission_status(&state.permission_mode);
+
+    // Calculate visual width of the status text (excluding ANSI sequences)
+    let mode_visual_width = match &state.permission_mode {
+        PermissionMode::Default => "  ? for shortcuts".chars().count(),
+        PermissionMode::Plan => "  ⏸ plan mode on (shift+tab to cycle)".chars().count(),
+        PermissionMode::AcceptEdits => "  ⏵⏵ accept edits on (shift+tab to cycle)".chars().count(),
+        PermissionMode::BypassPermissions => "  ⏵⏵ bypass permissions on (shift+tab to cycle)"
+            .chars()
+            .count(),
+        PermissionMode::Delegate => "  delegate mode (shift+tab to cycle)".chars().count(),
+        PermissionMode::DontAsk => "  don't ask mode (shift+tab to cycle)".chars().count(),
+    };
+
+    // Add right-aligned text based on mode
     match &state.permission_mode {
         PermissionMode::Default => {
             if state.thinking_enabled {
-                styled_status_text("? for shortcuts")
+                status
             } else {
                 // Show "Thinking off" aligned to the right
-                let left = styled_status_text("? for shortcuts");
-                let left_visual_width = "  ? for shortcuts".len(); // styled_status_text adds 2 spaces
                 let right = "Thinking off";
-                let padding = width.saturating_sub(left_visual_width + right.len());
-                format!("{}{:width$}{}", left, "", right, width = padding)
+                let padding = width.saturating_sub(mode_visual_width + right.len());
+                format!("{}{:width$}{}", status, "", right, width = padding)
             }
         }
-        PermissionMode::Plan => styled_plan_mode_status(),
-        PermissionMode::AcceptEdits => styled_accept_edits_status(),
-        PermissionMode::BypassPermissions => styled_bypass_permissions_status(),
-        // Delegate and DontAsk modes use plain text formatting
-        PermissionMode::Delegate | PermissionMode::DontAsk => format_status_bar(state, width),
+        _ => {
+            // Non-default modes show "Use meta+t to toggle thinking" on the right
+            let right_text = "Use meta+t to toggle thinking";
+            let padding = width.saturating_sub(mode_visual_width + right_text.len());
+            format!("{}{:width$}{}", status, "", right_text, width = padding)
+        }
     }
 }
 
@@ -2730,32 +2952,55 @@ impl TuiApp {
 
     /// Run the main event loop using iocraft fullscreen
     pub fn run(&mut self) -> std::io::Result<ExitReason> {
-        let state = self.state.clone();
+        loop {
+            let state = self.state.clone();
 
-        // Check if we're already in a tokio runtime
-        if tokio::runtime::Handle::try_current().is_ok() {
-            // Already in a runtime - use block_in_place to run async code
-            tokio::task::block_in_place(|| {
-                tokio::runtime::Handle::current().block_on(async {
-                    // ignore_ctrl_c() prevents iocraft from exiting on Ctrl+C - we handle it ourselves
+            // Check if we're already in a tokio runtime
+            if tokio::runtime::Handle::try_current().is_ok() {
+                // Already in a runtime - use block_in_place to run async code
+                tokio::task::block_in_place(|| {
+                    tokio::runtime::Handle::current().block_on(async {
+                        // ignore_ctrl_c() prevents iocraft from exiting on Ctrl+C - we handle it ourselves
+                        element!(App(state: Some(state.clone())))
+                            .fullscreen()
+                            .ignore_ctrl_c()
+                            .await
+                    })
+                })?;
+            } else {
+                // No runtime - create a new one
+                let rt = tokio::runtime::Runtime::new()?;
+                // ignore_ctrl_c() prevents iocraft from exiting on Ctrl+C - we handle it ourselves
+                rt.block_on(async {
                     element!(App(state: Some(state.clone())))
                         .fullscreen()
                         .ignore_ctrl_c()
                         .await
-                })
-            })?;
-        } else {
-            // No runtime - create a new one
-            let rt = tokio::runtime::Runtime::new()?;
-            // ignore_ctrl_c() prevents iocraft from exiting on Ctrl+C - we handle it ourselves
-            rt.block_on(async {
-                element!(App(state: Some(state.clone())))
-                    .fullscreen()
-                    .ignore_ctrl_c()
-                    .await
-            })?;
+                })?;
+            }
+
+            // Check if we exited due to suspend request
+            if matches!(self.state.exit_reason(), Some(ExitReason::Suspended)) {
+                // Print suspend messages
+                println!("Claude Code has been suspended. Run `fg` to bring Claude Code back.");
+                println!("Note: ctrl + z now suspends Claude Code, ctrl + _ undoes input.");
+
+                // Raise SIGTSTP to actually suspend the process
+                // After this, execution pauses until SIGCONT is received
+                #[cfg(unix)]
+                {
+                    use nix::sys::signal::{raise, Signal};
+                    let _ = raise(Signal::SIGTSTP);
+                }
+
+                // On resume (SIGCONT), clear exit state and re-enter fullscreen
+                self.state.clear_exit_state();
+                continue;
+            }
+
+            // Exit for any other reason
+            return Ok(self.state.exit_reason().unwrap_or(ExitReason::Completed));
         }
-        Ok(self.state.exit_reason().unwrap_or(ExitReason::Completed))
     }
 
     /// Get state reference for testing

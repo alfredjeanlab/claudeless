@@ -372,6 +372,6 @@ fn run_tui_mode(
             eprintln!("Error: {}", msg);
             std::process::exit(1);
         }
-        ExitReason::UserQuit | ExitReason::Completed => Ok(()),
+        ExitReason::UserQuit | ExitReason::Completed | ExitReason::Suspended => Ok(()),
     }
 }
