@@ -65,6 +65,7 @@ mod status_bar_rendering {
             trust_prompt: None,
             thinking_dialog: None,
             tasks_dialog: None,
+            model_picker_dialog: None,
             thinking_enabled: true,
             permission_mode: PermissionMode::Default,
             is_command_output: false,

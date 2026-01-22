@@ -92,9 +92,7 @@ fn test_tui_model_display_format() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Meta+P (Option+P on macOS) opens a model picker dialog showing available models.
-// TODO(implement): requires model picker dialog UI
 #[test]
-#[ignore]
 fn test_tui_meta_p_opens_model_picker() {
     let scenario = write_scenario(
         r#"
@@ -124,9 +122,7 @@ fn test_tui_meta_p_opens_model_picker() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Model picker shows available models: Default (Opus), Sonnet, and Haiku.
-// TODO(implement): requires model picker dialog UI
 #[test]
-#[ignore]
 fn test_tui_model_picker_shows_available_models() {
     let scenario = write_scenario(
         r#"
@@ -155,9 +151,7 @@ fn test_tui_model_picker_shows_available_models() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Model picker shows checkmark (✔) next to currently active model.
-// TODO(implement): requires model picker dialog UI
 #[test]
-#[ignore]
 fn test_tui_model_picker_shows_active_model_checkmark() {
     let scenario = write_scenario(
         r#"
@@ -186,9 +180,7 @@ fn test_tui_model_picker_shows_active_model_checkmark() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Model picker can be navigated with Up/Down arrow keys.
-// TODO(implement): requires model picker dialog UI with navigation
 #[test]
-#[ignore]
 fn test_tui_model_picker_arrow_navigation() {
     let scenario = write_scenario(
         r#"
@@ -224,9 +216,7 @@ fn test_tui_model_picker_arrow_navigation() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Pressing Escape closes the model picker without changing the model.
-// TODO(implement): requires model picker dialog UI
 #[test]
-#[ignore]
 fn test_tui_model_picker_escape_closes() {
     let scenario = write_scenario(
         r#"
@@ -260,9 +250,7 @@ fn test_tui_model_picker_escape_closes() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Model picker footer shows "Enter to confirm · esc to exit".
-// TODO(implement): requires model picker dialog UI
 #[test]
-#[ignore]
 fn test_tui_model_picker_shows_footer_hints() {
     let scenario = write_scenario(
         r#"

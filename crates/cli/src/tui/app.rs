@@ -132,6 +132,8 @@ pub enum AppMode {
     ThinkingToggle,
     /// Showing tasks dialog
     TasksDialog,
+    /// Showing model picker dialog
+    ModelPicker,
 }
 
 /// Status bar information
@@ -157,6 +159,7 @@ pub struct RenderState {
     pub trust_prompt: Option<TrustPromptState>,
     pub thinking_dialog: Option<ThinkingDialog>,
     pub tasks_dialog: Option<TasksDialog>,
+    pub model_picker_dialog: Option<super::widgets::ModelPickerDialog>,
     pub thinking_enabled: bool,
     pub permission_mode: PermissionMode,
     pub is_command_output: bool,
@@ -309,6 +312,9 @@ struct TuiAppStateInner {
     /// Tasks dialog state
     pub tasks_dialog: Option<TasksDialog>,
 
+    /// Model picker dialog state
+    pub model_picker_dialog: Option<super::widgets::ModelPickerDialog>,
+
     /// Current permission mode
     pub permission_mode: PermissionMode,
 
@@ -404,6 +410,7 @@ impl TuiAppState {
                 thinking_enabled: true, // Default to enabled
                 thinking_dialog: None,
                 tasks_dialog: None,
+                model_picker_dialog: None,
                 permission_mode: config.permission_mode.clone(),
                 allow_bypass_permissions: config.allow_bypass_permissions,
                 is_compacting: false,
@@ -441,6 +448,7 @@ impl TuiAppState {
             trust_prompt: inner.trust_prompt.clone(),
             thinking_dialog: inner.thinking_dialog.clone(),
             tasks_dialog: inner.tasks_dialog.clone(),
+            model_picker_dialog: inner.model_picker_dialog.clone(),
             thinking_enabled: inner.thinking_enabled,
             permission_mode: inner.permission_mode.clone(),
             is_command_output: inner.is_command_output,
@@ -513,6 +521,7 @@ impl TuiAppState {
             AppMode::Responding | AppMode::Thinking => self.handle_responding_key(key),
             AppMode::ThinkingToggle => self.handle_thinking_key(key),
             AppMode::TasksDialog => self.handle_tasks_key(key),
+            AppMode::ModelPicker => self.handle_model_picker_key(key),
         }
     }
 
@@ -599,6 +608,15 @@ impl TuiAppState {
             (m, KeyCode::Char('t')) if m.contains(KeyModifiers::ALT) => {
                 inner.thinking_dialog = Some(ThinkingDialog::new(inner.thinking_enabled));
                 inner.mode = AppMode::ThinkingToggle;
+            }
+
+            // Meta+p (Alt+p) - Open model picker
+            (m, KeyCode::Char('p'))
+                if m.contains(KeyModifiers::META) || m.contains(KeyModifiers::ALT) =>
+            {
+                inner.model_picker_dialog =
+                    Some(super::widgets::ModelPickerDialog::new(&inner.status.model));
+                inner.mode = AppMode::ModelPicker;
             }
 
             // Ctrl+T - Show todos (only when todos exist)
@@ -981,6 +999,11 @@ impl TuiAppState {
             AppMode::TasksDialog => {
                 // Close dialog without action
                 inner.tasks_dialog = None;
+                inner.mode = AppMode::Input;
+            }
+            AppMode::ModelPicker => {
+                // Close dialog without changing model
+                inner.model_picker_dialog = None;
                 inner.mode = AppMode::Input;
             }
         }
@@ -1594,6 +1617,38 @@ impl TuiAppState {
         }
     }
 
+    /// Handle key events in model picker mode
+    fn handle_model_picker_key(&self, key: KeyEvent) {
+        let mut inner = self.inner.lock();
+
+        match key.code {
+            KeyCode::Up | KeyCode::Char('k') => {
+                if let Some(ref mut dialog) = inner.model_picker_dialog {
+                    dialog.move_up();
+                }
+            }
+            KeyCode::Down | KeyCode::Char('j') | KeyCode::Tab => {
+                if let Some(ref mut dialog) = inner.model_picker_dialog {
+                    dialog.move_down();
+                }
+            }
+            KeyCode::Enter => {
+                if let Some(ref dialog) = inner.model_picker_dialog {
+                    // Apply selection
+                    inner.status.model = dialog.selected.model_id().to_string();
+                }
+                inner.model_picker_dialog = None;
+                inner.mode = AppMode::Input;
+            }
+            KeyCode::Esc => {
+                // Cancel without changes
+                inner.model_picker_dialog = None;
+                inner.mode = AppMode::Input;
+            }
+            _ => {}
+        }
+    }
+
     /// Check if exit hint has timed out and clear it
     pub fn check_exit_hint_timeout(&self) {
         let mut inner = self.inner.lock();
@@ -1838,6 +1893,13 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
     if state.mode == AppMode::TasksDialog {
         if let Some(ref dialog) = state.tasks_dialog {
             return render_tasks_dialog(dialog, width);
+        }
+    }
+
+    // If in model picker mode, render just the model picker dialog
+    if state.mode == AppMode::ModelPicker {
+        if let Some(ref dialog) = state.model_picker_dialog {
+            return render_model_picker_dialog(dialog, width);
         }
     }
 
@@ -2321,6 +2383,68 @@ fn render_tasks_dialog(dialog: &TasksDialog, width: usize) -> AnyElement<'static
         }
     }
     .into()
+}
+
+/// Render model picker dialog
+fn render_model_picker_dialog(
+    dialog: &super::widgets::ModelPickerDialog,
+    _width: usize,
+) -> AnyElement<'static> {
+    use super::widgets::ModelChoice;
+
+    let choices = ModelChoice::all();
+
+    element! {
+        View(flex_direction: FlexDirection::Column) {
+            // Title
+            Text(content: " Select model")
+            // Description
+            Text(content: " Switch between Claude models. Applies to this session and future Claude Code sessions. For other/previous model names,")
+            Text(content: "  specify with --model.")
+            // Empty line
+            Text(content: "")
+            // Options
+            #(choices.iter().enumerate().map(|(i, choice)| {
+                let is_selected = *choice == dialog.selected;
+                let is_current = *choice == dialog.current;
+
+                let cursor = if is_selected { "❯" } else { " " };
+                let checkmark = if is_current { " ✔" } else { "" };
+                let number = i + 1;
+
+                let label = match choice {
+                    ModelChoice::Default => "Default (recommended)",
+                    ModelChoice::Sonnet => "Sonnet",
+                    ModelChoice::Haiku => "Haiku",
+                };
+
+                let description = format!(
+                    "{} · {}",
+                    choice.display_name(),
+                    choice.description()
+                );
+
+                // Format: " ❯ 1. Label checkmark           Description"
+                let content = format!(
+                    " {} {}. {:<22}{} {}",
+                    cursor,
+                    number,
+                    label,
+                    checkmark,
+                    description
+                );
+
+                element! {
+                    Text(content: content)
+                }
+            }))
+            // Empty line
+            Text(content: "")
+            // Footer
+            Text(content: " Enter to confirm · esc to exit")
+        }
+    }
+    .into_any()
 }
 
 /// Render rich permission dialog

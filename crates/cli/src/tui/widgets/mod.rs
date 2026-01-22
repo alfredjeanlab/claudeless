@@ -7,6 +7,7 @@
 //! This module provides the type definitions used by app.rs.
 
 pub mod context;
+pub mod model_picker;
 pub mod permission;
 pub mod tasks;
 pub mod thinking;
@@ -14,6 +15,7 @@ pub mod tool_block;
 pub mod trust;
 
 pub use context::ContextUsage;
+pub use model_picker::{ModelChoice, ModelPickerDialog};
 pub use permission::{
     DiffKind, DiffLine, PermissionSelection, PermissionType, RichPermissionDialog,
 };
