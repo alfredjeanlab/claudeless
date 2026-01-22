@@ -1,5 +1,7 @@
 # Implementation Plan: Ctrl+Z Suspend Shortcut
 
+**Root Feature:** `cl-4c61`
+
 ## Overview
 
 Implement Ctrl+Z keyboard shortcut to suspend Claude Code, returning control to the shell. When suspended, the application prints informational messages, then sends SIGTSTP to actually suspend the process. On resume via `fg`, the TUI redraws with all state preserved.
