@@ -361,6 +361,11 @@ fn run_tui_mode(
     let mut app = TuiApp::new(scenario, sessions, clock, tui_config)?;
     let exit_reason = app.run()?;
 
+    // Print exit message if any (e.g., farewell from /exit)
+    if let Some(msg) = app.exit_message() {
+        println!("{}", msg);
+    }
+
     match exit_reason {
         ExitReason::Interrupted => std::process::exit(130),
         ExitReason::Error(msg) => {

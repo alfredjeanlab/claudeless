@@ -291,6 +291,9 @@ struct TuiAppStateInner {
     /// Exit reason (for testing)
     pub exit_reason: Option<ExitReason>,
 
+    /// Message to display after TUI exits (e.g., farewell from /exit)
+    pub exit_message: Option<String>,
+
     /// Configuration from scenario
     pub config: TuiConfig,
 
@@ -399,6 +402,7 @@ impl TuiAppState {
                 pending_permission: None,
                 should_exit: false,
                 exit_reason: None,
+                exit_message: None,
                 trust_granted: config.trusted,
                 trust_prompt,
                 thinking_enabled: true, // Default to enabled
@@ -474,6 +478,11 @@ impl TuiAppState {
     /// Get exit reason
     pub fn exit_reason(&self) -> Option<ExitReason> {
         self.inner.lock().exit_reason.clone()
+    }
+
+    /// Get exit message (e.g., farewell from /exit)
+    pub fn exit_message(&self) -> Option<String> {
+        self.inner.lock().exit_message.clone()
     }
 
     /// Get current mode
@@ -1056,6 +1065,13 @@ impl TuiAppState {
         }
     }
 
+    /// Generate a random farewell message for /exit command
+    fn random_farewell() -> &'static str {
+        const FAREWELLS: &[&str] = &["Goodbye!", "Bye!", "See ya!", "Catch you later!"];
+        let idx = fastrand::usize(..FAREWELLS.len());
+        FAREWELLS[idx]
+    }
+
     /// Format context usage as a grid display
     fn format_context_usage(usage: &ContextUsage) -> String {
         let cells = usage.grid_cells();
@@ -1285,6 +1301,13 @@ impl TuiAppState {
             "/context" => {
                 let usage = ContextUsage::new();
                 inner.response_content = Self::format_context_usage(&usage);
+            }
+            "/exit" => {
+                let farewell = Self::random_farewell().to_string();
+                inner.response_content = farewell.clone();
+                inner.exit_message = Some(farewell);
+                inner.should_exit = true;
+                inner.exit_reason = Some(ExitReason::UserQuit);
             }
             "/todos" => {
                 inner.response_content = Self::format_todos(&inner.todos);
@@ -2558,6 +2581,10 @@ impl TuiApp {
 
     pub fn mode(&self) -> AppMode {
         self.state.mode()
+    }
+
+    pub fn exit_message(&self) -> Option<String> {
+        self.state.exit_message()
     }
 
     pub fn input_buffer(&self) -> String {

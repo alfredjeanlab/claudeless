@@ -79,6 +79,16 @@ pub static COMMANDS: &[SlashCommand] = &[
         argument_hint: None,
     },
     SlashCommand {
+        name: "exit",
+        description: "Exit the REPL",
+        argument_hint: None,
+    },
+    SlashCommand {
+        name: "export",
+        description: "Export the current conversation to a file or clipboard",
+        argument_hint: None,
+    },
+    SlashCommand {
         name: "fork",
         description: "Create a fork of the current conversation at this point",
         argument_hint: None,
