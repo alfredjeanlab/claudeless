@@ -2,6 +2,8 @@
 
 **Status:** ✅ Complete (commit cdece22)
 
+**Root Feature:** `cl-5cb3`
+
 ## Overview
 
 Implement `Ctrl+T` keyboard shortcut to display the current todo list in the TUI. When no todos exist, the shortcut does nothing (no visible change). When todos exist, displays them with status indicators. Also includes the `/todos` slash command.

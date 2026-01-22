@@ -1,5 +1,7 @@
 # Implementation Plan: /tasks Slash Command
 
+**Root Feature:** `cl-5ec3`
+
 ## Overview
 
 Implement the `/tasks` slash command to display a dialog showing background tasks. When executed, it opens a bordered dialog with:
