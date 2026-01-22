@@ -24,6 +24,7 @@ use super::separator::{make_compact_separator, make_separator};
 use super::shortcuts::shortcuts_by_column;
 use super::slash_menu::SlashMenuState;
 use super::streaming::{StreamingConfig, StreamingResponse};
+use super::widgets::context::ContextUsage;
 use super::widgets::permission::{
     PermissionSelection, PermissionType, RichPermissionDialog, SessionPermissionKey,
 };
@@ -1055,6 +1056,71 @@ impl TuiAppState {
         }
     }
 
+    /// Format context usage as a grid display
+    fn format_context_usage(usage: &ContextUsage) -> String {
+        let cells = usage.grid_cells();
+        let mut lines = Vec::new();
+
+        // Build grid rows (10 cells per row, 9 rows)
+        for row in 0..9 {
+            let start = row * 10;
+            let end = start + 10;
+            let row_cells: String = cells[start..end]
+                .iter()
+                .map(|c| format!("{} ", c))
+                .collect::<String>()
+                .trim_end()
+                .to_string();
+
+            // Rows have category labels on the right
+            let label = match row {
+                1 => "  Estimated usage by category".to_string(),
+                2 => format!(
+                    "  ⛁ System prompt: {} tokens ({:.1}%)",
+                    ContextUsage::format_tokens(usage.system_prompt_tokens),
+                    usage.percentage(usage.system_prompt_tokens)
+                ),
+                3 => format!(
+                    "  ⛁ System tools: {} tokens ({:.1}%)",
+                    ContextUsage::format_tokens(usage.system_tools_tokens),
+                    usage.percentage(usage.system_tools_tokens)
+                ),
+                4 => format!(
+                    "  ⛁ Memory files: {} tokens ({:.1}%)",
+                    ContextUsage::format_tokens(usage.memory_files_tokens),
+                    usage.percentage(usage.memory_files_tokens)
+                ),
+                5 => format!(
+                    "  ⛁ Messages: {} tokens ({:.1}%)",
+                    ContextUsage::format_tokens(usage.messages_tokens),
+                    usage.percentage(usage.messages_tokens)
+                ),
+                6 => format!(
+                    "  ⛶ Free space: {} ({:.1}%)",
+                    ContextUsage::format_tokens(usage.free_space_tokens),
+                    usage.percentage(usage.free_space_tokens)
+                ),
+                7 => format!(
+                    "  ⛝ Autocompact buffer: {} tokens ({:.1}%)",
+                    ContextUsage::format_tokens(usage.autocompact_buffer_tokens),
+                    usage.percentage(usage.autocompact_buffer_tokens)
+                ),
+                _ => String::new(),
+            };
+
+            lines.push(format!("     {}   {}", row_cells, label));
+        }
+
+        // Add memory files section
+        lines.push(String::new());
+        lines.push("     Memory files · /memory".to_string());
+        for file in &usage.memory_files {
+            lines.push(format!("     └ {}: {} tokens", file.path, file.tokens));
+        }
+
+        lines.join("\n")
+    }
+
     /// Submit the current input
     fn submit_input(&self) {
         let mut inner = self.inner.lock();
@@ -1215,6 +1281,10 @@ impl TuiAppState {
                     /compact - Compact conversation history\n\
                     /help    - Show this help\n"
                     .to_string();
+            }
+            "/context" => {
+                let usage = ContextUsage::new();
+                inner.response_content = Self::format_context_usage(&usage);
             }
             "/todos" => {
                 inner.response_content = Self::format_todos(&inner.todos);
