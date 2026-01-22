@@ -33,9 +33,7 @@ use common::{start_tui, tmux, write_scenario};
 ///
 /// When Ctrl+Z is pressed, Claude Code suspends and prints a helpful message
 /// telling the user how to resume.
-// TODO(implement): requires SIGTSTP handler with suspend message
 #[test]
-#[ignore]
 fn test_tui_ctrl_z_suspends_with_message() {
     let scenario = write_scenario(
         r#"
@@ -74,9 +72,7 @@ fn test_tui_ctrl_z_suspends_with_message() {
 /// Behavior observed with: claude --version 2.1.14 (Claude Code)
 ///
 /// The suspend message includes a note about the Ctrl+Z keybinding change.
-// TODO(implement): requires SIGTSTP handler with suspend message
 #[test]
-#[ignore]
 fn test_tui_ctrl_z_shows_keybinding_note() {
     let scenario = write_scenario(
         r#"
@@ -109,9 +105,7 @@ fn test_tui_ctrl_z_shows_keybinding_note() {
 /// Behavior observed with: claude --version 2.1.14 (Claude Code)
 ///
 /// After Ctrl+Z, the shell prompt appears (process is suspended).
-// TODO(implement): requires SIGTSTP handler
 #[test]
-#[ignore]
 fn test_tui_ctrl_z_returns_to_shell() {
     let scenario = write_scenario(
         r#"
@@ -150,9 +144,7 @@ fn test_tui_ctrl_z_returns_to_shell() {
 ///
 /// After being suspended with Ctrl+Z and resumed with `fg`,
 /// Claude Code redraws its TUI interface.
-// TODO(implement): requires SIGTSTP handler and SIGCONT handler for resume
 #[test]
-#[ignore]
 fn test_tui_ctrl_z_resume_redraws_tui() {
     let scenario = write_scenario(
         r#"
@@ -191,9 +183,7 @@ fn test_tui_ctrl_z_resume_redraws_tui() {
 /// Behavior observed with: claude --version 2.1.14 (Claude Code)
 ///
 /// After resume, any input text that was in the prompt is preserved.
-// TODO(implement): requires state preservation across suspend/resume
 #[test]
-#[ignore]
 fn test_tui_ctrl_z_resume_preserves_input_state() {
     let scenario = write_scenario(
         r#"

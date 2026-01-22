@@ -210,6 +210,7 @@ pub enum ExitReason {
     Interrupted,   // Ctrl+C
     Completed,     // Normal completion
     Error(String), // Error occurred
+    Suspended,     // Ctrl+Z suspend (will resume)
 }
 
 /// Type of exit hint being shown
@@ -525,6 +526,13 @@ impl TuiAppState {
         inner.exit_reason = Some(reason);
     }
 
+    /// Clear exit state to allow re-entry (used after suspend/resume)
+    pub fn clear_exit_state(&self) {
+        let mut inner = self.inner.lock();
+        inner.should_exit = false;
+        inner.exit_reason = None;
+    }
+
     /// Handle key event based on current mode
     pub fn handle_key_event(&self, key: KeyEvent) {
         let mode = self.mode();
@@ -588,6 +596,17 @@ impl TuiAppState {
             (m, KeyCode::Char('c')) if m.contains(KeyModifiers::CONTROL) => {
                 drop(inner);
                 self.handle_interrupt();
+            }
+
+            // Ctrl+Z - Suspend process
+            // Note: Ctrl+Z is encoded as ASCII 0x1A (substitute) in terminals
+            (_, KeyCode::Char('\x1a')) => {
+                inner.should_exit = true;
+                inner.exit_reason = Some(ExitReason::Suspended);
+            }
+            (m, KeyCode::Char('z')) if m.contains(KeyModifiers::CONTROL) => {
+                inner.should_exit = true;
+                inner.exit_reason = Some(ExitReason::Suspended);
             }
 
             // Ctrl+D - Exit (only on empty input)
@@ -2725,32 +2744,55 @@ impl TuiApp {
 
     /// Run the main event loop using iocraft fullscreen
     pub fn run(&mut self) -> std::io::Result<ExitReason> {
-        let state = self.state.clone();
+        loop {
+            let state = self.state.clone();
 
-        // Check if we're already in a tokio runtime
-        if tokio::runtime::Handle::try_current().is_ok() {
-            // Already in a runtime - use block_in_place to run async code
-            tokio::task::block_in_place(|| {
-                tokio::runtime::Handle::current().block_on(async {
-                    // ignore_ctrl_c() prevents iocraft from exiting on Ctrl+C - we handle it ourselves
+            // Check if we're already in a tokio runtime
+            if tokio::runtime::Handle::try_current().is_ok() {
+                // Already in a runtime - use block_in_place to run async code
+                tokio::task::block_in_place(|| {
+                    tokio::runtime::Handle::current().block_on(async {
+                        // ignore_ctrl_c() prevents iocraft from exiting on Ctrl+C - we handle it ourselves
+                        element!(App(state: Some(state.clone())))
+                            .fullscreen()
+                            .ignore_ctrl_c()
+                            .await
+                    })
+                })?;
+            } else {
+                // No runtime - create a new one
+                let rt = tokio::runtime::Runtime::new()?;
+                // ignore_ctrl_c() prevents iocraft from exiting on Ctrl+C - we handle it ourselves
+                rt.block_on(async {
                     element!(App(state: Some(state.clone())))
                         .fullscreen()
                         .ignore_ctrl_c()
                         .await
-                })
-            })?;
-        } else {
-            // No runtime - create a new one
-            let rt = tokio::runtime::Runtime::new()?;
-            // ignore_ctrl_c() prevents iocraft from exiting on Ctrl+C - we handle it ourselves
-            rt.block_on(async {
-                element!(App(state: Some(state.clone())))
-                    .fullscreen()
-                    .ignore_ctrl_c()
-                    .await
-            })?;
+                })?;
+            }
+
+            // Check if we exited due to suspend request
+            if matches!(self.state.exit_reason(), Some(ExitReason::Suspended)) {
+                // Print suspend messages
+                println!("Claude Code has been suspended. Run `fg` to bring Claude Code back.");
+                println!("Note: ctrl + z now suspends Claude Code, ctrl + _ undoes input.");
+
+                // Raise SIGTSTP to actually suspend the process
+                // After this, execution pauses until SIGCONT is received
+                #[cfg(unix)]
+                {
+                    use nix::sys::signal::{raise, Signal};
+                    let _ = raise(Signal::SIGTSTP);
+                }
+
+                // On resume (SIGCONT), clear exit state and re-enter fullscreen
+                self.state.clear_exit_state();
+                continue;
+            }
+
+            // Exit for any other reason
+            return Ok(self.state.exit_reason().unwrap_or(ExitReason::Completed));
         }
-        Ok(self.state.exit_reason().unwrap_or(ExitReason::Completed))
     }
 
     /// Get state reference for testing
