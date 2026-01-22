@@ -78,6 +78,7 @@ mod status_bar_rendering {
             slash_menu: None,
             shell_mode: false,
             is_tty: false,
+            export_dialog: None,
         }
     }
 

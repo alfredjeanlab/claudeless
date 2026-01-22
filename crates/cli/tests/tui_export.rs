@@ -28,7 +28,7 @@ use common::{start_tui, tmux, write_scenario};
 /// Typing /export shows autocomplete dropdown with export description
 // TODO(implement): requires slash command autocomplete
 #[test]
-#[ignore]
+#[ignore] // Autocomplete feature is separate from /export dialog
 fn test_tui_export_command_shows_autocomplete() {
     let scenario = write_scenario(
         r#"
@@ -63,9 +63,7 @@ fn test_tui_export_command_shows_autocomplete() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// /export command shows a dialog with export method options
-// TODO(implement): requires /export dialog
 #[test]
-#[ignore]
 fn test_tui_export_shows_method_dialog() {
     let scenario = write_scenario(
         r#"
@@ -113,9 +111,7 @@ fn test_tui_export_shows_method_dialog() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Selecting clipboard option copies conversation and shows confirmation
-// TODO(implement): requires /export clipboard export
 #[test]
-#[ignore]
 fn test_tui_export_clipboard_shows_confirmation() {
     let scenario = write_scenario(
         r#"
@@ -149,9 +145,7 @@ fn test_tui_export_clipboard_shows_confirmation() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Selecting file option shows filename input dialog
-// TODO(implement): requires /export file dialog
 #[test]
-#[ignore]
 fn test_tui_export_file_shows_filename_dialog() {
     let scenario = write_scenario(
         r#"
@@ -202,9 +196,7 @@ fn test_tui_export_file_shows_filename_dialog() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Saving to file shows confirmation with filename
-// TODO(implement): requires /export file save
 #[test]
-#[ignore]
 fn test_tui_export_file_shows_save_confirmation() {
     let scenario = write_scenario(
         r#"
@@ -246,9 +238,7 @@ fn test_tui_export_file_shows_save_confirmation() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Pressing Escape in method selection cancels export
-// TODO(implement): requires /export cancel handling
 #[test]
-#[ignore]
 fn test_tui_export_escape_cancels() {
     let scenario = write_scenario(
         r#"
@@ -282,9 +272,7 @@ fn test_tui_export_escape_cancels() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Pressing Escape in filename dialog returns to method selection
-// TODO(implement): requires /export filename cancel handling
 #[test]
-#[ignore]
 fn test_tui_export_filename_escape_returns_to_method() {
     let scenario = write_scenario(
         r#"
@@ -332,9 +320,7 @@ fn test_tui_export_filename_escape_returns_to_method() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Arrow keys navigate between export method options
-// TODO(implement): requires /export dialog navigation
 #[test]
-#[ignore]
 fn test_tui_export_arrow_navigation() {
     let scenario = write_scenario(
         r#"

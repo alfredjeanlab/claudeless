@@ -25,6 +25,7 @@ use super::shortcuts::shortcuts_by_column;
 use super::slash_menu::SlashMenuState;
 use super::streaming::{StreamingConfig, StreamingResponse};
 use super::widgets::context::ContextUsage;
+use super::widgets::export::{ExportDialog, ExportStep};
 use super::widgets::permission::{
     PermissionSelection, PermissionType, RichPermissionDialog, SessionPermissionKey,
 };
@@ -134,6 +135,8 @@ pub enum AppMode {
     TasksDialog,
     /// Showing model picker dialog
     ModelPicker,
+    /// Showing export dialog
+    ExportDialog,
 }
 
 /// Status bar information
@@ -177,6 +180,8 @@ pub struct RenderState {
     pub shell_mode: bool,
     /// Whether output is connected to a TTY
     pub is_tty: bool,
+    /// Export dialog state (None if not showing)
+    pub export_dialog: Option<ExportDialog>,
 }
 
 /// Permission request state using the rich permission dialog
@@ -318,6 +323,9 @@ struct TuiAppStateInner {
     /// Model picker dialog state
     pub model_picker_dialog: Option<super::widgets::ModelPickerDialog>,
 
+    /// Export dialog state
+    pub export_dialog: Option<ExportDialog>,
+
     /// Current permission mode
     pub permission_mode: PermissionMode,
 
@@ -419,6 +427,7 @@ impl TuiAppState {
                 thinking_dialog: None,
                 tasks_dialog: None,
                 model_picker_dialog: None,
+                export_dialog: None,
                 permission_mode: config.permission_mode.clone(),
                 allow_bypass_permissions: config.allow_bypass_permissions,
                 is_compacting: false,
@@ -470,6 +479,7 @@ impl TuiAppState {
             slash_menu: inner.slash_menu.clone(),
             shell_mode: inner.shell_mode,
             is_tty: inner.config.is_tty,
+            export_dialog: inner.export_dialog.clone(),
         }
     }
 
@@ -536,6 +546,7 @@ impl TuiAppState {
             AppMode::ThinkingToggle => self.handle_thinking_key(key),
             AppMode::TasksDialog => self.handle_tasks_key(key),
             AppMode::ModelPicker => self.handle_model_picker_key(key),
+            AppMode::ExportDialog => self.handle_export_dialog_key(key),
         }
     }
 
@@ -1049,6 +1060,13 @@ impl TuiAppState {
                 inner.model_picker_dialog = None;
                 inner.mode = AppMode::Input;
             }
+            AppMode::ExportDialog => {
+                // Close dialog with cancellation message
+                inner.export_dialog = None;
+                inner.mode = AppMode::Input;
+                inner.response_content = "Export cancelled".to_string();
+                inner.is_command_output = true;
+            }
         }
     }
 
@@ -1389,6 +1407,10 @@ impl TuiAppState {
                 inner.mode = AppMode::TasksDialog;
                 inner.tasks_dialog = Some(TasksDialog::new());
             }
+            "/export" => {
+                inner.mode = AppMode::ExportDialog;
+                inner.export_dialog = Some(ExportDialog::new());
+            }
             _ => {
                 inner.response_content = format!("Unknown command: {}", input);
             }
@@ -1722,6 +1744,103 @@ impl TuiAppState {
         }
     }
 
+    /// Handle key events in export dialog mode
+    fn handle_export_dialog_key(&self, key: KeyEvent) {
+        let mut inner = self.inner.lock();
+
+        let Some(ref mut dialog) = inner.export_dialog else {
+            return;
+        };
+
+        match dialog.step {
+            ExportStep::MethodSelection => match key.code {
+                KeyCode::Esc => {
+                    inner.mode = AppMode::Input;
+                    inner.export_dialog = None;
+                    inner.response_content = "Export cancelled".to_string();
+                    inner.is_command_output = true;
+                }
+                KeyCode::Up => dialog.move_selection_up(),
+                KeyCode::Down => dialog.move_selection_down(),
+                KeyCode::Enter => {
+                    if dialog.confirm_selection() {
+                        // Clipboard export
+                        Self::do_clipboard_export(&mut inner);
+                    }
+                    // else: moved to filename input, dialog updated
+                }
+                _ => {}
+            },
+            ExportStep::FilenameInput => match key.code {
+                KeyCode::Esc => {
+                    dialog.go_back();
+                }
+                KeyCode::Enter => {
+                    Self::do_file_export(&mut inner);
+                }
+                KeyCode::Backspace => dialog.pop_char(),
+                KeyCode::Char(c) => dialog.push_char(c),
+                _ => {}
+            },
+        }
+    }
+
+    /// Export conversation to clipboard
+    fn do_clipboard_export(inner: &mut TuiAppStateInner) {
+        // Get conversation content
+        let content = Self::format_conversation_for_export(inner);
+
+        // Copy to clipboard
+        match arboard::Clipboard::new() {
+            Ok(mut clipboard) => match clipboard.set_text(&content) {
+                Ok(()) => {
+                    inner.response_content = "Conversation copied to clipboard".to_string();
+                }
+                Err(e) => {
+                    inner.response_content = format!("Failed to copy to clipboard: {}", e);
+                }
+            },
+            Err(e) => {
+                inner.response_content = format!("Failed to access clipboard: {}", e);
+            }
+        }
+
+        inner.mode = AppMode::Input;
+        inner.export_dialog = None;
+        inner.is_command_output = true;
+    }
+
+    /// Export conversation to file
+    fn do_file_export(inner: &mut TuiAppStateInner) {
+        let filename = inner
+            .export_dialog
+            .as_ref()
+            .map(|d| d.filename.clone())
+            .unwrap_or_else(|| "conversation.txt".to_string());
+
+        let content = Self::format_conversation_for_export(inner);
+
+        match std::fs::write(&filename, &content) {
+            Ok(()) => {
+                inner.response_content = format!("Conversation exported to: {}", filename);
+            }
+            Err(e) => {
+                inner.response_content = format!("Failed to write file: {}", e);
+            }
+        }
+
+        inner.mode = AppMode::Input;
+        inner.export_dialog = None;
+        inner.is_command_output = true;
+    }
+
+    /// Format conversation for export
+    fn format_conversation_for_export(inner: &TuiAppStateInner) -> String {
+        // Export the conversation display content
+        // This includes the visible conversation history
+        inner.conversation_display.clone()
+    }
+
     /// Check if exit hint has timed out and clear it
     pub fn check_exit_hint_timeout(&self) {
         let mut inner = self.inner.lock();
@@ -1966,6 +2085,13 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
     if state.mode == AppMode::TasksDialog {
         if let Some(ref dialog) = state.tasks_dialog {
             return render_tasks_dialog(dialog, width);
+        }
+    }
+
+    // If in export dialog mode, render just the export dialog
+    if state.mode == AppMode::ExportDialog {
+        if let Some(ref dialog) = state.export_dialog {
+            return render_export_dialog(dialog, width);
         }
     }
 
@@ -2456,6 +2582,69 @@ fn render_tasks_dialog(dialog: &TasksDialog, width: usize) -> AnyElement<'static
         }
     }
     .into()
+}
+
+/// Render export dialog
+fn render_export_dialog(dialog: &ExportDialog, width: usize) -> AnyElement<'static> {
+    use super::widgets::export::ExportMethod;
+
+    let inner_width = width.saturating_sub(2);
+    let h_line = "─".repeat(inner_width);
+    let top_border = format!("╭{}╮", h_line);
+    let bottom_border = format!("╰{}╯", h_line);
+
+    let pad_line = |s: &str| {
+        let visible_len = s.chars().count();
+        let padding = inner_width.saturating_sub(visible_len);
+        format!("│{}{}│", s, " ".repeat(padding))
+    };
+
+    match dialog.step {
+        ExportStep::MethodSelection => {
+            let clipboard_cursor = if dialog.selected_method == ExportMethod::Clipboard {
+                "❯"
+            } else {
+                " "
+            };
+            let file_cursor = if dialog.selected_method == ExportMethod::File {
+                "❯"
+            } else {
+                " "
+            };
+
+            element! {
+                View(
+                    flex_direction: FlexDirection::Column,
+                    width: 100pct,
+                ) {
+                    Text(content: top_border)
+                    Text(content: pad_line(" Export Conversation"))
+                    Text(content: pad_line(""))
+                    Text(content: pad_line(" Select export method:"))
+                    Text(content: pad_line(&format!(" {} 1. Copy to clipboard", clipboard_cursor)))
+                    Text(content: pad_line(&format!(" {} 2. Save to file", file_cursor)))
+                    Text(content: bottom_border)
+                    Text(content: "  ↑/↓ to select · Enter to confirm · Esc to cancel")
+                }
+            }
+            .into()
+        }
+        ExportStep::FilenameInput => element! {
+            View(
+                flex_direction: FlexDirection::Column,
+                width: 100pct,
+            ) {
+                Text(content: top_border)
+                Text(content: pad_line(" Export Conversation"))
+                Text(content: pad_line(""))
+                Text(content: pad_line(" Enter filename:"))
+                Text(content: pad_line(&format!(" {}", dialog.filename)))
+                Text(content: bottom_border)
+                Text(content: "  Enter to save · esc to go back")
+            }
+        }
+        .into(),
+    }
 }
 
 /// Render model picker dialog
