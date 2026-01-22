@@ -27,9 +27,7 @@ use common::{start_tui, tmux, write_scenario};
 ///
 /// When Ctrl+S is pressed with text in the input, the text is stashed
 /// and a message is displayed.
-// TODO(implement): requires Ctrl+S stash handler
 #[test]
-#[ignore]
 fn test_tui_ctrl_s_stashes_prompt_with_message() {
     let scenario = write_scenario(
         r#"
@@ -72,9 +70,7 @@ fn test_tui_ctrl_s_stashes_prompt_with_message() {
 ///
 /// When Ctrl+S is pressed again while a stash exists, the stashed text
 /// is restored to the input field.
-// TODO(implement): requires Ctrl+S stash/restore toggle
 #[test]
-#[ignore]
 fn test_tui_ctrl_s_restores_stashed_prompt() {
     let scenario = write_scenario(
         r#"
@@ -90,15 +86,22 @@ fn test_tui_ctrl_s_restores_stashed_prompt() {
 
     // Type some text
     tmux::send_keys(session, "my stashed prompt");
-    let with_input = tmux::wait_for_change(session, &previous);
+    let _with_input = tmux::wait_for_change(session, &previous);
 
     // Press Ctrl+S to stash
     tmux::send_keys(session, "C-s");
-    let stashed = tmux::wait_for_change(session, &with_input);
+    let stashed = tmux::wait_for_content(session, "Stashed (auto-restores after submit)");
+
+    // Verify stash state was captured correctly
+    assert!(
+        stashed.contains("Stashed (auto-restores after submit)"),
+        "Stash indicator should appear after Ctrl+S.\nStashed:\n{}",
+        stashed
+    );
 
     // Press Ctrl+S again to restore
     tmux::send_keys(session, "C-s");
-    let capture = tmux::wait_for_change(session, &stashed);
+    let capture = tmux::wait_for_content(session, "my stashed prompt");
 
     tmux::kill_session(session);
 
@@ -120,9 +123,7 @@ fn test_tui_ctrl_s_restores_stashed_prompt() {
 /// Behavior observed with: claude --version 2.1.14 (Claude Code)
 ///
 /// Ctrl+S on empty input does nothing - there's nothing to stash.
-// TODO(implement): requires Ctrl+S handler to check for empty input
 #[test]
-#[ignore]
 fn test_tui_ctrl_s_empty_input_does_nothing() {
     let scenario = write_scenario(
         r#"
@@ -156,9 +157,7 @@ fn test_tui_ctrl_s_empty_input_does_nothing() {
 ///
 /// The stash message "› Stashed (auto-restores after submit)" persists
 /// until the user restores the stash or submits a prompt.
-// TODO(implement): requires persistent stash indicator
 #[test]
-#[ignore]
 fn test_tui_stash_message_persists() {
     let scenario = write_scenario(
         r#"
@@ -208,9 +207,7 @@ fn test_tui_stash_message_persists() {
 ///
 /// After submitting a prompt and receiving a response, the stashed text
 /// is automatically restored to the input field.
-// TODO(implement): requires stash auto-restore after response
 #[test]
-#[ignore]
 fn test_tui_stash_auto_restores_after_submit() {
     let scenario = write_scenario(
         r#"

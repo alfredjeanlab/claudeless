@@ -186,6 +186,10 @@ pub struct RenderState {
     pub export_dialog: Option<ExportDialog>,
     /// Help dialog state (None if not showing)
     pub help_dialog: Option<HelpDialog>,
+    /// Stashed input text (for checking in tests)
+    pub stash_buffer: Option<String>,
+    /// Whether to show "Stashed (auto-restores after submit)" message
+    pub show_stash_indicator: bool,
 }
 
 /// Permission request state using the rich permission dialog
@@ -383,6 +387,12 @@ struct TuiAppStateInner {
     /// Stack of previous input states for undo (Ctrl+_)
     /// Each entry is a snapshot of input_buffer before a change
     pub undo_stack: Vec<String>,
+
+    /// Stashed input text (Ctrl+S to stash/restore)
+    pub stash_buffer: Option<String>,
+
+    /// Whether to show the stash indicator message
+    pub show_stash_indicator: bool,
 }
 
 impl TuiAppState {
@@ -456,6 +466,8 @@ impl TuiAppState {
                 shell_mode: false,
                 todos: TodoState::new(),
                 undo_stack: Vec::new(),
+                stash_buffer: None,
+                show_stash_indicator: false,
             })),
         }
     }
@@ -490,6 +502,8 @@ impl TuiAppState {
             is_tty: inner.config.is_tty,
             export_dialog: inner.export_dialog.clone(),
             help_dialog: inner.help_dialog.clone(),
+            stash_buffer: inner.stash_buffer.clone(),
+            show_stash_indicator: inner.show_stash_indicator,
         }
     }
 
@@ -850,6 +864,37 @@ impl TuiAppState {
                     inner.input_buffer = previous;
                     inner.cursor_pos = inner.cursor_pos.min(inner.input_buffer.len());
                 }
+            }
+
+            // Ctrl+S - Stash/restore prompt
+            // Note: Ctrl+S is encoded as ASCII 0x13 (device control 3) in terminals
+            (_, KeyCode::Char('\x13')) => {
+                if let Some(stashed) = inner.stash_buffer.take() {
+                    // Restore: stash exists, restore it to input
+                    inner.input_buffer = stashed;
+                    inner.cursor_pos = inner.input_buffer.len();
+                    inner.show_stash_indicator = false;
+                } else if !inner.input_buffer.is_empty() {
+                    // Stash: input is not empty, save it
+                    inner.stash_buffer = Some(std::mem::take(&mut inner.input_buffer));
+                    inner.cursor_pos = 0;
+                    inner.show_stash_indicator = true;
+                }
+                // If input is empty and no stash exists, do nothing
+            }
+            (m, KeyCode::Char('s')) if m.contains(KeyModifiers::CONTROL) => {
+                if let Some(stashed) = inner.stash_buffer.take() {
+                    // Restore: stash exists, restore it to input
+                    inner.input_buffer = stashed;
+                    inner.cursor_pos = inner.input_buffer.len();
+                    inner.show_stash_indicator = false;
+                } else if !inner.input_buffer.is_empty() {
+                    // Stash: input is not empty, save it
+                    inner.stash_buffer = Some(std::mem::take(&mut inner.input_buffer));
+                    inner.cursor_pos = 0;
+                    inner.show_stash_indicator = true;
+                }
+                // If input is empty and no stash exists, do nothing
             }
 
             // '?' key - show shortcuts panel on empty input, otherwise type literal
@@ -1596,6 +1641,13 @@ impl TuiAppState {
         }
 
         inner.mode = AppMode::Input;
+
+        // Auto-restore stashed text after response completes
+        if let Some(stashed) = inner.stash_buffer.take() {
+            inner.input_buffer = stashed;
+            inner.cursor_pos = inner.input_buffer.len();
+            inner.show_stash_indicator = false;
+        }
     }
 
     /// Confirm the current permission selection
@@ -2249,6 +2301,7 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
 
             // Input area with separators (NoWrap to preserve ANSI)
             Text(content: separator.clone(), wrap: TextWrap::NoWrap)
+            #(render_stash_indicator(state))
             Text(content: input_display, wrap: TextWrap::NoWrap)
             #(render_argument_hint(state))
             Text(content: separator, wrap: TextWrap::NoWrap)
@@ -2422,6 +2475,30 @@ fn render_slash_menu(state: &RenderState) -> AnyElement<'static> {
 }
 
 /// Render argument hint for completed slash commands
+/// Render stash indicator if stash is active
+fn render_stash_indicator(state: &RenderState) -> AnyElement<'static> {
+    if !state.show_stash_indicator {
+        return element! { View {} }.into();
+    }
+
+    // Use orange accent color for the › character
+    let (r, g, b) = super::colors::LOGO_FG;
+    let accent_fg = format!("\x1b[38;2;{};{};{}m", r, g, b);
+    let reset = "\x1b[0m";
+
+    let indicator_text = format!(
+        "  {}›{} Stashed (auto-restores after submit)",
+        accent_fg, reset
+    );
+
+    element! {
+        View(flex_direction: FlexDirection::Column) {
+            Text(content: indicator_text, wrap: TextWrap::NoWrap)
+        }
+    }
+    .into()
+}
+
 fn render_argument_hint(state: &RenderState) -> AnyElement<'static> {
     // Only show hint when menu is closed and input starts with a completed command
     if state.slash_menu.is_some() || !state.input_buffer.starts_with('/') {

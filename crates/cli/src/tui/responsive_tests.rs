@@ -80,6 +80,8 @@ mod status_bar_rendering {
             is_tty: false,
             export_dialog: None,
             help_dialog: None,
+            stash_buffer: None,
+            show_stash_indicator: false,
         }
     }
 

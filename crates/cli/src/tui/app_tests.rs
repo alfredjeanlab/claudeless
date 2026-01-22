@@ -912,3 +912,80 @@ fn clear_exit_state_resets_for_resume() {
     assert!(!state.should_exit());
     assert_eq!(state.exit_reason(), None);
 }
+
+// ========================
+// Ctrl+S Stash Tests
+// ========================
+
+#[test]
+fn ctrl_s_stashes_non_empty_input() {
+    let state = create_test_app();
+
+    // Type some text
+    for c in "hello world".chars() {
+        state.handle_key_event(key_event(KeyCode::Char(c), KeyModifiers::NONE));
+    }
+
+    assert_eq!(state.input_buffer(), "hello world");
+
+    // Ctrl+S to stash
+    state.handle_key_event(key_event(KeyCode::Char('s'), KeyModifiers::CONTROL));
+
+    // Input should be cleared
+    assert_eq!(state.input_buffer(), "");
+    let render = state.render_state();
+    assert_eq!(render.stash_buffer, Some("hello world".to_string()));
+    assert!(render.show_stash_indicator);
+}
+
+#[test]
+fn ctrl_s_empty_input_does_nothing() {
+    let state = create_test_app();
+
+    // Ctrl+S with empty input
+    state.handle_key_event(key_event(KeyCode::Char('s'), KeyModifiers::CONTROL));
+
+    // Nothing should change
+    assert_eq!(state.input_buffer(), "");
+    let render = state.render_state();
+    assert_eq!(render.stash_buffer, None);
+    assert!(!render.show_stash_indicator);
+}
+
+#[test]
+fn ctrl_s_restores_stashed_text() {
+    let state = create_test_app();
+
+    // Type and stash
+    for c in "stashed text".chars() {
+        state.handle_key_event(key_event(KeyCode::Char(c), KeyModifiers::NONE));
+    }
+    state.handle_key_event(key_event(KeyCode::Char('s'), KeyModifiers::CONTROL));
+
+    assert_eq!(state.input_buffer(), "");
+
+    // Ctrl+S again to restore
+    state.handle_key_event(key_event(KeyCode::Char('s'), KeyModifiers::CONTROL));
+
+    // Stashed text should be restored
+    assert_eq!(state.input_buffer(), "stashed text");
+    let render = state.render_state();
+    assert_eq!(render.stash_buffer, None);
+    assert!(!render.show_stash_indicator);
+}
+
+#[test]
+fn ctrl_s_raw_char_works() {
+    let state = create_test_app();
+
+    // Type some text
+    for c in "test".chars() {
+        state.handle_key_event(key_event(KeyCode::Char(c), KeyModifiers::NONE));
+    }
+
+    // Ctrl+S may come as raw ASCII 0x13
+    state.handle_key_event(key_event(KeyCode::Char('\x13'), KeyModifiers::NONE));
+
+    assert_eq!(state.input_buffer(), "");
+    assert!(state.render_state().show_stash_indicator);
+}
