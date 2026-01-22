@@ -1,5 +1,7 @@
 # ANSI Colors for Permission Modes
 
+**Root Feature:** `cl-82fb`
+
 **Branch:** `feature/ansi-permissions`
 
 Add ANSI color rendering to permission mode indicators in the TUI status bar, matching the exact output from Claude Code v2.1.15.
