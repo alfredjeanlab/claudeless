@@ -1,5 +1,7 @@
 # Implementation Plan: ANSI Colors for Shell Mode & Permission Modes
 
+**Root Feature:** `cl-2a19`
+
 ## Overview
 
 Implement ANSI color support for shell mode and complete the styled status bar for all permission modes. The v2.1.15 fixtures capture the expected appearance from real Claude Code, including:
