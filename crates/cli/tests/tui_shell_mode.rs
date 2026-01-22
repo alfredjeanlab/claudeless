@@ -400,7 +400,7 @@ fn test_tui_shell_mode_with_env_variable() {
 #[test]
 #[ignore]
 fn test_tui_shell_prefix_ansi_matches_fixture_v2115() {
-    use common::ansi::assert_ansi_matches_fixture_v2115;
+    use common::ansi::assert_versioned_ansi_matches_fixture;
 
     let scenario = write_scenario(
         r#"
@@ -421,7 +421,7 @@ fn test_tui_shell_prefix_ansi_matches_fixture_v2115() {
 
     tmux::kill_session(session);
 
-    assert_ansi_matches_fixture_v2115(&capture, "shell_mode_prefix_ansi.txt", None);
+    assert_versioned_ansi_matches_fixture(&capture, "v2.1.15", "shell_mode_prefix_ansi.txt", None);
 }
 
 /// Behavior observed with: claude --version 2.1.15 (Claude Code)
@@ -433,7 +433,7 @@ fn test_tui_shell_prefix_ansi_matches_fixture_v2115() {
 #[test]
 #[ignore]
 fn test_tui_shell_command_ansi_matches_fixture_v2115() {
-    use common::ansi::assert_ansi_matches_fixture_v2115;
+    use common::ansi::assert_versioned_ansi_matches_fixture;
 
     let scenario = write_scenario(
         r#"
@@ -456,5 +456,5 @@ fn test_tui_shell_command_ansi_matches_fixture_v2115() {
 
     tmux::kill_session(session);
 
-    assert_ansi_matches_fixture_v2115(&capture, "shell_mode_command_ansi.txt", None);
+    assert_versioned_ansi_matches_fixture(&capture, "v2.1.15", "shell_mode_command_ansi.txt", None);
 }
