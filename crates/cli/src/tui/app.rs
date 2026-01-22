@@ -2551,7 +2551,7 @@ pub(crate) fn format_status_bar(state: &RenderState, width: usize) -> String {
 }
 
 /// Format styled status bar content (with ANSI colors)
-fn format_status_bar_styled(state: &RenderState, _width: usize) -> String {
+fn format_status_bar_styled(state: &RenderState, width: usize) -> String {
     // Check for exit hint first (takes precedence)
     if let Some(hint) = &state.exit_hint {
         return match hint {
@@ -2561,11 +2561,21 @@ fn format_status_bar_styled(state: &RenderState, _width: usize) -> String {
         };
     }
 
-    // For styled output, only implement default mode for now (initial state fixture)
-    // The fixture shows "? for shortcuts" in gray
+    // For styled output, handle default mode with thinking status
     match &state.permission_mode {
-        PermissionMode::Default => styled_status_text("? for shortcuts"),
-        _ => format_status_bar(state, _width),
+        PermissionMode::Default => {
+            if state.thinking_enabled {
+                styled_status_text("? for shortcuts")
+            } else {
+                // Show "Thinking off" aligned to the right
+                let left = styled_status_text("? for shortcuts");
+                let left_visual_width = "  ? for shortcuts".len(); // styled_status_text adds 2 spaces
+                let right = "Thinking off";
+                let padding = width.saturating_sub(left_visual_width + right.len());
+                format!("{}{:width$}{}", left, "", right, width = padding)
+            }
+        }
+        _ => format_status_bar(state, width),
     }
 }
 
