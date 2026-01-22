@@ -1,6 +1,6 @@
 # Implementation Plan: /export Slash Command
 
-**Root Feature:** `slash-export`
+**Root Feature:** `cl-95ba`
 
 ## Overview
 
