@@ -18,7 +18,6 @@ use crate::time::{Clock, ClockHandle};
 
 use super::colors::{
     styled_logo_line1, styled_logo_line2, styled_logo_line3, styled_placeholder, styled_separator,
-    styled_status_text,
 };
 use super::separator::{make_compact_separator, make_separator};
 use super::shortcuts::shortcuts_by_column;
@@ -2833,6 +2832,8 @@ pub(crate) fn format_status_bar(state: &RenderState, width: usize) -> String {
 
 /// Format styled status bar content (with ANSI colors)
 fn format_status_bar_styled(state: &RenderState, width: usize) -> String {
+    use crate::tui::colors::styled_permission_status;
+
     // Check for exit hint first (takes precedence)
     if let Some(hint) = &state.exit_hint {
         return match hint {
@@ -2842,21 +2843,39 @@ fn format_status_bar_styled(state: &RenderState, width: usize) -> String {
         };
     }
 
-    // For styled output, handle default mode with thinking status
+    // Get styled permission status
+    let status = styled_permission_status(&state.permission_mode);
+
+    // Calculate visual width of the status text (excluding ANSI sequences)
+    let mode_visual_width = match &state.permission_mode {
+        PermissionMode::Default => "  ? for shortcuts".chars().count(),
+        PermissionMode::Plan => "  ⏸ plan mode on (shift+tab to cycle)".chars().count(),
+        PermissionMode::AcceptEdits => "  ⏵⏵ accept edits on (shift+tab to cycle)".chars().count(),
+        PermissionMode::BypassPermissions => "  ⏵⏵ bypass permissions on (shift+tab to cycle)"
+            .chars()
+            .count(),
+        PermissionMode::Delegate => "  delegate mode (shift+tab to cycle)".chars().count(),
+        PermissionMode::DontAsk => "  don't ask mode (shift+tab to cycle)".chars().count(),
+    };
+
+    // Add right-aligned text based on mode
     match &state.permission_mode {
         PermissionMode::Default => {
             if state.thinking_enabled {
-                styled_status_text("? for shortcuts")
+                status
             } else {
                 // Show "Thinking off" aligned to the right
-                let left = styled_status_text("? for shortcuts");
-                let left_visual_width = "  ? for shortcuts".len(); // styled_status_text adds 2 spaces
                 let right = "Thinking off";
-                let padding = width.saturating_sub(left_visual_width + right.len());
-                format!("{}{:width$}{}", left, "", right, width = padding)
+                let padding = width.saturating_sub(mode_visual_width + right.len());
+                format!("{}{:width$}{}", status, "", right, width = padding)
             }
         }
-        _ => format_status_bar(state, width),
+        _ => {
+            // Non-default modes show "Use meta+t to toggle thinking" on the right
+            let right_text = "Use meta+t to toggle thinking";
+            let padding = width.saturating_sub(mode_visual_width + right_text.len());
+            format!("{}{:width$}{}", status, "", right_text, width = padding)
+        }
     }
 }
 

@@ -12,7 +12,8 @@
 mod common;
 
 use common::{
-    assert_tui_matches_fixture, start_tui, start_tui_ext, tmux, write_scenario, TUI_READY_PATTERN,
+    ansi::assert_versioned_ansi_matches_fixture, assert_tui_matches_fixture, start_tui,
+    start_tui_ext, tmux, write_scenario, TUI_READY_PATTERN,
 };
 
 /// Helper to capture after a sequence of shift+tab presses
@@ -253,4 +254,124 @@ fn test_status_bar_extended_matches_fixture() {
     tmux::kill_session(session);
 
     assert_tui_matches_fixture(&capture, "status_bar_extended.txt", None);
+}
+
+// =============================================================================
+// ANSI Color Fixture Tests (v2.1.15)
+// =============================================================================
+
+/// Helper to start TUI and wait for content, then capture with ANSI sequences.
+fn start_tui_ansi(
+    session: &str,
+    scenario: &tempfile::NamedTempFile,
+    width: u16,
+    height: u16,
+    wait_for: &str,
+) -> String {
+    use common::claudeless_bin;
+
+    tmux::kill_session(session);
+    tmux::new_session(session, width, height);
+
+    let cmd = format!(
+        "{} --scenario {} --tui",
+        claudeless_bin(),
+        scenario.path().display()
+    );
+    tmux::send_line(session, &cmd);
+
+    // Wait for pattern, then capture with ANSI sequences
+    tmux::wait_for_content_ansi(session, wait_for)
+}
+
+/// Compare default permission mode ANSI output against v2.1.15 fixture
+#[test]
+fn test_permission_default_ansi_matches_fixture() {
+    let scenario = write_scenario(
+        r#"
+        {
+            "default_response": "Hello!",
+            "trusted": true,
+            "claude_version": "2.1.15"
+        }
+        "#,
+    );
+
+    let session = "claudeless-fixture-perm-default-ansi";
+    let capture = start_tui_ansi(session, &scenario, 120, 40, TUI_READY_PATTERN);
+
+    tmux::kill_session(session);
+
+    assert_versioned_ansi_matches_fixture(&capture, "v2.1.15", "permission_default_ansi.txt", None);
+}
+
+/// Compare plan mode ANSI output against v2.1.15 fixture
+#[test]
+fn test_permission_plan_ansi_matches_fixture() {
+    let scenario = write_scenario(
+        r#"
+        {
+            "default_response": "Hello!",
+            "trusted": true,
+            "permission_mode": "plan",
+            "claude_version": "2.1.15"
+        }
+        "#,
+    );
+
+    let session = "claudeless-fixture-perm-plan-ansi";
+    let capture = start_tui_ansi(session, &scenario, 120, 40, "plan mode");
+
+    tmux::kill_session(session);
+
+    assert_versioned_ansi_matches_fixture(&capture, "v2.1.15", "permission_plan_ansi.txt", None);
+}
+
+/// Compare accept edits mode ANSI output against v2.1.15 fixture
+#[test]
+fn test_permission_accept_edits_ansi_matches_fixture() {
+    let scenario = write_scenario(
+        r#"
+        {
+            "default_response": "Hello!",
+            "trusted": true,
+            "permission_mode": "accept-edits",
+            "claude_version": "2.1.15"
+        }
+        "#,
+    );
+
+    let session = "claudeless-fixture-perm-accept-edits-ansi";
+    let capture = start_tui_ansi(session, &scenario, 120, 40, "accept edits");
+
+    tmux::kill_session(session);
+
+    assert_versioned_ansi_matches_fixture(
+        &capture,
+        "v2.1.15",
+        "permission_accept_edits_ansi.txt",
+        None,
+    );
+}
+
+/// Compare bypass permissions mode ANSI output against v2.1.15 fixture
+#[test]
+fn test_permission_bypass_ansi_matches_fixture() {
+    let scenario = write_scenario(
+        r#"
+        {
+            "default_response": "Hello!",
+            "trusted": true,
+            "permission_mode": "bypass-permissions",
+            "claude_version": "2.1.15"
+        }
+        "#,
+    );
+
+    let session = "claudeless-fixture-perm-bypass-ansi";
+    let capture = start_tui_ansi(session, &scenario, 120, 40, "bypass permissions");
+
+    tmux::kill_session(session);
+
+    assert_versioned_ansi_matches_fixture(&capture, "v2.1.15", "permission_bypass_ansi.txt", None);
 }
