@@ -363,9 +363,7 @@ fn test_tui_ctrl_d_double_press_exits() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Typing /exit shows autocomplete dropdown with "Exit the REPL" description
-// TODO(implement): requires slash command autocomplete
 #[test]
-#[ignore]
 fn test_tui_exit_command_shows_autocomplete() {
     let scenario = write_scenario(
         r#"
@@ -395,9 +393,7 @@ fn test_tui_exit_command_shows_autocomplete() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// /exit command exits the TUI and shows a farewell message
-// TODO(implement): requires /exit slash command
 #[test]
-#[ignore]
 fn test_tui_exit_command_exits_with_farewell() {
     let scenario = write_scenario(
         r#"

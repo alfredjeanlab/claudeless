@@ -244,6 +244,7 @@ dependencies = [
  "chrono",
  "clap",
  "crossterm",
+ "fastrand",
  "glob",
  "hex",
  "insta",

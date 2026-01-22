@@ -25,6 +25,7 @@ hex = "0.4"
 parking_lot = "0.12"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
+fastrand = "2"
 
 # TUI dependencies
 iocraft = "0.7"
