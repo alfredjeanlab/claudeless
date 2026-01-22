@@ -30,7 +30,6 @@ use common::{start_tui, tmux, write_scenario};
 /// Typing /help shows autocomplete dropdown with help description
 // TODO(implement): requires slash command autocomplete
 #[test]
-#[ignore]
 fn test_tui_help_command_shows_autocomplete() {
     let scenario = write_scenario(
         r#"
@@ -66,7 +65,6 @@ fn test_tui_help_command_shows_autocomplete() {
 /// /help command shows a multi-tab help dialog with general tab active by default
 // TODO(implement): requires /help dialog
 #[test]
-#[ignore]
 fn test_tui_help_shows_dialog_with_general_tab() {
     let scenario = write_scenario(
         r#"
@@ -116,7 +114,6 @@ fn test_tui_help_shows_dialog_with_general_tab() {
 /// Tab key cycles to commands tab showing browseable command list
 // TODO(implement): requires /help dialog tab navigation
 #[test]
-#[ignore]
 fn test_tui_help_tab_shows_commands_tab() {
     let scenario = write_scenario(
         r#"
@@ -157,7 +154,6 @@ fn test_tui_help_tab_shows_commands_tab() {
 /// Tab cycles through all tabs: general -> commands -> custom-commands -> general
 // TODO(implement): requires /help dialog tab cycling
 #[test]
-#[ignore]
 fn test_tui_help_tab_cycles_through_all_tabs() {
     let scenario = write_scenario(
         r#"
@@ -207,7 +203,6 @@ fn test_tui_help_tab_cycles_through_all_tabs() {
 /// Arrow keys navigate through commands in the commands tab
 // TODO(implement): requires /help command list navigation
 #[test]
-#[ignore]
 fn test_tui_help_commands_arrow_navigation() {
     let scenario = write_scenario(
         r#"
@@ -259,7 +254,6 @@ fn test_tui_help_commands_arrow_navigation() {
 /// Pressing Escape dismisses the help dialog
 // TODO(implement): requires /help dialog dismiss
 #[test]
-#[ignore]
 fn test_tui_help_escape_dismisses_dialog() {
     let scenario = write_scenario(
         r#"
@@ -297,7 +291,6 @@ fn test_tui_help_escape_dismisses_dialog() {
 /// After dismissing help dialog, input is cleared and ready for new input
 // TODO(implement): requires /help dialog dismiss
 #[test]
-#[ignore]
 fn test_tui_help_dismiss_returns_to_clean_input() {
     let scenario = write_scenario(
         r#"
