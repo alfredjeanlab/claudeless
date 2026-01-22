@@ -735,3 +735,116 @@ fn escape_after_timeout_shows_hint_again() {
     assert_eq!(render.exit_hint, Some(ExitHint::Escape));
     assert_eq!(render.input_buffer, "x"); // Still present
 }
+
+// ========================
+// Ctrl+_ Undo Tests
+// ========================
+
+#[test]
+fn ctrl_underscore_undoes_to_previous_word_boundary() {
+    let state = create_test_app();
+
+    // Type "hello world"
+    for c in "hello ".chars() {
+        state.handle_key_event(key_event(KeyCode::Char(c), KeyModifiers::NONE));
+    }
+    for c in "world".chars() {
+        state.handle_key_event(key_event(KeyCode::Char(c), KeyModifiers::NONE));
+    }
+
+    assert_eq!(state.render_state().input_buffer, "hello world");
+
+    // Ctrl+_ should undo back to "hello" (snapshot taken before space was typed)
+    state.handle_key_event(key_event(KeyCode::Char('_'), KeyModifiers::CONTROL));
+    assert_eq!(state.render_state().input_buffer, "hello");
+}
+
+#[test]
+fn ctrl_underscore_on_empty_does_nothing() {
+    let state = create_test_app();
+
+    // Press Ctrl+_ on empty input
+    state.handle_key_event(key_event(KeyCode::Char('_'), KeyModifiers::CONTROL));
+
+    assert_eq!(state.render_state().input_buffer, "");
+}
+
+#[test]
+fn ctrl_underscore_clears_all_with_multiple_presses() {
+    let state = create_test_app();
+
+    // Type "one two three"
+    for word in ["one ", "two ", "three"] {
+        for c in word.chars() {
+            state.handle_key_event(key_event(KeyCode::Char(c), KeyModifiers::NONE));
+        }
+    }
+
+    // Undo all words
+    state.handle_key_event(key_event(KeyCode::Char('_'), KeyModifiers::CONTROL));
+    state.handle_key_event(key_event(KeyCode::Char('_'), KeyModifiers::CONTROL));
+    state.handle_key_event(key_event(KeyCode::Char('_'), KeyModifiers::CONTROL));
+
+    assert_eq!(state.render_state().input_buffer, "");
+}
+
+#[test]
+fn undo_stack_clears_on_submit() {
+    let state = create_test_app();
+
+    for c in "test".chars() {
+        state.handle_key_event(key_event(KeyCode::Char(c), KeyModifiers::NONE));
+    }
+
+    // Submit clears undo stack
+    state.handle_key_event(key_event(KeyCode::Enter, KeyModifiers::NONE));
+
+    // Ctrl+_ should do nothing now
+    state.handle_key_event(key_event(KeyCode::Char('_'), KeyModifiers::CONTROL));
+    assert_eq!(state.render_state().input_buffer, "");
+}
+
+#[test]
+fn ctrl_underscore_via_unit_separator_character() {
+    // Test that the 0x1f (unit separator) character encoding also triggers undo
+    // This is how terminals often send Ctrl+_
+    let state = create_test_app();
+
+    // Type "hello world"
+    for c in "hello world".chars() {
+        state.handle_key_event(key_event(KeyCode::Char(c), KeyModifiers::NONE));
+    }
+
+    assert_eq!(state.render_state().input_buffer, "hello world");
+
+    // Send as ASCII 0x1F (unit separator) - how terminals encode Ctrl+_
+    state.handle_key_event(key_event(KeyCode::Char('\x1f'), KeyModifiers::NONE));
+    assert_eq!(state.render_state().input_buffer, "hello");
+}
+
+#[test]
+fn ctrl_underscore_via_unit_separator_with_control_modifier() {
+    // Test with CONTROL modifier (crossterm might add this)
+    let state = create_test_app();
+
+    for c in "hello world".chars() {
+        state.handle_key_event(key_event(KeyCode::Char(c), KeyModifiers::NONE));
+    }
+
+    // Send as '\x1f' with CONTROL modifier
+    state.handle_key_event(key_event(KeyCode::Char('\x1f'), KeyModifiers::CONTROL));
+    assert_eq!(state.render_state().input_buffer, "hello");
+}
+
+#[test]
+fn ctrl_slash_also_triggers_undo() {
+    // Ctrl+/ is often the same terminal sequence as Ctrl+_
+    let state = create_test_app();
+
+    for c in "hello world".chars() {
+        state.handle_key_event(key_event(KeyCode::Char(c), KeyModifiers::NONE));
+    }
+
+    state.handle_key_event(key_event(KeyCode::Char('/'), KeyModifiers::CONTROL));
+    assert_eq!(state.render_state().input_buffer, "hello");
+}
