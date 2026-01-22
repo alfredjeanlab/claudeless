@@ -1,5 +1,7 @@
 # Implementation Plan: Ctrl+S Stash Prompt Shortcut
 
+**Root Feature:** `cl-b9d9`
+
 ## Overview
 
 Implement Ctrl+S keyboard shortcut to stash and restore the current input prompt. When pressed with text in the input, the text is saved to a stash buffer and the input is cleared. When pressed again (with a stash existing), the stashed text is restored. After submitting a prompt and receiving a response, any stashed text is automatically restored.
