@@ -25,6 +25,7 @@ use super::slash_menu::SlashMenuState;
 use super::streaming::{StreamingConfig, StreamingResponse};
 use super::widgets::context::ContextUsage;
 use super::widgets::export::{ExportDialog, ExportStep};
+use super::widgets::help::HelpDialog;
 use super::widgets::permission::{
     PermissionSelection, PermissionType, RichPermissionDialog, SessionPermissionKey,
 };
@@ -136,6 +137,8 @@ pub enum AppMode {
     ModelPicker,
     /// Showing export dialog
     ExportDialog,
+    /// Showing help dialog
+    HelpDialog,
 }
 
 /// Status bar information
@@ -181,6 +184,8 @@ pub struct RenderState {
     pub is_tty: bool,
     /// Export dialog state (None if not showing)
     pub export_dialog: Option<ExportDialog>,
+    /// Help dialog state (None if not showing)
+    pub help_dialog: Option<HelpDialog>,
 }
 
 /// Permission request state using the rich permission dialog
@@ -326,6 +331,9 @@ struct TuiAppStateInner {
     /// Export dialog state
     pub export_dialog: Option<ExportDialog>,
 
+    /// Help dialog state
+    pub help_dialog: Option<HelpDialog>,
+
     /// Current permission mode
     pub permission_mode: PermissionMode,
 
@@ -428,6 +436,7 @@ impl TuiAppState {
                 tasks_dialog: None,
                 model_picker_dialog: None,
                 export_dialog: None,
+                help_dialog: None,
                 permission_mode: config.permission_mode.clone(),
                 allow_bypass_permissions: config.allow_bypass_permissions,
                 is_compacting: false,
@@ -480,6 +489,7 @@ impl TuiAppState {
             shell_mode: inner.shell_mode,
             is_tty: inner.config.is_tty,
             export_dialog: inner.export_dialog.clone(),
+            help_dialog: inner.help_dialog.clone(),
         }
     }
 
@@ -554,6 +564,7 @@ impl TuiAppState {
             AppMode::TasksDialog => self.handle_tasks_key(key),
             AppMode::ModelPicker => self.handle_model_picker_key(key),
             AppMode::ExportDialog => self.handle_export_dialog_key(key),
+            AppMode::HelpDialog => self.handle_help_dialog_key(key),
         }
     }
 
@@ -1085,6 +1096,13 @@ impl TuiAppState {
                 inner.response_content = "Export cancelled".to_string();
                 inner.is_command_output = true;
             }
+            AppMode::HelpDialog => {
+                // Close dialog with dismissal message
+                inner.help_dialog = None;
+                inner.mode = AppMode::Input;
+                inner.response_content = "Help dialog dismissed".to_string();
+                inner.is_command_output = true;
+            }
         }
     }
 
@@ -1401,11 +1419,13 @@ impl TuiAppState {
                 }
             }
             "/help" | "/?" => {
-                inner.response_content = "Available commands:\n\
-                    /clear   - Clear conversation history\n\
-                    /compact - Compact conversation history\n\
-                    /help    - Show this help\n"
-                    .to_string();
+                inner.mode = AppMode::HelpDialog;
+                let version = inner
+                    .config
+                    .claude_version
+                    .clone()
+                    .unwrap_or_else(|| "2.1.12".to_string());
+                inner.help_dialog = Some(HelpDialog::new(version));
             }
             "/context" => {
                 let usage = ContextUsage::new();
@@ -1852,6 +1872,30 @@ impl TuiAppState {
         inner.is_command_output = true;
     }
 
+    /// Handle key events in help dialog mode
+    fn handle_help_dialog_key(&self, key: KeyEvent) {
+        use super::slash_menu::COMMANDS;
+        let mut inner = self.inner.lock();
+
+        let Some(ref mut dialog) = inner.help_dialog else {
+            return;
+        };
+
+        match key.code {
+            KeyCode::Esc => {
+                inner.mode = AppMode::Input;
+                inner.help_dialog = None;
+                inner.response_content = "Help dialog dismissed".to_string();
+                inner.is_command_output = true;
+            }
+            KeyCode::Tab | KeyCode::Right => dialog.next_tab(),
+            KeyCode::Left | KeyCode::BackTab => dialog.prev_tab(),
+            KeyCode::Up => dialog.select_prev(COMMANDS.len()),
+            KeyCode::Down => dialog.select_next(COMMANDS.len()),
+            _ => {}
+        }
+    }
+
     /// Format conversation for export
     fn format_conversation_for_export(inner: &TuiAppStateInner) -> String {
         // Export the conversation display content
@@ -2110,6 +2154,13 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
     if state.mode == AppMode::ExportDialog {
         if let Some(ref dialog) = state.export_dialog {
             return render_export_dialog(dialog, width);
+        }
+    }
+
+    // If in help dialog mode, render just the help dialog
+    if state.mode == AppMode::HelpDialog {
+        if let Some(ref dialog) = state.help_dialog {
+            return render_help_dialog(dialog, width);
         }
     }
 
@@ -2662,6 +2713,99 @@ fn render_export_dialog(dialog: &ExportDialog, width: usize) -> AnyElement<'stat
             }
         }
         .into(),
+    }
+}
+
+/// Render help dialog
+fn render_help_dialog(dialog: &HelpDialog, width: usize) -> AnyElement<'static> {
+    use super::slash_menu::COMMANDS;
+    use super::widgets::HelpTab;
+
+    let inner_width = width.saturating_sub(2);
+
+    // Build tab header line
+    let version_part = format!("─Claude Code v{}─", dialog.version);
+    let tabs_part = format!(
+        " {} ─ {} ─ {} ─",
+        HelpTab::General.name(),
+        HelpTab::Commands.name(),
+        HelpTab::CustomCommands.name()
+    );
+    let hint = "(←/→ or tab to cycle)";
+    let used = version_part.len() + tabs_part.len() + hint.len() + 1;
+    let remaining = inner_width.saturating_sub(used);
+    let tab_header = format!(
+        " {}{}{}{}",
+        version_part,
+        tabs_part,
+        hint,
+        "─".repeat(remaining)
+    );
+
+    let footer = " For more help: https://code.claude.com/docs/en/overview";
+
+    match dialog.active_tab {
+        HelpTab::General => {
+            element! {
+                View(flex_direction: FlexDirection::Column, width: 100pct) {
+                    Text(content: tab_header)
+                    Text(content: "")
+                    Text(content: "")
+                    Text(content: "  Claude understands your codebase, makes edits with your permission, and executes commands — right from your terminal.")
+                    Text(content: "  / for commands    ctrl + o for verbose output              cmd + v to paste images")
+                    Text(content: "  & for background  backslash (\\) + return (⏎) for newline   ctrl + s to stash prompt")
+                    Text(content: "")
+                    Text(content: footer)
+                }
+            }
+            .into()
+        }
+        HelpTab::Commands => {
+            let selected = dialog.commands_selected;
+            let cmd = COMMANDS.get(selected);
+            let next_cmd = COMMANDS.get(selected + 1);
+
+            let selected_line = format!(
+                "  ❯ /{}",
+                cmd.map(|c| c.name).unwrap_or("")
+            );
+            let description_line = format!(
+                "    {}",
+                cmd.map(|c| c.description).unwrap_or("")
+            );
+            let next_line = if let Some(next) = next_cmd {
+                format!("  ↓ /{}", next.name)
+            } else {
+                String::new()
+            };
+
+            element! {
+                View(flex_direction: FlexDirection::Column, width: 100pct) {
+                    Text(content: tab_header)
+                    Text(content: "")
+                    Text(content: "  Browse default commands:")
+                    Text(content: selected_line)
+                    Text(content: description_line)
+                    Text(content: next_line)
+                    Text(content: "")
+                    Text(content: footer)
+                }
+            }
+            .into()
+        }
+        HelpTab::CustomCommands => {
+            element! {
+                View(flex_direction: FlexDirection::Column, width: 100pct) {
+                    Text(content: tab_header)
+                    Text(content: "")
+                    Text(content: "  Browse custom commands:")
+                    Text(content: "  (no custom commands configured)")
+                    Text(content: "")
+                    Text(content: footer)
+                }
+            }
+            .into()
+        }
     }
 }
 
