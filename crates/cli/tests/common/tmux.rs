@@ -86,6 +86,16 @@ pub fn send_keys(session: &str, keys: &str) {
         .expect("Failed to send keys");
 }
 
+/// Send a literal control character to a tmux session.
+/// Uses tmux's -H flag to send hexadecimal keys.
+pub fn send_ctrl_char(session: &str, ascii_code: u8) {
+    let hex = format!("{:02X}", ascii_code);
+    Command::new("tmux")
+        .args(["send-keys", "-H", "-t", session, &hex])
+        .status()
+        .expect("Failed to send control character");
+}
+
 /// Send keys followed by Enter to a tmux session.
 pub fn send_line(session: &str, line: &str) {
     Command::new("tmux")

@@ -360,6 +360,10 @@ struct TuiAppStateInner {
 
     /// Todo list state
     pub todos: TodoState,
+
+    /// Stack of previous input states for undo (Ctrl+_)
+    /// Each entry is a snapshot of input_buffer before a change
+    pub undo_stack: Vec<String>,
 }
 
 impl TuiAppState {
@@ -429,6 +433,7 @@ impl TuiAppState {
                 slash_menu: None,
                 shell_mode: false,
                 todos: TodoState::new(),
+                undo_stack: Vec::new(),
             })),
         }
     }
@@ -775,6 +780,29 @@ impl TuiAppState {
                 Self::update_slash_menu_inner(&mut inner);
             }
 
+            // Ctrl+_ - Undo last input segment
+            // Note: Ctrl+_ is encoded as ASCII 0x1F (unit separator) in terminals
+            // Crossterm may decode this as Char('_') with CONTROL, or as raw Char('\x1f')
+            (_, KeyCode::Char('\x1f')) => {
+                if let Some(previous) = inner.undo_stack.pop() {
+                    inner.input_buffer = previous;
+                    inner.cursor_pos = inner.cursor_pos.min(inner.input_buffer.len());
+                }
+            }
+            (m, KeyCode::Char('_')) if m.contains(KeyModifiers::CONTROL) => {
+                if let Some(previous) = inner.undo_stack.pop() {
+                    inner.input_buffer = previous;
+                    inner.cursor_pos = inner.cursor_pos.min(inner.input_buffer.len());
+                }
+            }
+            // Ctrl+/ is often the same as Ctrl+_ in terminals (both ASCII 31)
+            (m, KeyCode::Char('/')) if m.contains(KeyModifiers::CONTROL) => {
+                if let Some(previous) = inner.undo_stack.pop() {
+                    inner.input_buffer = previous;
+                    inner.cursor_pos = inner.cursor_pos.min(inner.input_buffer.len());
+                }
+            }
+
             // '?' key - show shortcuts panel on empty input, otherwise type literal
             (m, KeyCode::Char('?')) if m.is_empty() || m == KeyModifiers::SHIFT => {
                 if inner.input_buffer.is_empty() && !inner.show_shortcuts_panel {
@@ -816,6 +844,12 @@ impl TuiAppState {
 
             // Regular character input
             (m, KeyCode::Char(c)) if m.is_empty() || m == KeyModifiers::SHIFT => {
+                // Push snapshot at word boundaries (space typed or first character typed)
+                let should_snapshot = c == ' ' || inner.input_buffer.is_empty();
+                if should_snapshot {
+                    Self::push_undo_snapshot(&mut inner);
+                }
+
                 let pos = inner.cursor_pos;
                 inner.input_buffer.insert(pos, c);
                 inner.cursor_pos = pos + 1;
@@ -1025,6 +1059,7 @@ impl TuiAppState {
                 inner.history_index = None;
                 inner.input_buffer.clear();
                 inner.cursor_pos = 0;
+                inner.undo_stack.clear();
                 return;
             }
             Some(i) => Some(i),
@@ -1034,6 +1069,7 @@ impl TuiAppState {
             inner.history_index = Some(idx);
             inner.input_buffer = inner.history[idx].clone();
             inner.cursor_pos = inner.input_buffer.len();
+            inner.undo_stack.clear();
         }
     }
 
@@ -1056,6 +1092,19 @@ impl TuiAppState {
             &inner.input_buffer[inner.cursor_pos..]
         );
         inner.cursor_pos = word_start;
+    }
+
+    /// Push current input state to undo stack if appropriate
+    fn push_undo_snapshot(inner: &mut TuiAppStateInner) {
+        // Push if stack is empty or last snapshot differs from current
+        if inner.undo_stack.last() != Some(&inner.input_buffer) {
+            inner.undo_stack.push(inner.input_buffer.clone());
+        }
+    }
+
+    /// Clear undo stack (e.g., when submitting input or navigating history)
+    fn clear_undo_stack(inner: &mut TuiAppStateInner) {
+        inner.undo_stack.clear();
     }
 
     /// Format todo items for display.
@@ -1151,6 +1200,7 @@ impl TuiAppState {
         let was_shell_mode = inner.shell_mode;
         inner.shell_mode = false; // Reset shell mode after submit
         inner.cursor_pos = 0;
+        Self::clear_undo_stack(&mut inner);
 
         // Add to history (with shell prefix if applicable)
         let history_entry = if was_shell_mode {
