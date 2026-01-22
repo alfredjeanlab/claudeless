@@ -1,5 +1,7 @@
 # Implementation Plan: /context Slash Command
 
+**Root Feature:** `cl-1853`
+
 ## Overview
 
 Implement the `/context` slash command to visualize current context usage as a colored grid. When executed, it displays:

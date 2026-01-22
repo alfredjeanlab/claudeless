@@ -1,6 +1,7 @@
 # Implementation Plan: Meta+P Shortcut for Model Picker
 
 **Status:** 📋 Planned
+**Root Feature:** `cl-0bad`
 
 ## Overview
 
