@@ -17,8 +17,9 @@ use crate::state::todos::{TodoState, TodoStatus};
 use crate::time::{Clock, ClockHandle};
 
 use super::colors::{
-    styled_logo_line1, styled_logo_line2, styled_logo_line3, styled_placeholder, styled_separator,
-    styled_status_text,
+    styled_accept_edits_status, styled_bypass_permissions_status, styled_logo_line1,
+    styled_logo_line2, styled_logo_line3, styled_placeholder, styled_plan_mode_status,
+    styled_separator, styled_status_text,
 };
 use super::separator::{make_compact_separator, make_separator};
 use super::shortcuts::shortcuts_by_column;
@@ -2634,7 +2635,7 @@ fn format_status_bar_styled(state: &RenderState, width: usize) -> String {
         };
     }
 
-    // For styled output, handle default mode with thinking status
+    // Handle each permission mode with appropriate styling
     match &state.permission_mode {
         PermissionMode::Default => {
             if state.thinking_enabled {
@@ -2648,7 +2649,11 @@ fn format_status_bar_styled(state: &RenderState, width: usize) -> String {
                 format!("{}{:width$}{}", left, "", right, width = padding)
             }
         }
-        _ => format_status_bar(state, width),
+        PermissionMode::Plan => styled_plan_mode_status(),
+        PermissionMode::AcceptEdits => styled_accept_edits_status(),
+        PermissionMode::BypassPermissions => styled_bypass_permissions_status(),
+        // Delegate and DontAsk modes use plain text formatting
+        PermissionMode::Delegate | PermissionMode::DontAsk => format_status_bar(state, width),
     }
 }
 

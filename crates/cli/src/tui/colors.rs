@@ -17,6 +17,15 @@ pub const TEXT_GRAY: (u8, u8, u8) = (153, 153, 153);
 /// Dark gray for separator lines: RGB(136, 136, 136)
 pub const SEPARATOR_GRAY: (u8, u8, u8) = (136, 136, 136);
 
+/// Teal for plan mode indicator: RGB(72, 150, 140)
+pub const PLAN_MODE_COLOR: (u8, u8, u8) = (72, 150, 140);
+
+/// Purple for accept edits mode indicator: RGB(175, 135, 255)
+pub const ACCEPT_EDITS_COLOR: (u8, u8, u8) = (175, 135, 255);
+
+/// Red/pink for bypass permissions mode indicator: RGB(255, 107, 128)
+pub const BYPASS_PERMISSIONS_COLOR: (u8, u8, u8) = (255, 107, 128);
+
 /// ANSI escape sequence helpers
 mod ansi {
     /// 24-bit foreground color
@@ -159,6 +168,65 @@ pub fn styled_status_text(text: &str) -> String {
     format!(
         "{reset}  {fg_gray}{text}{fg_reset}",
         reset = ansi::RESET,
+        fg_reset = ansi::FG_RESET,
+    )
+}
+
+/// Format plan mode status bar with teal icon and gray cycle hint.
+///
+/// Example output:
+/// `[reset]  [teal]⏸ plan mode on[gray] (shift+tab to cycle)[/fg]`
+pub fn styled_plan_mode_status() -> String {
+    let fg_teal = ansi::fg(PLAN_MODE_COLOR.0, PLAN_MODE_COLOR.1, PLAN_MODE_COLOR.2);
+    let fg_gray = ansi::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
+
+    format!(
+        "{reset}  {fg_teal}⏸ plan mode on{fg_gray} (shift+tab to cycle){fg_reset}",
+        reset = ansi::RESET,
+        fg_teal = fg_teal,
+        fg_gray = fg_gray,
+        fg_reset = ansi::FG_RESET,
+    )
+}
+
+/// Format accept edits mode status bar with purple icon and gray cycle hint.
+///
+/// Example output:
+/// `[reset]  [purple]⏵⏵ accept edits on[gray] (shift+tab to cycle)[/fg]`
+pub fn styled_accept_edits_status() -> String {
+    let fg_purple = ansi::fg(
+        ACCEPT_EDITS_COLOR.0,
+        ACCEPT_EDITS_COLOR.1,
+        ACCEPT_EDITS_COLOR.2,
+    );
+    let fg_gray = ansi::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
+
+    format!(
+        "{reset}  {fg_purple}⏵⏵ accept edits on{fg_gray} (shift+tab to cycle){fg_reset}",
+        reset = ansi::RESET,
+        fg_purple = fg_purple,
+        fg_gray = fg_gray,
+        fg_reset = ansi::FG_RESET,
+    )
+}
+
+/// Format bypass permissions mode status bar with red/pink icon and gray cycle hint.
+///
+/// Example output:
+/// `[reset]  [red]⏵⏵ bypass permissions on[gray] (shift+tab to cycle)[/fg]`
+pub fn styled_bypass_permissions_status() -> String {
+    let fg_red = ansi::fg(
+        BYPASS_PERMISSIONS_COLOR.0,
+        BYPASS_PERMISSIONS_COLOR.1,
+        BYPASS_PERMISSIONS_COLOR.2,
+    );
+    let fg_gray = ansi::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
+
+    format!(
+        "{reset}  {fg_red}⏵⏵ bypass permissions on{fg_gray} (shift+tab to cycle){fg_reset}",
+        reset = ansi::RESET,
+        fg_red = fg_red,
+        fg_gray = fg_gray,
         fg_reset = ansi::FG_RESET,
     )
 }

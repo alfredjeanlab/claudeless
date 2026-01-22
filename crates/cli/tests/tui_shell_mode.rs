@@ -386,3 +386,75 @@ fn test_tui_shell_mode_with_env_variable() {
         capture
     );
 }
+
+// =============================================================================
+// Shell Mode ANSI Color Tests (v2.1.15)
+// =============================================================================
+
+/// Behavior observed with: claude --version 2.1.15 (Claude Code)
+///
+/// Shell mode prefix ANSI output matches v2.1.15 fixture
+///
+/// IGNORED: Requires implementing shell mode status bar hiding and cursor block rendering.
+/// See PLAN.md Phase 5 for context.
+#[test]
+#[ignore]
+fn test_tui_shell_prefix_ansi_matches_fixture_v2115() {
+    use common::ansi::assert_ansi_matches_fixture_v2115;
+
+    let scenario = write_scenario(
+        r#"
+        {
+            "default_response": "Hello!",
+            "trusted": true,
+            "claude_version": "2.1.15"
+        }
+        "#,
+    );
+
+    let session = "claudeless-shell-prefix-ansi";
+    let previous = start_tui(session, &scenario);
+
+    // Press '!' to enter shell mode
+    tmux::send_keys(session, "!");
+    let capture = tmux::wait_for_change_ansi(session, &previous);
+
+    tmux::kill_session(session);
+
+    assert_ansi_matches_fixture_v2115(&capture, "shell_mode_prefix_ansi.txt", None);
+}
+
+/// Behavior observed with: claude --version 2.1.15 (Claude Code)
+///
+/// Shell mode with command ANSI output matches v2.1.15 fixture
+///
+/// IGNORED: Requires implementing shell mode status bar hiding and cursor block rendering.
+/// See PLAN.md Phase 5 for context.
+#[test]
+#[ignore]
+fn test_tui_shell_command_ansi_matches_fixture_v2115() {
+    use common::ansi::assert_ansi_matches_fixture_v2115;
+
+    let scenario = write_scenario(
+        r#"
+        {
+            "default_response": "Hello!",
+            "trusted": true,
+            "claude_version": "2.1.15"
+        }
+        "#,
+    );
+
+    let session = "claudeless-shell-command-ansi";
+    let previous = start_tui(session, &scenario);
+
+    // Enter shell mode and type a command
+    tmux::send_keys(session, "!");
+    tmux::wait_for_change(session, &previous);
+    tmux::send_keys(session, "ls -la");
+    let capture = tmux::wait_for_content_ansi(session, "ls -la");
+
+    tmux::kill_session(session);
+
+    assert_ansi_matches_fixture_v2115(&capture, "shell_mode_command_ansi.txt", None);
+}

@@ -254,3 +254,91 @@ fn test_status_bar_extended_matches_fixture() {
 
     assert_tui_matches_fixture(&capture, "status_bar_extended.txt", None);
 }
+
+// =============================================================================
+// Permission Mode ANSI Color Tests (v2.1.15)
+// =============================================================================
+
+/// Behavior observed with: claude --version 2.1.15 (Claude Code)
+///
+/// Plan mode ANSI output matches v2.1.15 fixture (teal colored)
+#[test]
+fn test_tui_permission_plan_ansi_matches_fixture_v2115() {
+    use common::ansi::assert_ansi_matches_fixture_v2115;
+
+    let scenario = write_scenario(
+        r#"
+        {
+            "default_response": "Hello!",
+            "trusted": true,
+            "claude_version": "2.1.15",
+            "permission_mode": "plan"
+        }
+        "#,
+    );
+
+    let session = "claudeless-perm-plan-ansi";
+    // Start with plan mode wait pattern, then capture with ANSI
+    start_tui_ext(session, &scenario, 120, 20, "plan mode on");
+    let capture = tmux::capture_pane_ansi(session);
+
+    tmux::kill_session(session);
+
+    assert_ansi_matches_fixture_v2115(&capture, "permission_plan_ansi.txt", None);
+}
+
+/// Behavior observed with: claude --version 2.1.15 (Claude Code)
+///
+/// Accept edits mode ANSI output matches v2.1.15 fixture (purple colored)
+#[test]
+fn test_tui_permission_accept_edits_ansi_matches_fixture_v2115() {
+    use common::ansi::assert_ansi_matches_fixture_v2115;
+
+    let scenario = write_scenario(
+        r#"
+        {
+            "default_response": "Hello!",
+            "trusted": true,
+            "claude_version": "2.1.15",
+            "permission_mode": "accept-edits"
+        }
+        "#,
+    );
+
+    let session = "claudeless-perm-accept-ansi";
+    // Start with accept edits mode wait pattern, then capture with ANSI
+    start_tui_ext(session, &scenario, 120, 20, "accept edits on");
+    let capture = tmux::capture_pane_ansi(session);
+
+    tmux::kill_session(session);
+
+    assert_ansi_matches_fixture_v2115(&capture, "permission_accept_edits_ansi.txt", None);
+}
+
+/// Behavior observed with: claude --version 2.1.15 (Claude Code)
+///
+/// Bypass permissions mode ANSI output matches v2.1.15 fixture (red/pink colored)
+#[test]
+fn test_tui_permission_bypass_ansi_matches_fixture_v2115() {
+    use common::ansi::assert_ansi_matches_fixture_v2115;
+
+    let scenario = write_scenario(
+        r#"
+        {
+            "default_response": "Hello!",
+            "trusted": true,
+            "claude_version": "2.1.15",
+            "permission_mode": "bypass-permissions"
+        }
+        "#,
+    );
+
+    let session = "claudeless-perm-bypass-ansi";
+    // Start with bypass permissions mode wait pattern, then capture with ANSI
+    start_tui_ext(session, &scenario, 120, 20, "bypass permissions on");
+    let capture = tmux::capture_pane_ansi(session);
+
+    tmux::kill_session(session);
+
+    assert_ansi_matches_fixture_v2115(&capture, "permission_bypass_ansi.txt", None);
+}

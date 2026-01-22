@@ -119,10 +119,15 @@ fn normalize_text_content(input: &str, cwd: Option<&str>) -> String {
     let model_re = Regex::new(r"(Haiku|Sonnet|Opus)( \d+(\.\d+)?)?").unwrap();
     result = model_re.replace_all(&result, "<MODEL>").to_string();
 
-    // Placeholder prompts
+    // Placeholder prompts - handles both full "Try" and partial "ry" when ANSI codes split them
     let placeholder_re = Regex::new(r#"Try "[^"]+""#).unwrap();
     result = placeholder_re
         .replace_all(&result, "<PLACEHOLDER>")
+        .to_string();
+    // Also handle partial match when T is in a separate ANSI span
+    let placeholder_partial_re = Regex::new(r#"ry "[^"]+""#).unwrap();
+    result = placeholder_partial_re
+        .replace_all(&result, "ry <PLACEHOLDER>")
         .to_string();
 
     // Strip trailing whitespace per line (handled at line level in output)
@@ -196,6 +201,35 @@ pub fn load_ansi_fixture(name: &str) -> String {
         .join(name);
     std::fs::read_to_string(&path)
         .unwrap_or_else(|e| panic!("Failed to load ANSI fixture {:?}: {}", path, e))
+}
+
+/// Load a v2.1.15 ANSI fixture file.
+/// Used for ANSI color tests against the newer fixture set.
+pub fn load_ansi_fixture_v2115(name: &str) -> String {
+    let path = super::fixtures_dir().join("v2.1.15").join(name);
+    std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("Failed to load v2.1.15 ANSI fixture {:?}: {}", path, e))
+}
+
+/// Assert that ANSI-colored TUI output matches a v2.1.15 fixture.
+pub fn assert_ansi_matches_fixture_v2115(actual: &str, fixture_name: &str, cwd: Option<&str>) {
+    let expected = load_ansi_fixture_v2115(fixture_name);
+    let normalized_actual = normalize_ansi_tui(actual, cwd);
+    let normalized_expected = normalize_ansi_tui(&expected, cwd);
+
+    if normalized_actual != normalized_expected {
+        let diff = diff_ansi_strings(&normalized_expected, &normalized_actual);
+        panic!(
+            "ANSI TUI output does not match v2.1.15 fixture '{}'\n\n\
+             === DIFF (expected vs actual) ===\n{}\n\n\
+             === NORMALIZED EXPECTED (escaped) ===\n{}\n\n\
+             === NORMALIZED ACTUAL (escaped) ===\n{}\n",
+            fixture_name,
+            diff,
+            escape_ansi_for_display(&normalized_expected),
+            escape_ansi_for_display(&normalized_actual)
+        );
+    }
 }
 
 /// Assert that ANSI-colored TUI output matches a fixture.
