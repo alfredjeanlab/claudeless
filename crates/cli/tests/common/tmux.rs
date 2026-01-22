@@ -247,3 +247,12 @@ pub fn wait_for_change(session: &str, previous: &str) -> String {
         sleep(poll);
     }
 }
+
+/// Wait for pane content to change, then return capture with ANSI sequences.
+///
+/// Waits for content to change using plain text matching (for reliability),
+/// then captures with ANSI escape sequences included.
+pub fn wait_for_change_ansi(session: &str, previous: &str) -> String {
+    wait_for_change(session, previous);
+    capture_pane_ansi(session)
+}

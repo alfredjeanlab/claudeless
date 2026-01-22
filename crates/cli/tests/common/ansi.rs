@@ -126,7 +126,6 @@ fn normalize_text_content(input: &str, cwd: Option<&str>) -> String {
     result = placeholder_re
         .replace_all(&result, "<PLACEHOLDER>")
         .to_string();
-
     // Handle partial placeholder when "T" is in a separate span
     let partial_placeholder_re = Regex::new(r#"ry "[^"]+""#).unwrap();
     result = partial_placeholder_re
