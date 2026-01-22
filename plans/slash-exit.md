@@ -1,5 +1,7 @@
 # Implementation Plan: /exit Slash Command
 
+**Root Feature:** `cl-1999`
+
 ## Overview
 
 Implement the `/exit` slash command to allow users to exit the TUI with a farewell message. When executed, it:
