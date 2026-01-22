@@ -989,3 +989,49 @@ fn ctrl_s_raw_char_works() {
     assert_eq!(state.input_buffer(), "");
     assert!(state.render_state().show_stash_indicator);
 }
+
+// ========================
+// Meta+T / Alt+T Thinking Dialog Tests
+// ========================
+
+#[test]
+fn meta_t_opens_thinking_dialog() {
+    let state = create_test_app();
+
+    state.handle_key_event(key_event(KeyCode::Char('t'), KeyModifiers::META));
+
+    assert_eq!(state.mode(), AppMode::ThinkingToggle);
+}
+
+#[test]
+fn alt_t_opens_thinking_dialog() {
+    let state = create_test_app();
+
+    // ALT should work same as META
+    state.handle_key_event(key_event(KeyCode::Char('t'), KeyModifiers::ALT));
+
+    assert_eq!(state.mode(), AppMode::ThinkingToggle);
+}
+
+// ========================
+// Meta+P / Alt+P Model Picker Tests
+// ========================
+
+#[test]
+fn meta_p_opens_model_picker() {
+    let state = create_test_app();
+
+    state.handle_key_event(key_event(KeyCode::Char('p'), KeyModifiers::META));
+
+    assert_eq!(state.mode(), AppMode::ModelPicker);
+}
+
+#[test]
+fn alt_p_opens_model_picker() {
+    let state = create_test_app();
+
+    // ALT should work same as META
+    state.handle_key_event(key_event(KeyCode::Char('p'), KeyModifiers::ALT));
+
+    assert_eq!(state.mode(), AppMode::ModelPicker);
+}
