@@ -33,6 +33,29 @@ use super::widgets::tasks::TasksDialog;
 use super::widgets::thinking::{ThinkingDialog, ThinkingMode};
 use super::widgets::trust::TrustChoice;
 
+/// Matches a control key that may be encoded as raw ASCII or as modifier+char.
+///
+/// Terminal encoding varies - some send raw ASCII codes (e.g., Ctrl+S as 0x13),
+/// while others send the character with CONTROL modifier. This macro handles both.
+macro_rules! ctrl_key {
+    // Ctrl+Z: ASCII 0x1A or 'z' with CONTROL
+    (z, $modifiers:expr, $code:expr) => {
+        matches!($code, KeyCode::Char('\x1a'))
+            || (matches!($code, KeyCode::Char('z')) && $modifiers.contains(KeyModifiers::CONTROL))
+    };
+    // Ctrl+S: ASCII 0x13 or 's' with CONTROL
+    (s, $modifiers:expr, $code:expr) => {
+        matches!($code, KeyCode::Char('\x13'))
+            || (matches!($code, KeyCode::Char('s')) && $modifiers.contains(KeyModifiers::CONTROL))
+    };
+    // Ctrl+_: ASCII 0x1F or '_' with CONTROL or '/' with CONTROL (same ASCII)
+    (underscore, $modifiers:expr, $code:expr) => {
+        matches!($code, KeyCode::Char('\x1f'))
+            || (matches!($code, KeyCode::Char('_')) && $modifiers.contains(KeyModifiers::CONTROL))
+            || (matches!($code, KeyCode::Char('/')) && $modifiers.contains(KeyModifiers::CONTROL))
+    };
+}
+
 /// Configuration from scenario for TUI behavior
 #[derive(Clone, Debug)]
 pub struct TuiConfig {
@@ -634,12 +657,8 @@ impl TuiAppState {
             }
 
             // Ctrl+Z - Suspend process
-            // Note: Ctrl+Z is encoded as ASCII 0x1A (substitute) in terminals
-            (_, KeyCode::Char('\x1a')) => {
-                inner.should_exit = true;
-                inner.exit_reason = Some(ExitReason::Suspended);
-            }
-            (m, KeyCode::Char('z')) if m.contains(KeyModifiers::CONTROL) => {
+            // Note: Ctrl+Z is encoded as ASCII 0x1A (substitute) or Char('z') with CONTROL
+            _ if ctrl_key!(z, key.modifiers, key.code) => {
                 inner.should_exit = true;
                 inner.exit_reason = Some(ExitReason::Suspended);
             }
@@ -673,7 +692,9 @@ impl TuiAppState {
             }
 
             // Meta+t (Alt+t) - Toggle thinking mode
-            (m, KeyCode::Char('t')) if m.contains(KeyModifiers::ALT) => {
+            (m, KeyCode::Char('t'))
+                if m.contains(KeyModifiers::META) || m.contains(KeyModifiers::ALT) =>
+            {
                 inner.thinking_dialog = Some(ThinkingDialog::new(inner.thinking_enabled));
                 inner.mode = AppMode::ThinkingToggle;
             }
@@ -844,22 +865,8 @@ impl TuiAppState {
             }
 
             // Ctrl+_ - Undo last input segment
-            // Note: Ctrl+_ is encoded as ASCII 0x1F (unit separator) in terminals
-            // Crossterm may decode this as Char('_') with CONTROL, or as raw Char('\x1f')
-            (_, KeyCode::Char('\x1f')) => {
-                if let Some(previous) = inner.undo_stack.pop() {
-                    inner.input_buffer = previous;
-                    inner.cursor_pos = inner.cursor_pos.min(inner.input_buffer.len());
-                }
-            }
-            (m, KeyCode::Char('_')) if m.contains(KeyModifiers::CONTROL) => {
-                if let Some(previous) = inner.undo_stack.pop() {
-                    inner.input_buffer = previous;
-                    inner.cursor_pos = inner.cursor_pos.min(inner.input_buffer.len());
-                }
-            }
-            // Ctrl+/ is often the same as Ctrl+_ in terminals (both ASCII 31)
-            (m, KeyCode::Char('/')) if m.contains(KeyModifiers::CONTROL) => {
+            // Note: Ctrl+_ is encoded as ASCII 0x1F, Char('_') with CONTROL, or Char('/') with CONTROL
+            _ if ctrl_key!(underscore, key.modifiers, key.code) => {
                 if let Some(previous) = inner.undo_stack.pop() {
                     inner.input_buffer = previous;
                     inner.cursor_pos = inner.cursor_pos.min(inner.input_buffer.len());
@@ -867,22 +874,8 @@ impl TuiAppState {
             }
 
             // Ctrl+S - Stash/restore prompt
-            // Note: Ctrl+S is encoded as ASCII 0x13 (device control 3) in terminals
-            (_, KeyCode::Char('\x13')) => {
-                if let Some(stashed) = inner.stash_buffer.take() {
-                    // Restore: stash exists, restore it to input
-                    inner.input_buffer = stashed;
-                    inner.cursor_pos = inner.input_buffer.len();
-                    inner.show_stash_indicator = false;
-                } else if !inner.input_buffer.is_empty() {
-                    // Stash: input is not empty, save it
-                    inner.stash_buffer = Some(std::mem::take(&mut inner.input_buffer));
-                    inner.cursor_pos = 0;
-                    inner.show_stash_indicator = true;
-                }
-                // If input is empty and no stash exists, do nothing
-            }
-            (m, KeyCode::Char('s')) if m.contains(KeyModifiers::CONTROL) => {
+            // Note: Ctrl+S is encoded as ASCII 0x13 or Char('s') with CONTROL
+            _ if ctrl_key!(s, key.modifiers, key.code) => {
                 if let Some(stashed) = inner.stash_buffer.take() {
                     // Restore: stash exists, restore it to input
                     inner.input_buffer = stashed;
