@@ -54,6 +54,29 @@ When pressing Shift+Tab to cycle permission modes:
 
 Note: Bypass mode is only available when started with `--dangerously-skip-permissions`.
 
+## Shell Mode ANSI Fixtures
+
+These fixtures capture the shell mode ('!' prefix) WITH ANSI color codes preserved.
+
+### shell_mode_prefix_ansi.txt
+Shell mode entry with ANSI escape sequences:
+- Input shows `❯ \!` with cursor positioned after the backslash-exclamation
+- The placeholder hint disappears when shell prefix is entered
+- Status bar is hidden in shell mode
+
+### shell_mode_command_ansi.txt
+Shell mode with command input with ANSI escape sequences:
+- Input shows `❯ \!ls -la` with cursor at end
+- Demonstrates multi-word command input in shell mode
+
+### Shell Mode Behavior
+- Typing '!' at the start of empty input enters shell mode
+- The '!' prefix is displayed as '\!' in the input field
+- Shell mode allows direct bash command execution
+- Commands are shown as `\!command` in the input
+- Backspace on `\!` exits shell mode and shows placeholder again
+- When submitted, the prompt shows `❯ \!command` and Claude executes `Bash(command)`
+
 ## Capture Method
 
 Captured using tmux with ANSI preservation:
@@ -74,4 +97,21 @@ tmux capture-pane -e -t claude-perm -p | tail -n +6 | head -8 > permission_accep
 For bypass mode, start with:
 ```bash
 tmux send-keys -t claude-bypass 'claude --model haiku --dangerously-skip-permissions' Enter
+```
+
+For shell mode fixtures:
+```bash
+tmux kill-session -t claude-shell 2>/dev/null
+tmux new-session -d -s claude-shell -x 120 -y 20
+tmux send-keys -t claude-shell 'claude --model haiku' Enter
+sleep 5
+# Press ! to enter shell mode
+tmux send-keys -t claude-shell '!'
+sleep 0.5
+tmux capture-pane -e -t claude-shell -p | tail -n +5 | head -8 > shell_mode_prefix_ansi.txt
+# Type a command
+tmux send-keys -t claude-shell 'ls -la'
+sleep 0.5
+tmux capture-pane -e -t claude-shell -p | tail -n +5 | head -8 > shell_mode_command_ansi.txt
+tmux kill-session -t claude-shell
 ```

@@ -231,3 +231,158 @@ fn test_tui_shell_mode_shows_prefixed_prompt_in_history() {
         capture
     );
 }
+
+// =============================================================================
+// Shell Mode Escape Tests
+// =============================================================================
+
+/// Behavior observed with: claude --version 2.1.15 (Claude Code)
+///
+/// Backspace on shell mode prefix '\!' exits shell mode and shows placeholder again
+#[test]
+fn test_tui_shell_mode_backspace_exits_shell_mode() {
+    let scenario = write_scenario(
+        r#"
+        name = "test"
+        [[responses]]
+        pattern = { type = "any" }
+        response = "Hello!"
+        "#,
+    );
+
+    let session = "claudeless-shell-backspace";
+    let previous = start_tui(session, &scenario);
+
+    // Enter shell mode
+    tmux::send_keys(session, "!");
+    let with_prefix = tmux::wait_for_change(session, &previous);
+
+    // Verify we're in shell mode
+    assert!(
+        with_prefix.contains("\\!"),
+        "Should be in shell mode.\nCapture:\n{}",
+        with_prefix
+    );
+
+    // Backspace to exit shell mode
+    tmux::send_keys(session, "BSpace");
+    let capture = tmux::wait_for_change(session, &with_prefix);
+
+    tmux::kill_session(session);
+
+    // Should no longer show '\!' and should show placeholder hint again
+    assert!(
+        !capture.contains("\\!"),
+        "Backspace should exit shell mode.\nCapture:\n{}",
+        capture
+    );
+    assert!(
+        capture.contains("Try \"") || capture.contains("? for shortcuts"),
+        "Should show placeholder or shortcuts hint after exiting shell mode.\nCapture:\n{}",
+        capture
+    );
+}
+
+// =============================================================================
+// Shell Mode Special Characters Tests
+// =============================================================================
+
+/// Behavior observed with: claude --version 2.1.15 (Claude Code)
+///
+/// Shell mode handles commands with special characters (pipes, redirects)
+#[test]
+fn test_tui_shell_mode_with_pipe_command() {
+    let scenario = write_scenario(
+        r#"
+        name = "test"
+        [[responses]]
+        pattern = { type = "any" }
+        response = "Hello!"
+        "#,
+    );
+
+    let session = "claudeless-shell-pipe";
+    let previous = start_tui(session, &scenario);
+
+    // Enter shell mode and type a command with pipe
+    tmux::send_keys(session, "!");
+    tmux::wait_for_change(session, &previous);
+    tmux::send_keys(session, "ls | head");
+    let capture = tmux::wait_for_content(session, "ls | head");
+
+    tmux::kill_session(session);
+
+    // Should show the full command with pipe
+    assert!(
+        capture.contains("\\!ls | head") || capture.contains("!ls | head"),
+        "Shell mode should handle pipe characters.\nCapture:\n{}",
+        capture
+    );
+}
+
+/// Behavior observed with: claude --version 2.1.15 (Claude Code)
+///
+/// Shell mode handles commands with quoted strings
+#[test]
+fn test_tui_shell_mode_with_quoted_string() {
+    let scenario = write_scenario(
+        r#"
+        name = "test"
+        [[responses]]
+        pattern = { type = "any" }
+        response = "Hello!"
+        "#,
+    );
+
+    let session = "claudeless-shell-quotes";
+    let previous = start_tui(session, &scenario);
+
+    // Enter shell mode and type a command with quotes
+    tmux::send_keys(session, "!");
+    tmux::wait_for_change(session, &previous);
+    // Note: We use single quotes to avoid tmux key interpretation issues
+    tmux::send_keys(session, "echo 'hello world'");
+    let capture = tmux::wait_for_content(session, "echo");
+
+    tmux::kill_session(session);
+
+    // Should show the command with quotes
+    assert!(
+        capture.contains("echo") && capture.contains("hello world"),
+        "Shell mode should handle quoted strings.\nCapture:\n{}",
+        capture
+    );
+}
+
+/// Behavior observed with: claude --version 2.1.15 (Claude Code)
+///
+/// Shell mode handles commands with environment variables
+#[test]
+fn test_tui_shell_mode_with_env_variable() {
+    let scenario = write_scenario(
+        r#"
+        name = "test"
+        [[responses]]
+        pattern = { type = "any" }
+        response = "Hello!"
+        "#,
+    );
+
+    let session = "claudeless-shell-env";
+    let previous = start_tui(session, &scenario);
+
+    // Enter shell mode and type a command with env variable
+    tmux::send_keys(session, "!");
+    tmux::wait_for_change(session, &previous);
+    tmux::send_keys(session, "echo $HOME");
+    let capture = tmux::wait_for_content(session, "$HOME");
+
+    tmux::kill_session(session);
+
+    // Should show the command with env variable
+    assert!(
+        capture.contains("\\!echo $HOME") || capture.contains("!echo $HOME"),
+        "Shell mode should handle environment variables.\nCapture:\n{}",
+        capture
+    );
+}
