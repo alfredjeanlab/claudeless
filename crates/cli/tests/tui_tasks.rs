@@ -21,9 +21,7 @@ use common::{assert_tui_matches_fixture, start_tui, tmux, write_scenario};
 /// Behavior observed with: claude --version 2.1.14 (Claude Code)
 ///
 /// When /tasks is executed with no background tasks, it shows a dialog with "No tasks currently running".
-// TODO(implement): requires /tasks slash command implementation
 #[test]
-#[ignore]
 fn test_tasks_empty_shows_no_tasks_message() {
     let scenario = write_scenario(
         r#"
@@ -58,9 +56,7 @@ fn test_tasks_empty_shows_no_tasks_message() {
 /// Behavior observed with: claude --version 2.1.14 (Claude Code)
 ///
 /// /tasks dialog shows correct header and footer controls.
-// TODO(implement): requires /tasks slash command implementation
 #[test]
-#[ignore]
 fn test_tasks_dialog_has_controls() {
     let scenario = write_scenario(
         r#"
@@ -103,9 +99,7 @@ fn test_tasks_dialog_has_controls() {
 /// Behavior observed with: claude --version 2.1.14 (Claude Code)
 ///
 /// Compare /tasks empty dialog against fixture.
-// TODO(implement): requires /tasks slash command implementation
 #[test]
-#[ignore]
 fn test_tasks_empty_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -136,9 +130,7 @@ fn test_tasks_empty_matches_fixture() {
 /// Behavior observed with: claude --version 2.1.14 (Claude Code)
 ///
 /// Pressing Escape dismisses the /tasks dialog.
-// TODO(implement): requires /tasks slash command implementation
 #[test]
-#[ignore]
 fn test_tasks_dialog_dismiss_with_escape() {
     let scenario = write_scenario(
         r#"
@@ -179,9 +171,7 @@ fn test_tasks_dialog_dismiss_with_escape() {
 /// Behavior observed with: claude --version 2.1.14 (Claude Code)
 ///
 /// /tasks appears in slash command autocomplete with correct description.
-// TODO(implement): requires slash command autocomplete for /tasks
 #[test]
-#[ignore]
 fn test_tasks_in_autocomplete() {
     let scenario = write_scenario(
         r#"
