@@ -1,5 +1,7 @@
 # Implementation Plan: Ctrl+_ Undo Shortcut
 
+**Root Feature:** `cl-576f`
+
 ## Overview
 
 Implement Ctrl+_ keyboard shortcut to undo input text progressively. Each press removes the last typed word/segment, allowing users to quickly revert their input. The shortcut documentation already exists in the shortcuts widget; this plan covers the actual functionality.
