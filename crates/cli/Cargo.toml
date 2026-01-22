@@ -33,6 +33,8 @@ unicode-width = "0.2"
 textwrap = "0.16"
 # Terminal size detection (used by iocraft transitively, but we need direct access)
 crossterm = "0.28"
+# Clipboard access for /export command
+arboard = "3"
 
 # Signal handling (for ignoring SIGINT in TUI mode)
 [target.'cfg(unix)'.dependencies]
