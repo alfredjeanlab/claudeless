@@ -144,6 +144,11 @@ pub static COMMANDS: &[SlashCommand] = &[
         argument_hint: None,
     },
     SlashCommand {
+        name: "tasks",
+        description: "List and manage background tasks",
+        argument_hint: None,
+    },
+    SlashCommand {
         name: "terminal-setup",
         description: "Configure terminal settings",
         argument_hint: None,

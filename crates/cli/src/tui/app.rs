@@ -27,6 +27,7 @@ use super::streaming::{StreamingConfig, StreamingResponse};
 use super::widgets::permission::{
     PermissionSelection, PermissionType, RichPermissionDialog, SessionPermissionKey,
 };
+use super::widgets::tasks::TasksDialog;
 use super::widgets::thinking::{ThinkingDialog, ThinkingMode};
 use super::widgets::trust::TrustChoice;
 
@@ -128,6 +129,8 @@ pub enum AppMode {
     Trust,
     /// Showing thinking toggle dialog
     ThinkingToggle,
+    /// Showing tasks dialog
+    TasksDialog,
 }
 
 /// Status bar information
@@ -152,6 +155,7 @@ pub struct RenderState {
     pub user_name: String,
     pub trust_prompt: Option<TrustPromptState>,
     pub thinking_dialog: Option<ThinkingDialog>,
+    pub tasks_dialog: Option<TasksDialog>,
     pub thinking_enabled: bool,
     pub permission_mode: PermissionMode,
     pub is_command_output: bool,
@@ -301,6 +305,9 @@ struct TuiAppStateInner {
     /// Thinking toggle dialog state
     pub thinking_dialog: Option<ThinkingDialog>,
 
+    /// Tasks dialog state
+    pub tasks_dialog: Option<TasksDialog>,
+
     /// Current permission mode
     pub permission_mode: PermissionMode,
 
@@ -395,6 +402,7 @@ impl TuiAppState {
                 trust_prompt,
                 thinking_enabled: true, // Default to enabled
                 thinking_dialog: None,
+                tasks_dialog: None,
                 permission_mode: config.permission_mode.clone(),
                 allow_bypass_permissions: config.allow_bypass_permissions,
                 is_compacting: false,
@@ -431,6 +439,7 @@ impl TuiAppState {
             user_name: inner.config.user_name.clone(),
             trust_prompt: inner.trust_prompt.clone(),
             thinking_dialog: inner.thinking_dialog.clone(),
+            tasks_dialog: inner.tasks_dialog.clone(),
             thinking_enabled: inner.thinking_enabled,
             permission_mode: inner.permission_mode.clone(),
             is_command_output: inner.is_command_output,
@@ -502,6 +511,7 @@ impl TuiAppState {
             AppMode::Permission => self.handle_permission_key(key),
             AppMode::Responding | AppMode::Thinking => self.handle_responding_key(key),
             AppMode::ThinkingToggle => self.handle_thinking_key(key),
+            AppMode::TasksDialog => self.handle_tasks_key(key),
         }
     }
 
@@ -967,6 +977,11 @@ impl TuiAppState {
                 inner.thinking_dialog = None;
                 inner.mode = AppMode::Input;
             }
+            AppMode::TasksDialog => {
+                // Close dialog without action
+                inner.tasks_dialog = None;
+                inner.mode = AppMode::Input;
+            }
         }
     }
 
@@ -1203,6 +1218,10 @@ impl TuiAppState {
             }
             "/todos" => {
                 inner.response_content = Self::format_todos(&inner.todos);
+            }
+            "/tasks" => {
+                inner.mode = AppMode::TasksDialog;
+                inner.tasks_dialog = Some(TasksDialog::new());
             }
             _ => {
                 inner.response_content = format!("Unknown command: {}", input);
@@ -1474,6 +1493,37 @@ impl TuiAppState {
         }
     }
 
+    /// Handle key events in tasks dialog mode
+    fn handle_tasks_key(&self, key: KeyEvent) {
+        let mut inner = self.inner.lock();
+        match key.code {
+            KeyCode::Esc => {
+                // Close dialog with dismissal message
+                inner.mode = AppMode::Input;
+                inner.tasks_dialog = None;
+                inner.response_content = "Background tasks dialog dismissed".to_string();
+                inner.is_command_output = true;
+            }
+            KeyCode::Up => {
+                if let Some(ref mut dialog) = inner.tasks_dialog {
+                    dialog.move_selection_up();
+                }
+            }
+            KeyCode::Down => {
+                if let Some(ref mut dialog) = inner.tasks_dialog {
+                    dialog.move_selection_down();
+                }
+            }
+            KeyCode::Enter => {
+                // Future: view selected task details
+                // For now, just close the dialog
+                inner.mode = AppMode::Input;
+                inner.tasks_dialog = None;
+            }
+            _ => {}
+        }
+    }
+
     /// Check if exit hint has timed out and clear it
     pub fn check_exit_hint_timeout(&self) {
         let mut inner = self.inner.lock();
@@ -1711,6 +1761,13 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
     if state.mode == AppMode::ThinkingToggle {
         if let Some(ref dialog) = state.thinking_dialog {
             return render_thinking_dialog(dialog, width);
+        }
+    }
+
+    // If in tasks dialog mode, render just the tasks dialog
+    if state.mode == AppMode::TasksDialog {
+        if let Some(ref dialog) = state.tasks_dialog {
+            return render_tasks_dialog(dialog, width);
         }
     }
 
@@ -2140,6 +2197,60 @@ fn render_thinking_dialog(dialog: &ThinkingDialog, width: usize) -> AnyElement<'
             Text(content: " Enter to confirm · escape to exit")
         }
     }.into()
+}
+
+/// Render tasks dialog with border
+fn render_tasks_dialog(dialog: &TasksDialog, width: usize) -> AnyElement<'static> {
+    // Inner width accounts for box borders (│ on each side)
+    let inner_width = width.saturating_sub(2);
+
+    // Build content string
+    let content = if dialog.is_empty() {
+        "No tasks currently running".to_string()
+    } else {
+        // Format task list with selection indicator
+        dialog
+            .tasks
+            .iter()
+            .enumerate()
+            .map(|(i, task)| {
+                let indicator = if i == dialog.selected_index {
+                    "❯ "
+                } else {
+                    "  "
+                };
+                format!("{}{}", indicator, task.description)
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+
+    // Box drawing chars
+    let h_line = "─".repeat(inner_width);
+    let top_border = format!("╭{}╮", h_line);
+    let bottom_border = format!("╰{}╯", h_line);
+
+    // Pad content lines to fill width
+    let pad_line = |s: &str| {
+        // Calculate visual width (accounting for multi-byte chars)
+        let visible_len = s.chars().count();
+        let padding = inner_width.saturating_sub(visible_len);
+        format!("│{}{}│", s, " ".repeat(padding))
+    };
+
+    element! {
+        View(
+            flex_direction: FlexDirection::Column,
+            width: 100pct,
+        ) {
+            Text(content: top_border)
+            Text(content: pad_line(" Background tasks"))
+            Text(content: pad_line(&format!(" {}", content)))
+            Text(content: bottom_border)
+            Text(content: "  ↑/↓ to select · Enter to view · Esc to close")
+        }
+    }
+    .into()
 }
 
 /// Render rich permission dialog
