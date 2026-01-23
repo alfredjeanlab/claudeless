@@ -40,9 +40,8 @@ use common::{start_tui, tmux, write_scenario};
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Typing /hooks shows autocomplete dropdown with hooks description
-// TODO(implement): requires slash command autocomplete
+// Note: requires slash command autocomplete
 #[test]
-#[ignore]
 fn test_tui_hooks_command_shows_autocomplete() {
     let scenario = write_scenario(
         r#"
@@ -77,9 +76,8 @@ fn test_tui_hooks_command_shows_autocomplete() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// /hooks command shows a dialog with list of hook types
-// TODO(implement): requires /hooks dialog
+// Note: requires /hooks dialog
 #[test]
-#[ignore]
 fn test_tui_hooks_shows_dialog_with_hook_types() {
     let scenario = write_scenario(
         r#"
@@ -122,9 +120,8 @@ fn test_tui_hooks_shows_dialog_with_hook_types() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// /hooks dialog shows count of active hooks
-// TODO(implement): requires /hooks dialog
+// Note: requires /hooks dialog
 #[test]
-#[ignore]
 fn test_tui_hooks_shows_active_hooks_count() {
     let scenario = write_scenario(
         r#"
@@ -161,9 +158,8 @@ fn test_tui_hooks_shows_active_hooks_count() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Down arrow navigates through hook types
-// TODO(implement): requires /hooks dialog navigation
+// Note: requires /hooks dialog navigation
 #[test]
-#[ignore]
 fn test_tui_hooks_arrow_navigation() {
     let scenario = write_scenario(
         r#"
@@ -207,9 +203,8 @@ fn test_tui_hooks_arrow_navigation() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Hooks list scrolls when navigating past visible items
-// TODO(implement): requires /hooks dialog scrolling
+// Note: requires /hooks dialog scrolling
 #[test]
-#[ignore]
 fn test_tui_hooks_list_scrolls() {
     let scenario = write_scenario(
         r#"
@@ -252,9 +247,8 @@ fn test_tui_hooks_list_scrolls() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Selecting a hook type shows its matchers dialog
-// TODO(implement): requires /hooks matcher dialog
+// Note: requires /hooks matcher dialog
 #[test]
-#[ignore]
 fn test_tui_hooks_select_shows_matchers() {
     let scenario = write_scenario(
         r#"
@@ -294,9 +288,8 @@ fn test_tui_hooks_select_shows_matchers() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Matcher dialog shows help text about exit codes
-// TODO(implement): requires /hooks matcher dialog
+// Note: requires /hooks matcher dialog
 #[test]
-#[ignore]
 fn test_tui_hooks_matchers_shows_exit_code_help() {
     let scenario = write_scenario(
         r#"
@@ -340,9 +333,8 @@ fn test_tui_hooks_matchers_shows_exit_code_help() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Pressing Escape dismisses the hooks dialog
-// TODO(implement): requires /hooks dialog dismiss
+// Note: requires /hooks dialog dismiss
 #[test]
-#[ignore]
 fn test_tui_hooks_escape_dismisses_dialog() {
     let scenario = write_scenario(
         r#"
@@ -378,9 +370,8 @@ fn test_tui_hooks_escape_dismisses_dialog() {
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Escape in matchers dialog returns to main hooks dialog
-// TODO(implement): requires /hooks nested dialog navigation
+// Note: requires /hooks nested dialog navigation
 #[test]
-#[ignore]
 fn test_tui_hooks_escape_from_matchers_returns_to_hooks() {
     let scenario = write_scenario(
         r#"

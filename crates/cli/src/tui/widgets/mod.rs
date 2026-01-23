@@ -9,6 +9,7 @@
 pub mod context;
 pub mod export;
 pub mod help;
+pub mod hooks;
 pub mod model_picker;
 pub mod permission;
 pub mod tasks;
@@ -19,6 +20,7 @@ pub mod trust;
 pub use context::ContextUsage;
 pub use export::ExportDialog;
 pub use help::{HelpDialog, HelpTab};
+pub use hooks::{HookType, HooksDialog, HooksView};
 pub use model_picker::{ModelChoice, ModelPickerDialog};
 pub use permission::{
     DiffKind, DiffLine, PermissionSelection, PermissionType, RichPermissionDialog,
