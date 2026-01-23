@@ -33,9 +33,9 @@ install:
 clean:
 	cargo clean
 
-# Check for outdated dependencies
+# Check for outdated dependencies (root deps only, not transitive)
 outdated:
-	cargo outdated
+	cargo outdated --depth 1
 
 # Lint all files
 lint: lint-shell lint-policy
