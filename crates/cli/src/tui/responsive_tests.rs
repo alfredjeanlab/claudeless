@@ -81,6 +81,7 @@ mod status_bar_rendering {
             export_dialog: None,
             help_dialog: None,
             hooks_dialog: None,
+            memory_dialog: None,
             stash_buffer: None,
             show_stash_indicator: false,
         }
