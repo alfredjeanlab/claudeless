@@ -24,16 +24,6 @@ allow = [
     "Zlib",
 ]
 
-# BSL-1.0 exceptions for Windows-only clipboard dependencies (via arboard)
-# BSL-1.0 is OSI approved and FSF Free/Libre, reviewed per commit 2bf492e
-[[licenses.exceptions]]
-name = "clipboard-win"
-allow = ["BSL-1.0"]
-
-[[licenses.exceptions]]
-name = "error-code"
-allow = ["BSL-1.0"]
-
 [bans]
 multiple-versions = "deny"
 wildcards = "deny"
