@@ -27,8 +27,8 @@ pub const ACCEPT_EDITS_MODE: (u8, u8, u8) = (175, 135, 255);
 /// Red/Pink for bypass permissions mode: RGB(255, 107, 128)
 pub const BYPASS_MODE: (u8, u8, u8) = (255, 107, 128);
 
-/// ANSI escape sequence helpers
-mod ansi {
+/// ANSI escape sequence helpers (public for reuse)
+pub mod escape {
     /// 24-bit foreground color
     pub fn fg(r: u8, g: u8, b: u8) -> String {
         format!("\x1b[38;2;{};{};{}m", r, g, b)
@@ -66,18 +66,18 @@ mod ansi {
 /// Example output:
 /// `[orange] ▐[black bg]▛███▜[/bg]▌[/fg]   [bold]Claude Code[/bold] [gray]v2.1.12[/gray]`
 pub fn styled_logo_line1(product_name: &str, version: &str) -> String {
-    let fg_orange = ansi::fg(LOGO_FG.0, LOGO_FG.1, LOGO_FG.2);
-    let bg_black = ansi::bg(LOGO_BG.0, LOGO_BG.1, LOGO_BG.2);
-    let fg_gray = ansi::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
+    let fg_orange = escape::fg(LOGO_FG.0, LOGO_FG.1, LOGO_FG.2);
+    let bg_black = escape::bg(LOGO_BG.0, LOGO_BG.1, LOGO_BG.2);
+    let fg_gray = escape::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
 
     format!(
         "{fg_orange} ▐{bg_black}▛███▜{bg_reset}▌{fg_reset}   {bold}{product_name}{reset} {fg_gray}{version}{fg_reset}",
         fg_orange = fg_orange,
         bg_black = bg_black,
-        bg_reset = ansi::BG_RESET,
-        fg_reset = ansi::FG_RESET,
-        bold = ansi::BOLD,
-        reset = ansi::RESET,
+        bg_reset = escape::BG_RESET,
+        fg_reset = escape::FG_RESET,
+        bold = escape::BOLD,
+        reset = escape::RESET,
         fg_gray = fg_gray,
     )
 }
@@ -87,16 +87,16 @@ pub fn styled_logo_line1(product_name: &str, version: &str) -> String {
 /// Example output:
 /// `[orange]▝▜[black bg]█████[/bg]▛▘[/fg]  [gray]Haiku 4.5 · Claude Max[/gray]`
 pub fn styled_logo_line2(model_str: &str) -> String {
-    let fg_orange = ansi::fg(LOGO_FG.0, LOGO_FG.1, LOGO_FG.2);
-    let bg_black = ansi::bg(LOGO_BG.0, LOGO_BG.1, LOGO_BG.2);
-    let fg_gray = ansi::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
+    let fg_orange = escape::fg(LOGO_FG.0, LOGO_FG.1, LOGO_FG.2);
+    let bg_black = escape::bg(LOGO_BG.0, LOGO_BG.1, LOGO_BG.2);
+    let fg_gray = escape::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
 
     format!(
         "{fg_orange}▝▜{bg_black}█████{bg_reset}▛▘{fg_reset}  {fg_gray}{model_str}{fg_reset}",
         fg_orange = fg_orange,
         bg_black = bg_black,
-        bg_reset = ansi::BG_RESET,
-        fg_reset = ansi::FG_RESET,
+        bg_reset = escape::BG_RESET,
+        fg_reset = escape::FG_RESET,
         fg_gray = fg_gray,
     )
 }
@@ -106,13 +106,13 @@ pub fn styled_logo_line2(model_str: &str) -> String {
 /// Example output:
 /// `[orange]  ▘▘ ▝▝  [/fg]  [gray]~/Developer/claudeless[/gray]`
 pub fn styled_logo_line3(path_str: &str) -> String {
-    let fg_orange = ansi::fg(LOGO_FG.0, LOGO_FG.1, LOGO_FG.2);
-    let fg_gray = ansi::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
+    let fg_orange = escape::fg(LOGO_FG.0, LOGO_FG.1, LOGO_FG.2);
+    let fg_gray = escape::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
 
     format!(
         "{fg_orange}  ▘▘ ▝▝  {fg_reset}  {fg_gray}{path_str}{fg_reset}",
         fg_orange = fg_orange,
-        fg_reset = ansi::FG_RESET,
+        fg_reset = escape::FG_RESET,
         fg_gray = fg_gray,
     )
 }
@@ -124,11 +124,11 @@ pub fn styled_logo_line3(path_str: &str) -> String {
 /// Example output:
 /// `[dim][dark gray]────────...`
 pub fn styled_separator(width: usize) -> String {
-    let fg_gray = ansi::fg(SEPARATOR_GRAY.0, SEPARATOR_GRAY.1, SEPARATOR_GRAY.2);
+    let fg_gray = escape::fg(SEPARATOR_GRAY.0, SEPARATOR_GRAY.1, SEPARATOR_GRAY.2);
 
     format!(
         "{dim}{fg_gray}{line}",
-        dim = ansi::DIM,
+        dim = escape::DIM,
         fg_gray = fg_gray,
         line = "─".repeat(width),
     )
@@ -149,10 +149,10 @@ pub fn styled_placeholder(text: &str) -> String {
 
     format!(
         "{reset}❯ {inv}{first}{reset_dim}{rest}{reset}",
-        reset = ansi::RESET,
-        inv = ansi::INVERSE,
+        reset = escape::RESET,
+        inv = escape::INVERSE,
         first = first_char,
-        reset_dim = ansi::RESET_DIM,
+        reset_dim = escape::RESET_DIM,
         rest = rest,
     )
 }
@@ -164,12 +164,12 @@ pub fn styled_placeholder(text: &str) -> String {
 /// Example output:
 /// `[reset]  [gray]? for shortcuts[/gray]`
 pub fn styled_status_text(text: &str) -> String {
-    let fg_gray = ansi::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
+    let fg_gray = escape::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
 
     format!(
         "{reset}  {fg_gray}{text}{fg_reset}",
-        reset = ansi::RESET,
-        fg_reset = ansi::FG_RESET,
+        reset = escape::RESET,
+        fg_reset = escape::FG_RESET,
     )
 }
 
@@ -181,7 +181,7 @@ pub fn styled_status_text(text: &str) -> String {
 /// Format for non-default modes:
 /// `[reset]  [mode_color][icon] [mode_text][gray] (shift+tab to cycle)[fg_reset]`
 pub fn styled_permission_status(mode: &PermissionMode) -> String {
-    let fg_gray = ansi::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
+    let fg_gray = escape::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
 
     match mode {
         PermissionMode::Default => styled_status_text("? for shortcuts"),
@@ -189,47 +189,47 @@ pub fn styled_permission_status(mode: &PermissionMode) -> String {
             let (r, g, b) = PLAN_MODE;
             format!(
                 "{}  {}⏸ plan mode on{} (shift+tab to cycle){}",
-                ansi::RESET,
-                ansi::fg(r, g, b),
+                escape::RESET,
+                escape::fg(r, g, b),
                 fg_gray,
-                ansi::FG_RESET
+                escape::FG_RESET
             )
         }
         PermissionMode::AcceptEdits => {
             let (r, g, b) = ACCEPT_EDITS_MODE;
             format!(
                 "{}  {}⏵⏵ accept edits on{} (shift+tab to cycle){}",
-                ansi::RESET,
-                ansi::fg(r, g, b),
+                escape::RESET,
+                escape::fg(r, g, b),
                 fg_gray,
-                ansi::FG_RESET
+                escape::FG_RESET
             )
         }
         PermissionMode::BypassPermissions => {
             let (r, g, b) = BYPASS_MODE;
             format!(
                 "{}  {}⏵⏵ bypass permissions on{} (shift+tab to cycle){}",
-                ansi::RESET,
-                ansi::fg(r, g, b),
+                escape::RESET,
+                escape::fg(r, g, b),
                 fg_gray,
-                ansi::FG_RESET
+                escape::FG_RESET
             )
         }
         // Delegate and DontAsk modes use gray (same as default cycle hint)
         PermissionMode::Delegate => {
             format!(
                 "{}  {}delegate mode (shift+tab to cycle){}",
-                ansi::RESET,
+                escape::RESET,
                 fg_gray,
-                ansi::FG_RESET
+                escape::FG_RESET
             )
         }
         PermissionMode::DontAsk => {
             format!(
                 "{}  {}don't ask mode (shift+tab to cycle){}",
-                ansi::RESET,
+                escape::RESET,
                 fg_gray,
-                ansi::FG_RESET
+                escape::FG_RESET
             )
         }
     }

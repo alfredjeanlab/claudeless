@@ -2475,9 +2475,9 @@ fn render_stash_indicator(state: &RenderState) -> AnyElement<'static> {
     }
 
     // Use orange accent color for the › character
-    let (r, g, b) = super::colors::LOGO_FG;
-    let accent_fg = format!("\x1b[38;2;{};{};{}m", r, g, b);
-    let reset = "\x1b[0m";
+    use super::colors::{escape, LOGO_FG};
+    let accent_fg = escape::fg(LOGO_FG.0, LOGO_FG.1, LOGO_FG.2);
+    let reset = escape::RESET;
 
     let indicator_text = format!(
         "  {}›{} Stashed (auto-restores after submit)",
