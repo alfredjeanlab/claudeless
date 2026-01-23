@@ -45,8 +45,8 @@ fn test_memory_source_description() {
 #[test]
 fn test_memory_dialog_new_initializes_correctly() {
     let dialog = MemoryDialog::new();
-    assert_eq!(dialog.selected_index, 0);
-    assert_eq!(dialog.scroll_offset, 0);
+    assert_eq!(dialog.selected_index(), 0);
+    assert_eq!(dialog.scroll_offset(), 0);
     assert!(!dialog.entries.is_empty());
 }
 
@@ -54,7 +54,7 @@ fn test_memory_dialog_new_initializes_correctly() {
 fn test_memory_dialog_default_matches_new() {
     let default = MemoryDialog::default();
     let new = MemoryDialog::new();
-    assert_eq!(default.selected_index, new.selected_index);
+    assert_eq!(default.selected_index(), new.selected_index());
     assert_eq!(default.entries.len(), new.entries.len());
 }
 
@@ -65,13 +65,13 @@ fn test_memory_dialog_default_matches_new() {
 #[test]
 fn test_select_next_increments() {
     let mut dialog = MemoryDialog::new();
-    assert_eq!(dialog.selected_index, 0);
+    assert_eq!(dialog.selected_index(), 0);
 
     dialog.select_next();
-    assert_eq!(dialog.selected_index, 1);
+    assert_eq!(dialog.selected_index(), 1);
 
     dialog.select_next();
-    assert_eq!(dialog.selected_index, 2);
+    assert_eq!(dialog.selected_index(), 2);
 }
 
 #[test]
@@ -83,47 +83,50 @@ fn test_select_next_wraps_at_end() {
     for _ in 0..total - 1 {
         dialog.select_next();
     }
-    assert_eq!(dialog.selected_index, total - 1);
+    assert_eq!(dialog.selected_index(), total - 1);
 
     // Next should wrap to first
     dialog.select_next();
-    assert_eq!(dialog.selected_index, 0);
-    assert_eq!(dialog.scroll_offset, 0);
+    assert_eq!(dialog.selected_index(), 0);
+    assert_eq!(dialog.scroll_offset(), 0);
 }
 
 #[test]
 fn test_select_prev_decrements() {
     let mut dialog = MemoryDialog::new();
-    dialog.selected_index = 2;
+    // Navigate to index 2
+    dialog.select_next();
+    dialog.select_next();
+    assert_eq!(dialog.selected_index(), 2);
 
     dialog.select_prev();
-    assert_eq!(dialog.selected_index, 1);
+    assert_eq!(dialog.selected_index(), 1);
 
     dialog.select_prev();
-    assert_eq!(dialog.selected_index, 0);
+    assert_eq!(dialog.selected_index(), 0);
 }
 
 #[test]
 fn test_select_prev_wraps_at_beginning() {
     let mut dialog = MemoryDialog::new();
-    assert_eq!(dialog.selected_index, 0);
+    assert_eq!(dialog.selected_index(), 0);
 
     // Previous should wrap to last
     dialog.select_prev();
-    assert_eq!(dialog.selected_index, dialog.entries.len() - 1);
+    assert_eq!(dialog.selected_index(), dialog.entries.len() - 1);
 }
 
 #[test]
 fn test_navigation_with_empty_entries() {
     let mut dialog = MemoryDialog::new();
-    dialog.entries.clear();
+    dialog.set_entries(vec![]);
 
     // Should not panic with empty entries
     dialog.select_next();
-    assert_eq!(dialog.selected_index, 0);
+    assert_eq!(dialog.selected_index(), 0);
 
     dialog.select_prev();
-    assert_eq!(dialog.selected_index, 0);
+    assert_eq!(dialog.selected_index(), 0);
 }
 
 // =============================================================================
@@ -168,7 +171,7 @@ fn test_selected_entry_with_empty_entries() {
 #[test]
 fn test_has_more_below_when_many_entries() {
     let mut dialog = MemoryDialog::new();
-    dialog.visible_count = 2; // Only show 2 items
+    dialog.set_visible_count(2); // Only show 2 items
 
     // With 3 entries and 2 visible, should have more below at offset 0
     assert!(dialog.has_more_below());
@@ -185,7 +188,10 @@ fn test_has_more_below_when_few_entries() {
 #[test]
 fn test_has_more_above_when_scrolled() {
     let mut dialog = MemoryDialog::new();
-    dialog.scroll_offset = 1;
+    dialog.set_visible_count(2);
+    // Navigate down to scroll
+    dialog.select_next();
+    dialog.select_next();
 
     assert!(dialog.has_more_above());
 }
@@ -193,7 +199,7 @@ fn test_has_more_above_when_scrolled() {
 #[test]
 fn test_has_more_above_when_at_top() {
     let dialog = MemoryDialog::new();
-    assert_eq!(dialog.scroll_offset, 0);
+    assert_eq!(dialog.scroll_offset(), 0);
     assert!(!dialog.has_more_above());
 }
 

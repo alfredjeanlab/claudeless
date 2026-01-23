@@ -26,9 +26,8 @@ use common::{start_tui, tmux, write_scenario};
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Typing /export shows autocomplete dropdown with export description
-// TODO(implement): requires slash command autocomplete
 #[test]
-#[ignore] // Autocomplete feature is separate from /export dialog
+#[ignore] // DEFERRED: Requires slash command autocomplete implementation
 fn test_tui_export_command_shows_autocomplete() {
     let scenario = write_scenario(
         r#"
@@ -77,9 +76,15 @@ fn test_tui_export_shows_method_dialog() {
     let session = "claudeless-export-method-dialog";
     let previous = start_tui(session, &scenario);
 
+    // First, create a conversation by sending a message
+    tmux::send_keys(session, "test message");
+    let _ = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(session, "Enter");
+    let after_message = tmux::wait_for_content(session, "Hello!");
+
     // Type /export and press Enter
     tmux::send_keys(session, "/export");
-    let _ = tmux::wait_for_change(session, &previous);
+    let _ = tmux::wait_for_change(session, &after_message);
     tmux::send_keys(session, "Enter");
     let capture = tmux::wait_for_content(session, "Export Conversation");
 
@@ -125,9 +130,15 @@ fn test_tui_export_clipboard_shows_confirmation() {
     let session = "claudeless-export-clipboard";
     let previous = start_tui(session, &scenario);
 
+    // First, create a conversation by sending a message
+    tmux::send_keys(session, "test message");
+    let _ = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(session, "Enter");
+    let after_message = tmux::wait_for_content(session, "Hello!");
+
     // Type /export, press Enter to open dialog, then Enter again to select clipboard
     tmux::send_keys(session, "/export");
-    let _ = tmux::wait_for_change(session, &previous);
+    let _ = tmux::wait_for_change(session, &after_message);
     tmux::send_keys(session, "Enter");
     let dialog = tmux::wait_for_content(session, "Export Conversation");
     tmux::send_keys(session, "Enter");
@@ -159,9 +170,15 @@ fn test_tui_export_file_shows_filename_dialog() {
     let session = "claudeless-export-filename-dialog";
     let previous = start_tui(session, &scenario);
 
+    // First, create a conversation by sending a message
+    tmux::send_keys(session, "test message");
+    let _ = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(session, "Enter");
+    let after_message = tmux::wait_for_content(session, "Hello!");
+
     // Type /export, press Enter to open dialog, Down to select file, Enter
     tmux::send_keys(session, "/export");
-    let _ = tmux::wait_for_change(session, &previous);
+    let _ = tmux::wait_for_change(session, &after_message);
     tmux::send_keys(session, "Enter");
     let dialog = tmux::wait_for_content(session, "Export Conversation");
     tmux::send_keys(session, "Down");
@@ -210,9 +227,15 @@ fn test_tui_export_file_shows_save_confirmation() {
     let session = "claudeless-export-file-save";
     let previous = start_tui(session, &scenario);
 
+    // First, create a conversation by sending a message
+    tmux::send_keys(session, "test message");
+    let _ = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(session, "Enter");
+    let after_message = tmux::wait_for_content(session, "Hello!");
+
     // Type /export, open dialog, select file, press Enter to save with default name
     tmux::send_keys(session, "/export");
-    let _ = tmux::wait_for_change(session, &previous);
+    let _ = tmux::wait_for_change(session, &after_message);
     tmux::send_keys(session, "Enter");
     let dialog = tmux::wait_for_content(session, "Export Conversation");
     tmux::send_keys(session, "Down");
@@ -252,9 +275,15 @@ fn test_tui_export_escape_cancels() {
     let session = "claudeless-export-cancel";
     let previous = start_tui(session, &scenario);
 
+    // First, create a conversation by sending a message
+    tmux::send_keys(session, "test message");
+    let _ = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(session, "Enter");
+    let after_message = tmux::wait_for_content(session, "Hello!");
+
     // Type /export, open dialog, then cancel with Escape
     tmux::send_keys(session, "/export");
-    let _ = tmux::wait_for_change(session, &previous);
+    let _ = tmux::wait_for_change(session, &after_message);
     tmux::send_keys(session, "Enter");
     let dialog = tmux::wait_for_content(session, "Export Conversation");
     tmux::send_keys(session, "Escape");
@@ -286,9 +315,15 @@ fn test_tui_export_filename_escape_returns_to_method() {
     let session = "claudeless-export-filename-back";
     let previous = start_tui(session, &scenario);
 
+    // First, create a conversation by sending a message
+    tmux::send_keys(session, "test message");
+    let _ = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(session, "Enter");
+    let after_message = tmux::wait_for_content(session, "Hello!");
+
     // Navigate to filename dialog, then press Escape
     tmux::send_keys(session, "/export");
-    let _ = tmux::wait_for_change(session, &previous);
+    let _ = tmux::wait_for_change(session, &after_message);
     tmux::send_keys(session, "Enter");
     let dialog = tmux::wait_for_content(session, "Export Conversation");
     tmux::send_keys(session, "Down");
@@ -334,9 +369,15 @@ fn test_tui_export_arrow_navigation() {
     let session = "claudeless-export-navigation";
     let previous = start_tui(session, &scenario);
 
+    // First, create a conversation by sending a message
+    tmux::send_keys(session, "test message");
+    let _ = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(session, "Enter");
+    let after_message = tmux::wait_for_content(session, "Hello!");
+
     // Open export dialog
     tmux::send_keys(session, "/export");
-    let _ = tmux::wait_for_change(session, &previous);
+    let _ = tmux::wait_for_change(session, &after_message);
     tmux::send_keys(session, "Enter");
     let initial = tmux::wait_for_content(session, "Export Conversation");
 

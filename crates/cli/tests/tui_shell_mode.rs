@@ -395,10 +395,8 @@ fn test_tui_shell_mode_with_env_variable() {
 ///
 /// Shell mode prefix ANSI output matches v2.1.15 fixture
 ///
-/// IGNORED: Requires implementing shell mode status bar hiding and cursor block rendering.
-/// See PLAN.md Phase 5 for context.
 #[test]
-#[ignore]
+#[ignore] // DEFERRED: Requires shell mode status bar hiding and cursor block rendering
 fn test_tui_shell_prefix_ansi_matches_fixture_v2115() {
     use common::ansi::assert_versioned_ansi_matches_fixture;
 
@@ -428,10 +426,8 @@ fn test_tui_shell_prefix_ansi_matches_fixture_v2115() {
 ///
 /// Shell mode with command ANSI output matches v2.1.15 fixture
 ///
-/// IGNORED: Requires implementing shell mode status bar hiding and cursor block rendering.
-/// See PLAN.md Phase 5 for context.
 #[test]
-#[ignore]
+#[ignore] // DEFERRED: Requires shell mode status bar hiding and cursor block rendering
 fn test_tui_shell_command_ansi_matches_fixture_v2115() {
     use common::ansi::assert_versioned_ansi_matches_fixture;
 

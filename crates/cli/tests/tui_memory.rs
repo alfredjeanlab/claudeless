@@ -253,3 +253,51 @@ fn test_tui_memory_enter_shows_selected() {
         capture
     );
 }
+
+// =============================================================================
+// /memory Edge Case Tests
+// =============================================================================
+
+/// Behavior observed with: claude --version 2.1.12 (Claude Code)
+///
+/// /memory dialog handles case where no CLAUDE.md files exist
+#[test]
+fn test_tui_memory_shows_no_files_gracefully() {
+    let scenario = write_scenario(
+        r#"
+        name = "test"
+        [[responses]]
+        pattern = { type = "any" }
+        response = "Hello!"
+        "#,
+    );
+
+    let session = "claudeless-memory-no-files";
+    let previous = start_tui(session, &scenario);
+
+    // Type /memory and press Enter
+    tmux::send_keys(session, "/memory");
+    let _ = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(session, "Enter");
+    let capture = tmux::wait_for_content(session, "Memory");
+
+    tmux::kill_session(session);
+
+    // Should still show dialog with all source types (even if inactive)
+    assert!(
+        capture.contains("Memory"),
+        "Should show Memory dialog header.\nCapture:\n{}",
+        capture
+    );
+    assert!(
+        capture.contains("Project") && capture.contains("User") && capture.contains("Enterprise"),
+        "Should show all memory source types.\nCapture:\n{}",
+        capture
+    );
+    // Should not crash or show error
+    assert!(
+        !capture.contains("error") && !capture.contains("panic"),
+        "Should handle no CLAUDE.md files gracefully.\nCapture:\n{}",
+        capture
+    );
+}

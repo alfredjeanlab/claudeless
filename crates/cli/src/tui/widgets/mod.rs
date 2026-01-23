@@ -13,6 +13,7 @@ pub mod hooks;
 pub mod memory;
 pub mod model_picker;
 pub mod permission;
+pub mod scrollable;
 pub mod tasks;
 pub mod thinking;
 pub mod tool_block;
@@ -27,6 +28,7 @@ pub use model_picker::{ModelChoice, ModelPickerDialog};
 pub use permission::{
     DiffKind, DiffLine, PermissionSelection, PermissionType, RichPermissionDialog,
 };
+pub use scrollable::ScrollState;
 pub use tasks::TasksDialog;
 pub use thinking::{ThinkingDialog, ThinkingMode};
 pub use tool_block::{ToolBlockState, ToolStatus};

@@ -38,9 +38,8 @@ use common::{tmux, write_scenario};
 /// Theme selection shows 6 options and syntax highlighting preview.
 /// Dark mode is selected by default (option 1 with ✔).
 /// See fixture: setup_01_select_theme_dark.txt
-// TODO(implement): requires setup flow mode
 #[test]
-#[ignore]
+#[ignore] // DEFERRED: Requires setup flow implementation
 fn test_tui_setup_theme_selection_dark_mode_default() {
     let scenario = write_scenario(
         r#"
@@ -113,9 +112,8 @@ fn test_tui_setup_theme_selection_dark_mode_default() {
 /// Selecting light mode (option 2) changes the logo art and syntax theme.
 /// Light mode uses "GitHub" syntax theme instead of "Monokai Extended".
 /// See fixture: setup_01_select_theme_light.txt
-// TODO(implement): requires setup flow mode
 #[test]
-#[ignore]
+#[ignore] // DEFERRED: Requires setup flow implementation
 fn test_tui_setup_theme_selection_light_mode() {
     let scenario = write_scenario(
         r#"
@@ -164,9 +162,8 @@ fn test_tui_setup_theme_selection_light_mode() {
 ///
 /// Selecting ANSI-only mode (option 5 or 6) uses "ansi" syntax theme.
 /// ANSI modes have limited colors for terminal compatibility.
-// TODO(implement): requires setup flow mode
 #[test]
-#[ignore]
+#[ignore] // DEFERRED: Requires setup flow implementation
 fn test_tui_setup_theme_selection_ansi_mode() {
     let scenario = write_scenario(
         r#"
@@ -217,9 +214,8 @@ fn test_tui_setup_theme_selection_ansi_mode() {
 /// Behavior observed with: claude --version 2.1.14 (Claude Code)
 ///
 /// Ctrl+T on theme selection toggles syntax highlighting preview
-// TODO(implement): requires setup flow mode
 #[test]
-#[ignore]
+#[ignore] // DEFERRED: Requires setup flow implementation
 fn test_tui_setup_theme_ctrl_t_toggles_syntax_highlighting() {
     let scenario = write_scenario(
         r#"
@@ -273,9 +269,8 @@ fn test_tui_setup_theme_ctrl_t_toggles_syntax_highlighting() {
 /// Behavior observed with: claude --version 2.1.14 (Claude Code)
 ///
 /// Login method selection shows Claude subscription and API options
-// TODO(implement): requires setup flow mode
 #[test]
-#[ignore]
+#[ignore] // DEFERRED: Requires setup flow implementation
 fn test_tui_setup_login_method_shows_options() {
     let scenario = write_scenario(
         r#"
@@ -340,9 +335,8 @@ fn test_tui_setup_login_method_shows_options() {
 /// 4. Security notes (Enter to continue)
 /// 5. Terminal setup (Enter to accept or Esc to skip)
 /// 6. Initial state with "? for shortcuts"
-// TODO(implement): requires full setup flow
 #[test]
-#[ignore]
+#[ignore] // DEFERRED: Requires full setup flow implementation
 fn test_tui_setup_full_login_flow_to_initial_state() {
     let scenario = write_scenario(
         r#"
@@ -441,9 +435,8 @@ fn test_tui_setup_full_login_flow_to_initial_state() {
 ///
 /// /logout command shows success message and exits Claude Code.
 /// After /logout, the shell prompt should be visible.
-// TODO(implement): requires /logout command
 #[test]
-#[ignore]
+#[ignore] // DEFERRED: Requires /logout command implementation
 fn test_tui_slash_logout_exits_to_shell() {
     let scenario = write_scenario(
         r#"
@@ -490,9 +483,8 @@ fn test_tui_slash_logout_exits_to_shell() {
 ///
 /// When started with no internet connection, shows "Unable to connect" error
 /// and exits immediately to shell.
-// TODO(implement): requires connection error handling
 #[test]
-#[ignore]
+#[ignore] // DEFERRED: Requires connection error handling
 fn test_tui_failed_to_open_socket_exits() {
     let scenario = write_scenario(
         r#"
@@ -541,9 +533,8 @@ fn test_tui_failed_to_open_socket_exits() {
 /// Behavior observed with: claude --version 2.1.14 (Claude Code)
 ///
 /// Connection error message includes helpful troubleshooting hints.
-// TODO(implement): requires connection error handling
 #[test]
-#[ignore]
+#[ignore] // DEFERRED: Requires connection error handling
 fn test_tui_failed_to_open_socket_shows_helpful_message() {
     let scenario = write_scenario(
         r#"

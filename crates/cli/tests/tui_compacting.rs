@@ -144,7 +144,7 @@ fn test_compact_collapses_history() {
 
 /// Compare conversation state before /compact against fixture
 #[test]
-#[ignore] // TODO(implement): Simulator rendering differs from real Claude CLI fixture
+#[ignore] // TODO(slash-cleanup): Simulator rendering differs from real Claude CLI fixture
 fn test_compact_before_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -176,7 +176,7 @@ fn test_compact_before_matches_fixture() {
 
 /// Compare conversation state during /compact against fixture
 #[test]
-#[ignore] // TODO(fixture): Header inclusion differs from tmux capture method
+#[ignore] // TODO(slash-cleanup): Header inclusion differs from tmux capture method
 fn test_compact_during_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -210,7 +210,7 @@ fn test_compact_during_matches_fixture() {
 
 /// Compare conversation state after /compact against fixture
 #[test]
-#[ignore] // TODO(fixture): Tool summary requires tool_calls to be recorded in session
+#[ignore] // TODO(slash-cleanup): Tool summary requires tool_calls to be recorded in session
 fn test_compact_after_matches_fixture() {
     let scenario = write_scenario(
         r#"
