@@ -164,6 +164,8 @@ pub enum AppMode {
     HelpDialog,
     /// Showing hooks management dialog
     HooksDialog,
+    /// Showing memory management dialog
+    MemoryDialog,
 }
 
 /// Status bar information
@@ -213,6 +215,8 @@ pub struct RenderState {
     pub help_dialog: Option<HelpDialog>,
     /// Hooks dialog state (None if not showing)
     pub hooks_dialog: Option<super::widgets::HooksDialog>,
+    /// Memory dialog state (None if not showing)
+    pub memory_dialog: Option<super::widgets::MemoryDialog>,
     /// Stashed input text (for checking in tests)
     pub stash_buffer: Option<String>,
     /// Whether to show "Stashed (auto-restores after submit)" message
@@ -368,6 +372,9 @@ struct TuiAppStateInner {
     /// Hooks dialog state
     pub hooks_dialog: Option<super::widgets::HooksDialog>,
 
+    /// Memory dialog state
+    pub memory_dialog: Option<super::widgets::MemoryDialog>,
+
     /// Current permission mode
     pub permission_mode: PermissionMode,
 
@@ -478,6 +485,7 @@ impl TuiAppState {
                 export_dialog: None,
                 help_dialog: None,
                 hooks_dialog: None,
+                memory_dialog: None,
                 permission_mode: config.permission_mode.clone(),
                 allow_bypass_permissions: config.allow_bypass_permissions,
                 is_compacting: false,
@@ -534,6 +542,7 @@ impl TuiAppState {
             export_dialog: inner.export_dialog.clone(),
             help_dialog: inner.help_dialog.clone(),
             hooks_dialog: inner.hooks_dialog.clone(),
+            memory_dialog: inner.memory_dialog.clone(),
             stash_buffer: inner.stash_buffer.clone(),
             show_stash_indicator: inner.show_stash_indicator,
         }
@@ -612,6 +621,7 @@ impl TuiAppState {
             AppMode::ExportDialog => self.handle_export_dialog_key(key),
             AppMode::HelpDialog => self.handle_help_dialog_key(key),
             AppMode::HooksDialog => self.handle_hooks_dialog_key(key),
+            AppMode::MemoryDialog => self.handle_memory_dialog_key(key),
         }
     }
 
@@ -1158,6 +1168,13 @@ impl TuiAppState {
                 inner.response_content = "Hooks dialog dismissed".to_string();
                 inner.is_command_output = true;
             }
+            AppMode::MemoryDialog => {
+                // Close dialog with dismissal message
+                inner.memory_dialog = None;
+                inner.mode = AppMode::Input;
+                inner.response_content = "Memory dialog dismissed".to_string();
+                inner.is_command_output = true;
+            }
         }
     }
 
@@ -1508,6 +1525,10 @@ impl TuiAppState {
                 inner.mode = AppMode::HooksDialog;
                 // For now, hard-code to 4 active hooks as shown in the fixture
                 inner.hooks_dialog = Some(super::widgets::HooksDialog::new(4));
+            }
+            "/memory" => {
+                inner.mode = AppMode::MemoryDialog;
+                inner.memory_dialog = Some(super::widgets::MemoryDialog::new());
             }
             _ => {
                 inner.response_content = format!("Unknown command: {}", input);
@@ -2001,6 +2022,38 @@ impl TuiAppState {
         }
     }
 
+    fn handle_memory_dialog_key(&self, key: KeyEvent) {
+        let mut inner = self.inner.lock();
+
+        let Some(ref mut dialog) = inner.memory_dialog else {
+            return;
+        };
+
+        match key.code {
+            KeyCode::Esc => {
+                inner.mode = AppMode::Input;
+                inner.memory_dialog = None;
+                inner.response_content = "Memory dialog dismissed".to_string();
+                inner.is_command_output = true;
+            }
+            KeyCode::Up => dialog.select_prev(),
+            KeyCode::Down => dialog.select_next(),
+            KeyCode::Enter => {
+                // Open selected memory file for viewing/editing
+                // For now, just show the path of the selected entry
+                if let Some(entry) = dialog.selected_entry() {
+                    let path = entry.path.as_deref().unwrap_or("(not configured)");
+                    inner.response_content =
+                        format!("Selected: {} - {}", entry.source.name(), path);
+                    inner.is_command_output = true;
+                    inner.memory_dialog = None;
+                    inner.mode = AppMode::Input;
+                }
+            }
+            _ => {}
+        }
+    }
+
     /// Format conversation for export
     fn format_conversation_for_export(inner: &TuiAppStateInner) -> String {
         // Export the conversation display content
@@ -2273,6 +2326,13 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
     if state.mode == AppMode::HooksDialog {
         if let Some(ref dialog) = state.hooks_dialog {
             return render_hooks_dialog(dialog, width);
+        }
+    }
+
+    // If in memory dialog mode, render just the memory dialog
+    if state.mode == AppMode::MemoryDialog {
+        if let Some(ref dialog) = state.memory_dialog {
+            return render_memory_dialog(dialog, width);
         }
     }
 
@@ -2944,6 +3004,57 @@ fn render_help_dialog(dialog: &HelpDialog, width: usize) -> AnyElement<'static> 
             .into()
         }
     }
+}
+
+/// Render memory dialog
+fn render_memory_dialog(
+    dialog: &super::widgets::MemoryDialog,
+    _width: usize,
+) -> AnyElement<'static> {
+    // Build visible items
+    let items: Vec<_> = dialog
+        .entries
+        .iter()
+        .enumerate()
+        .map(|(i, entry)| {
+            let is_selected = i == dialog.selected_index;
+            let prefix = if is_selected { "❯" } else { " " };
+            let status = if entry.is_active { "✓" } else { " " };
+            let path = entry.path.as_deref().unwrap_or("(not configured)");
+
+            format!(
+                " {} {} {}. {} - {}",
+                prefix,
+                status,
+                i + 1,
+                entry.source.name(),
+                path
+            )
+        })
+        .collect();
+
+    // Count active entries
+    let active_count = dialog.entries.iter().filter(|e| e.is_active).count();
+    let header = if active_count == 1 {
+        " Memory · 1 file".to_string()
+    } else {
+        format!(" Memory · {} files", active_count)
+    };
+
+    let footer = " Enter to view · esc to cancel".to_string();
+
+    element! {
+        View(flex_direction: FlexDirection::Column, width: 100pct) {
+            Text(content: header)
+            Text(content: "")
+            #(items.into_iter().map(|item| {
+                element! { Text(content: item) }
+            }))
+            Text(content: "")
+            Text(content: footer)
+        }
+    }
+    .into()
 }
 
 /// Render hooks dialog

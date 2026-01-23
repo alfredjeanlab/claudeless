@@ -276,6 +276,24 @@ tmux capture-pane -e -t claude-tui -p > initial_state_ansi.txt
   - Pressing Escape returns to main hooks list
 - Pressing Escape in main dialog shows "Hooks dialog dismissed"
 
+### /memory Command
+- **memory_autocomplete.txt**: TUI state showing /memory in the autocomplete dropdown
+  - Shows "/memory                  View or manage conversation memory"
+  - Autocomplete appears when typing /memory
+- **memory_dialog.txt**: TUI state showing the /memory dialog with memory sources
+  - Shows "Memory" header with count of active files (e.g., "1 file" or "2 files")
+  - Shows list of memory sources:
+    - Project - .claude/CLAUDE.md (project-level instructions)
+    - User - ~/.claude/CLAUDE.md (user-level instructions)
+    - Enterprise - Organization-level instructions (if configured)
+  - Arrow (❯) indicates cursor position
+  - Checkmark (✓) indicates active/existing memory files
+  - Footer shows "Enter to view · esc to cancel"
+- Navigation:
+  - Up/Down arrows navigate between memory sources
+  - Enter selects a memory source to view its contents
+  - Pressing Escape dismisses the dialog and shows "Memory dialog dismissed"
+
 ### Slash Command Search
 - **slash_search_menu.txt**: TUI state showing the slash command autocomplete menu
   - Appears when typing `/` at empty input or start of line
