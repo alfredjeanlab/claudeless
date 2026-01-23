@@ -1,5 +1,7 @@
 # Implementation Plan: /hooks Slash Command
 
+**Root Feature:** `cl-3416`
+
 ## Overview
 
 Implement the `/hooks` slash command to display a dialog for managing hook configurations. The dialog shows a scrollable list of hook types (PreToolUse, PostToolUse, etc.) with their descriptions. Selecting a hook type opens a nested "Tool Matchers" dialog showing configured matchers and exit code documentation.
