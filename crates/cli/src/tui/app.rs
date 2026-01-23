@@ -162,6 +162,8 @@ pub enum AppMode {
     ExportDialog,
     /// Showing help dialog
     HelpDialog,
+    /// Showing hooks management dialog
+    HooksDialog,
 }
 
 /// Status bar information
@@ -209,6 +211,8 @@ pub struct RenderState {
     pub export_dialog: Option<ExportDialog>,
     /// Help dialog state (None if not showing)
     pub help_dialog: Option<HelpDialog>,
+    /// Hooks dialog state (None if not showing)
+    pub hooks_dialog: Option<super::widgets::HooksDialog>,
     /// Stashed input text (for checking in tests)
     pub stash_buffer: Option<String>,
     /// Whether to show "Stashed (auto-restores after submit)" message
@@ -361,6 +365,9 @@ struct TuiAppStateInner {
     /// Help dialog state
     pub help_dialog: Option<HelpDialog>,
 
+    /// Hooks dialog state
+    pub hooks_dialog: Option<super::widgets::HooksDialog>,
+
     /// Current permission mode
     pub permission_mode: PermissionMode,
 
@@ -470,6 +477,7 @@ impl TuiAppState {
                 model_picker_dialog: None,
                 export_dialog: None,
                 help_dialog: None,
+                hooks_dialog: None,
                 permission_mode: config.permission_mode.clone(),
                 allow_bypass_permissions: config.allow_bypass_permissions,
                 is_compacting: false,
@@ -525,6 +533,7 @@ impl TuiAppState {
             is_tty: inner.config.is_tty,
             export_dialog: inner.export_dialog.clone(),
             help_dialog: inner.help_dialog.clone(),
+            hooks_dialog: inner.hooks_dialog.clone(),
             stash_buffer: inner.stash_buffer.clone(),
             show_stash_indicator: inner.show_stash_indicator,
         }
@@ -602,6 +611,7 @@ impl TuiAppState {
             AppMode::ModelPicker => self.handle_model_picker_key(key),
             AppMode::ExportDialog => self.handle_export_dialog_key(key),
             AppMode::HelpDialog => self.handle_help_dialog_key(key),
+            AppMode::HooksDialog => self.handle_hooks_dialog_key(key),
         }
     }
 
@@ -1141,6 +1151,13 @@ impl TuiAppState {
                 inner.response_content = "Help dialog dismissed".to_string();
                 inner.is_command_output = true;
             }
+            AppMode::HooksDialog => {
+                // Close dialog with dismissal message
+                inner.hooks_dialog = None;
+                inner.mode = AppMode::Input;
+                inner.response_content = "Hooks dialog dismissed".to_string();
+                inner.is_command_output = true;
+            }
         }
     }
 
@@ -1486,6 +1503,11 @@ impl TuiAppState {
             "/export" => {
                 inner.mode = AppMode::ExportDialog;
                 inner.export_dialog = Some(ExportDialog::new());
+            }
+            "/hooks" => {
+                inner.mode = AppMode::HooksDialog;
+                // For now, hard-code to 4 active hooks as shown in the fixture
+                inner.hooks_dialog = Some(super::widgets::HooksDialog::new(4));
             }
             _ => {
                 inner.response_content = format!("Unknown command: {}", input);
@@ -1941,6 +1963,44 @@ impl TuiAppState {
         }
     }
 
+    /// Handle key events in hooks dialog mode
+    fn handle_hooks_dialog_key(&self, key: KeyEvent) {
+        use super::widgets::HooksView;
+        let mut inner = self.inner.lock();
+
+        let Some(ref mut dialog) = inner.hooks_dialog else {
+            return;
+        };
+
+        match dialog.view {
+            HooksView::HookList => match key.code {
+                KeyCode::Esc => {
+                    inner.mode = AppMode::Input;
+                    inner.hooks_dialog = None;
+                    inner.response_content = "Hooks dialog dismissed".to_string();
+                    inner.is_command_output = true;
+                }
+                KeyCode::Up => dialog.select_prev(),
+                KeyCode::Down => dialog.select_next(),
+                KeyCode::Enter => dialog.open_matchers(),
+                _ => {}
+            },
+            HooksView::Matchers => match key.code {
+                KeyCode::Esc => dialog.close_matchers(),
+                KeyCode::Up => {
+                    // Navigate matchers (when implemented)
+                }
+                KeyCode::Down => {
+                    // Navigate matchers (when implemented)
+                }
+                KeyCode::Enter => {
+                    // Add new matcher (when implemented)
+                }
+                _ => {}
+            },
+        }
+    }
+
     /// Format conversation for export
     fn format_conversation_for_export(inner: &TuiAppStateInner) -> String {
         // Export the conversation display content
@@ -2206,6 +2266,13 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
     if state.mode == AppMode::HelpDialog {
         if let Some(ref dialog) = state.help_dialog {
             return render_help_dialog(dialog, width);
+        }
+    }
+
+    // If in hooks dialog mode, render just the hooks dialog
+    if state.mode == AppMode::HooksDialog {
+        if let Some(ref dialog) = state.hooks_dialog {
+            return render_hooks_dialog(dialog, width);
         }
     }
 
@@ -2877,6 +2944,90 @@ fn render_help_dialog(dialog: &HelpDialog, width: usize) -> AnyElement<'static> 
             .into()
         }
     }
+}
+
+/// Render hooks dialog
+fn render_hooks_dialog(dialog: &super::widgets::HooksDialog, _width: usize) -> AnyElement<'static> {
+    use super::widgets::HooksView;
+
+    match dialog.view {
+        HooksView::HookList => render_hooks_list(dialog),
+        HooksView::Matchers => render_hooks_matchers(dialog),
+    }
+}
+
+/// Render the main hooks list view
+fn render_hooks_list(dialog: &super::widgets::HooksDialog) -> AnyElement<'static> {
+    use super::widgets::HookType;
+
+    let hooks = HookType::all();
+    let visible_start = dialog.scroll_offset;
+    let visible_end = (visible_start + dialog.visible_count).min(hooks.len());
+
+    // Build visible items
+    let items: Vec<_> = hooks
+        .iter()
+        .enumerate()
+        .skip(visible_start)
+        .take(visible_end - visible_start)
+        .map(|(i, hook)| {
+            let is_selected = i == dialog.selected_index;
+            let is_last_visible = i == visible_end - 1 && dialog.has_more_below();
+
+            let prefix = if is_selected {
+                "❯"
+            } else if is_last_visible {
+                "↓"
+            } else {
+                " "
+            };
+
+            format!(
+                " {} {}.  {} - {}",
+                prefix,
+                i + 1,
+                hook.name(),
+                hook.description()
+            )
+        })
+        .collect();
+
+    element! {
+        View(flex_direction: FlexDirection::Column, width: 100pct) {
+            Text(content: " Hooks")
+            Text(content: format!(" {} hooks", dialog.active_hook_count))
+            Text(content: "")
+            #(items.into_iter().map(|item| {
+                element! { Text(content: item) }
+            }).collect::<Vec<_>>())
+            Text(content: "")
+            Text(content: " Enter to confirm · esc to cancel")
+        }
+    }
+    .into()
+}
+
+/// Render the matchers view for a selected hook type
+fn render_hooks_matchers(dialog: &super::widgets::HooksDialog) -> AnyElement<'static> {
+    use super::widgets::HookType;
+
+    let hook = dialog.selected_hook.unwrap_or(HookType::PreToolUse);
+
+    element! {
+        View(flex_direction: FlexDirection::Column, width: 100pct) {
+            Text(content: format!(" {} - Tool Matchers", hook.name()))
+            Text(content: " Input to command is JSON of tool call arguments.")
+            Text(content: " Exit code 0 - stdout/stderr not shown")
+            Text(content: " Exit code 2 - show stderr to model and block tool call")
+            Text(content: " Other exit codes - show stderr to user only but continue with tool call")
+            Text(content: "")
+            Text(content: " ❯ 1. + Add new matcher…")
+            Text(content: "   No matchers configured yet")
+            Text(content: "")
+            Text(content: " Enter to confirm · esc to cancel")
+        }
+    }
+    .into()
 }
 
 /// Render model picker dialog
