@@ -1,5 +1,7 @@
 # TUI Colors Cleanup Plan
 
+**Root Feature:** `cl-ee5e`
+
 ## Overview
 
 Review and clean up the TUI ANSI colors implementation to eliminate code duplication, centralize color handling, enhance test coverage, and ensure consistency with fixture expectations. The goal is to make the color system more maintainable while verifying all color output matches captured fixtures.
