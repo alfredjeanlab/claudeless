@@ -1,5 +1,7 @@
 # Slash Commands Cleanup Plan
 
+**Root Feature:** `cl-79ab`
+
 ## Overview
 
 Review, clean up, and enhance the slash commands implementation chain. This covers the command dispatcher (`app.rs`), widget state modules (`widgets/*.rs`), autocomplete menu (`slash_menu.rs`), and associated tests.
