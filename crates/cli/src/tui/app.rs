@@ -17,7 +17,8 @@ use crate::state::todos::{TodoState, TodoStatus};
 use crate::time::{Clock, ClockHandle};
 
 use super::colors::{
-    styled_logo_line1, styled_logo_line2, styled_logo_line3, styled_placeholder, styled_separator,
+    styled_bash_placeholder, styled_bash_separator, styled_bash_status, styled_logo_line1,
+    styled_logo_line2, styled_logo_line3, styled_placeholder, styled_separator,
 };
 use super::separator::{make_compact_separator, make_separator};
 use super::shortcuts::shortcuts_by_column;
@@ -1346,7 +1347,7 @@ impl TuiAppState {
 
         // Add to history (with shell prefix if applicable)
         let history_entry = if was_shell_mode {
-            format!("\\!{}", input)
+            format!("! {}", input)
         } else {
             input.clone()
         };
@@ -1385,13 +1386,13 @@ impl TuiAppState {
                 .push_str(&format!("⏺ {}", response));
         }
 
-        // Add the shell command to conversation display with \! prefix
+        // Add the shell command to conversation display with ! prefix
         if !inner.conversation_display.is_empty() {
             inner.conversation_display.push_str("\n\n");
         }
         inner
             .conversation_display
-            .push_str(&format!("❯ \\!{}", command));
+            .push_str(&format!("❯ ! {}", command));
 
         // Check if bypass mode - execute directly without permission dialog
         if inner.permission_mode.allows_all() {
@@ -2375,13 +2376,33 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
     let use_colors = state.is_tty;
 
     // Format input line
-    // Shell mode shows \! prefix, otherwise show normal input or placeholder
+    // Shell mode shows `! Try "..."` in pink, otherwise show normal input or placeholder
     let input_display = if state.shell_mode {
-        // Shell mode: show \! prefix with any typed command
+        // Bash mode: show `! ` prefix in pink with suggestion or typed command
         if state.input_buffer.is_empty() {
-            "❯ \\!".to_string()
+            if use_colors {
+                styled_bash_placeholder("Try \"fix lint errors\"")
+            } else {
+                "! Try \"fix lint errors\"".to_string()
+            }
         } else {
-            format!("❯ \\!{}", state.input_buffer)
+            // User is typing a command - show `! ` followed by their input
+            if use_colors {
+                let fg_pink = super::colors::escape::fg(
+                    super::colors::BASH_MODE.0,
+                    super::colors::BASH_MODE.1,
+                    super::colors::BASH_MODE.2,
+                );
+                format!(
+                    "{}{}! {}{}",
+                    super::colors::escape::RESET,
+                    fg_pink,
+                    state.input_buffer,
+                    super::colors::escape::RESET
+                )
+            } else {
+                format!("! {}", state.input_buffer)
+            }
         }
     } else if state.input_buffer.is_empty() {
         if state.conversation_display.is_empty() && state.response_content.is_empty() {
@@ -2399,15 +2420,19 @@ fn render_main_content(state: &RenderState) -> AnyElement<'static> {
         format!("❯ {}", state.input_buffer)
     };
 
-    // Format separators
-    let separator = if use_colors {
+    // Format separators - pink in bash mode, gray otherwise
+    let separator = if state.shell_mode && use_colors {
+        styled_bash_separator(width)
+    } else if use_colors {
         styled_separator(width)
     } else {
         format!("{}\n", make_separator(width))
     };
 
-    // Format status bar
-    let status_bar = if use_colors {
+    // Format status bar - show `! for bash mode` in bash mode
+    let status_bar = if state.shell_mode && use_colors {
+        styled_bash_status()
+    } else if use_colors {
         format_status_bar_styled(state, width)
     } else {
         format_status_bar(state, width)
@@ -3455,8 +3480,11 @@ impl TuiApp {
                 tokio::task::block_in_place(|| {
                     tokio::runtime::Handle::current().block_on(async {
                         // ignore_ctrl_c() prevents iocraft from exiting on Ctrl+C - we handle it ourselves
+                        // Use render_loop() instead of fullscreen() to:
+                        // 1. Render inline (like the real Claude CLI) instead of alternate screen
+                        // 2. Not enable mouse capture (allows normal text selection/copy)
                         element!(App(state: Some(state.clone())))
-                            .fullscreen()
+                            .render_loop()
                             .ignore_ctrl_c()
                             .await
                     })
@@ -3465,9 +3493,12 @@ impl TuiApp {
                 // No runtime - create a new one
                 let rt = tokio::runtime::Runtime::new()?;
                 // ignore_ctrl_c() prevents iocraft from exiting on Ctrl+C - we handle it ourselves
+                // Use render_loop() instead of fullscreen() to:
+                // 1. Render inline (like the real Claude CLI) instead of alternate screen
+                // 2. Not enable mouse capture (allows normal text selection/copy)
                 rt.block_on(async {
                     element!(App(state: Some(state.clone())))
-                        .fullscreen()
+                        .render_loop()
                         .ignore_ctrl_c()
                         .await
                 })?;

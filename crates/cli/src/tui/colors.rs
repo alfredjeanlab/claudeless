@@ -27,6 +27,10 @@ pub const ACCEPT_EDITS_MODE: (u8, u8, u8) = (175, 135, 255);
 /// Red/Pink for bypass permissions mode: RGB(255, 107, 128)
 pub const BYPASS_MODE: (u8, u8, u8) = (255, 107, 128);
 
+// Bash/shell mode color (from v2.1.17 fixtures)
+/// Pink for bash mode: RGB(253, 93, 177)
+pub const BASH_MODE: (u8, u8, u8) = (253, 93, 177);
+
 /// ANSI escape sequence helpers (public for reuse)
 pub mod escape {
     /// 24-bit foreground color
@@ -134,6 +138,21 @@ pub fn styled_separator(width: usize) -> String {
     )
 }
 
+/// Format a styled separator line for bash mode (dim + pink).
+///
+/// Example output:
+/// `[dim][pink]────────...`
+pub fn styled_bash_separator(width: usize) -> String {
+    let fg_pink = escape::fg(BASH_MODE.0, BASH_MODE.1, BASH_MODE.2);
+
+    format!(
+        "{dim}{fg_pink}{line}",
+        dim = escape::DIM,
+        fg_pink = fg_pink,
+        line = "─".repeat(width),
+    )
+}
+
 /// Format the placeholder prompt with proper styling.
 ///
 /// Starts with [0m] to reset from the separator's dim/gray.
@@ -154,6 +173,45 @@ pub fn styled_placeholder(text: &str) -> String {
         first = first_char,
         reset_dim = escape::RESET_DIM,
         rest = rest,
+    )
+}
+
+/// Format the bash mode placeholder prompt with pink styling.
+///
+/// Starts with [0m] to reset from the separator's dim/pink.
+/// Shows `! ` in pink, then the first char inverse, rest dim.
+///
+/// Example output:
+/// `[reset][pink]! [inverse][fg_reset]T[reset+dim]ry "fix lint errors"[reset]`
+pub fn styled_bash_placeholder(text: &str) -> String {
+    let fg_pink = escape::fg(BASH_MODE.0, BASH_MODE.1, BASH_MODE.2);
+    let first_char = text.chars().next().unwrap_or('T');
+    let rest = &text[first_char.len_utf8()..];
+
+    format!(
+        "{reset}{fg_pink}! {inv}{fg_reset}{first}{reset_dim}{rest}{reset}",
+        reset = escape::RESET,
+        fg_pink = fg_pink,
+        inv = escape::INVERSE,
+        fg_reset = escape::FG_RESET,
+        first = first_char,
+        reset_dim = escape::RESET_DIM,
+        rest = rest,
+    )
+}
+
+/// Format the bash mode status text (pink).
+///
+/// Example output:
+/// `[reset]  [pink]! for bash mode[fg_reset]`
+pub fn styled_bash_status() -> String {
+    let fg_pink = escape::fg(BASH_MODE.0, BASH_MODE.1, BASH_MODE.2);
+
+    format!(
+        "{reset}  {fg_pink}! for bash mode{fg_reset}",
+        reset = escape::RESET,
+        fg_pink = fg_pink,
+        fg_reset = escape::FG_RESET,
     )
 }
 

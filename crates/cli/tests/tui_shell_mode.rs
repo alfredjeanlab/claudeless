@@ -3,17 +3,17 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-//! TUI shell mode tests - '\!' prefix shell mode handling.
+//! TUI shell mode tests - '!' prefix shell mode handling.
 //!
-//! Behavior observed with: claude --version 2.1.12 (Claude Code)
+//! Behavior observed with: claude --version 2.1.17 (Claude Code)
 //!
 //! ## Shell Mode Behavior
 //! - Typing '!' at the start of empty input enters shell mode
-//! - The '!' prefix is displayed as '\!' in the input field
-//! - Shell mode allows direct bash command execution
-//! - Commands are shown as `\!command` in the input (e.g., `\!ls -la`)
-//! - The placeholder hint disappears when shell prefix is entered
-//! - When submitted, the prompt shows `❯ \!command` and Claude executes `Bash(command)`
+//! - Bash mode shows pink-colored separators (RGB 253, 93, 177)
+//! - The prompt shows `! Try "..."` suggestion with `!` in pink (no `❯` prefix)
+//! - Commands are shown as `! command` in the input (e.g., `! ls -la`)
+//! - Status bar shows `! for bash mode` in pink
+//! - When submitted, the prompt shows `❯ ! command` in history
 
 mod common;
 
@@ -26,9 +26,9 @@ const BYPASS_MODE_PATTERN: &str = "bypass permissions on";
 // Shell Mode Entry Tests
 // =============================================================================
 
-/// Behavior observed with: claude --version 2.1.12 (Claude Code)
+/// Behavior observed with: claude --version 2.1.17 (Claude Code)
 ///
-/// Typing '!' on empty input shows '\!' prefix for shell mode
+/// Typing '!' on empty input shows '!' prefix for shell mode with suggestion hint
 #[test]
 fn test_tui_exclamation_shows_shell_prefix() {
     let scenario = write_scenario(
@@ -49,10 +49,10 @@ fn test_tui_exclamation_shows_shell_prefix() {
 
     tmux::kill_session(session);
 
-    // Should show '\!' in input field
+    // Should show '! Try "..."' or '! for bash mode' in the UI
     assert!(
-        capture.contains("\\!") || capture.contains("\\!"),
-        "Shell mode should show '\\!' prefix.\nCapture:\n{}",
+        capture.contains("! Try") || capture.contains("! for bash mode"),
+        "Shell mode should show '!' prefix with suggestion.\nCapture:\n{}",
         capture
     );
 }
@@ -88,9 +88,9 @@ fn test_tui_shell_prefix_matches_fixture() {
 // Shell Mode Command Input Tests
 // =============================================================================
 
-/// Behavior observed with: claude --version 2.1.12 (Claude Code)
+/// Behavior observed with: claude --version 2.1.17 (Claude Code)
 ///
-/// Typing a command after '!' shows '\!command' in the input
+/// Typing a command after '!' shows '! command' in the input
 #[test]
 fn test_tui_shell_mode_shows_command() {
     let scenario = write_scenario(
@@ -113,10 +113,10 @@ fn test_tui_shell_mode_shows_command() {
 
     tmux::kill_session(session);
 
-    // Should show '\!ls -la' in input
+    // Should show '! ls -la' in input (with space after !)
     assert!(
-        capture.contains("\\!ls -la") || capture.contains("!ls -la"),
-        "Shell mode should show command after prefix.\nCapture:\n{}",
+        capture.contains("! ls -la"),
+        "Shell mode should show command after '! ' prefix.\nCapture:\n{}",
         capture
     );
 }
@@ -193,9 +193,9 @@ fn test_tui_shell_mode_executes_command() {
     );
 }
 
-/// Behavior observed with: claude --version 2.1.12 (Claude Code)
+/// Behavior observed with: claude --version 2.1.17 (Claude Code)
 ///
-/// Shell command shows as '\!command' in conversation history
+/// Shell command shows as '! command' in conversation history
 #[test]
 fn test_tui_shell_mode_shows_prefixed_prompt_in_history() {
     let scenario = write_scenario(
@@ -226,8 +226,8 @@ fn test_tui_shell_mode_shows_prefixed_prompt_in_history() {
 
     // Should show the prompt with shell prefix in history
     assert!(
-        capture.contains("❯ \\!pwd") || capture.contains("❯ !pwd"),
-        "Shell mode should show '\\!command' in conversation history.\nCapture:\n{}",
+        capture.contains("❯ ! pwd") || capture.contains("! pwd"),
+        "Shell mode should show '! command' in conversation history.\nCapture:\n{}",
         capture
     );
 }
@@ -236,9 +236,9 @@ fn test_tui_shell_mode_shows_prefixed_prompt_in_history() {
 // Shell Mode Escape Tests
 // =============================================================================
 
-/// Behavior observed with: claude --version 2.1.15 (Claude Code)
+/// Behavior observed with: claude --version 2.1.17 (Claude Code)
 ///
-/// Backspace on shell mode prefix '\!' exits shell mode and shows placeholder again
+/// Backspace on shell mode prefix '!' exits shell mode and shows placeholder again
 #[test]
 fn test_tui_shell_mode_backspace_exits_shell_mode() {
     let scenario = write_scenario(
@@ -257,9 +257,9 @@ fn test_tui_shell_mode_backspace_exits_shell_mode() {
     tmux::send_keys(session, "!");
     let with_prefix = tmux::wait_for_change(session, &previous);
 
-    // Verify we're in shell mode
+    // Verify we're in shell mode (shows '! for bash mode' in status)
     assert!(
-        with_prefix.contains("\\!"),
+        with_prefix.contains("! for bash mode") || with_prefix.contains("! Try"),
         "Should be in shell mode.\nCapture:\n{}",
         with_prefix
     );
@@ -270,9 +270,9 @@ fn test_tui_shell_mode_backspace_exits_shell_mode() {
 
     tmux::kill_session(session);
 
-    // Should no longer show '\!' and should show placeholder hint again
+    // Should no longer show bash mode indicator and should show normal placeholder
     assert!(
-        !capture.contains("\\!"),
+        !capture.contains("! for bash mode"),
         "Backspace should exit shell mode.\nCapture:\n{}",
         capture
     );
@@ -287,7 +287,7 @@ fn test_tui_shell_mode_backspace_exits_shell_mode() {
 // Shell Mode Special Characters Tests
 // =============================================================================
 
-/// Behavior observed with: claude --version 2.1.15 (Claude Code)
+/// Behavior observed with: claude --version 2.1.17 (Claude Code)
 ///
 /// Shell mode handles commands with special characters (pipes, redirects)
 #[test]
@@ -314,13 +314,13 @@ fn test_tui_shell_mode_with_pipe_command() {
 
     // Should show the full command with pipe
     assert!(
-        capture.contains("\\!ls | head") || capture.contains("!ls | head"),
+        capture.contains("! ls | head"),
         "Shell mode should handle pipe characters.\nCapture:\n{}",
         capture
     );
 }
 
-/// Behavior observed with: claude --version 2.1.15 (Claude Code)
+/// Behavior observed with: claude --version 2.1.17 (Claude Code)
 ///
 /// Shell mode handles commands with quoted strings
 #[test]
@@ -354,7 +354,7 @@ fn test_tui_shell_mode_with_quoted_string() {
     );
 }
 
-/// Behavior observed with: claude --version 2.1.15 (Claude Code)
+/// Behavior observed with: claude --version 2.1.17 (Claude Code)
 ///
 /// Shell mode handles commands with environment variables
 #[test]
@@ -381,23 +381,27 @@ fn test_tui_shell_mode_with_env_variable() {
 
     // Should show the command with env variable
     assert!(
-        capture.contains("\\!echo $HOME") || capture.contains("!echo $HOME"),
+        capture.contains("! echo $HOME"),
         "Shell mode should handle environment variables.\nCapture:\n{}",
         capture
     );
 }
 
 // =============================================================================
-// Shell Mode ANSI Color Tests (v2.1.15)
+// Shell Mode ANSI Color Tests (v2.1.17)
 // =============================================================================
 
-/// Behavior observed with: claude --version 2.1.15 (Claude Code)
+/// Behavior observed with: claude --version 2.1.17 (Claude Code)
 ///
-/// Shell mode prefix ANSI output matches v2.1.15 fixture
+/// Shell mode prefix ANSI output matches v2.1.17 fixture.
+/// In bash mode, the CLI shows:
+/// - Pink separators (RGB 253, 93, 177) instead of gray
+/// - `! Try "..."` prompt with `!` in pink (no `❯` prefix)
+/// - Status bar shows `! for bash mode` in pink
 ///
 #[test]
-#[ignore] // DEFERRED: Requires shell mode status bar hiding and cursor block rendering
-fn test_tui_shell_prefix_ansi_matches_fixture_v2115() {
+#[ignore] // TODO(implement): Requires bash mode pink styling and `!` prefix
+fn test_tui_shell_prefix_ansi_matches_fixture_v2117() {
     use common::ansi::assert_versioned_ansi_matches_fixture;
 
     let scenario = write_scenario(
@@ -405,7 +409,7 @@ fn test_tui_shell_prefix_ansi_matches_fixture_v2115() {
         {
             "default_response": "Hello!",
             "trusted": true,
-            "claude_version": "2.1.15"
+            "claude_version": "2.1.17"
         }
         "#,
     );
@@ -419,38 +423,5 @@ fn test_tui_shell_prefix_ansi_matches_fixture_v2115() {
 
     tmux::kill_session(session);
 
-    assert_versioned_ansi_matches_fixture(&capture, "v2.1.15", "shell_mode_prefix_ansi.txt", None);
-}
-
-/// Behavior observed with: claude --version 2.1.15 (Claude Code)
-///
-/// Shell mode with command ANSI output matches v2.1.15 fixture
-///
-#[test]
-#[ignore] // DEFERRED: Requires shell mode status bar hiding and cursor block rendering
-fn test_tui_shell_command_ansi_matches_fixture_v2115() {
-    use common::ansi::assert_versioned_ansi_matches_fixture;
-
-    let scenario = write_scenario(
-        r#"
-        {
-            "default_response": "Hello!",
-            "trusted": true,
-            "claude_version": "2.1.15"
-        }
-        "#,
-    );
-
-    let session = "claudeless-shell-command-ansi";
-    let previous = start_tui(session, &scenario);
-
-    // Enter shell mode and type a command
-    tmux::send_keys(session, "!");
-    tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "ls -la");
-    let capture = tmux::wait_for_content_ansi(session, "ls -la");
-
-    tmux::kill_session(session);
-
-    assert_versioned_ansi_matches_fixture(&capture, "v2.1.15", "shell_mode_command_ansi.txt", None);
+    assert_versioned_ansi_matches_fixture(&capture, "v2.1.17", "shell_mode_prefix_ansi.txt", None);
 }

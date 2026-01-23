@@ -17,6 +17,17 @@ use regex::Regex;
 /// ANSI escape sequences. Normalizations are applied to the text
 /// content between ANSI sequences.
 pub fn normalize_ansi_tui(input: &str, cwd: Option<&str>) -> String {
+    // Strip shell preamble - find the TUI logo line and remove everything before it
+    // In ANSI output, the logo looks like: `[color]▐[bg]▛███▜[reset]▌[reset]`
+    // We need to find the `▐` character (U+2590) which starts the logo
+    let input = if let Some(logo_pos) = input.find('▐') {
+        // Find the start of this line
+        let line_start = input[..logo_pos].rfind('\n').map(|p| p + 1).unwrap_or(0);
+        &input[line_start..]
+    } else {
+        input
+    };
+
     // Parse input into spans
     let spans = parse_ansi(input);
 

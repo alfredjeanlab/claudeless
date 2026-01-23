@@ -149,6 +149,14 @@ pub fn normalize_tui(input: &str, cwd: Option<&str>) -> String {
 
     let mut result = input.to_string();
 
+    // Strip shell preamble - find the TUI logo line and remove everything before it
+    // The logo line starts with ` ▐▛███▜▌` (space + logo) or `▐▛███▜▌` (logo only)
+    if let Some(logo_pos) = result.find("▐▛███▜▌") {
+        // Find the start of this line
+        let line_start = result[..logo_pos].rfind('\n').map(|p| p + 1).unwrap_or(0);
+        result = result[line_start..].to_string();
+    }
+
     // Replace non-breaking spaces with regular spaces (real Claude CLI uses NBSP after ❯)
     result = result.replace('\u{00A0}', " ");
 
