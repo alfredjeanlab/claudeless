@@ -1,5 +1,7 @@
 # Implementation Plan: /memory Slash Command
 
+**Root Feature:** `cl-9f45`
+
 ## Overview
 
 Implement the `/memory` slash command to display a dialog for viewing and managing conversation memory (CLAUDE.md instruction files). The command shows CLAUDE.md files from various sources: project-level (`.claude/CLAUDE.md`), user-level (`~/.claude/CLAUDE.md`), and enterprise/organization-level files.
