@@ -9,6 +9,8 @@
 #[path = "memory_tests.rs"]
 mod tests;
 
+use super::scrollable::ScrollState;
+
 /// Memory source types displayed in the dialog
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MemorySource {
@@ -65,14 +67,10 @@ pub struct MemoryEntry {
 /// State for the /memory dialog
 #[derive(Clone, Debug)]
 pub struct MemoryDialog {
-    /// Currently selected entry index (0-based)
-    pub selected_index: usize,
     /// Memory entries (loaded from filesystem)
     pub entries: Vec<MemoryEntry>,
-    /// Scroll offset for the list
-    pub scroll_offset: usize,
-    /// Visible item count (based on terminal height)
-    pub visible_count: usize,
+    /// Scroll-aware navigation state
+    scroll: ScrollState,
 }
 
 impl Default for MemoryDialog {
@@ -106,62 +104,60 @@ impl MemoryDialog {
             },
         ];
 
-        Self {
-            selected_index: 0,
-            entries,
-            scroll_offset: 0,
-            visible_count: 5,
-        }
+        let mut scroll = ScrollState::new(5); // Default visible items
+        scroll.set_total(entries.len());
+
+        Self { entries, scroll }
+    }
+
+    /// Get the currently selected index
+    pub fn selected_index(&self) -> usize {
+        self.scroll.selected_index
+    }
+
+    /// Get the scroll offset for rendering
+    pub fn scroll_offset(&self) -> usize {
+        self.scroll.scroll_offset
+    }
+
+    /// Get the visible item count
+    pub fn visible_count(&self) -> usize {
+        self.scroll.visible_count
+    }
+
+    /// Set the visible item count (call when terminal resizes)
+    pub fn set_visible_count(&mut self, count: usize) {
+        self.scroll.visible_count = count;
+    }
+
+    /// Update entries list
+    pub fn set_entries(&mut self, entries: Vec<MemoryEntry>) {
+        self.entries = entries;
+        self.scroll.set_total(self.entries.len());
     }
 
     /// Move selection up (wraps at boundaries)
     pub fn select_prev(&mut self) {
-        if self.entries.is_empty() {
-            return;
-        }
-        if self.selected_index == 0 {
-            self.selected_index = self.entries.len() - 1;
-            // Scroll to bottom
-            if self.entries.len() > self.visible_count {
-                self.scroll_offset = self.entries.len() - self.visible_count;
-            }
-        } else {
-            self.selected_index -= 1;
-            // Scroll up if needed
-            if self.selected_index < self.scroll_offset {
-                self.scroll_offset = self.selected_index;
-            }
-        }
+        self.scroll.select_prev();
     }
 
     /// Move selection down (wraps at boundaries)
     pub fn select_next(&mut self) {
-        if self.entries.is_empty() {
-            return;
-        }
-        self.selected_index = (self.selected_index + 1) % self.entries.len();
-        // Handle wrap to top
-        if self.selected_index == 0 {
-            self.scroll_offset = 0;
-        }
-        // Scroll down if needed
-        else if self.selected_index >= self.scroll_offset + self.visible_count {
-            self.scroll_offset = self.selected_index - self.visible_count + 1;
-        }
+        self.scroll.select_next();
     }
 
     /// Get currently selected entry
     pub fn selected_entry(&self) -> Option<&MemoryEntry> {
-        self.entries.get(self.selected_index)
+        self.entries.get(self.scroll.selected_index)
     }
 
     /// Check if we should show scroll indicator above
     pub fn has_more_above(&self) -> bool {
-        self.scroll_offset > 0
+        self.scroll.has_more_above()
     }
 
     /// Check if we should show scroll indicator below
     pub fn has_more_below(&self) -> bool {
-        self.scroll_offset + self.visible_count < self.entries.len()
+        self.scroll.has_more_below()
     }
 }

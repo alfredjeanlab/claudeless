@@ -110,7 +110,7 @@ fn test_response_format_matches_fixture() {
 
 /// Compare input display against real Claude fixture
 #[test]
-#[ignore] // TODO(implement): Simulator shows status bar while fixture does not
+#[ignore] // TODO(slash-cleanup): Simulator shows status bar while fixture does not
 fn test_input_display_matches_fixture() {
     let scenario = write_scenario(
         r#"

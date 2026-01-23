@@ -124,3 +124,49 @@ fn test_fork_in_autocomplete() {
         capture
     );
 }
+
+/// Behavior observed with: claude --version 2.1.12 (Claude Code)
+///
+/// /fork succeeds when there is an existing conversation.
+#[test]
+fn test_fork_success_with_conversation() {
+    let scenario = write_scenario(
+        r#"
+        {
+            "trusted": true,
+            "claude_version": "2.1.12",
+            "responses": [
+                { "pattern": { "type": "contains", "text": "hello" }, "response": "Hello! How can I help you today?" },
+                { "pattern": { "type": "any" }, "response": "ok" }
+            ]
+        }
+        "#,
+    );
+
+    let session = "claudeless-fork-success";
+    start_tui(session, &scenario);
+
+    // Build up a conversation first
+    tmux::send_line(session, "hello");
+    tmux::wait_for_content(session, "How can I help you");
+
+    // Execute /fork with existing conversation
+    tmux::send_line(session, "/fork");
+
+    // Wait for success message
+    let capture = tmux::wait_for_content(session, "Conversation forked");
+
+    tmux::kill_session(session);
+
+    // Should show success message (not error)
+    assert!(
+        capture.contains("Conversation forked"),
+        "/fork with conversation should succeed.\nCapture:\n{}",
+        capture
+    );
+    assert!(
+        !capture.contains("Failed"),
+        "/fork with conversation should not show error.\nCapture:\n{}",
+        capture
+    );
+}

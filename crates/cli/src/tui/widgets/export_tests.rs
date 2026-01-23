@@ -136,3 +136,48 @@ fn pop_char_ignored_in_method_selection() {
     dialog.pop_char();
     assert_eq!(dialog.filename, original);
 }
+
+#[test]
+fn filename_accepts_special_characters() {
+    let mut dialog = ExportDialog::new();
+    dialog.step = ExportStep::FilenameInput;
+    dialog.filename = String::new();
+
+    // Test various special characters that might appear in filenames
+    for c in "my-file_2024.01.txt".chars() {
+        dialog.push_char(c);
+    }
+    assert_eq!(dialog.filename, "my-file_2024.01.txt");
+}
+
+#[test]
+fn filename_handles_unicode_characters() {
+    let mut dialog = ExportDialog::new();
+    dialog.step = ExportStep::FilenameInput;
+    dialog.filename = String::new();
+
+    // Test Unicode characters
+    for c in "対話_记录.txt".chars() {
+        dialog.push_char(c);
+    }
+    assert_eq!(dialog.filename, "対話_记录.txt");
+
+    // Pop should remove last character (which is multibyte)
+    dialog.pop_char();
+    assert_eq!(dialog.filename, "対話_记录.tx");
+}
+
+#[test]
+fn filename_handles_empty_after_all_pops() {
+    let mut dialog = ExportDialog::new();
+    dialog.step = ExportStep::FilenameInput;
+    dialog.filename = "ab".to_string();
+
+    dialog.pop_char();
+    dialog.pop_char();
+    assert_eq!(dialog.filename, "");
+
+    // Further pops should not panic
+    dialog.pop_char();
+    assert_eq!(dialog.filename, "");
+}

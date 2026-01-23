@@ -26,9 +26,8 @@ use common::{start_tui, tmux, write_scenario};
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Typing /export shows autocomplete dropdown with export description
-// TODO(implement): requires slash command autocomplete
 #[test]
-#[ignore] // Autocomplete feature is separate from /export dialog
+#[ignore] // DEFERRED: Requires slash command autocomplete implementation
 fn test_tui_export_command_shows_autocomplete() {
     let scenario = write_scenario(
         r#"

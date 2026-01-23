@@ -1464,13 +1464,19 @@ impl TuiAppState {
                 inner.response_content = "(no content)".to_string();
             }
             "/compact" => {
-                // Show compacting in progress message
-                inner.mode = AppMode::Responding;
-                inner.is_compacting = true;
-                inner.compacting_started = Some(std::time::Instant::now());
-                // Use correct symbol (✻) and ellipsis (…)
-                inner.response_content =
-                    "✻ Compacting conversation… (ctrl+c to interrupt)".to_string();
+                // Check if already compacting
+                if inner.is_compacting {
+                    inner.response_content =
+                        "Failed to compact: Compaction already in progress".to_string();
+                } else {
+                    // Show compacting in progress message
+                    inner.mode = AppMode::Responding;
+                    inner.is_compacting = true;
+                    inner.compacting_started = Some(std::time::Instant::now());
+                    // Use correct symbol (✻) and ellipsis (…)
+                    inner.response_content =
+                        "✻ Compacting conversation… (ctrl+c to interrupt)".to_string();
+                }
             }
             "/fork" => {
                 // Check if there's a conversation to fork
@@ -1518,8 +1524,20 @@ impl TuiAppState {
                 inner.tasks_dialog = Some(TasksDialog::new());
             }
             "/export" => {
-                inner.mode = AppMode::ExportDialog;
-                inner.export_dialog = Some(ExportDialog::new());
+                // Check if there's a conversation to export
+                let has_conversation = {
+                    let sessions = inner.sessions.lock();
+                    let current = sessions.get_current();
+                    current.map(|s| !s.turns.is_empty()).unwrap_or(false)
+                };
+
+                if has_conversation {
+                    inner.mode = AppMode::ExportDialog;
+                    inner.export_dialog = Some(ExportDialog::new());
+                } else {
+                    inner.response_content =
+                        "Failed to export: No conversation to export".to_string();
+                }
             }
             "/hooks" => {
                 inner.mode = AppMode::HooksDialog;
@@ -2811,7 +2829,7 @@ fn render_tasks_dialog(dialog: &TasksDialog, width: usize) -> AnyElement<'static
             .iter()
             .enumerate()
             .map(|(i, task)| {
-                let indicator = if i == dialog.selected_index {
+                let indicator = if i == dialog.selected_index() {
                     "❯ "
                 } else {
                     "  "
@@ -3017,7 +3035,7 @@ fn render_memory_dialog(
         .iter()
         .enumerate()
         .map(|(i, entry)| {
-            let is_selected = i == dialog.selected_index;
+            let is_selected = i == dialog.selected_index();
             let prefix = if is_selected { "❯" } else { " " };
             let status = if entry.is_active { "✓" } else { " " };
             let path = entry.path.as_deref().unwrap_or("(not configured)");
@@ -3072,8 +3090,8 @@ fn render_hooks_list(dialog: &super::widgets::HooksDialog) -> AnyElement<'static
     use super::widgets::HookType;
 
     let hooks = HookType::all();
-    let visible_start = dialog.scroll_offset;
-    let visible_end = (visible_start + dialog.visible_count).min(hooks.len());
+    let visible_start = dialog.scroll_offset();
+    let visible_end = (visible_start + dialog.visible_count()).min(hooks.len());
 
     // Build visible items
     let items: Vec<_> = hooks
@@ -3082,7 +3100,7 @@ fn render_hooks_list(dialog: &super::widgets::HooksDialog) -> AnyElement<'static
         .skip(visible_start)
         .take(visible_end - visible_start)
         .map(|(i, hook)| {
-            let is_selected = i == dialog.selected_index;
+            let is_selected = i == dialog.selected_index();
             let is_last_visible = i == visible_end - 1 && dialog.has_more_below();
 
             let prefix = if is_selected {

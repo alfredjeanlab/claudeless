@@ -9,6 +9,8 @@
 #[path = "hooks_tests.rs"]
 mod tests;
 
+use super::scrollable::ScrollState;
+
 /// Hook types displayed in the dialog
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HookType {
@@ -113,8 +115,8 @@ pub enum HooksView {
 /// State for the /hooks dialog
 #[derive(Clone, Debug)]
 pub struct HooksDialog {
-    /// Currently selected hook type index (0-based)
-    pub selected_index: usize,
+    /// Scroll-aware navigation state for hook list
+    scroll: ScrollState,
     /// Current view (list or matchers)
     pub view: HooksView,
     /// Selected hook type when viewing matchers
@@ -123,10 +125,6 @@ pub struct HooksDialog {
     pub matcher_selected: usize,
     /// Number of active hooks (for display)
     pub active_hook_count: usize,
-    /// Scroll offset for the hook list
-    pub scroll_offset: usize,
-    /// Visible item count (based on terminal height)
-    pub visible_count: usize,
 }
 
 impl Default for HooksDialog {
@@ -137,52 +135,50 @@ impl Default for HooksDialog {
 
 impl HooksDialog {
     pub fn new(active_hook_count: usize) -> Self {
+        let mut scroll = ScrollState::new(5); // Default visible items
+        scroll.set_total(HookType::all().len());
         Self {
-            selected_index: 0,
+            scroll,
             view: HooksView::HookList,
             selected_hook: None,
             matcher_selected: 0,
             active_hook_count,
-            scroll_offset: 0,
-            visible_count: 5, // Default visible items
         }
+    }
+
+    /// Get the currently selected index
+    pub fn selected_index(&self) -> usize {
+        self.scroll.selected_index
+    }
+
+    /// Get the scroll offset for rendering
+    pub fn scroll_offset(&self) -> usize {
+        self.scroll.scroll_offset
+    }
+
+    /// Get the visible item count
+    pub fn visible_count(&self) -> usize {
+        self.scroll.visible_count
+    }
+
+    /// Set the visible item count (call when terminal resizes)
+    pub fn set_visible_count(&mut self, count: usize) {
+        self.scroll.visible_count = count;
     }
 
     /// Move selection up (wraps at boundaries)
     pub fn select_prev(&mut self) {
-        let total = HookType::all().len();
-        if self.selected_index == 0 {
-            self.selected_index = total - 1;
-            // Scroll to bottom
-            if total > self.visible_count {
-                self.scroll_offset = total - self.visible_count;
-            }
-        } else {
-            self.selected_index -= 1;
-            // Scroll up if needed
-            if self.selected_index < self.scroll_offset {
-                self.scroll_offset = self.selected_index;
-            }
-        }
+        self.scroll.select_prev();
     }
 
     /// Move selection down (wraps at boundaries)
     pub fn select_next(&mut self) {
-        let total = HookType::all().len();
-        self.selected_index = (self.selected_index + 1) % total;
-        // Handle wrap to top
-        if self.selected_index == 0 {
-            self.scroll_offset = 0;
-        }
-        // Scroll down if needed
-        else if self.selected_index >= self.scroll_offset + self.visible_count {
-            self.scroll_offset = self.selected_index - self.visible_count + 1;
-        }
+        self.scroll.select_next();
     }
 
     /// Get currently selected hook type
     pub fn selected_hook_type(&self) -> HookType {
-        HookType::all()[self.selected_index]
+        HookType::all()[self.scroll.selected_index]
     }
 
     /// Open matchers dialog for current selection
@@ -199,9 +195,13 @@ impl HooksDialog {
         self.selected_hook = None;
     }
 
+    /// Check if we should show scroll indicator above
+    pub fn has_more_above(&self) -> bool {
+        self.scroll.has_more_above()
+    }
+
     /// Check if we should show scroll indicator below
     pub fn has_more_below(&self) -> bool {
-        let total = HookType::all().len();
-        self.scroll_offset + self.visible_count < total
+        self.scroll.has_more_below()
     }
 }

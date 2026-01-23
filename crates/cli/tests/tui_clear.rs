@@ -76,3 +76,34 @@ fn test_clear_after_matches_fixture() {
 
     assert_tui_matches_fixture(&capture, "clear_after.txt", None);
 }
+
+/// Verify /clear succeeds when session is already empty
+#[test]
+fn test_clear_empty_session_succeeds() {
+    let scenario = write_scenario(
+        r#"
+        {
+            "trusted": true,
+            "claude_version": "2.1.12",
+            "responses": [
+                { "pattern": { "type": "any" }, "response": "ok" }
+            ]
+        }
+        "#,
+    );
+
+    let session = "claudeless-clear-empty";
+    start_tui(session, &scenario);
+
+    // Clear without any conversation
+    tmux::send_line(session, "/clear");
+
+    // Should show "(no content)" without error
+    let capture = tmux::wait_for_content(session, "no content");
+
+    tmux::kill_session(session);
+
+    // Verify no error message appears
+    assert!(!capture.contains("error"));
+    assert!(!capture.contains("Failed"));
+}

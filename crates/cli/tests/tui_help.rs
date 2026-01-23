@@ -194,6 +194,51 @@ fn test_tui_help_tab_cycles_through_all_tabs() {
     tmux::kill_session(session);
 }
 
+/// Behavior observed with: claude --version 2.1.12 (Claude Code)
+///
+/// Left/Right arrow keys navigate between tabs (alternative to Tab key)
+#[test]
+fn test_tui_help_arrow_keys_navigate_tabs() {
+    let scenario = write_scenario(
+        r#"
+        name = "test"
+        [[responses]]
+        pattern = { type = "any" }
+        response = "Hello!"
+        "#,
+    );
+
+    let session = "claudeless-help-arrow-tabs";
+    let previous = start_tui(session, &scenario);
+
+    // Open help dialog
+    tmux::send_keys(session, "/help");
+    let _ = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(session, "Enter");
+    let general = tmux::wait_for_content(session, "general");
+
+    // Right arrow should go to commands tab
+    tmux::send_keys(session, "Right");
+    let commands = tmux::wait_for_change(session, &general);
+    assert!(
+        commands.contains("Browse default commands:"),
+        "Right arrow should navigate to commands tab.\nCapture:\n{}",
+        commands
+    );
+
+    // Left arrow should go back to general tab
+    tmux::send_keys(session, "Left");
+    let back_to_general = tmux::wait_for_change(session, &commands);
+
+    tmux::kill_session(session);
+
+    assert!(
+        back_to_general.contains("/ for commands"),
+        "Left arrow should navigate back to general tab.\nCapture:\n{}",
+        back_to_general
+    );
+}
+
 // =============================================================================
 // /help Navigation Tests
 // =============================================================================

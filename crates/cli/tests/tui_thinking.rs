@@ -138,7 +138,7 @@ fn test_thinking_dialog_matches_fixture() {
 
 /// Compare thinking dialog with Enabled selected against fixture
 #[test]
-#[ignore] // TODO(implement): Simulator captures include separator line not in fixture
+#[ignore] // TODO(slash-cleanup): Simulator captures include separator line not in fixture
 fn test_thinking_dialog_enabled_selected_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -165,7 +165,7 @@ fn test_thinking_dialog_enabled_selected_matches_fixture() {
 
 /// Compare thinking dialog with Disabled selected against fixture
 #[test]
-#[ignore] // TODO(implement): Simulator captures include separator line not in fixture
+#[ignore] // TODO(slash-cleanup): Simulator captures include separator line not in fixture
 fn test_thinking_dialog_disabled_selected_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -195,7 +195,7 @@ fn test_thinking_dialog_disabled_selected_matches_fixture() {
 
 /// Compare "Thinking off" status bar against fixture
 #[test]
-#[ignore] // TODO(implement): Fixture only captures status bar, simulator captures full screen
+#[ignore] // TODO(slash-cleanup): Fixture only captures status bar, simulator captures full screen
 fn test_thinking_off_status_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -228,7 +228,7 @@ fn test_thinking_off_status_matches_fixture() {
 }
 
 #[test]
-#[ignore] // TODO(implement): Implement mid-conversation warning in thinking dialog
+#[ignore] // DEFERRED: Requires mid-conversation warning implementation in thinking dialog
 fn test_thinking_dialog_mid_conversation_matches_fixture() {
     let scenario = write_scenario(
         r#"

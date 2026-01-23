@@ -309,9 +309,8 @@ mod stream_json_output {
     ///
     /// Real Claude starts stream with {"type":"system","subtype":"init",...}
     ///
-    /// FIXME: epic-05x-fix-cli - enable after fixing output format
     #[test]
-    #[ignore]
+    #[ignore] // DEFERRED: Requires output format fix (epic-05x-fix-cli)
     fn test_stream_json_starts_with_system_init() {
         let scenario = write_scenario(
             r#"
@@ -618,9 +617,8 @@ mod unsupported_flags {
     ///
     /// Real Claude supports --add-dir. claudeless should accept it (even if ignored).
     ///
-    /// FIXME: epic-05x-fix-cli - enable after adding missing CLI flags
     #[test]
-    #[ignore]
+    #[ignore] // DEFERRED: Requires missing CLI flags (epic-05x-fix-cli)
     fn test_add_dir_flag_should_be_accepted() {
         let scenario = write_scenario(
             r#"
@@ -648,9 +646,8 @@ mod unsupported_flags {
     ///
     /// Real Claude supports --json-schema. claudeless should accept it (even if ignored).
     ///
-    /// FIXME: epic-05x-fix-cli - enable after adding missing CLI flags
     #[test]
-    #[ignore]
+    #[ignore] // DEFERRED: Requires missing CLI flags (epic-05x-fix-cli)
     fn test_json_schema_flag_should_be_accepted() {
         let scenario = write_scenario(
             r#"
@@ -678,9 +675,8 @@ mod unsupported_flags {
     ///
     /// Real Claude supports --tools. claudeless should accept it (even if ignored).
     ///
-    /// FIXME: epic-05x-fix-cli - enable after adding missing CLI flags
     #[test]
-    #[ignore]
+    #[ignore] // DEFERRED: Requires missing CLI flags (epic-05x-fix-cli)
     fn test_tools_flag_should_be_accepted() {
         let scenario = write_scenario(
             r#"
@@ -708,9 +704,8 @@ mod unsupported_flags {
     ///
     /// Real Claude supports --agent. claudeless should accept it (even if ignored).
     ///
-    /// FIXME: epic-05x-fix-cli - enable after adding missing CLI flags
     #[test]
-    #[ignore]
+    #[ignore] // DEFERRED: Requires missing CLI flags (epic-05x-fix-cli)
     fn test_agent_flag_should_be_accepted() {
         let scenario = write_scenario(
             r#"
@@ -738,9 +733,8 @@ mod unsupported_flags {
     ///
     /// Real Claude supports --append-system-prompt. claudeless should accept it.
     ///
-    /// FIXME: epic-05x-fix-cli - enable after adding missing CLI flags
     #[test]
-    #[ignore]
+    #[ignore] // DEFERRED: Requires missing CLI flags (epic-05x-fix-cli)
     fn test_append_system_prompt_flag_should_be_accepted() {
         let scenario = write_scenario(
             r#"
