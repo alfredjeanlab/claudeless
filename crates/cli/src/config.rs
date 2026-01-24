@@ -224,6 +224,16 @@ impl Default for ResponseSpec {
     }
 }
 
+impl ResponseSpec {
+    /// Extract text and optional usage from a response.
+    pub fn text_and_usage(&self) -> (String, Option<UsageSpec>) {
+        match self {
+            ResponseSpec::Simple(s) => (s.clone(), None),
+            ResponseSpec::Detailed { text, usage, .. } => (text.clone(), usage.clone()),
+        }
+    }
+}
+
 /// Simulated tool call
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
