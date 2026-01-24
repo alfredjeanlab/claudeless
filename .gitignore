@@ -1,6 +1,7 @@
 # Build artifacts
 target/
 .build/
+.quench/
 
 # v0 build state
 .v0/
