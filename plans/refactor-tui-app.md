@@ -2,6 +2,8 @@
 
 ## Overview
 
+**Root Feature:** `cl-e7cb`
+
 Split the monolithic `crates/cli/src/tui/app.rs` (3596 lines, 32772 tokens) into smaller, focused modules. The file contains mixed concerns: configuration, state management, input handling, command processing, dialog handlers, permission handling, and rendering. This refactor extracts each concern into its own module under `tui/app/` while maintaining the same public API.
 
 ## Project Structure
