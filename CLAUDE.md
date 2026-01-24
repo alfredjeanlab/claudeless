@@ -47,6 +47,7 @@ Before committing changes:
   - `make lint` (shellcheck)
   - `cargo fmt --all -- --check`
   - `cargo clippy --all-targets --all-features -- -D warnings`
+  - `quench check --fix`
   - `cargo test --all`
   - `cargo build --all`
   - `cargo audit`

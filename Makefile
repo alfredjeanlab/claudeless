@@ -1,11 +1,12 @@
 SHELL := /bin/bash
 
-.PHONY: check build test install clean license outdated lint lint-shell lint-policy
+.PHONY: check install license outdated lint lint-shell lint-policy
 
 # Run all CI checks
 check: lint
 	cargo fmt --all -- --check
 	cargo clippy --all-targets --all-features -- -D warnings
+	quench check --fix
 	cargo test --all
 	cargo build --all
 	@if [ -n "$$CI" ]; then \
@@ -17,21 +18,9 @@ check: lint
 	fi
 	cargo deny check licenses bans sources
 
-# Build release binary
-build:
-	cargo build --release
-
-# Run tests
-test:
-	cargo test --all
-
 # Install to ~/.local/bin
 install:
 	@scripts/install
-
-# Clean build artifacts
-clean:
-	cargo clean
 
 # Check for outdated dependencies (root deps only, not transitive)
 outdated:

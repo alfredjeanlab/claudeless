@@ -24,58 +24,11 @@ if [[ "$BASE_BRANCH" == "--base-branch" ]]; then
     BASE_BRANCH="${2:-main}"
 fi
 
-# Forbidden lints that should only appear in test code
-FORBIDDEN_LINTS=(
-    "clippy::unwrap_used"
-    "clippy::expect_used"
-    "clippy::panic"
-)
 
 ERRORS=0
 
 # =============================================================================
-# Check 1: Allow attributes policy
-# =============================================================================
-check_allow_attributes() {
-    local pattern
-    pattern=$(printf '%s\\|' "${FORBIDDEN_LINTS[@]}")
-    pattern="${pattern%\\|}"  # Remove trailing \|
-
-    # Find Rust files with forbidden allow attributes
-    # Exclude: tests/ directories, *_test.rs, *_tests.rs files
-    local violations
-    violations=$(find "$ROOT_DIR/crates" -name "*.rs" -type f \
-        ! -path "*/tests/*" \
-        ! -name "*_test.rs" \
-        ! -name "*_tests.rs" \
-        -exec grep -l "#\[allow(.*\(${pattern}\)" {} \; 2>/dev/null || true)
-
-    # Also check for #![allow(...)] at file level
-    local file_level_violations
-    file_level_violations=$(find "$ROOT_DIR/crates" -name "*.rs" -type f \
-        ! -path "*/tests/*" \
-        ! -name "*_test.rs" \
-        ! -name "*_tests.rs" \
-        -exec grep -l "#!\[allow(.*\(${pattern}\)" {} \; 2>/dev/null || true)
-
-    violations="$violations $file_level_violations"
-    violations=$(echo "$violations" | tr ' ' '\n' | sort -u | grep -v '^$' || true)
-
-    if [[ -n "$violations" ]]; then
-        echo "ERROR: Forbidden allow attributes in production code:"
-        echo "$violations" | while read -r file; do
-            if [[ -n "$file" ]]; then
-                echo "  $file"
-                grep -n "#\[allow\|#!\[allow" "$file" | grep -E "$(printf '%s|' "${FORBIDDEN_LINTS[@]}" | sed 's/|$//')" | sed 's/^/    /'
-            fi
-        done
-        echo "Allowed only in: tests/ directories, *_test.rs, *_tests.rs"
-        ERRORS=$((ERRORS + 1))
-    fi
-}
-
-# =============================================================================
-# Check 2: deny.toml policy
+# Check 1: deny.toml policy
 # =============================================================================
 check_deny_toml() {
     local deny_file="$ROOT_DIR/deny.toml"
@@ -113,29 +66,7 @@ check_deny_toml() {
 }
 
 # =============================================================================
-# Check 3: Shellcheck exceptions policy
-# =============================================================================
-check_shellcheck_exceptions() {
-    local scripts_dir="$ROOT_DIR/scripts"
-    [[ ! -d "$scripts_dir" ]] && return
-
-    local violations
-    violations=$(grep -rn "# shellcheck disable=" "$scripts_dir" --exclude="lint-policy" 2>/dev/null || true)
-
-    if [[ -n "$violations" ]]; then
-        echo "ERROR: shellcheck disable comments found:"
-        echo "$violations" | sed 's/^/  /'
-        ERRORS=$((ERRORS + 1))
-    fi
-
-    if [[ -f "$ROOT_DIR/.shellcheckrc" ]]; then
-        echo "ERROR: .shellcheckrc file found (global exceptions not allowed)"
-        ERRORS=$((ERRORS + 1))
-    fi
-}
-
-# =============================================================================
-# Check 4: cargo audit ignore policy
+# Check 2: cargo audit ignore policy
 # =============================================================================
 check_audit_toml() {
     local audit_file="$ROOT_DIR/.cargo/audit.toml"
@@ -160,89 +91,10 @@ check_audit_toml() {
 }
 
 # =============================================================================
-# Check 5: Cargo.toml lints policy
-# =============================================================================
-check_cargo_lints() {
-    git -C "$ROOT_DIR" rev-parse --git-dir >/dev/null 2>&1 || return
-    git -C "$ROOT_DIR" rev-parse "$BASE_BRANCH" >/dev/null 2>&1 || return
-
-    local cargo_files
-    cargo_files=$(find "$ROOT_DIR" -name "Cargo.toml" -type f ! -path "*/target/*")
-
-    for cargo_file in $cargo_files; do
-        local rel_path="${cargo_file#$ROOT_DIR/}"
-
-        # Get base version
-        local base_cargo
-        base_cargo=$(git -C "$ROOT_DIR" show "$BASE_BRANCH:$rel_path" 2>/dev/null || echo "")
-
-        if [[ -z "$base_cargo" ]]; then
-            continue
-        fi
-
-        # Check for [lints.clippy] section changes
-        # Extract lint settings from current and base
-        local current_lints base_lints
-        current_lints=$(sed -n '/\[lints\.clippy\]/,/^\[/p' "$cargo_file" 2>/dev/null | grep -E '^[a-z_]+ = "' || true)
-        base_lints=$(echo "$base_cargo" | sed -n '/\[lints\.clippy\]/,/^\[/p' 2>/dev/null | grep -E '^[a-z_]+ = "' || true)
-
-        # Check for new "allow" or "warn" entries (weakening)
-        local new_allows
-        new_allows=$(echo "$current_lints" | grep -E '= "(allow|warn)"' | while read -r line; do
-            lint_name=$(echo "$line" | cut -d= -f1 | tr -d ' ')
-            # Check if this lint existed with stronger level in base
-            base_level=$(echo "$base_lints" | grep "^$lint_name = " | sed 's/.*= "\([^"]*\)".*/\1/' || true)
-            current_level=$(echo "$line" | sed 's/.*= "\([^"]*\)".*/\1/')
-
-            if [[ -z "$base_level" ]]; then
-                # New lint added with allow/warn
-                echo "$lint_name = \"$current_level\" (new)"
-            elif [[ "$base_level" == "deny" || "$base_level" == "forbid" ]]; then
-                # Weakened from deny/forbid
-                echo "$lint_name: $base_level → $current_level (weakened)"
-            fi
-        done || true)
-
-        if [[ -n "$new_allows" ]]; then
-            echo "ERROR: Weakened or new allow/warn lints in $rel_path:"
-            echo "$new_allows" | sed 's/^/  /'
-            ERRORS=$((ERRORS + 1))
-        fi
-
-        # Check [lints.rust] section too
-        local current_rust_lints base_rust_lints
-        current_rust_lints=$(sed -n '/\[lints\.rust\]/,/^\[/p' "$cargo_file" 2>/dev/null | grep -E '^[a-z_]+ = "' || true)
-        base_rust_lints=$(echo "$base_cargo" | sed -n '/\[lints\.rust\]/,/^\[/p' 2>/dev/null | grep -E '^[a-z_]+ = "' || true)
-
-        local new_rust_allows
-        new_rust_allows=$(echo "$current_rust_lints" | grep -E '= "(allow|warn)"' | while read -r line; do
-            lint_name=$(echo "$line" | cut -d= -f1 | tr -d ' ')
-            base_level=$(echo "$base_rust_lints" | grep "^$lint_name = " | sed 's/.*= "\([^"]*\)".*/\1/' || true)
-            current_level=$(echo "$line" | sed 's/.*= "\([^"]*\)".*/\1/')
-
-            if [[ -z "$base_level" ]]; then
-                echo "$lint_name = \"$current_level\" (new)"
-            elif [[ "$base_level" == "deny" || "$base_level" == "forbid" ]]; then
-                echo "$lint_name: $base_level → $current_level (weakened)"
-            fi
-        done || true)
-
-        if [[ -n "$new_rust_allows" ]]; then
-            echo "ERROR: Weakened or new allow/warn rust lints in $rel_path:"
-            echo "$new_rust_allows" | sed 's/^/  /'
-            ERRORS=$((ERRORS + 1))
-        fi
-    done
-}
-
-# =============================================================================
 # Main
 # =============================================================================
-check_allow_attributes
 check_deny_toml
-check_shellcheck_exceptions
 check_audit_toml
-check_cargo_lints
 
 if [[ $ERRORS -gt 0 ]]; then
     echo ""
