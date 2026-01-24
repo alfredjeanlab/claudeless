@@ -1,5 +1,7 @@
 # Plan: Refactor session.rs
 
+**Root Feature:** `cl-7007`
+
 ## Overview
 
 Refactor `crates/cli/src/state/session.rs` (931 lines) to be under the 750-line limit by extracting JSONL format types into a submodule and DRYing up repetitive patterns.
