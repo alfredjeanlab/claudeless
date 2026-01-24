@@ -8,6 +8,14 @@ use crate::config::{ResponseSpec, ToolCallSpec, UsageSpec};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 
+#[path = "output_events.rs"]
+mod output_events;
+pub use output_events::{
+    AssistantEvent, AssistantMessageContent, CondensedAssistantEvent, CondensedMessage,
+    ContentBlockDeltaEvent, ContentBlockStartEvent, ContentBlockStopEvent, ExtendedUsage,
+    SystemInitEvent,
+};
+
 /// Detailed usage statistics for result output
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ResultUsage {
@@ -73,35 +81,37 @@ pub struct ResultOutput {
 }
 
 impl ResultOutput {
-    /// Create a success result with usage based on response
-    pub fn success(result: String, session_id: String, duration_ms: u64) -> Self {
-        let output_tokens = estimate_tokens(&result);
-        let input_tokens = 100; // Default simulated input tokens
-        let usage = ResultUsage::from_tokens(input_tokens, output_tokens);
-
-        let mut model_usage = ModelUsage::default();
-        model_usage.models.insert(
-            "claude-opus-4-5-20251101".to_string(),
-            ResultUsage::from_tokens(input_tokens, output_tokens),
-        );
-
+    /// Create a base result with common defaults.
+    fn base(session_id: String) -> Self {
         Self {
             output_type: "result".to_string(),
             subtype: "success".to_string(),
-            cost_usd: usage.cost_usd,
+            cost_usd: 0.0,
             is_error: false,
-            duration_ms,
-            duration_api_ms: duration_ms.saturating_sub(50),
-            num_turns: 1,
-            result: Some(result),
+            duration_ms: 0,
+            duration_api_ms: 0,
+            num_turns: 0,
+            result: None,
             error: None,
             session_id,
             uuid: uuid_stub(),
             retry_after: None,
-            model_usage,
-            usage,
+            model_usage: ModelUsage::default(),
+            usage: ResultUsage::from_tokens(0, 0),
             permission_denials: vec![],
         }
+    }
+
+    /// Create a success result with usage based on response
+    pub fn success(result: String, session_id: String, duration_ms: u64) -> Self {
+        Self::success_with_usage(
+            result,
+            session_id,
+            duration_ms,
+            100,
+            0, // Will be estimated below
+            "claude-opus-4-5-20251101",
+        )
     }
 
     /// Create a success result with custom usage
@@ -113,8 +123,12 @@ impl ResultOutput {
         output_tokens: u32,
         model: &str,
     ) -> Self {
+        let output_tokens = if output_tokens == 0 {
+            estimate_tokens(&result)
+        } else {
+            output_tokens
+        };
         let usage = ResultUsage::from_tokens(input_tokens, output_tokens);
-
         let mut model_usage = ModelUsage::default();
         model_usage.models.insert(
             model.to_string(),
@@ -122,66 +136,42 @@ impl ResultOutput {
         );
 
         Self {
-            output_type: "result".to_string(),
-            subtype: "success".to_string(),
             cost_usd: usage.cost_usd,
-            is_error: false,
             duration_ms,
             duration_api_ms: duration_ms.saturating_sub(50),
             num_turns: 1,
             result: Some(result),
-            error: None,
-            session_id,
-            uuid: uuid_stub(),
-            retry_after: None,
             model_usage,
             usage,
-            permission_denials: vec![],
+            ..Self::base(session_id)
         }
     }
 
     /// Create an error result
     pub fn error(error: String, session_id: String, duration_ms: u64) -> Self {
         Self {
-            output_type: "result".to_string(),
             subtype: "error".to_string(),
-            cost_usd: 0.0,
             is_error: true,
             duration_ms,
             duration_api_ms: duration_ms.saturating_sub(10),
-            num_turns: 0,
-            result: None,
             error: Some(error),
-            session_id,
-            uuid: uuid_stub(),
-            retry_after: None,
-            model_usage: ModelUsage::default(),
-            usage: ResultUsage::from_tokens(0, 0),
-            permission_denials: vec![],
+            ..Self::base(session_id)
         }
     }
 
     /// Create a rate limit error result
     pub fn rate_limit(retry_after: u64, session_id: String) -> Self {
         Self {
-            output_type: "result".to_string(),
             subtype: "error".to_string(),
-            cost_usd: 0.0,
             is_error: true,
             duration_ms: 50,
             duration_api_ms: 50,
-            num_turns: 0,
-            result: None,
             error: Some(format!(
                 "Rate limited. Retry after {} seconds.",
                 retry_after
             )),
-            session_id,
-            uuid: uuid_stub(),
             retry_after: Some(retry_after),
-            model_usage: ModelUsage::default(),
-            usage: ResultUsage::from_tokens(0, 0),
-            permission_denials: vec![],
+            ..Self::base(session_id)
         }
     }
 }
@@ -335,221 +325,6 @@ pub enum ToolResultContentBlock {
     Image { data: String, media_type: String },
 }
 
-// =============================================================================
-// Real Claude Format Types
-// =============================================================================
-// The types below match the actual format produced by Claude Code CLI
-
-/// System init event for stream-json
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SystemInitEvent {
-    #[serde(rename = "type")]
-    pub event_type: String,
-    pub subtype: String,
-    pub session_id: String,
-    pub tools: Vec<String>,
-    pub mcp_servers: Vec<String>,
-}
-
-impl SystemInitEvent {
-    pub fn new(session_id: impl Into<String>, tools: Vec<String>) -> Self {
-        Self {
-            event_type: "system".to_string(),
-            subtype: "init".to_string(),
-            session_id: session_id.into(),
-            tools,
-            mcp_servers: vec![],
-        }
-    }
-
-    /// Create with MCP servers included.
-    pub fn with_mcp_servers(
-        session_id: impl Into<String>,
-        tools: Vec<String>,
-        mcp_servers: Vec<String>,
-    ) -> Self {
-        Self {
-            event_type: "system".to_string(),
-            subtype: "init".to_string(),
-            session_id: session_id.into(),
-            tools,
-            mcp_servers,
-        }
-    }
-}
-
-/// Assistant message event for stream-json
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AssistantEvent {
-    #[serde(rename = "type")]
-    pub event_type: String,
-    pub subtype: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub message: Option<AssistantMessageContent>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub usage: Option<ExtendedUsage>,
-}
-
-impl AssistantEvent {
-    pub fn message_start(message: AssistantMessageContent) -> Self {
-        Self {
-            event_type: "assistant".to_string(),
-            subtype: "message_start".to_string(),
-            message: Some(message),
-            usage: None,
-        }
-    }
-
-    pub fn message_delta(usage: ExtendedUsage) -> Self {
-        Self {
-            event_type: "assistant".to_string(),
-            subtype: "message_delta".to_string(),
-            message: None,
-            usage: Some(usage),
-        }
-    }
-
-    pub fn message_stop() -> Self {
-        Self {
-            event_type: "assistant".to_string(),
-            subtype: "message_stop".to_string(),
-            message: None,
-            usage: None,
-        }
-    }
-}
-
-/// Content of assistant message
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AssistantMessageContent {
-    pub id: String,
-    pub model: String,
-    pub role: String,
-    pub content: Vec<serde_json::Value>,
-    pub stop_reason: Option<String>,
-}
-
-/// Condensed assistant event for stream-json (matches real Claude output)
-/// This is the format used in real Claude CLI output - no subtype, includes full message
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CondensedAssistantEvent {
-    #[serde(rename = "type")]
-    pub event_type: String,
-    pub message: CondensedMessage,
-    pub session_id: String,
-    pub uuid: String,
-}
-
-impl CondensedAssistantEvent {
-    pub fn new(message: CondensedMessage, session_id: impl Into<String>) -> Self {
-        Self {
-            event_type: "assistant".to_string(),
-            message,
-            session_id: session_id.into(),
-            uuid: uuid_stub(),
-        }
-    }
-}
-
-/// Message content for condensed assistant event
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CondensedMessage {
-    pub id: String,
-    pub model: String,
-    pub role: String,
-    #[serde(rename = "type")]
-    pub message_type: String,
-    pub content: serde_json::Value,
-    pub stop_reason: Option<String>,
-    pub stop_sequence: Option<String>,
-    pub usage: serde_json::Value,
-}
-
-/// Extended usage info matching real Claude
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ExtendedUsage {
-    pub input_tokens: u32,
-    pub output_tokens: u32,
-    pub cache_creation_input_tokens: u32,
-    pub cache_read_input_tokens: u32,
-}
-
-impl ExtendedUsage {
-    pub fn new(input_tokens: u32, output_tokens: u32) -> Self {
-        Self {
-            input_tokens,
-            output_tokens,
-            cache_creation_input_tokens: 0,
-            cache_read_input_tokens: 0,
-        }
-    }
-}
-
-/// Content block start event
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ContentBlockStartEvent {
-    #[serde(rename = "type")]
-    pub event_type: String,
-    pub subtype: String,
-    pub index: u32,
-}
-
-impl ContentBlockStartEvent {
-    pub fn text(index: u32) -> Self {
-        Self {
-            event_type: "content_block_start".to_string(),
-            subtype: "text".to_string(),
-            index,
-        }
-    }
-
-    pub fn tool_use(index: u32) -> Self {
-        Self {
-            event_type: "content_block_start".to_string(),
-            subtype: "tool_use".to_string(),
-            index,
-        }
-    }
-}
-
-/// Content block delta event
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ContentBlockDeltaEvent {
-    #[serde(rename = "type")]
-    pub event_type: String,
-    pub subtype: String,
-    pub index: u32,
-    pub delta: String,
-}
-
-impl ContentBlockDeltaEvent {
-    pub fn text(index: u32, delta: impl Into<String>) -> Self {
-        Self {
-            event_type: "content_block_delta".to_string(),
-            subtype: "text_delta".to_string(),
-            index,
-            delta: delta.into(),
-        }
-    }
-}
-
-/// Content block stop event
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ContentBlockStopEvent {
-    #[serde(rename = "type")]
-    pub event_type: String,
-    pub index: u32,
-}
-
-impl ContentBlockStopEvent {
-    pub fn new(index: u32) -> Self {
-        Self {
-            event_type: "content_block_stop".to_string(),
-            index,
-        }
-    }
-}
-
 /// Output writer that handles different formats
 pub struct OutputWriter<W: Write> {
     writer: W,
@@ -593,10 +368,7 @@ impl<W: Write> OutputWriter<W> {
         response: &ResponseSpec,
         tool_calls: &[ToolCallSpec],
     ) -> std::io::Result<()> {
-        let (text, usage) = match response {
-            ResponseSpec::Simple(s) => (s.clone(), None),
-            ResponseSpec::Detailed { text, usage, .. } => (text.clone(), usage.clone()),
-        };
+        let (text, usage) = response.text_and_usage();
 
         let mut content = vec![ContentBlock::Text { text: text.clone() }];
         for tc in tool_calls {
@@ -625,8 +397,7 @@ impl<W: Write> OutputWriter<W> {
             },
         };
 
-        let json = serde_json::to_string(&json_response)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        let json = to_json(&json_response)?;
         writeln!(self.writer, "{}", json)
     }
 
@@ -635,10 +406,7 @@ impl<W: Write> OutputWriter<W> {
         response: &ResponseSpec,
         tool_calls: &[ToolCallSpec],
     ) -> std::io::Result<()> {
-        let (text, usage) = match response {
-            ResponseSpec::Simple(s) => (s.clone(), None),
-            ResponseSpec::Detailed { text, usage, .. } => (text.clone(), usage.clone()),
-        };
+        let (text, usage) = response.text_and_usage();
 
         let msg_id = format!("msg_{}", uuid_stub());
 
@@ -695,8 +463,7 @@ impl<W: Write> OutputWriter<W> {
             self.write_event(&tool_start)?;
 
             // Stream the input JSON
-            let input_json = serde_json::to_string(&tc.input)
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+            let input_json = to_json(&tc.input)?;
             let input_delta = StreamEvent::ContentBlockDelta {
                 index: idx,
                 delta: Delta::InputJsonDelta {
@@ -731,8 +498,7 @@ impl<W: Write> OutputWriter<W> {
     }
 
     fn write_event(&mut self, event: &StreamEvent) -> std::io::Result<()> {
-        let json = serde_json::to_string(event)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        let json = to_json(event)?;
         writeln!(self.writer, "{}", json)
     }
 
@@ -742,8 +508,7 @@ impl<W: Write> OutputWriter<W> {
 
     /// Write a result in Claude's result wrapper format (--output-format json)
     pub fn write_result(&mut self, result: &ResultOutput) -> std::io::Result<()> {
-        let json = serde_json::to_string(result)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        let json = to_json(result)?;
         writeln!(self.writer, "{}", json)
     }
 
@@ -780,10 +545,7 @@ impl<W: Write> OutputWriter<W> {
         response: &ResponseSpec,
         session_id: &str,
     ) -> std::io::Result<()> {
-        let (text, usage_spec) = match response {
-            ResponseSpec::Simple(s) => (s.clone(), None),
-            ResponseSpec::Detailed { text, usage, .. } => (text.clone(), usage.clone()),
-        };
+        let (text, usage_spec) = response.text_and_usage();
 
         let result = if let Some(usage) = usage_spec {
             ResultOutput::success_with_usage(
@@ -814,10 +576,7 @@ impl<W: Write> OutputWriter<W> {
         tools: Vec<String>,
         mcp_servers: Vec<String>,
     ) -> std::io::Result<()> {
-        let (text, usage) = match response {
-            ResponseSpec::Simple(s) => (s.clone(), None),
-            ResponseSpec::Detailed { text, usage, .. } => (text.clone(), usage.clone()),
-        };
+        let (text, usage) = response.text_and_usage();
 
         let msg_id = format!("msg_{}", uuid_stub());
 
@@ -903,10 +662,14 @@ impl<W: Write> OutputWriter<W> {
 
     /// Write a JSON-serializable object as a line
     fn write_json_line<T: serde::Serialize>(&mut self, value: &T) -> std::io::Result<()> {
-        let json = serde_json::to_string(value)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        writeln!(self.writer, "{}", json)
+        writeln!(self.writer, "{}", to_json(value)?)
     }
+}
+
+/// Serialize to JSON with IO error mapping.
+fn to_json<T: serde::Serialize>(value: &T) -> std::io::Result<String> {
+    serde_json::to_string(value)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
 }
 
 /// Generate a deterministic UUID-like stub for testing
