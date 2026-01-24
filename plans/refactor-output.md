@@ -1,5 +1,7 @@
 # Refactor Output Plan
 
+**Root Feature:** `cl-f708`
+
 ## Overview
 
 Reduce `output.rs` from 924 lines to under 750 by:
