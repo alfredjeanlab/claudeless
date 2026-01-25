@@ -3,12 +3,15 @@
 
 # Required: Project identity
 PROJECT="claudeless"
-ISSUE_PREFIX="cl"    # Issue IDs: cs-abc123
+ISSUE_PREFIX="less"    # Issue IDs: less-abc123
 
 # Optional: Override defaults
 # V0_BUILD_DIR=".v0/build"      # Build state directory
 # V0_PLANS_DIR="plans"          # Implementation plans
+V0_DEVELOP_BRANCH="v0/develop"     # Target branch for merges
 # V0_FEATURE_BRANCH="feature/{name}"
 # V0_BUGFIX_BRANCH="fix/{id}"
 # V0_CHORE_BRANCH="chore/{id}"
+# V0_GIT_REMOTE="origin"        # Git remote for push/fetch
+# V0_WORKSPACE_MODE="worktree"  # 'worktree' or 'clone' (auto-detected)
 # DISABLE_NOTIFICATIONS=1       # Disable macOS notifications
