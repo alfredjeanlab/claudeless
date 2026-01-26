@@ -38,6 +38,11 @@ fn parses_empty_input() { ... }
 - LOC metrics reflect implementation conciseness, not test volume
 - Integration tests remain in `tests/` as usual
 
+## Commits
+
+Use conventional commit format: `type(scope): description`
+Types: feat, fix, chore, docs, test, refactor
+
 ## Landing the Plane
 
 Before committing changes:
