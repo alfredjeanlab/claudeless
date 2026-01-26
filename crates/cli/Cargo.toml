@@ -32,7 +32,7 @@ iocraft = "0.7"
 unicode-width = "0.2"
 textwrap = "0.16"
 # Terminal size detection (used by iocraft transitively, but we need direct access)
-crossterm = "0.28"
+crossterm = "0.29"
 # Clipboard access for /export command
 arboard = "3"
 
