@@ -492,7 +492,10 @@ impl TuiAppState {
     }
 
     /// Check if a permission is already granted for this session
-    pub(super) fn is_session_granted(&self, permission_type: &crate::tui::widgets::permission::PermissionType) -> bool {
+    pub(super) fn is_session_granted(
+        &self,
+        permission_type: &crate::tui::widgets::permission::PermissionType,
+    ) -> bool {
         let inner = self.inner.lock();
         let dialog = RichPermissionDialog::new(permission_type.clone());
         let key = dialog.session_key();

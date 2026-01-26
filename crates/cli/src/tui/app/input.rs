@@ -153,8 +153,9 @@ impl TuiAppState {
             (m, KeyCode::Char('p'))
                 if m.contains(KeyModifiers::META) || m.contains(KeyModifiers::ALT) =>
             {
-                inner.model_picker_dialog =
-                    Some(crate::tui::widgets::ModelPickerDialog::new(&inner.status.model));
+                inner.model_picker_dialog = Some(crate::tui::widgets::ModelPickerDialog::new(
+                    &inner.status.model,
+                ));
                 inner.mode = AppMode::ModelPicker;
             }
 

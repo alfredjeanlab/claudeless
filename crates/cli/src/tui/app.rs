@@ -8,11 +8,11 @@ mod state;
 mod types;
 
 pub use state::TuiAppState;
+use state::TuiAppStateInner;
 pub use types::{
     AppMode, ExitHint, ExitReason, PermissionChoice, PermissionRequest, RenderState, StatusInfo,
     TrustPromptState, TuiConfig, DEFAULT_TERMINAL_WIDTH,
 };
-use state::TuiAppStateInner;
 
 use iocraft::prelude::*;
 

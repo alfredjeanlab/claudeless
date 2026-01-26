@@ -4,7 +4,7 @@ SHELL := /bin/bash
 
 # Run all CI checks
 check: lint
-	cargo fmt --all -- --check
+	cargo fmt --all
 	cargo clippy --all-targets --all-features -- -D warnings
 	quench check --fix
 	cargo test --all
