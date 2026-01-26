@@ -25,3 +25,4 @@ Thumbs.db
 # Workdir
 checkout/
 
+.v0.profile.rc

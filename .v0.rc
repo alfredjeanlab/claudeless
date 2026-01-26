@@ -5,13 +5,23 @@
 PROJECT="claudeless"
 ISSUE_PREFIX="less"    # Issue IDs: less-abc123
 
-# Optional: Override defaults
-# V0_BUILD_DIR=".v0/build"      # Build state directory
-# V0_PLANS_DIR="plans"          # Implementation plans
-V0_DEVELOP_BRANCH="v0/develop"     # Target branch for merges
-# V0_FEATURE_BRANCH="feature/{name}"
-# V0_BUGFIX_BRANCH="fix/{id}"
-# V0_CHORE_BRANCH="chore/{id}"
-# V0_GIT_REMOTE="origin"        # Git remote for push/fetch
-# V0_WORKSPACE_MODE="worktree"  # 'worktree' or 'clone' (auto-detected)
-# DISABLE_NOTIFICATIONS=1       # Disable macOS notifications
+# Build and merge configuration
+# V0_DEVELOP_BRANCH defined in .v0.profile.rc (user-specific)
+[[ -f "${V0_ROOT:-$(dirname "${BASH_SOURCE[0]}")}/.v0.profile.rc" ]] && source "${V0_ROOT:-$(dirname "${BASH_SOURCE[0]}")}/.v0.profile.rc"
+V0_GIT_REMOTE="agent"        # Git remote for push/fetch (local agent remote)
+V0_WORKSPACE_MODE="worktree"     # 'worktree' or 'clone' (auto-detected)
+
+# Worktree hooks
+# V0_WORKTREE_INIT='"${V0_CHECKOUT_DIR}/scripts/init-worktree"'  # Hook to run after worktree creation
+
+# Branch naming patterns
+V0_FEATURE_BRANCH="feature/{name}"
+V0_BUGFIX_BRANCH="fix/{id}"
+V0_CHORE_BRANCH="chore/{id}"
+
+# Build state directories
+V0_BUILD_DIR=".v0/build"          # Build state directory
+V0_PLANS_DIR="plans"              # Implementation plans
+
+# Notifications (macOS only)
+# DISABLE_NOTIFICATIONS=1         # Disable macOS notifications
