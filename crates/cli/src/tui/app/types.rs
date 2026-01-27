@@ -7,14 +7,10 @@ use std::path::PathBuf;
 
 use crate::config::{ScenarioConfig, DEFAULT_MODEL, DEFAULT_USER_NAME};
 use crate::permission::PermissionMode;
-use crate::tui::slash_menu::SlashMenuState;
-use crate::tui::widgets::export::ExportDialog;
-use crate::tui::widgets::help::HelpDialog;
 use crate::tui::widgets::permission::{PermissionSelection, RichPermissionDialog};
-use crate::tui::widgets::tasks::TasksDialog;
-use crate::tui::widgets::thinking::ThinkingDialog;
 use crate::tui::widgets::trust::TrustChoice;
-use crate::tui::widgets::{HooksDialog, MemoryDialog, ModelPickerDialog};
+
+use super::state::{DialogState, DisplayState, InputState};
 
 /// Configuration from scenario for TUI behavior
 #[derive(Clone, Debug)]
@@ -137,50 +133,24 @@ pub struct StatusInfo {
     pub session_id: Option<String>,
 }
 
-/// Snapshot of app state for rendering (avoids borrow issues)
+/// Snapshot of app state for rendering - uses focused state structs
 #[derive(Clone, Debug)]
 pub struct RenderState {
     pub mode: AppMode,
-    pub input_buffer: String,
-    pub cursor_pos: usize,
-    pub response_content: String,
-    pub is_streaming: bool,
+    /// Input state (buffer, cursor, history, etc.)
+    pub input: InputState,
+    /// Dialog state (active dialog if any)
+    pub dialog: DialogState,
+    /// Display state (response, conversation, terminal, etc.)
+    pub display: DisplayState,
     pub status: StatusInfo,
-    pub pending_permission: Option<PermissionRequest>,
-    pub user_name: String,
-    pub trust_prompt: Option<TrustPromptState>,
-    pub thinking_dialog: Option<ThinkingDialog>,
-    pub tasks_dialog: Option<TasksDialog>,
-    pub model_picker_dialog: Option<ModelPickerDialog>,
-    pub thinking_enabled: bool,
     pub permission_mode: PermissionMode,
-    pub is_command_output: bool,
-    pub conversation_display: String,
-    pub is_compacted: bool,
-    pub exit_hint: Option<ExitHint>,
+    pub thinking_enabled: bool,
+    pub user_name: String,
     /// Explicit Claude version, or None for Claudeless-native mode
     pub claude_version: Option<String>,
-    pub terminal_width: u16,
-    /// Whether the shortcuts panel is currently visible
-    pub show_shortcuts_panel: bool,
-    /// Slash command autocomplete menu state (None if menu is closed)
-    pub slash_menu: Option<SlashMenuState>,
-    /// Whether shell mode is currently active
-    pub shell_mode: bool,
     /// Whether output is connected to a TTY
     pub is_tty: bool,
-    /// Export dialog state (None if not showing)
-    pub export_dialog: Option<ExportDialog>,
-    /// Help dialog state (None if not showing)
-    pub help_dialog: Option<HelpDialog>,
-    /// Hooks dialog state (None if not showing)
-    pub hooks_dialog: Option<HooksDialog>,
-    /// Memory dialog state (None if not showing)
-    pub memory_dialog: Option<MemoryDialog>,
-    /// Stashed input text (for checking in tests)
-    pub stash_buffer: Option<String>,
-    /// Whether to show "Stashed (auto-restores after submit)" message
-    pub show_stash_indicator: bool,
 }
 
 /// Permission request state using the rich permission dialog

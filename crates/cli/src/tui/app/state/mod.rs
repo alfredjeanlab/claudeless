@@ -3,6 +3,14 @@
 
 //! TUI application state management.
 
+mod dialog;
+mod display;
+mod input;
+
+pub use dialog::DialogState;
+pub use display::DisplayState;
+pub use input::InputState;
+
 use parking_lot::Mutex;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -12,18 +20,11 @@ use crate::scenario::Scenario;
 use crate::state::session::SessionManager;
 use crate::state::todos::{TodoState, TodoStatus};
 use crate::time::{Clock, ClockHandle};
-use crate::tui::slash_menu::SlashMenuState;
 use crate::tui::widgets::context::ContextUsage;
-use crate::tui::widgets::export::ExportDialog;
-use crate::tui::widgets::help::HelpDialog;
 use crate::tui::widgets::permission::{RichPermissionDialog, SessionPermissionKey};
-use crate::tui::widgets::tasks::TasksDialog;
-use crate::tui::widgets::thinking::ThinkingDialog;
-use crate::tui::widgets::{HooksDialog, MemoryDialog, ModelPickerDialog};
 
 use super::types::{
-    AppMode, ExitHint, ExitReason, PermissionRequest, RenderState, StatusInfo, TrustPromptState,
-    TuiConfig, DEFAULT_TERMINAL_WIDTH, EXIT_HINT_TIMEOUT_MS,
+    AppMode, ExitReason, RenderState, StatusInfo, TrustPromptState, TuiConfig, EXIT_HINT_TIMEOUT_MS,
 };
 
 /// Shared state for the TUI app that can be accessed from outside the component
@@ -33,158 +34,66 @@ pub struct TuiAppState {
 }
 
 pub(super) struct TuiAppStateInner {
-    /// Current application mode
-    pub mode: AppMode,
+    // Focused state groups
+    /// Input editing state
+    pub input: InputState,
+    /// Active dialog state
+    pub dialog: DialogState,
+    /// Display/rendering state
+    pub display: DisplayState,
 
-    /// Input buffer for user typing
-    pub input_buffer: String,
-
-    /// Cursor position in input
-    pub cursor_pos: usize,
-
-    /// Response content being displayed
-    pub response_content: String,
-
-    /// Whether response is currently streaming
-    pub is_streaming: bool,
-
-    /// Current status message
-    pub status: StatusInfo,
-
+    // Core dependencies
     /// Scenario for response matching
     pub scenario: Arc<Mutex<Scenario>>,
-
     /// Session manager for conversation state
     pub sessions: Arc<Mutex<SessionManager>>,
-
     /// Clock for timing
     pub clock: ClockHandle,
-
-    /// Command history
-    pub history: Vec<String>,
-
-    /// Current history index
-    pub history_index: Option<usize>,
-
-    /// Pending permission request
-    pub pending_permission: Option<PermissionRequest>,
-
-    /// Whether app should exit
-    pub should_exit: bool,
-
-    /// Exit reason (for testing)
-    pub exit_reason: Option<ExitReason>,
-
-    /// Message to display after TUI exits (e.g., farewell from /exit)
-    pub exit_message: Option<String>,
-
     /// Configuration from scenario
     pub config: TuiConfig,
 
-    /// Whether trust has been granted (for untrusted dirs)
-    pub trust_granted: bool,
-
-    /// Trust prompt dialog state
-    pub trust_prompt: Option<TrustPromptState>,
-
-    /// Whether extended thinking mode is enabled
-    pub thinking_enabled: bool,
-
-    /// Thinking toggle dialog state
-    pub thinking_dialog: Option<ThinkingDialog>,
-
-    /// Tasks dialog state
-    pub tasks_dialog: Option<TasksDialog>,
-
-    /// Model picker dialog state
-    pub model_picker_dialog: Option<ModelPickerDialog>,
-
-    /// Export dialog state
-    pub export_dialog: Option<ExportDialog>,
-
-    /// Help dialog state
-    pub help_dialog: Option<HelpDialog>,
-
-    /// Hooks dialog state
-    pub hooks_dialog: Option<HooksDialog>,
-
-    /// Memory dialog state
-    pub memory_dialog: Option<MemoryDialog>,
-
+    // Session state
+    /// Current application mode
+    pub mode: AppMode,
+    /// Current status message
+    pub status: StatusInfo,
     /// Current permission mode
     pub permission_mode: PermissionMode,
-
+    /// Session-level permission grants
+    pub session_grants: HashSet<SessionPermissionKey>,
+    /// Whether trust has been granted (for untrusted dirs)
+    pub trust_granted: bool,
+    /// Whether extended thinking mode is enabled
+    pub thinking_enabled: bool,
     /// Whether bypass permissions is allowed (requires --dangerously-skip-permissions)
     pub allow_bypass_permissions: bool,
 
+    // Exit state
+    /// Whether app should exit
+    pub should_exit: bool,
+    /// Exit reason (for testing)
+    pub exit_reason: Option<ExitReason>,
+    /// Message to display after TUI exits (e.g., farewell from /exit)
+    pub exit_message: Option<String>,
+
+    // Compacting state
     /// Whether compacting is in progress
     pub is_compacting: bool,
-
-    /// Whether current response is command output (not a Claude response)
-    pub is_command_output: bool,
-
     /// When compacting started (for async completion)
     pub compacting_started: Option<std::time::Instant>,
 
-    /// Visible conversation history (accumulates turns, cleared on /compact)
-    pub conversation_display: String,
-
-    /// Whether conversation has been compacted (for showing separator)
-    pub is_compacted: bool,
-
-    /// Active exit hint (if any)
-    pub exit_hint: Option<ExitHint>,
-
-    /// When exit hint was shown (milliseconds from clock)
-    pub exit_hint_shown_at: Option<u64>,
-
-    /// Current terminal width
-    pub terminal_width: u16,
-
-    /// Session-level permission grants
-    /// Permissions granted with "Yes, allow for session" are stored here
-    pub session_grants: HashSet<SessionPermissionKey>,
-
-    /// Whether the shortcuts panel is currently visible
-    pub show_shortcuts_panel: bool,
-
-    /// Slash command autocomplete menu state (None if menu is closed)
-    pub slash_menu: Option<SlashMenuState>,
-
-    /// Whether shell mode is currently active (user typed '!' at empty input)
-    pub shell_mode: bool,
-
+    // Data
     /// Todo list state
     pub todos: TodoState,
-
-    /// Stack of previous input states for undo (Ctrl+_)
-    /// Each entry is a snapshot of input_buffer before a change
-    pub undo_stack: Vec<String>,
-
-    /// Stashed input text (Ctrl+S to stash/restore)
-    pub stash_buffer: Option<String>,
-
-    /// Whether to show the stash indicator message
-    pub show_stash_indicator: bool,
 }
 
 impl TuiAppStateInner {
     /// Dismiss any active dialog and return to input mode.
     pub fn dismiss_dialog(&mut self, name: &str) {
         self.mode = AppMode::Input;
-        self.response_content = format!("{} dismissed", name);
-        self.is_command_output = true;
-
-        // Clear all dialog states
-        self.thinking_dialog = None;
-        self.tasks_dialog = None;
-        self.model_picker_dialog = None;
-        self.export_dialog = None;
-        self.help_dialog = None;
-        self.hooks_dialog = None;
-        self.memory_dialog = None;
-        self.trust_prompt = None;
-        self.pending_permission = None;
+        self.dialog.dismiss();
+        self.display.response_content = format!("{} dismissed", name);
+        self.display.is_command_output = true;
     }
 }
 
@@ -203,66 +112,53 @@ impl TuiAppState {
             AppMode::Trust
         };
 
-        // Create trust prompt if not trusted
-        let trust_prompt = if !config.trusted {
-            Some(TrustPromptState::new(
+        // Create trust prompt dialog if not trusted
+        let dialog = if !config.trusted {
+            DialogState::Trust(TrustPromptState::new(
                 config.working_directory.to_string_lossy().to_string(),
             ))
         } else {
-            None
+            DialogState::None
         };
 
         Self {
             inner: Arc::new(Mutex::new(TuiAppStateInner {
+                // Focused state groups
+                input: InputState::default(),
+                dialog,
+                display: DisplayState::new(),
+
+                // Core dependencies
+                scenario: Arc::new(Mutex::new(scenario)),
+                sessions: Arc::new(Mutex::new(sessions)),
+                clock,
+
+                // Session state
                 mode: initial_mode,
-                input_buffer: String::new(),
-                cursor_pos: 0,
-                response_content: String::new(),
-                is_streaming: false,
                 status: StatusInfo {
                     model: config.model.clone(),
                     ..Default::default()
                 },
-                scenario: Arc::new(Mutex::new(scenario)),
-                sessions: Arc::new(Mutex::new(sessions)),
-                clock,
-                history: Vec::new(),
-                history_index: None,
-                pending_permission: None,
+                permission_mode: config.permission_mode.clone(),
+                session_grants: HashSet::new(),
+                trust_granted: config.trusted,
+                thinking_enabled: true, // Default to enabled
+                allow_bypass_permissions: config.allow_bypass_permissions,
+
+                // Exit state
                 should_exit: false,
                 exit_reason: None,
                 exit_message: None,
-                trust_granted: config.trusted,
-                trust_prompt,
-                thinking_enabled: true, // Default to enabled
-                thinking_dialog: None,
-                tasks_dialog: None,
-                model_picker_dialog: None,
-                export_dialog: None,
-                help_dialog: None,
-                hooks_dialog: None,
-                memory_dialog: None,
-                permission_mode: config.permission_mode.clone(),
-                allow_bypass_permissions: config.allow_bypass_permissions,
+
+                // Compacting state
                 is_compacting: false,
-                is_command_output: false,
                 compacting_started: None,
-                conversation_display: String::new(),
-                is_compacted: false,
-                exit_hint: None,
-                exit_hint_shown_at: None,
-                terminal_width: crossterm::terminal::size()
-                    .map(|(w, _)| w)
-                    .unwrap_or(DEFAULT_TERMINAL_WIDTH),
-                config,
-                session_grants: HashSet::new(),
-                show_shortcuts_panel: false,
-                slash_menu: None,
-                shell_mode: false,
+
+                // Data
                 todos: TodoState::new(),
-                undo_stack: Vec::new(),
-                stash_buffer: None,
-                show_stash_indicator: false,
+
+                // Config (must be last as it's moved)
+                config,
             })),
         }
     }
@@ -272,46 +168,26 @@ impl TuiAppState {
         let inner = self.inner.lock();
         RenderState {
             mode: inner.mode.clone(),
-            input_buffer: inner.input_buffer.clone(),
-            cursor_pos: inner.cursor_pos,
-            response_content: inner.response_content.clone(),
-            is_streaming: inner.is_streaming,
+            input: inner.input.clone(),
+            dialog: inner.dialog.clone(),
+            display: inner.display.clone(),
             status: inner.status.clone(),
-            pending_permission: inner.pending_permission.clone(),
-            user_name: inner.config.user_name.clone(),
-            trust_prompt: inner.trust_prompt.clone(),
-            thinking_dialog: inner.thinking_dialog.clone(),
-            tasks_dialog: inner.tasks_dialog.clone(),
-            model_picker_dialog: inner.model_picker_dialog.clone(),
-            thinking_enabled: inner.thinking_enabled,
             permission_mode: inner.permission_mode.clone(),
-            is_command_output: inner.is_command_output,
-            conversation_display: inner.conversation_display.clone(),
-            is_compacted: inner.is_compacted,
-            exit_hint: inner.exit_hint.clone(),
+            thinking_enabled: inner.thinking_enabled,
+            user_name: inner.config.user_name.clone(),
             claude_version: inner.config.claude_version.clone(),
-            terminal_width: inner.terminal_width,
-            show_shortcuts_panel: inner.show_shortcuts_panel,
-            slash_menu: inner.slash_menu.clone(),
-            shell_mode: inner.shell_mode,
             is_tty: inner.config.is_tty,
-            export_dialog: inner.export_dialog.clone(),
-            help_dialog: inner.help_dialog.clone(),
-            hooks_dialog: inner.hooks_dialog.clone(),
-            memory_dialog: inner.memory_dialog.clone(),
-            stash_buffer: inner.stash_buffer.clone(),
-            show_stash_indicator: inner.show_stash_indicator,
         }
     }
 
     /// Get terminal width
     pub fn terminal_width(&self) -> u16 {
-        self.inner.lock().terminal_width
+        self.inner.lock().display.terminal_width
     }
 
     /// Update terminal width (called on resize)
     pub fn set_terminal_width(&self, width: u16) {
-        self.inner.lock().terminal_width = width;
+        self.inner.lock().display.terminal_width = width;
     }
 
     /// Check if app should exit
@@ -336,17 +212,17 @@ impl TuiAppState {
 
     /// Get input buffer
     pub fn input_buffer(&self) -> String {
-        self.inner.lock().input_buffer.clone()
+        self.inner.lock().input.buffer.clone()
     }
 
     /// Get cursor position
     pub fn cursor_pos(&self) -> usize {
-        self.inner.lock().cursor_pos
+        self.inner.lock().input.cursor_pos
     }
 
     /// Get history
     pub fn history(&self) -> Vec<String> {
-        self.inner.lock().history.clone()
+        self.inner.lock().input.history.clone()
     }
 
     /// Request app exit
@@ -366,11 +242,12 @@ impl TuiAppState {
     /// Check if exit hint has timed out and clear it
     pub fn check_exit_hint_timeout(&self) {
         let mut inner = self.inner.lock();
-        if let (Some(_hint), Some(shown_at)) = (&inner.exit_hint, inner.exit_hint_shown_at) {
+        if let (Some(_hint), Some(shown_at)) =
+            (&inner.display.exit_hint, inner.display.exit_hint_shown_at)
+        {
             let now = inner.clock.now_millis();
             if now.saturating_sub(shown_at) >= EXIT_HINT_TIMEOUT_MS {
-                inner.exit_hint = None;
-                inner.exit_hint_shown_at = None;
+                inner.display.clear_exit_hint();
             }
         }
     }
@@ -385,13 +262,13 @@ impl TuiAppState {
                     inner.is_compacting = false;
                     inner.compacting_started = None;
                     inner.mode = AppMode::Input;
-                    inner.is_compacted = true;
+                    inner.display.is_compacted = true;
 
                     // Build tool summary from session turns
                     let tool_summary = build_tool_summary(&inner.sessions);
 
                     // Set response with elbow connector format
-                    inner.response_content = format!(
+                    inner.display.response_content = format!(
                         "Compacted (ctrl+o to see full summary){}",
                         if tool_summary.is_empty() {
                             String::new()
@@ -399,10 +276,10 @@ impl TuiAppState {
                             format!("\n{}", tool_summary)
                         }
                     );
-                    inner.is_command_output = true;
+                    inner.display.is_command_output = true;
 
                     // Set conversation display to show the /compact command
-                    inner.conversation_display = "❯ /compact".to_string();
+                    inner.display.conversation_display = "❯ /compact".to_string();
                 }
             }
         }

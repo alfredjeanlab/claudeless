@@ -12,6 +12,8 @@ mod types;
 
 pub use state::TuiAppState;
 #[cfg(test)]
+pub use state::{DialogState, DisplayState, InputState};
+#[cfg(test)]
 pub use types::DEFAULT_TERMINAL_WIDTH;
 pub use types::{
     AppMode, ExitHint, ExitReason, PermissionChoice, PermissionRequest, RenderState, StatusInfo,
@@ -214,11 +216,11 @@ impl TuiApp {
     }
 
     pub fn response_content(&self) -> String {
-        self.state.render_state().response_content
+        self.state.render_state().display.response_content.clone()
     }
 
     pub fn is_streaming(&self) -> bool {
-        self.state.render_state().is_streaming
+        self.state.render_state().display.is_streaming
     }
 
     pub fn status(&self) -> StatusInfo {
@@ -226,7 +228,7 @@ impl TuiApp {
     }
 
     pub fn pending_permission(&self) -> Option<PermissionRequest> {
-        self.state.render_state().pending_permission
+        self.state.render_state().dialog.as_permission().cloned()
     }
 
     pub fn show_permission_request(

@@ -53,7 +53,7 @@ pub(crate) fn format_header_lines(state: &RenderState) -> (String, String, Strin
 /// Format status bar content
 pub(crate) fn format_status_bar(state: &RenderState, width: usize) -> String {
     // Check for exit hint first (takes precedence)
-    if let Some(hint) = &state.exit_hint {
+    if let Some(hint) = &state.display.exit_hint {
         return match hint {
             ExitHint::CtrlC => "  Press Ctrl-C again to exit".to_string(),
             ExitHint::CtrlD => "  Press Ctrl-D again to exit".to_string(),
@@ -100,7 +100,7 @@ pub(crate) fn format_status_bar(state: &RenderState, width: usize) -> String {
 /// Format styled status bar content (with ANSI colors)
 pub(crate) fn format_status_bar_styled(state: &RenderState, width: usize) -> String {
     // Check for exit hint first (takes precedence)
-    if let Some(hint) = &state.exit_hint {
+    if let Some(hint) = &state.display.exit_hint {
         return match hint {
             ExitHint::CtrlC => "  Press Ctrl-C again to exit".to_string(),
             ExitHint::CtrlD => "  Press Ctrl-D again to exit".to_string(),

@@ -17,19 +17,18 @@ use crate::tui::widgets::help::HelpDialog;
 use crate::tui::widgets::permission::{DiffKind, DiffLine, PermissionType, RichPermissionDialog};
 use crate::tui::widgets::tasks::TasksDialog;
 
-use super::input::clear_undo_stack;
-use super::state::{TuiAppState, TuiAppStateInner};
+use super::state::{DialogState, TuiAppState, TuiAppStateInner};
 use super::types::{AppMode, ExitReason, PermissionRequest};
 
 impl TuiAppState {
     /// Submit the current input
     pub(super) fn submit_input(&self) {
         let mut inner = self.inner.lock();
-        let input = std::mem::take(&mut inner.input_buffer);
-        let was_shell_mode = inner.shell_mode;
-        inner.shell_mode = false; // Reset shell mode after submit
-        inner.cursor_pos = 0;
-        clear_undo_stack(&mut inner);
+        let input = std::mem::take(&mut inner.input.buffer);
+        let was_shell_mode = inner.input.shell_mode;
+        inner.input.shell_mode = false; // Reset shell mode after submit
+        inner.input.cursor_pos = 0;
+        inner.input.undo_stack.clear();
 
         // Add to history (with shell prefix if applicable)
         let history_entry = if was_shell_mode {
@@ -38,9 +37,9 @@ impl TuiAppState {
             input.clone()
         };
         if !history_entry.is_empty() {
-            inner.history.push(history_entry);
+            inner.input.history.push(history_entry);
         }
-        inner.history_index = None;
+        inner.input.history_index = None;
 
         // Check for slash commands (not applicable in shell mode)
         if !was_shell_mode && input.starts_with('/') {
@@ -62,21 +61,23 @@ impl TuiAppState {
         let mut inner = self.inner.lock();
 
         // Add previous response to conversation display if any
-        if !inner.response_content.is_empty() && !inner.is_command_output {
-            let response = inner.response_content.clone();
-            if !inner.conversation_display.is_empty() {
-                inner.conversation_display.push_str("\n\n");
+        if !inner.display.response_content.is_empty() && !inner.display.is_command_output {
+            let response = inner.display.response_content.clone();
+            if !inner.display.conversation_display.is_empty() {
+                inner.display.conversation_display.push_str("\n\n");
             }
             inner
+                .display
                 .conversation_display
                 .push_str(&format!("⏺ {}", response));
         }
 
         // Add the shell command to conversation display with ! prefix
-        if !inner.conversation_display.is_empty() {
-            inner.conversation_display.push_str("\n\n");
+        if !inner.display.conversation_display.is_empty() {
+            inner.display.conversation_display.push_str("\n\n");
         }
         inner
+            .display
             .conversation_display
             .push_str(&format!("❯ ! {}", command));
 
@@ -84,6 +85,7 @@ impl TuiAppState {
         if inner.permission_mode.allows_all() {
             // Show bash output directly
             inner
+                .display
                 .conversation_display
                 .push_str(&format!("\n\n⏺ Bash({})", command));
 
@@ -99,16 +101,16 @@ impl TuiAppState {
             };
 
             // Start streaming the response
-            inner.response_content.clear();
-            inner.is_command_output = false;
+            inner.display.response_content.clear();
+            inner.display.is_command_output = false;
             start_streaming_inner(&mut inner, response_text);
             return;
         }
 
         // Show bash permission dialog
         inner.mode = AppMode::Thinking;
-        inner.response_content.clear();
-        inner.is_command_output = false;
+        inner.display.response_content.clear();
+        inner.display.is_command_output = false;
 
         drop(inner);
 
@@ -126,27 +128,29 @@ impl TuiAppState {
         let mut inner = self.inner.lock();
 
         // If there's previous response content, add it to conversation history first
-        if !inner.response_content.is_empty() && !inner.is_command_output {
-            let response = inner.response_content.clone();
-            if !inner.conversation_display.is_empty() {
-                inner.conversation_display.push_str("\n\n");
+        if !inner.display.response_content.is_empty() && !inner.display.is_command_output {
+            let response = inner.display.response_content.clone();
+            if !inner.display.conversation_display.is_empty() {
+                inner.display.conversation_display.push_str("\n\n");
             }
             inner
+                .display
                 .conversation_display
                 .push_str(&format!("⏺ {}", response));
         }
 
         // Add the new user prompt to conversation display
-        if !inner.conversation_display.is_empty() {
-            inner.conversation_display.push_str("\n\n");
+        if !inner.display.conversation_display.is_empty() {
+            inner.display.conversation_display.push_str("\n\n");
         }
         inner
+            .display
             .conversation_display
             .push_str(&format!("❯ {}", prompt));
 
         inner.mode = AppMode::Thinking;
-        inner.response_content.clear();
-        inner.is_command_output = false;
+        inner.display.response_content.clear();
+        inner.display.is_command_output = false;
 
         // Record the turn
         {
@@ -174,7 +178,13 @@ impl TuiAppState {
     /// Confirm the current permission selection
     pub(super) fn confirm_permission(&self) {
         let mut inner = self.inner.lock();
-        let perm = inner.pending_permission.take();
+
+        // Extract the permission from dialog state
+        let perm = if let DialogState::Permission(p) = std::mem::take(&mut inner.dialog) {
+            Some(p)
+        } else {
+            None
+        };
         inner.mode = AppMode::Input;
 
         if let Some(perm) = perm {
@@ -188,6 +198,7 @@ impl TuiAppState {
                 crate::tui::widgets::permission::PermissionSelection::Yes => {
                     // Continue with tool execution (single request)
                     inner
+                        .display
                         .response_content
                         .push_str(&format!("\n[Permission granted for {}]\n", tool_name));
                 }
@@ -197,13 +208,14 @@ impl TuiAppState {
                     inner.session_grants.insert(key);
 
                     // Continue with tool execution (session-level grant)
-                    inner.response_content.push_str(&format!(
+                    inner.display.response_content.push_str(&format!(
                         "\n[Permission granted for session: {}]\n",
                         tool_name
                     ));
                 }
                 crate::tui::widgets::permission::PermissionSelection::No => {
                     inner
+                        .display
                         .response_content
                         .push_str(&format!("\n[Permission denied for {}]\n", tool_name));
                 }
@@ -237,7 +249,7 @@ impl TuiAppState {
                 PermissionType::Edit { file_path, .. } => format!("Edit: {}", file_path),
                 PermissionType::Write { file_path, .. } => format!("Write: {}", file_path),
             };
-            inner.response_content.push_str(&format!(
+            inner.display.response_content.push_str(&format!(
                 "\n[Permission auto-granted (session): {}]\n",
                 tool_name
             ));
@@ -246,7 +258,7 @@ impl TuiAppState {
 
         // Show dialog as normal
         let mut inner = self.inner.lock();
-        inner.pending_permission = Some(PermissionRequest {
+        inner.dialog = DialogState::Permission(PermissionRequest {
             dialog: RichPermissionDialog::new(permission_type),
         });
         inner.mode = AppMode::Permission;
@@ -280,10 +292,10 @@ impl TuiAppState {
 /// Handle slash commands like /compact and /clear
 pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
     let cmd = input.trim().to_lowercase();
-    inner.is_command_output = true;
+    inner.display.is_command_output = true;
 
     // Add the command to conversation display
-    inner.conversation_display = format!("❯ {}", input.trim());
+    inner.display.conversation_display = format!("❯ {}", input.trim());
 
     match cmd.as_str() {
         "/clear" => {
@@ -301,12 +313,12 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
             inner.session_grants.clear();
 
             // Set response content (will be rendered with elbow connector)
-            inner.response_content = "(no content)".to_string();
+            inner.display.response_content = "(no content)".to_string();
         }
         "/compact" => {
             // Check if already compacting
             if inner.is_compacting {
-                inner.response_content =
+                inner.display.response_content =
                     "Failed to compact: Compaction already in progress".to_string();
             } else {
                 // Show compacting in progress message
@@ -314,7 +326,7 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
                 inner.is_compacting = true;
                 inner.compacting_started = Some(std::time::Instant::now());
                 // Use correct symbol (✻) and ellipsis (…)
-                inner.response_content =
+                inner.display.response_content =
                     "✻ Compacting conversation… (ctrl+c to interrupt)".to_string();
             }
         }
@@ -329,10 +341,10 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
             if has_conversation {
                 // TODO: Implement actual fork functionality
                 // For now, show a placeholder message
-                inner.response_content = "Conversation forked".to_string();
+                inner.display.response_content = "Conversation forked".to_string();
             } else {
                 // No conversation to fork - show error
-                inner.response_content =
+                inner.display.response_content =
                     "Failed to fork conversation: No conversation to fork".to_string();
             }
         }
@@ -343,25 +355,25 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
                 .claude_version
                 .clone()
                 .unwrap_or_else(|| "2.1.12".to_string());
-            inner.help_dialog = Some(HelpDialog::new(version));
+            inner.dialog = DialogState::Help(HelpDialog::new(version));
         }
         "/context" => {
             let usage = ContextUsage::new();
-            inner.response_content = TuiAppState::format_context_usage(&usage);
+            inner.display.response_content = TuiAppState::format_context_usage(&usage);
         }
         "/exit" => {
             let farewell = TuiAppState::random_farewell().to_string();
-            inner.response_content = farewell.clone();
+            inner.display.response_content = farewell.clone();
             inner.exit_message = Some(farewell);
             inner.should_exit = true;
             inner.exit_reason = Some(ExitReason::UserQuit);
         }
         "/todos" => {
-            inner.response_content = TuiAppState::format_todos(&inner.todos);
+            inner.display.response_content = TuiAppState::format_todos(&inner.todos);
         }
         "/tasks" => {
             inner.mode = AppMode::TasksDialog;
-            inner.tasks_dialog = Some(TasksDialog::new());
+            inner.dialog = DialogState::Tasks(TasksDialog::new());
         }
         "/export" => {
             // Check if there's a conversation to export
@@ -373,22 +385,23 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
 
             if has_conversation {
                 inner.mode = AppMode::ExportDialog;
-                inner.export_dialog = Some(ExportDialog::new());
+                inner.dialog = DialogState::Export(ExportDialog::new());
             } else {
-                inner.response_content = "Failed to export: No conversation to export".to_string();
+                inner.display.response_content =
+                    "Failed to export: No conversation to export".to_string();
             }
         }
         "/hooks" => {
             inner.mode = AppMode::HooksDialog;
             // For now, hard-code to 4 active hooks as shown in the fixture
-            inner.hooks_dialog = Some(crate::tui::widgets::HooksDialog::new(4));
+            inner.dialog = DialogState::Hooks(crate::tui::widgets::HooksDialog::new(4));
         }
         "/memory" => {
             inner.mode = AppMode::MemoryDialog;
-            inner.memory_dialog = Some(crate::tui::widgets::MemoryDialog::new());
+            inner.dialog = DialogState::Memory(crate::tui::widgets::MemoryDialog::new());
         }
         _ => {
-            inner.response_content = format!("Unknown command: {}", input);
+            inner.display.response_content = format!("Unknown command: {}", input);
         }
     }
 }
@@ -396,7 +409,7 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
 /// Start streaming a response
 pub(super) fn start_streaming_inner(inner: &mut TuiAppStateInner, text: String) {
     inner.mode = AppMode::Responding;
-    inner.is_streaming = true;
+    inner.display.is_streaming = true;
 
     let config = StreamingConfig::default();
     let clock = inner.clock.clone();
@@ -404,28 +417,28 @@ pub(super) fn start_streaming_inner(inner: &mut TuiAppStateInner, text: String) 
 
     // For synchronous operation, just set the full text
     // In async mode, this would use the TokenStream
-    inner.response_content = response.full_text().to_string();
-    inner.is_streaming = false;
+    inner.display.response_content = response.full_text().to_string();
+    inner.display.is_streaming = false;
 
     // Update token counts
     inner.status.output_tokens += response.tokens_streamed();
-    inner.status.input_tokens += (inner.input_buffer.len() / 4).max(1) as u32;
+    inner.status.input_tokens += (inner.input.buffer.len() / 4).max(1) as u32;
 
     // Update session with response
     {
         let mut sessions = inner.sessions.lock();
         if let Some(turn) = sessions.current_session().turns.last_mut() {
-            turn.response = inner.response_content.clone();
+            turn.response = inner.display.response_content.clone();
         }
     }
 
     inner.mode = AppMode::Input;
 
     // Auto-restore stashed text after response completes
-    if let Some(stashed) = inner.stash_buffer.take() {
-        inner.input_buffer = stashed;
-        inner.cursor_pos = inner.input_buffer.len();
-        inner.show_stash_indicator = false;
+    if let Some(stashed) = inner.input.stash.take() {
+        inner.input.buffer = stashed;
+        inner.input.cursor_pos = inner.input.buffer.len();
+        inner.input.show_stash_indicator = false;
     }
 }
 
@@ -486,6 +499,7 @@ fn simulate_permission_accept(
 ) {
     let mut inner = state.inner.lock();
     inner
+        .display
         .response_content
         .push_str(&format!("\n⏺ {}({})\n", tool_name, {
             match permission_type {
@@ -506,27 +520,27 @@ pub(super) fn do_clipboard_export(inner: &mut TuiAppStateInner) {
     match arboard::Clipboard::new() {
         Ok(mut clipboard) => match clipboard.set_text(&content) {
             Ok(()) => {
-                inner.response_content = "Conversation copied to clipboard".to_string();
+                inner.display.response_content = "Conversation copied to clipboard".to_string();
             }
             Err(e) => {
-                inner.response_content = format!("Failed to copy to clipboard: {}", e);
+                inner.display.response_content = format!("Failed to copy to clipboard: {}", e);
             }
         },
         Err(e) => {
-            inner.response_content = format!("Failed to access clipboard: {}", e);
+            inner.display.response_content = format!("Failed to access clipboard: {}", e);
         }
     }
 
     inner.mode = AppMode::Input;
-    inner.export_dialog = None;
-    inner.is_command_output = true;
+    inner.dialog.dismiss();
+    inner.display.is_command_output = true;
 }
 
 /// Export conversation to file
 pub(super) fn do_file_export(inner: &mut TuiAppStateInner) {
     let filename = inner
-        .export_dialog
-        .as_ref()
+        .dialog
+        .as_export()
         .map(|d| d.filename.clone())
         .unwrap_or_else(|| "conversation.txt".to_string());
 
@@ -534,21 +548,21 @@ pub(super) fn do_file_export(inner: &mut TuiAppStateInner) {
 
     match std::fs::write(&filename, &content) {
         Ok(()) => {
-            inner.response_content = format!("Conversation exported to: {}", filename);
+            inner.display.response_content = format!("Conversation exported to: {}", filename);
         }
         Err(e) => {
-            inner.response_content = format!("Failed to write file: {}", e);
+            inner.display.response_content = format!("Failed to write file: {}", e);
         }
     }
 
     inner.mode = AppMode::Input;
-    inner.export_dialog = None;
-    inner.is_command_output = true;
+    inner.dialog.dismiss();
+    inner.display.is_command_output = true;
 }
 
 /// Format conversation for export
 fn format_conversation_for_export(inner: &TuiAppStateInner) -> String {
     // Export the conversation display content
     // This includes the visible conversation history
-    inner.conversation_display.clone()
+    inner.display.conversation_display.clone()
 }

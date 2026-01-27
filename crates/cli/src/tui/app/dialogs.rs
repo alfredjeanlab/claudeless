@@ -34,14 +34,14 @@ impl TuiAppState {
         match key.code {
             // Up - Move selection up
             KeyCode::Up => {
-                if let Some(ref mut perm) = inner.pending_permission {
+                if let Some(perm) = inner.dialog.as_permission_mut() {
                     perm.dialog.selected = perm.dialog.selected.prev();
                 }
             }
 
             // Down - Move selection down
             KeyCode::Down => {
-                if let Some(ref mut perm) = inner.pending_permission {
+                if let Some(perm) = inner.dialog.as_permission_mut() {
                     perm.dialog.selected = perm.dialog.selected.next();
                 }
             }
@@ -54,7 +54,7 @@ impl TuiAppState {
 
             // 1 - Select Yes and confirm
             KeyCode::Char('1') => {
-                if let Some(ref mut perm) = inner.pending_permission {
+                if let Some(perm) = inner.dialog.as_permission_mut() {
                     perm.dialog.selected = PermissionSelection::Yes;
                 }
                 drop(inner);
@@ -63,7 +63,7 @@ impl TuiAppState {
 
             // Y/y - Select Yes and confirm
             KeyCode::Char('y') | KeyCode::Char('Y') => {
-                if let Some(ref mut perm) = inner.pending_permission {
+                if let Some(perm) = inner.dialog.as_permission_mut() {
                     perm.dialog.selected = PermissionSelection::Yes;
                 }
                 drop(inner);
@@ -72,7 +72,7 @@ impl TuiAppState {
 
             // 2 - Select Yes for session and confirm
             KeyCode::Char('2') => {
-                if let Some(ref mut perm) = inner.pending_permission {
+                if let Some(perm) = inner.dialog.as_permission_mut() {
                     perm.dialog.selected = PermissionSelection::YesSession;
                 }
                 drop(inner);
@@ -81,7 +81,7 @@ impl TuiAppState {
 
             // 3 - Select No and confirm
             KeyCode::Char('3') => {
-                if let Some(ref mut perm) = inner.pending_permission {
+                if let Some(perm) = inner.dialog.as_permission_mut() {
                     perm.dialog.selected = PermissionSelection::No;
                 }
                 drop(inner);
@@ -90,7 +90,7 @@ impl TuiAppState {
 
             // N/n - Select No and confirm
             KeyCode::Char('n') | KeyCode::Char('N') => {
-                if let Some(ref mut perm) = inner.pending_permission {
+                if let Some(perm) = inner.dialog.as_permission_mut() {
                     perm.dialog.selected = PermissionSelection::No;
                 }
                 drop(inner);
@@ -99,7 +99,7 @@ impl TuiAppState {
 
             // Escape - Cancel (select No)
             KeyCode::Esc => {
-                if let Some(ref mut perm) = inner.pending_permission {
+                if let Some(perm) = inner.dialog.as_permission_mut() {
                     perm.dialog.selected = PermissionSelection::No;
                 }
                 drop(inner);
@@ -116,7 +116,7 @@ impl TuiAppState {
         match key.code {
             // Left/Right/Tab - Toggle selection
             KeyCode::Left | KeyCode::Right | KeyCode::Tab => {
-                if let Some(ref mut prompt) = inner.trust_prompt {
+                if let Some(prompt) = inner.dialog.as_trust_mut() {
                     prompt.selected = match prompt.selected {
                         TrustChoice::Yes => TrustChoice::No,
                         TrustChoice::No => TrustChoice::Yes,
@@ -126,11 +126,11 @@ impl TuiAppState {
 
             // Enter - Confirm selection
             KeyCode::Enter => {
-                if let Some(ref prompt) = inner.trust_prompt {
+                if let Some(prompt) = inner.dialog.as_trust() {
                     match prompt.selected {
                         TrustChoice::Yes => {
                             inner.trust_granted = true;
-                            inner.trust_prompt = None;
+                            inner.dialog.dismiss();
                             inner.mode = AppMode::Input;
                         }
                         TrustChoice::No => {
@@ -144,7 +144,7 @@ impl TuiAppState {
             // Y/y - Yes (trust)
             KeyCode::Char('y') | KeyCode::Char('Y') => {
                 inner.trust_granted = true;
-                inner.trust_prompt = None;
+                inner.dialog.dismiss();
                 inner.mode = AppMode::Input;
             }
 
@@ -164,7 +164,7 @@ impl TuiAppState {
         match key.code {
             // Up/Down arrows, Tab - Toggle selection
             KeyCode::Up | KeyCode::Down | KeyCode::Tab => {
-                if let Some(ref mut dialog) = inner.thinking_dialog {
+                if let Some(dialog) = inner.dialog.as_thinking_mut() {
                     dialog.selected = match dialog.selected {
                         ThinkingMode::Enabled => ThinkingMode::Disabled,
                         ThinkingMode::Disabled => ThinkingMode::Enabled,
@@ -174,16 +174,16 @@ impl TuiAppState {
 
             // Enter - Confirm selection
             KeyCode::Enter => {
-                if let Some(ref dialog) = inner.thinking_dialog {
+                if let Some(dialog) = inner.dialog.as_thinking() {
                     inner.thinking_enabled = dialog.selected == ThinkingMode::Enabled;
                 }
-                inner.thinking_dialog = None;
+                inner.dialog.dismiss();
                 inner.mode = AppMode::Input;
             }
 
             // Escape - Cancel (close without changing)
             KeyCode::Esc => {
-                inner.thinking_dialog = None;
+                inner.dialog.dismiss();
                 inner.mode = AppMode::Input;
             }
 
@@ -199,12 +199,12 @@ impl TuiAppState {
                 inner.dismiss_dialog("Background tasks dialog");
             }
             KeyCode::Up => {
-                if let Some(ref mut dialog) = inner.tasks_dialog {
+                if let Some(dialog) = inner.dialog.as_tasks_mut() {
                     dialog.move_selection_up();
                 }
             }
             KeyCode::Down => {
-                if let Some(ref mut dialog) = inner.tasks_dialog {
+                if let Some(dialog) = inner.dialog.as_tasks_mut() {
                     dialog.move_selection_down();
                 }
             }
@@ -212,7 +212,7 @@ impl TuiAppState {
                 // Future: view selected task details
                 // For now, just close the dialog
                 inner.mode = AppMode::Input;
-                inner.tasks_dialog = None;
+                inner.dialog.dismiss();
             }
             _ => {}
         }
@@ -224,26 +224,26 @@ impl TuiAppState {
 
         match key.code {
             KeyCode::Up | KeyCode::Char('k') => {
-                if let Some(ref mut dialog) = inner.model_picker_dialog {
+                if let Some(dialog) = inner.dialog.as_model_picker_mut() {
                     dialog.move_up();
                 }
             }
             KeyCode::Down | KeyCode::Char('j') | KeyCode::Tab => {
-                if let Some(ref mut dialog) = inner.model_picker_dialog {
+                if let Some(dialog) = inner.dialog.as_model_picker_mut() {
                     dialog.move_down();
                 }
             }
             KeyCode::Enter => {
-                if let Some(ref dialog) = inner.model_picker_dialog {
+                if let Some(dialog) = inner.dialog.as_model_picker() {
                     // Apply selection
                     inner.status.model = dialog.selected.model_id().to_string();
                 }
-                inner.model_picker_dialog = None;
+                inner.dialog.dismiss();
                 inner.mode = AppMode::Input;
             }
             KeyCode::Esc => {
                 // Cancel without changes
-                inner.model_picker_dialog = None;
+                inner.dialog.dismiss();
                 inner.mode = AppMode::Input;
             }
             _ => {}
@@ -254,7 +254,7 @@ impl TuiAppState {
     pub(super) fn handle_export_dialog_key(&self, key: KeyEvent) {
         let mut inner = self.inner.lock();
 
-        let Some(ref mut dialog) = inner.export_dialog else {
+        let Some(dialog) = inner.dialog.as_export_mut() else {
             return;
         };
 
@@ -262,9 +262,9 @@ impl TuiAppState {
             ExportStep::MethodSelection => match key.code {
                 KeyCode::Esc => {
                     inner.mode = AppMode::Input;
-                    inner.export_dialog = None;
-                    inner.response_content = "Export cancelled".to_string();
-                    inner.is_command_output = true;
+                    inner.dialog.dismiss();
+                    inner.display.response_content = "Export cancelled".to_string();
+                    inner.display.is_command_output = true;
                 }
                 KeyCode::Up => dialog.move_selection_up(),
                 KeyCode::Down => dialog.move_selection_down(),
@@ -279,13 +279,23 @@ impl TuiAppState {
             },
             ExportStep::FilenameInput => match key.code {
                 KeyCode::Esc => {
-                    dialog.go_back();
+                    if let Some(dialog) = inner.dialog.as_export_mut() {
+                        dialog.go_back();
+                    }
                 }
                 KeyCode::Enter => {
                     do_file_export(&mut inner);
                 }
-                KeyCode::Backspace => dialog.pop_char(),
-                KeyCode::Char(c) => dialog.push_char(c),
+                KeyCode::Backspace => {
+                    if let Some(dialog) = inner.dialog.as_export_mut() {
+                        dialog.pop_char();
+                    }
+                }
+                KeyCode::Char(c) => {
+                    if let Some(dialog) = inner.dialog.as_export_mut() {
+                        dialog.push_char(c);
+                    }
+                }
                 _ => {}
             },
         }
@@ -295,7 +305,7 @@ impl TuiAppState {
     pub(super) fn handle_help_dialog_key(&self, key: KeyEvent) {
         let mut inner = self.inner.lock();
 
-        let Some(ref mut dialog) = inner.help_dialog else {
+        let Some(dialog) = inner.dialog.as_help_mut() else {
             return;
         };
 
@@ -315,7 +325,7 @@ impl TuiAppState {
     pub(super) fn handle_hooks_dialog_key(&self, key: KeyEvent) {
         let mut inner = self.inner.lock();
 
-        let Some(ref mut dialog) = inner.hooks_dialog else {
+        let Some(dialog) = inner.dialog.as_hooks_mut() else {
             return;
         };
 
@@ -349,7 +359,7 @@ impl TuiAppState {
     pub(super) fn handle_memory_dialog_key(&self, key: KeyEvent) {
         let mut inner = self.inner.lock();
 
-        let Some(ref mut dialog) = inner.memory_dialog else {
+        let Some(dialog) = inner.dialog.as_memory_mut() else {
             return;
         };
 
@@ -364,10 +374,10 @@ impl TuiAppState {
                 // For now, just show the path of the selected entry
                 if let Some(entry) = dialog.selected_entry() {
                     let path = entry.path.as_deref().unwrap_or("(not configured)");
-                    inner.response_content =
+                    inner.display.response_content =
                         format!("Selected: {} - {}", entry.source.name(), path);
-                    inner.is_command_output = true;
-                    inner.memory_dialog = None;
+                    inner.display.is_command_output = true;
+                    inner.dialog.dismiss();
                     inner.mode = AppMode::Input;
                 }
             }

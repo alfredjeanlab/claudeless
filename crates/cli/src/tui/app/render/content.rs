@@ -61,38 +61,38 @@ pub(crate) fn render_conversation_area(state: &RenderState) -> AnyElement<'stati
     let mut content = String::new();
 
     // Add compact separator if conversation has been compacted
-    if state.is_compacted {
+    if state.display.is_compacted {
         let compact_text = "Conversation compacted · ctrl+o for history";
         content.push_str(&make_compact_separator(
             compact_text,
-            state.terminal_width as usize,
+            state.display.terminal_width as usize,
         ));
         content.push('\n');
     }
 
     // Add conversation display (includes user prompts and past responses)
-    if !state.conversation_display.is_empty() {
-        content.push_str(&state.conversation_display);
+    if !state.display.conversation_display.is_empty() {
+        content.push_str(&state.display.conversation_display);
     }
 
     // Add current response if present
-    if !state.response_content.is_empty() {
+    if !state.display.response_content.is_empty() {
         // Check if this is a compacting-in-progress message (✻ symbol)
-        let is_compacting_in_progress = state.response_content.starts_with('✻');
+        let is_compacting_in_progress = state.display.response_content.starts_with('✻');
 
         if is_compacting_in_progress {
             // During compacting, show message on its own line after blank line
             if !content.is_empty() {
                 content.push_str("\n\n");
             }
-            content.push_str(&state.response_content);
-        } else if state.is_command_output {
+            content.push_str(&state.display.response_content);
+        } else if state.display.is_command_output {
             // Completed command output uses elbow connector format
             if !content.is_empty() {
                 content.push('\n');
             }
             // Format each line with elbow connector (2 spaces + ⎿ + 2 spaces)
-            for (i, line) in state.response_content.lines().enumerate() {
+            for (i, line) in state.display.response_content.lines().enumerate() {
                 if i > 0 {
                     content.push('\n');
                 }
@@ -103,7 +103,7 @@ pub(crate) fn render_conversation_area(state: &RenderState) -> AnyElement<'stati
             if !content.is_empty() {
                 content.push_str("\n\n");
             }
-            content.push_str(&format!("⏺ {}", state.response_content));
+            content.push_str(&format!("⏺ {}", state.display.response_content));
         }
     }
 
@@ -127,7 +127,7 @@ pub(crate) fn render_conversation_area(state: &RenderState) -> AnyElement<'stati
 
 /// Render the slash command autocomplete menu (if open)
 pub(crate) fn render_slash_menu(state: &RenderState) -> AnyElement<'static> {
-    let Some(ref menu) = state.slash_menu else {
+    let Some(ref menu) = state.display.slash_menu else {
         return element! { View {} }.into();
     };
 
@@ -168,7 +168,7 @@ pub(crate) fn render_slash_menu(state: &RenderState) -> AnyElement<'static> {
 
 /// Render stash indicator if stash is active
 pub(crate) fn render_stash_indicator(state: &RenderState) -> AnyElement<'static> {
-    if !state.show_stash_indicator {
+    if !state.input.show_stash_indicator {
         return element! { View {} }.into();
     }
 
@@ -193,12 +193,12 @@ pub(crate) fn render_stash_indicator(state: &RenderState) -> AnyElement<'static>
 /// Render argument hint for completed slash commands
 pub(crate) fn render_argument_hint(state: &RenderState) -> AnyElement<'static> {
     // Only show hint when menu is closed and input starts with a completed command
-    if state.slash_menu.is_some() || !state.input_buffer.starts_with('/') {
+    if state.display.slash_menu.is_some() || !state.input.buffer.starts_with('/') {
         return element! { View {} }.into();
     }
 
     // Extract command name (without leading /)
-    let cmd_text = state.input_buffer.trim_start_matches('/');
+    let cmd_text = state.input.buffer.trim_start_matches('/');
 
     // Find exact match
     if let Some(cmd) = COMMANDS.iter().find(|c| c.name == cmd_text) {

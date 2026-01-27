@@ -36,41 +36,38 @@ use super::types::{AppMode, RenderState};
 /// Render modal dialog if one is active, otherwise return None.
 fn render_active_dialog(state: &RenderState, width: usize) -> Option<AnyElement<'static>> {
     match state.mode {
-        AppMode::Trust => state
-            .trust_prompt
-            .as_ref()
-            .map(|p| render_trust_prompt(p, width)),
+        AppMode::Trust => state.dialog.as_trust().map(|p| render_trust_prompt(p, width)),
         AppMode::ThinkingToggle => state
-            .thinking_dialog
-            .as_ref()
+            .dialog
+            .as_thinking()
             .map(|d| render_thinking_dialog(d, width)),
         AppMode::TasksDialog => state
-            .tasks_dialog
-            .as_ref()
+            .dialog
+            .as_tasks()
             .map(|d| render_tasks_dialog(d, width)),
         AppMode::ExportDialog => state
-            .export_dialog
-            .as_ref()
+            .dialog
+            .as_export()
             .map(|d| render_export_dialog(d, width)),
         AppMode::HelpDialog => state
-            .help_dialog
-            .as_ref()
+            .dialog
+            .as_help()
             .map(|d| render_help_dialog(d, width)),
         AppMode::HooksDialog => state
-            .hooks_dialog
-            .as_ref()
+            .dialog
+            .as_hooks()
             .map(|d| render_hooks_dialog(d, width)),
         AppMode::MemoryDialog => state
-            .memory_dialog
-            .as_ref()
+            .dialog
+            .as_memory()
             .map(|d| render_memory_dialog(d, width)),
         AppMode::ModelPicker => state
-            .model_picker_dialog
-            .as_ref()
+            .dialog
+            .as_model_picker()
             .map(|d| render_model_picker_dialog(d, width)),
         AppMode::Permission => state
-            .pending_permission
-            .as_ref()
+            .dialog
+            .as_permission()
             .map(|p| render_permission_dialog(p, width)),
         _ => None,
     }
@@ -78,7 +75,7 @@ fn render_active_dialog(state: &RenderState, width: usize) -> Option<AnyElement<
 
 /// Render the main content based on current mode
 pub(crate) fn render_main_content(state: &RenderState) -> AnyElement<'static> {
-    let width = state.terminal_width as usize;
+    let width = state.display.terminal_width as usize;
 
     // Modal dialogs take over the full screen
     if let Some(dialog) = render_active_dialog(state, width) {
@@ -93,9 +90,9 @@ pub(crate) fn render_main_content(state: &RenderState) -> AnyElement<'static> {
 
     // Format input line
     // Shell mode shows `! Try "..."` in pink, otherwise show normal input or placeholder
-    let input_display = if state.shell_mode {
+    let input_display = if state.input.shell_mode {
         // Bash mode: show `! ` prefix in pink with suggestion or typed command
-        if state.input_buffer.is_empty() {
+        if state.input.buffer.is_empty() {
             if use_colors {
                 styled_bash_placeholder("Try \"fix lint errors\"")
             } else {
@@ -113,15 +110,17 @@ pub(crate) fn render_main_content(state: &RenderState) -> AnyElement<'static> {
                     "{}{}! {}{}",
                     crate::tui::colors::escape::RESET,
                     fg_pink,
-                    state.input_buffer,
+                    state.input.buffer,
                     crate::tui::colors::escape::RESET
                 )
             } else {
-                format!("! {}", state.input_buffer)
+                format!("! {}", state.input.buffer)
             }
         }
-    } else if state.input_buffer.is_empty() {
-        if state.conversation_display.is_empty() && state.response_content.is_empty() {
+    } else if state.input.buffer.is_empty() {
+        if state.display.conversation_display.is_empty()
+            && state.display.response_content.is_empty()
+        {
             // Show placeholder only on initial state
             if use_colors {
                 styled_placeholder("Try \"write a test for scenario.rs\"")
@@ -133,11 +132,11 @@ pub(crate) fn render_main_content(state: &RenderState) -> AnyElement<'static> {
             "❯".to_string()
         }
     } else {
-        format!("❯ {}", state.input_buffer)
+        format!("❯ {}", state.input.buffer)
     };
 
     // Format separators - pink in bash mode, gray otherwise
-    let separator = if state.shell_mode && use_colors {
+    let separator = if state.input.shell_mode && use_colors {
         styled_bash_separator(width)
     } else if use_colors {
         styled_separator(width)
@@ -146,7 +145,7 @@ pub(crate) fn render_main_content(state: &RenderState) -> AnyElement<'static> {
     };
 
     // Format status bar - show `! for bash mode` in bash mode
-    let status_bar = if state.shell_mode && use_colors {
+    let status_bar = if state.input.shell_mode && use_colors {
         styled_bash_status()
     } else if use_colors {
         format_status_bar_styled(state, width)
@@ -186,8 +185,8 @@ pub(crate) fn render_main_content(state: &RenderState) -> AnyElement<'static> {
             Text(content: separator, wrap: TextWrap::NoWrap)
 
             // Shortcuts panel or status bar (NoWrap to preserve ANSI)
-            #(if state.show_shortcuts_panel {
-                render_shortcuts_panel(state.terminal_width as usize)
+            #(if state.display.show_shortcuts_panel {
+                render_shortcuts_panel(state.display.terminal_width as usize)
             } else {
                 element! {
                     Text(content: status_bar.clone(), wrap: TextWrap::NoWrap)

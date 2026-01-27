@@ -6,6 +6,7 @@
 //! Unit tests for responsive terminal width rendering.
 
 use super::app::{format_status_bar, AppMode, RenderState, StatusInfo, DEFAULT_TERMINAL_WIDTH};
+use super::app::{DialogState, DisplayState, InputState};
 use super::separator::{make_compact_separator, make_separator};
 use crate::permission::PermissionMode;
 
@@ -58,35 +59,18 @@ mod status_bar_rendering {
     fn create_render_state(width: u16) -> RenderState {
         RenderState {
             mode: AppMode::Input,
-            input_buffer: String::new(),
-            cursor_pos: 0,
-            response_content: String::new(),
-            is_streaming: false,
+            input: InputState::default(),
+            dialog: DialogState::None,
+            display: DisplayState {
+                terminal_width: width,
+                ..Default::default()
+            },
             status: StatusInfo::default(),
-            pending_permission: None,
             user_name: "test".to_string(),
-            trust_prompt: None,
-            thinking_dialog: None,
-            tasks_dialog: None,
-            model_picker_dialog: None,
             thinking_enabled: true,
             permission_mode: PermissionMode::Default,
-            is_command_output: false,
-            conversation_display: String::new(),
-            is_compacted: false,
-            exit_hint: None,
             claude_version: None,
-            terminal_width: width,
-            show_shortcuts_panel: false,
-            slash_menu: None,
-            shell_mode: false,
             is_tty: false,
-            export_dialog: None,
-            help_dialog: None,
-            hooks_dialog: None,
-            memory_dialog: None,
-            stash_buffer: None,
-            show_stash_indicator: false,
         }
     }
 

@@ -6,11 +6,10 @@
 use iocraft::prelude::*;
 
 use crate::time::Clock;
-use crate::tui::slash_menu::SlashMenuState;
 use crate::tui::widgets::permission::PermissionSelection;
 use crate::tui::widgets::thinking::ThinkingDialog;
 
-use super::state::{TuiAppState, TuiAppStateInner};
+use super::state::{DialogState, TuiAppState};
 use super::types::{AppMode, ExitHint, ExitReason, EXIT_HINT_TIMEOUT_MS};
 
 /// Matches a control key that may be encoded as raw ASCII or as modifier+char.
@@ -60,37 +59,36 @@ impl TuiAppState {
         let mut inner = self.inner.lock();
 
         // Handle slash menu navigation when menu is open
-        if inner.slash_menu.is_some() {
+        if inner.display.slash_menu.is_some() {
             match key.code {
                 KeyCode::Down => {
-                    if let Some(ref mut menu) = inner.slash_menu {
+                    if let Some(ref mut menu) = inner.display.slash_menu {
                         menu.select_next();
                     }
                     return;
                 }
                 KeyCode::Up => {
-                    if let Some(ref mut menu) = inner.slash_menu {
+                    if let Some(ref mut menu) = inner.display.slash_menu {
                         menu.select_prev();
                     }
                     return;
                 }
                 KeyCode::Tab => {
                     // Complete the selected command
-                    if let Some(ref menu) = inner.slash_menu {
+                    if let Some(ref menu) = inner.display.slash_menu {
                         if let Some(cmd) = menu.selected_command() {
-                            inner.input_buffer = cmd.full_name();
-                            inner.cursor_pos = inner.input_buffer.len();
+                            inner.input.buffer = cmd.full_name();
+                            inner.input.cursor_pos = inner.input.buffer.len();
                         }
                     }
-                    inner.slash_menu = None; // Close menu
+                    inner.display.slash_menu = None; // Close menu
                     return;
                 }
                 KeyCode::Esc => {
                     // Close menu but keep text, show "Esc to clear again" hint
-                    inner.slash_menu = None;
+                    inner.display.slash_menu = None;
                     let now = inner.clock.now_millis();
-                    inner.exit_hint = Some(ExitHint::Escape);
-                    inner.exit_hint_shown_at = Some(now);
+                    inner.display.show_exit_hint(ExitHint::Escape, now);
                     return;
                 }
                 _ => {
@@ -115,10 +113,11 @@ impl TuiAppState {
 
             // Ctrl+D - Exit (only on empty input)
             (m, KeyCode::Char('d')) if m.contains(KeyModifiers::CONTROL) => {
-                if inner.input_buffer.is_empty() {
+                if inner.input.buffer.is_empty() {
                     let now = inner.clock.now_millis();
-                    let within_timeout = inner.exit_hint == Some(ExitHint::CtrlD)
+                    let within_timeout = inner.display.exit_hint == Some(ExitHint::CtrlD)
                         && inner
+                            .display
                             .exit_hint_shown_at
                             .map(|t| now.saturating_sub(t) < EXIT_HINT_TIMEOUT_MS)
                             .unwrap_or(false);
@@ -129,8 +128,7 @@ impl TuiAppState {
                         inner.exit_reason = Some(ExitReason::UserQuit);
                     } else {
                         // First Ctrl+D - show hint
-                        inner.exit_hint = Some(ExitHint::CtrlD);
-                        inner.exit_hint_shown_at = Some(now);
+                        inner.display.show_exit_hint(ExitHint::CtrlD, now);
                     }
                 }
                 // With text in input: ignored (do nothing)
@@ -138,14 +136,14 @@ impl TuiAppState {
 
             // Ctrl+L - Clear screen (keep input)
             (m, KeyCode::Char('l')) if m.contains(KeyModifiers::CONTROL) => {
-                inner.response_content.clear();
+                inner.display.response_content.clear();
             }
 
             // Meta+t (Alt+t) - Toggle thinking mode
             (m, KeyCode::Char('t'))
                 if m.contains(KeyModifiers::META) || m.contains(KeyModifiers::ALT) =>
             {
-                inner.thinking_dialog = Some(ThinkingDialog::new(inner.thinking_enabled));
+                inner.dialog = DialogState::Thinking(ThinkingDialog::new(inner.thinking_enabled));
                 inner.mode = AppMode::ThinkingToggle;
             }
 
@@ -153,18 +151,18 @@ impl TuiAppState {
             (m, KeyCode::Char('p'))
                 if m.contains(KeyModifiers::META) || m.contains(KeyModifiers::ALT) =>
             {
-                inner.model_picker_dialog = Some(crate::tui::widgets::ModelPickerDialog::new(
-                    &inner.status.model,
-                ));
+                inner.dialog = DialogState::ModelPicker(
+                    crate::tui::widgets::ModelPickerDialog::new(&inner.status.model),
+                );
                 inner.mode = AppMode::ModelPicker;
             }
 
             // Ctrl+T - Show todos (only when todos exist)
             (m, KeyCode::Char('t')) if m.contains(KeyModifiers::CONTROL) => {
                 if !inner.todos.is_empty() {
-                    inner.response_content = Self::format_todos(&inner.todos);
-                    inner.is_command_output = true;
-                    inner.conversation_display = "Todo List".to_string();
+                    inner.display.response_content = Self::format_todos(&inner.todos);
+                    inner.display.is_command_output = true;
+                    inner.display.conversation_display = "Todo List".to_string();
                 }
                 // When no todos, do nothing (no visible change)
             }
@@ -179,11 +177,10 @@ impl TuiAppState {
             // Enter - Submit input
             (_, KeyCode::Enter) => {
                 // Close slash menu on enter
-                inner.slash_menu = None;
+                inner.display.slash_menu = None;
                 // Clear exit hint on Enter
-                inner.exit_hint = None;
-                inner.exit_hint_shown_at = None;
-                if !inner.input_buffer.is_empty() {
+                inner.display.clear_exit_hint();
+                if !inner.input.buffer.is_empty() {
                     drop(inner);
                     self.submit_input();
                 }
@@ -192,33 +189,30 @@ impl TuiAppState {
             // Escape - Dismiss shortcuts panel first, then exit shell mode, then check for clear
             // Note: slash menu escape is handled above in the slash_menu.is_some() block
             (_, KeyCode::Esc) => {
-                if inner.show_shortcuts_panel {
+                if inner.display.show_shortcuts_panel {
                     // First priority: dismiss shortcuts panel
-                    inner.show_shortcuts_panel = false;
-                } else if inner.shell_mode {
+                    inner.display.show_shortcuts_panel = false;
+                } else if inner.input.shell_mode {
                     // Second priority: exit shell mode
-                    inner.shell_mode = false;
-                    inner.input_buffer.clear();
-                    inner.cursor_pos = 0;
-                } else if !inner.input_buffer.is_empty() {
+                    inner.input.shell_mode = false;
+                    inner.input.clear();
+                } else if !inner.input.buffer.is_empty() {
                     // Input has text - check for double-tap
                     let now = inner.clock.now_millis();
-                    let within_timeout = inner.exit_hint == Some(ExitHint::Escape)
+                    let within_timeout = inner.display.exit_hint == Some(ExitHint::Escape)
                         && inner
+                            .display
                             .exit_hint_shown_at
                             .map(|t| now.saturating_sub(t) < EXIT_HINT_TIMEOUT_MS)
                             .unwrap_or(false);
 
                     if within_timeout {
                         // Second Escape within timeout - clear input
-                        inner.input_buffer.clear();
-                        inner.cursor_pos = 0;
-                        inner.exit_hint = None;
-                        inner.exit_hint_shown_at = None;
+                        inner.input.clear();
+                        inner.display.clear_exit_hint();
                     } else {
                         // First Escape - show hint
-                        inner.exit_hint = Some(ExitHint::Escape);
-                        inner.exit_hint_shown_at = Some(now);
+                        inner.display.show_exit_hint(ExitHint::Escape, now);
                     }
                 }
                 // Empty input: do nothing (no else branch)
@@ -226,178 +220,168 @@ impl TuiAppState {
 
             // Backspace - Delete character before cursor, or exit shell mode if empty
             (_, KeyCode::Backspace) => {
-                if inner.cursor_pos > 0 {
-                    let pos = inner.cursor_pos - 1;
-                    inner.cursor_pos = pos;
-                    inner.input_buffer.remove(pos);
-                } else if inner.shell_mode && inner.input_buffer.is_empty() {
+                if inner.input.cursor_pos > 0 {
+                    inner.input.backspace();
+                } else if inner.input.shell_mode && inner.input.buffer.is_empty() {
                     // Backspace on empty input in shell mode: exit shell mode
-                    inner.shell_mode = false;
+                    inner.input.shell_mode = false;
                 }
                 // Update slash menu state
-                update_slash_menu_inner(&mut inner);
+                {
+                    let buffer = inner.input.buffer.clone();
+                    inner.display.update_slash_menu(&buffer);
+                }
             }
 
             // Delete - Delete character at cursor
             (_, KeyCode::Delete) => {
-                let pos = inner.cursor_pos;
-                if pos < inner.input_buffer.len() {
-                    inner.input_buffer.remove(pos);
-                }
+                inner.input.delete();
                 // Update slash menu state
-                update_slash_menu_inner(&mut inner);
+                {
+                    let buffer = inner.input.buffer.clone();
+                    inner.display.update_slash_menu(&buffer);
+                }
             }
 
             // Left arrow - Move cursor left
             (_, KeyCode::Left) => {
-                if inner.cursor_pos > 0 {
-                    inner.cursor_pos -= 1;
-                }
+                inner.input.move_left();
             }
 
             // Right arrow - Move cursor right
             (_, KeyCode::Right) => {
-                if inner.cursor_pos < inner.input_buffer.len() {
-                    inner.cursor_pos += 1;
-                }
+                inner.input.move_right();
             }
 
             // Up arrow - Previous history (only when slash menu is closed)
             (_, KeyCode::Up) => {
-                navigate_history_inner(&mut inner, -1);
+                inner.input.navigate_history(-1);
             }
 
             // Down arrow - Next history (only when slash menu is closed)
             (_, KeyCode::Down) => {
-                navigate_history_inner(&mut inner, 1);
+                inner.input.navigate_history(1);
             }
 
             // Home - Move cursor to start
             (_, KeyCode::Home) => {
-                inner.cursor_pos = 0;
+                inner.input.move_to_start();
             }
 
             // Ctrl+A - Move cursor to start
             (m, KeyCode::Char('a')) if m.contains(KeyModifiers::CONTROL) => {
-                inner.cursor_pos = 0;
+                inner.input.move_to_start();
             }
 
             // End - Move cursor to end
             (_, KeyCode::End) => {
-                inner.cursor_pos = inner.input_buffer.len();
+                inner.input.move_to_end();
             }
 
             // Ctrl+E - Move cursor to end
             (m, KeyCode::Char('e')) if m.contains(KeyModifiers::CONTROL) => {
-                inner.cursor_pos = inner.input_buffer.len();
+                inner.input.move_to_end();
             }
 
             // Ctrl+U - Clear line before cursor
             (m, KeyCode::Char('u')) if m.contains(KeyModifiers::CONTROL) => {
-                inner.input_buffer = inner.input_buffer[inner.cursor_pos..].to_string();
-                inner.cursor_pos = 0;
+                inner.input.clear_before_cursor();
                 // Update slash menu state
-                update_slash_menu_inner(&mut inner);
+                {
+                    let buffer = inner.input.buffer.clone();
+                    inner.display.update_slash_menu(&buffer);
+                }
             }
 
             // Ctrl+K - Clear line after cursor
             (m, KeyCode::Char('k')) if m.contains(KeyModifiers::CONTROL) => {
-                let pos = inner.cursor_pos;
-                inner.input_buffer.truncate(pos);
+                inner.input.clear_after_cursor();
                 // Update slash menu state
-                update_slash_menu_inner(&mut inner);
+                {
+                    let buffer = inner.input.buffer.clone();
+                    inner.display.update_slash_menu(&buffer);
+                }
             }
 
             // Ctrl+W - Delete word before cursor
             (m, KeyCode::Char('w')) if m.contains(KeyModifiers::CONTROL) => {
-                delete_word_before_cursor_inner(&mut inner);
+                inner.input.delete_word_before_cursor();
                 // Update slash menu state
-                update_slash_menu_inner(&mut inner);
+                {
+                    let buffer = inner.input.buffer.clone();
+                    inner.display.update_slash_menu(&buffer);
+                }
             }
 
             // Ctrl+_ - Undo last input segment
             // Note: Ctrl+_ is encoded as ASCII 0x1F, Char('_') with CONTROL, or Char('/') with CONTROL
             _ if ctrl_key!(underscore, key.modifiers, key.code) => {
-                if let Some(previous) = inner.undo_stack.pop() {
-                    inner.input_buffer = previous;
-                    inner.cursor_pos = inner.cursor_pos.min(inner.input_buffer.len());
-                }
+                inner.input.undo();
             }
 
             // Ctrl+S - Stash/restore prompt
             // Note: Ctrl+S is encoded as ASCII 0x13 or Char('s') with CONTROL
             _ if ctrl_key!(s, key.modifiers, key.code) => {
-                if let Some(stashed) = inner.stash_buffer.take() {
+                if inner.input.stash.is_some() {
                     // Restore: stash exists, restore it to input
-                    inner.input_buffer = stashed;
-                    inner.cursor_pos = inner.input_buffer.len();
-                    inner.show_stash_indicator = false;
-                } else if !inner.input_buffer.is_empty() {
+                    inner.input.restore_stash();
+                } else if !inner.input.buffer.is_empty() {
                     // Stash: input is not empty, save it
-                    inner.stash_buffer = Some(std::mem::take(&mut inner.input_buffer));
-                    inner.cursor_pos = 0;
-                    inner.show_stash_indicator = true;
+                    inner.input.stash();
                 }
                 // If input is empty and no stash exists, do nothing
             }
 
             // '?' key - show shortcuts panel on empty input, otherwise type literal
             (m, KeyCode::Char('?')) if m.is_empty() || m == KeyModifiers::SHIFT => {
-                if inner.input_buffer.is_empty() && !inner.show_shortcuts_panel {
+                if inner.input.buffer.is_empty() && !inner.display.show_shortcuts_panel {
                     // Empty input: show shortcuts panel
-                    inner.show_shortcuts_panel = true;
+                    inner.display.show_shortcuts_panel = true;
                 } else {
                     // Non-empty input or panel already showing: type literal '?'
-                    let pos = inner.cursor_pos;
-                    inner.input_buffer.insert(pos, '?');
-                    inner.cursor_pos = pos + 1;
+                    inner.input.insert_char('?');
                     // Reset history browsing on new input
-                    inner.history_index = None;
+                    inner.input.history_index = None;
                     // Clear exit hint on typing
-                    inner.exit_hint = None;
-                    inner.exit_hint_shown_at = None;
+                    inner.display.clear_exit_hint();
                 }
             }
 
             // '!' key - enter shell mode on empty input, otherwise type literal
             (m, KeyCode::Char('!')) if m.is_empty() || m == KeyModifiers::SHIFT => {
-                if inner.input_buffer.is_empty() && !inner.shell_mode {
+                if inner.input.buffer.is_empty() && !inner.input.shell_mode {
                     // Empty input: enter shell mode
-                    inner.shell_mode = true;
+                    inner.input.shell_mode = true;
                     // Clear any exit hint
-                    inner.exit_hint = None;
-                    inner.exit_hint_shown_at = None;
+                    inner.display.clear_exit_hint();
                 } else {
                     // Already in shell mode or has input: type literal '!'
-                    let pos = inner.cursor_pos;
-                    inner.input_buffer.insert(pos, '!');
-                    inner.cursor_pos = pos + 1;
+                    inner.input.insert_char('!');
                     // Reset history browsing on new input
-                    inner.history_index = None;
+                    inner.input.history_index = None;
                     // Clear exit hint on typing
-                    inner.exit_hint = None;
-                    inner.exit_hint_shown_at = None;
+                    inner.display.clear_exit_hint();
                 }
             }
 
             // Regular character input
             (m, KeyCode::Char(c)) if m.is_empty() || m == KeyModifiers::SHIFT => {
                 // Push snapshot at word boundaries (space typed or first character typed)
-                let should_snapshot = c == ' ' || inner.input_buffer.is_empty();
+                let should_snapshot = c == ' ' || inner.input.buffer.is_empty();
                 if should_snapshot {
-                    push_undo_snapshot(&mut inner);
+                    inner.input.push_undo_snapshot();
                 }
 
-                let pos = inner.cursor_pos;
-                inner.input_buffer.insert(pos, c);
-                inner.cursor_pos = pos + 1;
+                inner.input.insert_char(c);
                 // Reset history browsing on new input
-                inner.history_index = None;
+                inner.input.history_index = None;
                 // Clear exit hint on typing
-                inner.exit_hint = None;
-                inner.exit_hint_shown_at = None;
+                inner.display.clear_exit_hint();
                 // Update slash menu state
-                update_slash_menu_inner(&mut inner);
+                {
+                    let buffer = inner.input.buffer.clone();
+                    inner.display.update_slash_menu(&buffer);
+                }
             }
 
             _ => {}
@@ -428,8 +412,9 @@ impl TuiAppState {
             AppMode::Input => {
                 // Check if within exit hint timeout
                 let now = inner.clock.now_millis();
-                let within_timeout = inner.exit_hint == Some(ExitHint::CtrlC)
+                let within_timeout = inner.display.exit_hint == Some(ExitHint::CtrlC)
                     && inner
+                        .display
                         .exit_hint_shown_at
                         .map(|t| now.saturating_sub(t) < EXIT_HINT_TIMEOUT_MS)
                         .unwrap_or(false);
@@ -440,21 +425,19 @@ impl TuiAppState {
                     inner.exit_reason = Some(ExitReason::Interrupted);
                 } else {
                     // First Ctrl+C - clear input (if any) and show hint
-                    inner.input_buffer.clear();
-                    inner.cursor_pos = 0;
-                    inner.exit_hint = Some(ExitHint::CtrlC);
-                    inner.exit_hint_shown_at = Some(now);
+                    inner.input.clear();
+                    inner.display.show_exit_hint(ExitHint::CtrlC, now);
                 }
             }
             AppMode::Responding | AppMode::Thinking => {
                 // Cancel current response
-                inner.is_streaming = false;
+                inner.display.is_streaming = false;
                 inner.mode = AppMode::Input;
-                inner.response_content.push_str("\n\n[Interrupted]");
+                inner.display.response_content.push_str("\n\n[Interrupted]");
             }
             AppMode::Permission => {
                 // Deny and return to input
-                if let Some(ref mut perm) = inner.pending_permission {
+                if let Some(perm) = inner.dialog.as_permission_mut() {
                     perm.dialog.selected = PermissionSelection::No;
                 }
                 drop(inner);
@@ -467,127 +450,47 @@ impl TuiAppState {
             }
             AppMode::ThinkingToggle => {
                 // Close dialog without changing
-                inner.thinking_dialog = None;
+                inner.dialog.dismiss();
                 inner.mode = AppMode::Input;
             }
             AppMode::TasksDialog => {
                 // Close dialog without action
-                inner.tasks_dialog = None;
+                inner.dialog.dismiss();
                 inner.mode = AppMode::Input;
             }
             AppMode::ModelPicker => {
                 // Close dialog without changing model
-                inner.model_picker_dialog = None;
+                inner.dialog.dismiss();
                 inner.mode = AppMode::Input;
             }
             AppMode::ExportDialog => {
                 // Close dialog with cancellation message
-                inner.export_dialog = None;
+                inner.dialog.dismiss();
                 inner.mode = AppMode::Input;
-                inner.response_content = "Export cancelled".to_string();
-                inner.is_command_output = true;
+                inner.display.response_content = "Export cancelled".to_string();
+                inner.display.is_command_output = true;
             }
             AppMode::HelpDialog => {
                 // Close dialog with dismissal message
-                inner.help_dialog = None;
+                inner.dialog.dismiss();
                 inner.mode = AppMode::Input;
-                inner.response_content = "Help dialog dismissed".to_string();
-                inner.is_command_output = true;
+                inner.display.response_content = "Help dialog dismissed".to_string();
+                inner.display.is_command_output = true;
             }
             AppMode::HooksDialog => {
                 // Close dialog with dismissal message
-                inner.hooks_dialog = None;
+                inner.dialog.dismiss();
                 inner.mode = AppMode::Input;
-                inner.response_content = "Hooks dialog dismissed".to_string();
-                inner.is_command_output = true;
+                inner.display.response_content = "Hooks dialog dismissed".to_string();
+                inner.display.is_command_output = true;
             }
             AppMode::MemoryDialog => {
                 // Close dialog with dismissal message
-                inner.memory_dialog = None;
+                inner.dialog.dismiss();
                 inner.mode = AppMode::Input;
-                inner.response_content = "Memory dialog dismissed".to_string();
-                inner.is_command_output = true;
+                inner.display.response_content = "Memory dialog dismissed".to_string();
+                inner.display.is_command_output = true;
             }
         }
     }
-}
-
-/// Update slash menu state based on current input buffer
-pub(super) fn update_slash_menu_inner(inner: &mut TuiAppStateInner) {
-    if inner.input_buffer.starts_with('/') {
-        let filter = inner.input_buffer[1..].to_string();
-        if let Some(ref mut menu) = inner.slash_menu {
-            menu.set_filter(filter);
-        } else {
-            let mut menu = SlashMenuState::new();
-            menu.set_filter(filter);
-            inner.slash_menu = Some(menu);
-        }
-    } else {
-        inner.slash_menu = None;
-    }
-}
-
-/// Navigate through command history
-pub(super) fn navigate_history_inner(inner: &mut TuiAppStateInner, direction: i32) {
-    if inner.history.is_empty() {
-        return;
-    }
-
-    let new_index = match inner.history_index {
-        None if direction < 0 => Some(inner.history.len() - 1),
-        None => return,
-        Some(i) if direction < 0 && i > 0 => Some(i - 1),
-        Some(i) if direction > 0 && i < inner.history.len() - 1 => Some(i + 1),
-        Some(_) if direction > 0 => {
-            // Past end of history, clear input
-            inner.history_index = None;
-            inner.input_buffer.clear();
-            inner.cursor_pos = 0;
-            inner.undo_stack.clear();
-            return;
-        }
-        Some(i) => Some(i),
-    };
-
-    if let Some(idx) = new_index {
-        inner.history_index = Some(idx);
-        inner.input_buffer = inner.history[idx].clone();
-        inner.cursor_pos = inner.input_buffer.len();
-        inner.undo_stack.clear();
-    }
-}
-
-/// Delete word before cursor (Ctrl+W behavior)
-pub(super) fn delete_word_before_cursor_inner(inner: &mut TuiAppStateInner) {
-    if inner.cursor_pos == 0 {
-        return;
-    }
-
-    let before = &inner.input_buffer[..inner.cursor_pos];
-    let trimmed = before.trim_end();
-    let word_start = trimmed
-        .rfind(char::is_whitespace)
-        .map(|i| i + 1)
-        .unwrap_or(0);
-
-    inner.input_buffer = format!(
-        "{}{}",
-        &inner.input_buffer[..word_start],
-        &inner.input_buffer[inner.cursor_pos..]
-    );
-    inner.cursor_pos = word_start;
-}
-
-/// Push current input state to undo stack if appropriate
-pub(super) fn push_undo_snapshot(inner: &mut TuiAppStateInner) {
-    // Push if stack is empty or last snapshot differs from current
-    if inner.undo_stack.last() != Some(&inner.input_buffer) {
-        inner.undo_stack.push(inner.input_buffer.clone());
-    }
-}
-
-/// Clear undo stack (e.g., when submitting input or navigating history)
-pub(super) fn clear_undo_stack(inner: &mut TuiAppStateInner) {
-    inner.undo_stack.clear();
 }
