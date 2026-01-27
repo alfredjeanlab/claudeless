@@ -247,16 +247,6 @@ impl TuiAppState {
         }
     }
 
-    /// Access the inner state with a closure
-    /// Used for cross-module method access
-    pub(super) fn with_inner<F, R>(&self, f: F) -> R
-    where
-        F: FnOnce(&mut TuiAppStateInner) -> R,
-    {
-        let mut inner = self.inner.lock();
-        f(&mut inner)
-    }
-
     /// Get the render state snapshot
     pub fn render_state(&self) -> RenderState {
         let inner = self.inner.lock();
