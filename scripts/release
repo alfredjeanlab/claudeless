@@ -1,0 +1,306 @@
+#!/bin/bash
+# Release script for claudeless
+# Tags and releases a new version after validation, then publishes to crates.io
+#
+# Usage: scripts/release
+#
+# Prerequisites:
+#   - Must be on 'main' branch
+#   - Working tree must be clean
+#   - Version in Cargo.toml must be > highest tagged version
+#   - 'make check' must pass
+#   - CI checks must pass after push
+#   - Logged into crates.io (cargo login)
+#
+# Exit codes:
+#   0  Release successful
+#   1  Release failed
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+
+cd "$ROOT_DIR"
+
+# Colors for output (respects NO_COLOR, COLOR, and TTY)
+use_color() {
+    # NO_COLOR takes precedence (https://no-color.org/)
+    if [ "${NO_COLOR:-}" = "1" ]; then
+        return 1
+    fi
+    # COLOR=1 forces color on
+    if [ "${COLOR:-}" = "1" ]; then
+        return 0
+    fi
+    # Default: use color if stdout is a TTY
+    [ -t 1 ]
+}
+
+if use_color; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[0;33m'
+    BLUE='\033[0;34m'
+    NC='\033[0m'
+else
+    RED='' GREEN='' YELLOW='' BLUE='' NC=''
+fi
+
+step_start() { echo -e "${BLUE}==>${NC} $1..."; }
+step_pass()  { echo -e "${GREEN}==>${NC} $1"; }
+step_fail()  { echo -e "${RED}==>${NC} $1"; exit 1; }
+
+# Get version from workspace Cargo.toml
+get_cargo_version() {
+    grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/'
+}
+
+# Get highest tagged version (without 'v' prefix)
+get_highest_tag_version() {
+    git tag --sort=-v:refname | grep '^v' | head -1 | sed 's/^v//' || echo "0.0.0"
+}
+
+# Compare semver versions: returns 0 if $1 > $2
+version_gt() {
+    local v1="$1"
+    local v2="$2"
+
+    # Split into components
+    local v1_major v1_minor v1_patch
+    local v2_major v2_minor v2_patch
+
+    IFS='.' read -r v1_major v1_minor v1_patch <<< "$v1"
+    IFS='.' read -r v2_major v2_minor v2_patch <<< "$v2"
+
+    # Default to 0 if empty
+    v1_major=${v1_major:-0}
+    v1_minor=${v1_minor:-0}
+    v1_patch=${v1_patch:-0}
+    v2_major=${v2_major:-0}
+    v2_minor=${v2_minor:-0}
+    v2_patch=${v2_patch:-0}
+
+    if [ "$v1_major" -gt "$v2_major" ]; then return 0; fi
+    if [ "$v1_major" -lt "$v2_major" ]; then return 1; fi
+    if [ "$v1_minor" -gt "$v2_minor" ]; then return 0; fi
+    if [ "$v1_minor" -lt "$v2_minor" ]; then return 1; fi
+    if [ "$v1_patch" -gt "$v2_patch" ]; then return 0; fi
+    return 1
+}
+
+# Bump patch version
+bump_patch_version() {
+    local version="$1"
+    local major minor patch
+    IFS='.' read -r major minor patch <<< "$version"
+    patch=$((patch + 1))
+    echo "${major}.${minor}.${patch}"
+}
+
+# Update version in workspace Cargo.toml
+update_cargo_version() {
+    local new_version="$1"
+    sed -i '' "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
+}
+
+echo ""
+echo "=== Claudeless Release ==="
+echo ""
+
+# Step 1: Check we're on main branch
+step_start "Checking branch is 'main'"
+CURRENT_BRANCH=$(git branch --show-current)
+if [ "$CURRENT_BRANCH" != "main" ]; then
+    step_fail "Not on 'main' branch (currently on '$CURRENT_BRANCH')"
+fi
+step_pass "On 'main' branch"
+
+# Step 2: Check working tree is clean
+step_start "Checking working tree is clean"
+if ! git diff --quiet || ! git diff --cached --quiet; then
+    step_fail "Working tree has uncommitted changes"
+fi
+step_pass "Working tree is clean"
+
+# Step 3: Check crates.io login
+step_start "Checking crates.io authentication"
+if ! cargo login --help >/dev/null 2>&1; then
+    step_fail "cargo not available"
+fi
+# Try a dry-run publish to verify authentication
+if ! cargo publish --dry-run -p claudeless 2>&1 | grep -q "warning: aborting upload due to dry run"; then
+    echo ""
+    echo "    You may need to run: cargo login"
+    step_fail "Not authenticated with crates.io"
+fi
+step_pass "Authenticated with crates.io"
+
+# Step 4: Run make check
+step_start "Running 'make check'"
+if ! make check; then
+    step_fail "'make check' failed"
+fi
+step_pass "'make check' passed"
+
+# Step 5: Check/bump version
+step_start "Checking version"
+CARGO_VERSION=$(get_cargo_version)
+TAG_VERSION=$(get_highest_tag_version)
+echo "    Cargo.toml version: $CARGO_VERSION"
+echo "    Highest tag:        v$TAG_VERSION"
+
+if ! version_gt "$CARGO_VERSION" "$TAG_VERSION"; then
+    step_start "Bumping version (Cargo.toml version not greater than highest tag)"
+    NEW_VERSION=$(bump_patch_version "$TAG_VERSION")
+    echo "    New version: $NEW_VERSION"
+    update_cargo_version "$NEW_VERSION"
+
+    git add Cargo.toml
+    git commit -m "chore: bump version to $NEW_VERSION"
+    CARGO_VERSION="$NEW_VERSION"
+    step_pass "Version bumped to $NEW_VERSION"
+else
+    step_pass "Version $CARGO_VERSION is valid (> v$TAG_VERSION)"
+fi
+
+TAG_NAME="v$CARGO_VERSION"
+
+# Step 6: Push to remote
+step_start "Pushing 'main' to origin"
+if ! git push origin main; then
+    step_fail "Failed to push to origin"
+fi
+step_pass "Pushed 'main' to origin"
+
+step_start "Pushing 'main' to github"
+if ! git push github main; then
+    step_fail "Failed to push to github"
+fi
+step_pass "Pushed 'main' to github"
+
+# Step 7: Wait for CI checks
+step_start "Waiting for CI checks to pass"
+echo "    (this may take a few minutes)"
+
+# Get the latest commit SHA
+COMMIT_SHA=$(git rev-parse HEAD)
+
+# Poll for CI status
+MAX_ATTEMPTS=60  # 10 minutes with 10s interval
+ATTEMPT=0
+while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+    ATTEMPT=$((ATTEMPT + 1))
+
+    # Get combined status using gh (for external CI integrations)
+    # Note: returns "pending" with total_count=0 if no external status checks are configured
+    STATUS_JSON=$(gh api "repos/{owner}/{repo}/commits/$COMMIT_SHA/status" --jq '{state: .state, count: .total_count}' 2>/dev/null || echo '{"state":"error","count":0}')
+    STATUS=$(echo "$STATUS_JSON" | jq -r '.state')
+    STATUS_COUNT=$(echo "$STATUS_JSON" | jq -r '.count')
+
+    # If no external status checks configured, treat as success (only check-runs matter)
+    if [ "$STATUS_COUNT" = "0" ]; then
+        STATUS="success"
+    fi
+
+    # Check GitHub Actions workflow runs (check-runs API)
+    CHECK_STATUS=$(gh api "repos/{owner}/{repo}/commits/$COMMIT_SHA/check-runs" --jq '.check_runs | map(.conclusion) | if length == 0 then "pending" elif all(. == "success") then "success" elif any(. == null) then "pending" elif any(. == "failure" or . == "cancelled") then "failure" else "pending" end' 2>/dev/null || echo "error")
+
+    # Determine overall status
+    if [ "$STATUS" = "success" ] && [ "$CHECK_STATUS" = "success" ]; then
+        break
+    elif [ "$STATUS" = "failure" ] || [ "$CHECK_STATUS" = "failure" ]; then
+        echo ""
+        step_fail "CI checks failed. Check https://github.com/$(gh repo view --json nameWithOwner -q .nameWithOwner)/actions"
+    elif [ "$STATUS" = "error" ] && [ "$CHECK_STATUS" = "error" ]; then
+        # If both errored, maybe no CI configured - proceed with warning
+        echo -e "    ${YELLOW}Warning: Could not determine CI status${NC}"
+        break
+    fi
+
+    # Still pending, wait and retry
+    printf "\r    Attempt %d/%d - Status: %s, Checks: %s" "$ATTEMPT" "$MAX_ATTEMPTS" "$STATUS" "$CHECK_STATUS"
+    sleep 10
+done
+
+if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
+    echo ""
+    step_fail "CI checks timed out after 10 minutes"
+fi
+
+echo ""
+step_pass "CI checks passed"
+
+# Step 8: Create and push tag
+step_start "Creating tag '$TAG_NAME'"
+git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+step_pass "Created tag '$TAG_NAME'"
+
+step_start "Pushing tag '$TAG_NAME' to origin"
+if ! git push origin "$TAG_NAME"; then
+    step_fail "Failed to push tag to origin"
+fi
+step_pass "Pushed tag '$TAG_NAME' to origin"
+
+step_start "Pushing tag '$TAG_NAME' to github"
+if ! git push github "$TAG_NAME"; then
+    step_fail "Failed to push tag to github"
+fi
+step_pass "Pushed tag '$TAG_NAME' to github"
+
+# Step 9: Wait for tag CI/release build
+step_start "Waiting for release build"
+echo "    (waiting for tag workflow to complete)"
+
+# Give GitHub a moment to trigger the workflow
+sleep 5
+
+# Poll for tag workflow completion
+ATTEMPT=0
+while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+    ATTEMPT=$((ATTEMPT + 1))
+
+    # Check workflow runs for this tag
+    TAG_RUN_STATUS=$(gh run list --branch "$TAG_NAME" --limit 1 --json status,conclusion --jq '.[0] | if .status == "completed" then .conclusion else "pending" end' 2>/dev/null || echo "pending")
+
+    if [ "$TAG_RUN_STATUS" = "success" ]; then
+        break
+    elif [ "$TAG_RUN_STATUS" = "failure" ] || [ "$TAG_RUN_STATUS" = "cancelled" ]; then
+        echo ""
+        step_fail "Release build failed. Check https://github.com/$(gh repo view --json nameWithOwner -q .nameWithOwner)/actions"
+    fi
+
+    printf "\r    Attempt %d/%d - Status: %s" "$ATTEMPT" "$MAX_ATTEMPTS" "$TAG_RUN_STATUS"
+    sleep 10
+done
+
+if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
+    echo ""
+    echo -e "    ${YELLOW}Warning: Timed out waiting for release build${NC}"
+    echo "    Release may still be in progress. Check GitHub Actions."
+fi
+
+echo ""
+step_pass "Release build completed"
+
+# Step 10: Publish to crates.io
+step_start "Publishing to crates.io"
+if ! cargo publish -p claudeless; then
+    step_fail "Failed to publish to crates.io"
+fi
+step_pass "Published claudeless $CARGO_VERSION to crates.io"
+
+# Step 11: Output summary
+REPO_NAME=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+RELEASE_URL="https://github.com/$REPO_NAME/releases/tag/$TAG_NAME"
+CRATES_URL="https://crates.io/crates/claudeless/$CARGO_VERSION"
+
+echo ""
+echo "=== Release $TAG_NAME Complete ==="
+echo ""
+echo "GitHub Release: $RELEASE_URL"
+echo "Crates.io:      $CRATES_URL"
+echo ""
+echo "Users can now install with:"
+echo ""
+echo "    cargo install claudeless"
+echo ""
