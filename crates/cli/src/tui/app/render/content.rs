@@ -8,8 +8,9 @@ use iocraft::prelude::*;
 use crate::tui::separator::make_compact_separator;
 use crate::tui::shortcuts::shortcuts_by_column;
 use crate::tui::slash_menu::COMMANDS;
+use crate::tui::spinner;
 
-use super::super::types::RenderState;
+use super::super::types::{AppMode, RenderState};
 
 /// Render the shortcuts panel with 3 columns
 pub(crate) fn render_shortcuts_panel(_width: usize) -> AnyElement<'static> {
@@ -76,16 +77,25 @@ pub(crate) fn render_conversation_area(state: &RenderState) -> AnyElement<'stati
     }
 
     // Add current response if present
-    if !state.display.response_content.is_empty() {
-        // Check if this is a compacting-in-progress message (✻ symbol)
-        let is_compacting_in_progress = state.display.response_content.starts_with('✻');
-
-        if is_compacting_in_progress {
-            // During compacting, show message on its own line after blank line
+    if !state.display.response_content.is_empty() || state.is_compacting {
+        // Check if this is a compacting-in-progress state
+        if state.is_compacting {
+            // During compacting, show animated spinner
             if !content.is_empty() {
                 content.push_str("\n\n");
             }
-            content.push_str(&state.display.response_content);
+            content.push_str(&render_spinner(state, "Compacting conversation"));
+            content.push_str(" (ctrl+c to interrupt)");
+        } else if matches!(state.mode, AppMode::Responding | AppMode::Thinking)
+            && !state.display.is_command_output
+            && state.display.response_content.is_empty()
+        {
+            // Show animated spinner during thinking/responding with no content yet
+            if !content.is_empty() {
+                content.push_str("\n\n");
+            }
+            content.push_str(&render_spinner(state, &state.spinner_verb));
+            content.push('…');
         } else if state.display.is_command_output {
             // Completed command output uses elbow connector format
             if !content.is_empty() {
@@ -214,4 +224,11 @@ pub(crate) fn render_argument_hint(state: &RenderState) -> AnyElement<'static> {
     }
 
     element! { View {} }.into()
+}
+
+/// Render animated spinner with text
+fn render_spinner(state: &RenderState, text: &str) -> String {
+    let cycle = spinner::spinner_cycle();
+    let frame = cycle[state.spinner_frame % cycle.len()];
+    format!("{} {}", frame, text)
 }

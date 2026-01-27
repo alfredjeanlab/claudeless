@@ -15,6 +15,7 @@ mod screenshot;
 pub mod separator;
 pub mod shortcuts;
 pub mod slash_menu;
+pub mod spinner;
 mod streaming;
 mod test_helpers;
 

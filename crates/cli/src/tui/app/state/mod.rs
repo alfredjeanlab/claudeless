@@ -177,7 +177,18 @@ impl TuiAppState {
             user_name: inner.config.user_name.clone(),
             claude_version: inner.config.claude_version.clone(),
             is_tty: inner.config.is_tty,
+            is_compacting: inner.is_compacting,
+            spinner_frame: inner.display.spinner_frame,
+            spinner_verb: inner.display.spinner_verb.clone(),
         }
+    }
+
+    /// Advance the spinner animation frame
+    pub fn advance_spinner(&self) {
+        use crate::tui::spinner;
+        let mut inner = self.inner.lock();
+        let cycle_len = spinner::spinner_cycle().len();
+        inner.display.spinner_frame = (inner.display.spinner_frame + 1) % cycle_len;
     }
 
     /// Get terminal width

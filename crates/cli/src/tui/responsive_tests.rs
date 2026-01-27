@@ -71,6 +71,9 @@ mod status_bar_rendering {
             permission_mode: PermissionMode::Default,
             claude_version: None,
             is_tty: false,
+            is_compacting: false,
+            spinner_frame: 0,
+            spinner_verb: String::new(),
         }
     }
 
