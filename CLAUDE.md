@@ -55,5 +55,6 @@ Before committing changes:
   - `quench check --fix`
   - `cargo test --all`
   - `cargo build --all`
+  - `cargo publish --dry-run` (verify crate packaging)
   - `cargo audit`
   - `cargo deny check`

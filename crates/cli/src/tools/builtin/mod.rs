@@ -55,15 +55,19 @@ impl Default for BuiltinExecutor {
 impl BuiltinExecutor {
     /// Create a new builtin executor with default configuration.
     pub fn new() -> Self {
-        let mut executors: HashMap<String, Box<dyn BuiltinToolExecutor>> = HashMap::new();
+        let all_executors: [Box<dyn BuiltinToolExecutor>; 6] = [
+            Box::new(BashExecutor::new()),
+            Box::new(ReadExecutor::new()),
+            Box::new(WriteExecutor::new()),
+            Box::new(EditExecutor::new()),
+            Box::new(GlobExecutor::new()),
+            Box::new(GrepExecutor::new()),
+        ];
 
-        // Register all built-in tool executors
-        executors.insert("Bash".to_string(), Box::new(BashExecutor::new()));
-        executors.insert("Read".to_string(), Box::new(ReadExecutor::new()));
-        executors.insert("Write".to_string(), Box::new(WriteExecutor::new()));
-        executors.insert("Edit".to_string(), Box::new(EditExecutor::new()));
-        executors.insert("Glob".to_string(), Box::new(GlobExecutor::new()));
-        executors.insert("Grep".to_string(), Box::new(GrepExecutor::new()));
+        let executors = all_executors
+            .into_iter()
+            .map(|e| (e.tool_name().to_string(), e))
+            .collect();
 
         Self {
             executors,

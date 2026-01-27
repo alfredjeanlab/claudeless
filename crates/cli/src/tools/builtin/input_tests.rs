@@ -52,34 +52,6 @@ fn extract_directory_returns_none_when_missing() {
 }
 
 #[test]
-fn extract_pattern_works() {
-    let input = json!({
-        "pattern": "*.rs"
-    });
-    assert_eq!(extract_pattern(&input), Some("*.rs"));
-}
-
-#[test]
-fn extract_pattern_returns_none_when_missing() {
-    let input = json!({});
-    assert_eq!(extract_pattern(&input), None);
-}
-
-#[test]
-fn extract_command_works() {
-    let input = json!({
-        "command": "echo hello"
-    });
-    assert_eq!(extract_command(&input), Some("echo hello"));
-}
-
-#[test]
-fn extract_command_returns_none_when_missing() {
-    let input = json!({});
-    assert_eq!(extract_command(&input), None);
-}
-
-#[test]
 fn extract_str_works() {
     let input = json!({
         "foo": "bar",

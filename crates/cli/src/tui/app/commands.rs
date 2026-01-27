@@ -92,8 +92,7 @@ impl TuiAppState {
 
             // Get scenario response for the command
             let response_text = {
-                let mut scenario = inner.scenario.lock();
-                let text = scenario.response_text_or_default(&command);
+                let text = inner.scenario.response_text_or_default(&command);
                 if text.is_empty() {
                     format!("$ {}", command)
                 } else {
@@ -160,17 +159,14 @@ impl TuiAppState {
         inner.display.spinner_verb = spinner::random_verb().to_string();
 
         // Record the turn
-        {
-            let mut sessions = inner.sessions.lock();
-            sessions
-                .current_session()
-                .add_turn(prompt.clone(), String::new());
-        }
+        inner
+            .sessions
+            .current_session()
+            .add_turn(prompt.clone(), String::new());
 
         // Match scenario
         let response_text = {
-            let mut scenario = inner.scenario.lock();
-            let text = scenario.response_text_or_default(&prompt);
+            let text = inner.scenario.response_text_or_default(&prompt);
             if text.is_empty() {
                 "I'm not sure how to help with that.".to_string()
             } else {
@@ -307,10 +303,7 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
     match cmd.as_str() {
         "/clear" => {
             // Clear session turns
-            {
-                let mut sessions = inner.sessions.lock();
-                sessions.current_session().turns.clear();
-            }
+            inner.sessions.current_session().turns.clear();
 
             // Reset token counts
             inner.status.input_tokens = 0;
@@ -341,11 +334,11 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
         }
         "/fork" => {
             // Check if there's a conversation to fork
-            let has_conversation = {
-                let sessions = inner.sessions.lock();
-                let current = sessions.get_current();
-                current.map(|s| !s.turns.is_empty()).unwrap_or(false)
-            };
+            let has_conversation = inner
+                .sessions
+                .get_current()
+                .map(|s| !s.turns.is_empty())
+                .unwrap_or(false);
 
             if has_conversation {
                 // TODO: Implement actual fork functionality
@@ -386,11 +379,11 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
         }
         "/export" => {
             // Check if there's a conversation to export
-            let has_conversation = {
-                let sessions = inner.sessions.lock();
-                let current = sessions.get_current();
-                current.map(|s| !s.turns.is_empty()).unwrap_or(false)
-            };
+            let has_conversation = inner
+                .sessions
+                .get_current()
+                .map(|s| !s.turns.is_empty())
+                .unwrap_or(false);
 
             if has_conversation {
                 inner.mode = AppMode::ExportDialog;
@@ -437,11 +430,8 @@ pub(super) fn start_streaming_inner(inner: &mut TuiAppStateInner, text: String) 
     inner.status.input_tokens += (inner.input.buffer.len() / 4).max(1) as u32;
 
     // Update session with response
-    {
-        let mut sessions = inner.sessions.lock();
-        if let Some(turn) = sessions.current_session().turns.last_mut() {
-            turn.response = inner.display.response_content.clone();
-        }
+    if let Some(turn) = inner.sessions.current_session().turns.last_mut() {
+        turn.response = inner.display.response_content.clone();
     }
 
     inner.mode = AppMode::Input;

@@ -66,6 +66,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release --all
 
+  publish-check:
+    name: Can Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo publish --dry-run -p claudeless
+
   audit:
     name: Security Audit
     runs-on: ubuntu-latest

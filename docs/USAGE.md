@@ -4,10 +4,7 @@ Claudeless is a Claude CLI simulator for deterministic integration testing witho
 
 ## Quick Start
 
-```bash
-# Install
-cargo install --path .
-
+```sh
 # Run with a scenario
 claudeless --scenario scenarios/simple.toml -p "hello"
 

@@ -44,9 +44,9 @@ pub(super) struct TuiAppStateInner {
 
     // Core dependencies
     /// Scenario for response matching
-    pub scenario: Arc<Mutex<Scenario>>,
+    pub scenario: Scenario,
     /// Session manager for conversation state
-    pub sessions: Arc<Mutex<SessionManager>>,
+    pub sessions: SessionManager,
     /// Clock for timing
     pub clock: ClockHandle,
     /// Configuration from scenario
@@ -129,8 +129,8 @@ impl TuiAppState {
                 display: DisplayState::new(),
 
                 // Core dependencies
-                scenario: Arc::new(Mutex::new(scenario)),
-                sessions: Arc::new(Mutex::new(sessions)),
+                scenario,
+                sessions,
                 clock,
 
                 // Session state
@@ -402,8 +402,7 @@ impl TuiAppState {
 }
 
 /// Build tool summary from session turns for /compact output
-pub(super) fn build_tool_summary(sessions: &Arc<Mutex<SessionManager>>) -> String {
-    let sessions = sessions.lock();
+pub(super) fn build_tool_summary(sessions: &SessionManager) -> String {
     let Some(session) = sessions.get_current() else {
         return String::new();
     };

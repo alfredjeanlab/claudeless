@@ -11,10 +11,6 @@ mod state;
 mod types;
 
 pub use state::TuiAppState;
-#[cfg(test)]
-pub use state::{DialogState, DisplayState, InputState};
-#[cfg(test)]
-pub use types::DEFAULT_TERMINAL_WIDTH;
 pub use types::{
     AppMode, ExitHint, ExitReason, PermissionChoice, PermissionRequest, RenderState, StatusInfo,
     TrustPromptState, TuiConfig,
@@ -184,8 +180,7 @@ impl TuiApp {
                 // After this, execution pauses until SIGCONT is received
                 #[cfg(unix)]
                 {
-                    use nix::sys::signal::{raise, Signal};
-                    let _ = raise(Signal::SIGTSTP);
+                    let _ = signal_hook::low_level::raise(signal_hook::consts::SIGTSTP);
                 }
 
                 // On resume (SIGCONT), clear exit state and re-enter fullscreen
@@ -271,6 +266,10 @@ pub(crate) use crate::permission::PermissionMode;
 pub(crate) use crate::tui::widgets::permission::PermissionSelection;
 #[cfg(test)]
 pub(crate) use render::{format_header_lines, format_status_bar};
+#[cfg(test)]
+pub use state::{DialogState, DisplayState, InputState};
+#[cfg(test)]
+pub use types::DEFAULT_TERMINAL_WIDTH;
 
 #[cfg(test)]
 #[path = "app_tests.rs"]

@@ -215,12 +215,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 
 [[package]]
-name = "cfg_aliases"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
-
-[[package]]
 name = "chrono"
 version = "0.4.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -289,7 +283,6 @@ dependencies = [
  "insta",
  "iocraft",
  "json5",
- "nix",
  "parking_lot",
  "predicates",
  "proptest",
@@ -298,6 +291,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "signal-hook",
  "tempfile",
  "textwrap",
  "thiserror",
@@ -903,18 +897,6 @@ checksum = "ac9557c559cd6fc9867e122e20d2cbefc9ca29d80d027a8e39310920ed2f0a97"
 dependencies = [
  "num-traits",
  "pxfm",
-]
-
-[[package]]
-name = "nix"
-version = "0.31.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db9f2b173ed7678e98df5c31c60c3d49595cb37e9b58c71e85ec03e88a278fae"
-dependencies = [
- "bitflags",
- "cfg-if",
- "cfg_aliases",
- "libc",
 ]
 
 [[package]]

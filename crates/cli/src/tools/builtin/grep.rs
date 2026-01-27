@@ -11,7 +11,7 @@ use regex::Regex;
 use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
-use super::{extract_bool, extract_pattern, extract_str, BuiltinContext, BuiltinToolExecutor};
+use super::{extract_bool, extract_str, BuiltinContext, BuiltinToolExecutor};
 
 /// Executor for content search (grep-like functionality).
 #[derive(Clone, Debug, Default)]
@@ -66,7 +66,7 @@ impl BuiltinToolExecutor for GrepExecutor {
         tool_use_id: &str,
         ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let pattern_str = match extract_pattern(&call.input) {
+        let pattern_str = match extract_str(&call.input, "pattern") {
             Some(p) => p,
             None => {
                 return ToolExecutionResult::error(

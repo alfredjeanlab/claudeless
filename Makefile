@@ -9,6 +9,7 @@ check: lint
 	quench check --fix
 	cargo test --all
 	cargo build --all
+	cargo publish --dry-run --allow-dirty -p claudeless
 	@if [ -n "$$CI" ]; then \
 		mv .cargo/audit.toml .cargo/audit.toml.bak 2>/dev/null || true; \
 		cargo audit; \

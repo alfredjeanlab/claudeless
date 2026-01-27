@@ -23,16 +23,6 @@ pub fn extract_directory(input: &Value) -> Option<&str> {
         .and_then(|v| v.as_str())
 }
 
-/// Extract a pattern from tool input.
-pub fn extract_pattern(input: &Value) -> Option<&str> {
-    input.get("pattern").and_then(|v| v.as_str())
-}
-
-/// Extract a command from tool input.
-pub fn extract_command(input: &Value) -> Option<&str> {
-    input.get("command").and_then(|v| v.as_str())
-}
-
 /// Extract a string field by name.
 pub fn extract_str<'a>(input: &'a Value, key: &str) -> Option<&'a str> {
     input.get(key).and_then(|v| v.as_str())

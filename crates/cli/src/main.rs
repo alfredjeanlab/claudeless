@@ -9,7 +9,16 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clap::Parser;
-use claudeless::config::ToolExecutionMode;
+use parking_lot::RwLock;
+
+use claudeless::capture::{CaptureLog, CapturedArgs, CapturedOutcome};
+use claudeless::cli::Cli;
+use claudeless::config::{ResponseSpec, ToolExecutionMode};
+use claudeless::failure::FailureExecutor;
+use claudeless::mcp::{load_mcp_config, McpConfig, McpManager};
+use claudeless::output::OutputWriter;
+use claudeless::permission::PermissionBypass;
+use claudeless::scenario::Scenario;
 use claudeless::session::SessionContext;
 use claudeless::state::session::SessionManager;
 use claudeless::state::StateWriter;
@@ -17,11 +26,6 @@ use claudeless::time::ClockHandle;
 use claudeless::tools::builtin::BuiltinExecutor;
 use claudeless::tools::{create_executor, ExecutionContext, ToolExecutor};
 use claudeless::tui::{ExitReason, TuiApp, TuiConfig};
-use claudeless::{
-    load_mcp_config, CaptureLog, CapturedArgs, CapturedOutcome, Cli, FailureExecutor, McpConfig,
-    McpManager, OutputWriter, PermissionBypass, ResponseSpec, Scenario,
-};
-use parking_lot::RwLock;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -312,15 +316,18 @@ fn run_tui_mode(
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Ignore SIGINT so Ctrl+C is captured as a key event rather than killing the process.
     // This is required because raw mode alone doesn't prevent SIGINT generation on macOS/tmux.
-    // SAFETY: SIG_IGN is a well-defined, constant signal handler provided by the OS that
-    // simply ignores the signal. This is necessary to allow raw mode terminal input to
-    // capture Ctrl+C as a key event.
+    // We register a flag that gets set on SIGINT but we never check it - effectively ignoring the signal.
     #[cfg(unix)]
-    unsafe {
-        use nix::sys::signal::{signal, SigHandler, Signal};
-        if let Err(e) = signal(Signal::SIGINT, SigHandler::SigIgn) {
+    {
+        use std::sync::atomic::AtomicBool;
+        use std::sync::Arc;
+        let flag = Arc::new(AtomicBool::new(false));
+        if let Err(e) = signal_hook::flag::register(signal_hook::consts::SIGINT, Arc::clone(&flag))
+        {
             eprintln!("Warning: Failed to ignore SIGINT: {}", e);
         }
+        // Leak the flag so it stays registered for the lifetime of the process
+        std::mem::forget(flag);
     }
 
     // Load scenario if specified

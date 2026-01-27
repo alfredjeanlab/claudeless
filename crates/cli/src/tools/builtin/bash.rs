@@ -8,7 +8,7 @@ use std::process::Command;
 use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
-use super::{extract_command, BuiltinContext, BuiltinToolExecutor};
+use super::{extract_str, BuiltinContext, BuiltinToolExecutor};
 
 /// Executor for Bash commands.
 #[derive(Clone, Debug, Default)]
@@ -21,7 +21,7 @@ impl BashExecutor {
     }
 
     /// Execute command for real.
-    fn execute_real(command: &str, ctx: &BuiltinContext) -> ToolExecutionResult {
+    fn execute_real(command: &str, ctx: &BuiltinContext, tool_use_id: &str) -> ToolExecutionResult {
         let mut cmd = Command::new("sh");
         cmd.arg("-c").arg(command);
 
@@ -36,17 +36,19 @@ impl BashExecutor {
                 let stderr = String::from_utf8_lossy(&output.stderr);
 
                 if output.status.success() {
-                    ToolExecutionResult::success("", stdout.trim())
+                    ToolExecutionResult::success(tool_use_id, stdout.trim())
                 } else {
                     let error_msg = if stderr.is_empty() {
                         format!("Command failed with exit code: {:?}", output.status.code())
                     } else {
                         stderr.trim().to_string()
                     };
-                    ToolExecutionResult::error("", error_msg)
+                    ToolExecutionResult::error(tool_use_id, error_msg)
                 }
             }
-            Err(e) => ToolExecutionResult::error("", format!("Failed to execute command: {}", e)),
+            Err(e) => {
+                ToolExecutionResult::error(tool_use_id, format!("Failed to execute command: {}", e))
+            }
         }
     }
 }
@@ -58,7 +60,7 @@ impl BuiltinToolExecutor for BashExecutor {
         tool_use_id: &str,
         ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let command = match extract_command(&call.input) {
+        let command = match extract_str(&call.input, "command") {
             Some(cmd) => cmd,
             None => {
                 return ToolExecutionResult::error(
@@ -68,9 +70,7 @@ impl BuiltinToolExecutor for BashExecutor {
             }
         };
 
-        let mut result = Self::execute_real(command, ctx);
-        result.tool_use_id = tool_use_id.to_string();
-        result
+        Self::execute_real(command, ctx, tool_use_id)
     }
 
     fn tool_name(&self) -> &'static str {

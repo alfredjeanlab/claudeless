@@ -10,7 +10,7 @@ use glob::glob as glob_match;
 use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
-use super::{extract_directory, extract_pattern, BuiltinContext, BuiltinToolExecutor};
+use super::{extract_directory, extract_str, BuiltinContext, BuiltinToolExecutor};
 
 /// Executor for glob pattern matching.
 #[derive(Clone, Debug, Default)]
@@ -30,7 +30,7 @@ impl BuiltinToolExecutor for GlobExecutor {
         tool_use_id: &str,
         ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let pattern = match extract_pattern(&call.input) {
+        let pattern = match extract_str(&call.input, "pattern") {
             Some(p) => p,
             None => {
                 return ToolExecutionResult::error(
