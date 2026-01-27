@@ -136,10 +136,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Get response delay from spec if detailed
-    let response_delay = match &response {
-        Some(ResponseSpec::Detailed { delay_ms, .. }) => *delay_ms,
-        _ => None,
-    };
+    let response_delay = response.as_ref().and_then(|r| r.delay_ms());
 
     if let Some(delay) = response_delay {
         tokio::time::sleep(Duration::from_millis(delay)).await;
@@ -149,10 +146,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(ref log) = capture {
         let outcome = match &response {
             Some(spec) => CapturedOutcome::Response {
-                text: match spec {
-                    ResponseSpec::Simple(s) => s.clone(),
-                    ResponseSpec::Detailed { text, .. } => text.clone(),
-                },
+                text: spec.text().to_string(),
                 matched_rule,
                 delay_ms: response_delay.unwrap_or(0),
             },
@@ -169,10 +163,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Write output
     let mut stdout = io::stdout();
     let response = response.unwrap_or(ResponseSpec::Simple(String::new()));
-    let tool_calls = match &response {
-        ResponseSpec::Detailed { tool_calls, .. } => tool_calls.clone(),
-        _ => vec![],
-    };
+    let tool_calls = response.tool_calls().to_vec();
 
     // Use real Claude format (result wrapper for JSON, system init + result for stream-JSON)
     let mut writer = OutputWriter::new(&mut stdout, cli.output_format.clone(), cli.model.clone());
@@ -195,10 +186,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Record the turn to state directory
-    let response_text = match &response {
-        ResponseSpec::Simple(s) => s.clone(),
-        ResponseSpec::Detailed { text, .. } => text.clone(),
-    };
+    let response_text = response.text().to_string();
 
     if tool_calls.is_empty() {
         // Simple turn without tool calls

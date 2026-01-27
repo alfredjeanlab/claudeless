@@ -225,6 +225,38 @@ impl Default for ResponseSpec {
 }
 
 impl ResponseSpec {
+    /// Extract just the text content.
+    pub fn text(&self) -> &str {
+        match self {
+            ResponseSpec::Simple(s) => s,
+            ResponseSpec::Detailed { text, .. } => text,
+        }
+    }
+
+    /// Extract text content as owned String.
+    pub fn into_text(self) -> String {
+        match self {
+            ResponseSpec::Simple(s) => s,
+            ResponseSpec::Detailed { text, .. } => text,
+        }
+    }
+
+    /// Get tool calls if any.
+    pub fn tool_calls(&self) -> &[ToolCallSpec] {
+        match self {
+            ResponseSpec::Simple(_) => &[],
+            ResponseSpec::Detailed { tool_calls, .. } => tool_calls,
+        }
+    }
+
+    /// Get delay if specified.
+    pub fn delay_ms(&self) -> Option<u64> {
+        match self {
+            ResponseSpec::Simple(_) => None,
+            ResponseSpec::Detailed { delay_ms, .. } => *delay_ms,
+        }
+    }
+
     /// Extract text and optional usage from a response.
     pub fn text_and_usage(&self) -> (String, Option<UsageSpec>) {
         match self {

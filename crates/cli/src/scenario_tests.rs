@@ -545,3 +545,87 @@ fn test_reset_counts_also_resets_turns() {
     scenario.reset_counts();
     assert!(!scenario.has_active_sequence());
 }
+
+#[test]
+fn test_response_text_extracts_text() {
+    let config = simple_config(vec![ResponseRule {
+        pattern: PatternSpec::Any,
+        response: Some(ResponseSpec::Simple("Hello!".to_string())),
+        failure: None,
+        max_matches: None,
+        turns: Vec::new(),
+    }]);
+
+    let mut scenario = Scenario::from_config(config).unwrap();
+    let result = scenario.match_prompt("anything").unwrap();
+    assert_eq!(scenario.response_text(&result), "Hello!");
+}
+
+#[test]
+fn test_response_text_returns_empty_for_none() {
+    let config = simple_config(vec![ResponseRule {
+        pattern: PatternSpec::Any,
+        response: None, // No response
+        failure: None,
+        max_matches: None,
+        turns: Vec::new(),
+    }]);
+
+    let mut scenario = Scenario::from_config(config).unwrap();
+    let result = scenario.match_prompt("anything").unwrap();
+    assert_eq!(scenario.response_text(&result), "");
+}
+
+#[test]
+fn test_response_text_or_default_matched() {
+    let config = simple_config(vec![ResponseRule {
+        pattern: PatternSpec::Contains {
+            text: "hello".to_string(),
+        },
+        response: Some(ResponseSpec::Simple("Matched!".to_string())),
+        failure: None,
+        max_matches: None,
+        turns: Vec::new(),
+    }]);
+
+    let mut scenario = Scenario::from_config(config).unwrap();
+    assert_eq!(scenario.response_text_or_default("hello world"), "Matched!");
+}
+
+#[test]
+fn test_response_text_or_default_falls_back() {
+    let config = ScenarioConfig {
+        name: "test".to_string(),
+        default_response: Some(ResponseSpec::Simple("Default!".to_string())),
+        responses: vec![ResponseRule {
+            pattern: PatternSpec::Exact {
+                text: "specific".to_string(),
+            },
+            response: Some(ResponseSpec::Simple("Matched!".to_string())),
+            failure: None,
+            max_matches: None,
+            turns: Vec::new(),
+        }],
+        tool_execution: None,
+        ..Default::default()
+    };
+
+    let mut scenario = Scenario::from_config(config).unwrap();
+    assert_eq!(scenario.response_text_or_default("no match"), "Default!");
+}
+
+#[test]
+fn test_response_text_or_default_returns_empty_when_no_default() {
+    let config = simple_config(vec![ResponseRule {
+        pattern: PatternSpec::Exact {
+            text: "specific".to_string(),
+        },
+        response: Some(ResponseSpec::Simple("Matched!".to_string())),
+        failure: None,
+        max_matches: None,
+        turns: Vec::new(),
+    }]);
+
+    let mut scenario = Scenario::from_config(config).unwrap();
+    assert_eq!(scenario.response_text_or_default("no match"), "");
+}
