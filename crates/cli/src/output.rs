@@ -298,32 +298,13 @@ impl ToolResultBlock {
             block_type: "tool_result".to_string(),
             tool_use_id: result.tool_use_id.clone(),
             is_error: result.is_error,
-            content: result
-                .content
-                .iter()
-                .map(|c| match c {
-                    crate::tools::ToolResultContent::Text { text } => {
-                        ToolResultContentBlock::Text { text: text.clone() }
-                    }
-                    crate::tools::ToolResultContent::Image { data, media_type } => {
-                        ToolResultContentBlock::Image {
-                            data: data.clone(),
-                            media_type: media_type.clone(),
-                        }
-                    }
-                })
-                .collect(),
+            content: result.content.clone(),
         }
     }
 }
 
-/// Content block within a tool result
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum ToolResultContentBlock {
-    Text { text: String },
-    Image { data: String, media_type: String },
-}
+/// Content block within a tool result (alias for ToolResultContent).
+pub use crate::tools::ToolResultContent as ToolResultContentBlock;
 
 /// Output writer that handles different formats
 pub struct OutputWriter<W: Write> {
