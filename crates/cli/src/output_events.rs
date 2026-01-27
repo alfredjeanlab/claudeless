@@ -136,24 +136,7 @@ pub struct CondensedMessage {
 }
 
 /// Extended usage info matching real Claude
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ExtendedUsage {
-    pub input_tokens: u32,
-    pub output_tokens: u32,
-    pub cache_creation_input_tokens: u32,
-    pub cache_read_input_tokens: u32,
-}
-
-impl ExtendedUsage {
-    pub fn new(input_tokens: u32, output_tokens: u32) -> Self {
-        Self {
-            input_tokens,
-            output_tokens,
-            cache_creation_input_tokens: 0,
-            cache_read_input_tokens: 0,
-        }
-    }
-}
+pub use crate::usage::ExtendedTokenCounts as ExtendedUsage;
 
 /// Content block start event
 #[derive(Clone, Debug, Serialize, Deserialize)]
