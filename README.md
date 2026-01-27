@@ -17,14 +17,22 @@ Claudeless provides a controllable test double that responds to the same CLI int
 
 ## Installation
 
+### Homebrew (macOS)
+
 ```bash
-cargo install --path .
+brew install alfredjeanlab/tap/claudeless
 ```
 
-Or build from source:
+### Linux / Manual
 
 ```bash
-cargo build --release
+curl -fsSL https://github.com/alfredjeanlab/claudeless/releases/latest/download/install.sh | bash
+```
+
+### Cargo
+
+```bash
+cargo install claudeless
 ```
 
 ## Usage

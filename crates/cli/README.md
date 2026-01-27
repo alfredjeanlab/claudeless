@@ -13,8 +13,39 @@ Claudeless provides a controllable test double that responds to the same CLI int
 
 ## Installation
 
+### Cargo
+
 ```bash
 cargo install claudeless
+```
+
+## Using in Test Suites
+
+Add claudeless as a dev dependency to get the binary built alongside your tests:
+
+```toml
+[dev-dependencies]
+claudeless = "0.2"
+```
+
+In your tests, use `CARGO_BIN_EXE_claudeless` to find the binary:
+
+```rust
+use std::process::Command;
+
+#[test]
+fn test_my_claude_integration() {
+    let claudeless = env!("CARGO_BIN_EXE_claudeless");
+
+    let output = Command::new(claudeless)
+        .args(["--scenario", "tests/fixtures/scenario.toml"])
+        .arg("-p")
+        .arg("hello world")
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+}
 ```
 
 ## Usage
