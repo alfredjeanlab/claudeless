@@ -48,19 +48,20 @@ pub fn claudeless_bin() -> String {
 /// Start claudeless TUI in a tmux session and wait for it to be ready.
 /// Returns the initial capture after the TUI is ready.
 /// Uses default dimensions (120x40) and waits for `TUI_READY_PATTERN`.
-pub fn start_tui(session: &str, scenario: &tempfile::NamedTempFile) -> String {
+pub fn start_tui(session: impl AsRef<str>, scenario: &tempfile::NamedTempFile) -> String {
     start_tui_ext(session, scenario, 120, 40, TUI_READY_PATTERN)
 }
 
 /// Start claudeless TUI with custom dimensions and wait pattern.
 /// Returns the capture after the wait pattern appears.
 pub fn start_tui_ext(
-    session: &str,
+    session: impl AsRef<str>,
     scenario: &tempfile::NamedTempFile,
     width: u16,
     height: u16,
     wait_for: &str,
 ) -> String {
+    let session = session.as_ref();
     tmux::require_tmux();
     tmux::kill_session(session);
     tmux::new_session(session, width, height);
@@ -76,7 +77,8 @@ pub fn start_tui_ext(
 }
 
 /// Helper to start claudeless TUI and capture initial state
-pub fn capture_tui_initial(session: &str, extra_args: &str) -> String {
+pub fn capture_tui_initial(session: impl AsRef<str>, extra_args: &str) -> String {
+    let session = session.as_ref();
     tmux::require_tmux();
     let scenario = write_scenario(
         r#"
@@ -337,7 +339,8 @@ fn diff_strings(expected: &str, actual: &str) -> String {
 
 /// Helper to run claudeless and execute a sequence of keys, capturing at each step.
 /// After each key press, waits for the screen content to change before capturing.
-pub fn capture_key_sequence(session: &str, keys: &[&str]) -> Vec<String> {
+pub fn capture_key_sequence(session: impl AsRef<str>, keys: &[&str]) -> Vec<String> {
+    let session = session.as_ref();
     tmux::require_tmux();
     let scenario = write_scenario(
         r#"

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! TUI slash command search tests - incremental filtering and navigation.
 //!
@@ -42,15 +43,15 @@ fn test_tui_slash_opens_command_menu() {
         "#,
     );
 
-    let session = "claudeless-slash-menu";
-    let _previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("slash-menu");
+    let _previous = start_tui(&session, &scenario);
 
     // Type /
-    tmux::send_keys(session, "/");
+    tmux::send_keys(&session, "/");
     // Wait for menu content to appear (not just any change)
-    let capture = tmux::wait_for_content(session, "/add-dir");
+    let capture = tmux::wait_for_content(&session, "/add-dir");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("/add-dir") && capture.contains("Add a new working directory"),
@@ -78,15 +79,15 @@ fn test_tui_slash_menu_shows_descriptions() {
         "#,
     );
 
-    let session = "claudeless-slash-descriptions";
-    let _previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("slash-descriptions");
+    let _previous = start_tui(&session, &scenario);
 
     // Type /
-    tmux::send_keys(session, "/");
+    tmux::send_keys(&session, "/");
     // Wait for menu content to appear
-    let capture = tmux::wait_for_content(session, "/clear");
+    let capture = tmux::wait_for_content(&session, "/clear");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show commands with their descriptions
     assert!(
@@ -119,14 +120,14 @@ fn test_tui_slash_filters_commands() {
         "#,
     );
 
-    let session = "claudeless-slash-filter";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("slash-filter");
+    let previous = start_tui(&session, &scenario);
 
     // Type /co
-    tmux::send_keys(session, "/co");
-    let capture = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "/co");
+    let capture = tmux::wait_for_change(&session, &previous);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show commands matching "co"
     assert!(
@@ -160,15 +161,15 @@ fn test_tui_slash_filters_progressively() {
         "#,
     );
 
-    let session = "claudeless-slash-progressive";
-    let _previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("slash-progressive");
+    let _previous = start_tui(&session, &scenario);
 
     // Type /hel
-    tmux::send_keys(session, "/hel");
+    tmux::send_keys(&session, "/hel");
     // Wait for the filtered menu to appear
-    let capture = tmux::wait_for_content(session, "/help");
+    let capture = tmux::wait_for_content(&session, "/help");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should only show /help
     assert!(
@@ -192,14 +193,14 @@ fn test_tui_slash_fuzzy_matches() {
         "#,
     );
 
-    let session = "claudeless-slash-fuzzy";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("slash-fuzzy");
+    let previous = start_tui(&session, &scenario);
 
     // Type /h - should match help, hooks, theme, chrome, etc. (all containing 'h')
-    tmux::send_keys(session, "/h");
-    let capture = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "/h");
+    let capture = tmux::wait_for_change(&session, &previous);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show commands containing 'h'
     assert!(
@@ -232,24 +233,24 @@ fn test_tui_slash_down_arrow_navigation() {
         "#,
     );
 
-    let session = "claudeless-slash-down";
-    let _previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("slash-down");
+    let _previous = start_tui(&session, &scenario);
 
     // Type /
-    tmux::send_keys(session, "/");
+    tmux::send_keys(&session, "/");
     // Wait for menu to appear
-    let _ = tmux::wait_for_content(session, "/add-dir");
+    let _ = tmux::wait_for_content(&session, "/add-dir");
 
     // Press Down to move to next command
-    tmux::send_keys(session, "Down");
+    tmux::send_keys(&session, "Down");
     // Small delay for selection to update (visual change is subtle)
     std::thread::sleep(std::time::Duration::from_millis(100));
 
     // Press Tab to complete and verify selection moved
-    tmux::send_keys(session, "Tab");
-    let capture = tmux::wait_for_content(session, "/agents");
+    tmux::send_keys(&session, "Tab");
+    let capture = tmux::wait_for_content(&session, "/agents");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // After Down, Tab should complete to /agents (second command, not /add-dir)
     assert!(
@@ -273,27 +274,27 @@ fn test_tui_slash_up_arrow_navigation() {
         "#,
     );
 
-    let session = "claudeless-slash-up";
-    let _previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("slash-up");
+    let _previous = start_tui(&session, &scenario);
 
     // Type /
-    tmux::send_keys(session, "/");
+    tmux::send_keys(&session, "/");
     // Wait for menu to appear
-    let _ = tmux::wait_for_content(session, "/add-dir");
+    let _ = tmux::wait_for_content(&session, "/add-dir");
 
     // Press Down twice then Up once
-    tmux::send_keys(session, "Down");
+    tmux::send_keys(&session, "Down");
     std::thread::sleep(std::time::Duration::from_millis(100));
-    tmux::send_keys(session, "Down");
+    tmux::send_keys(&session, "Down");
     std::thread::sleep(std::time::Duration::from_millis(100));
-    tmux::send_keys(session, "Up");
+    tmux::send_keys(&session, "Up");
     std::thread::sleep(std::time::Duration::from_millis(100));
 
     // Press Tab to complete
-    tmux::send_keys(session, "Tab");
-    let capture = tmux::wait_for_content(session, "/agents");
+    tmux::send_keys(&session, "Tab");
+    let capture = tmux::wait_for_content(&session, "/agents");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should complete to /agents (Down, Down, Up = second command)
     assert!(
@@ -321,20 +322,20 @@ fn test_tui_slash_tab_completes_first_command() {
         "#,
     );
 
-    let session = "claudeless-slash-tab";
-    let _previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("slash-tab");
+    let _previous = start_tui(&session, &scenario);
 
     // Type /
-    tmux::send_keys(session, "/");
+    tmux::send_keys(&session, "/");
     // Wait for menu to appear
-    let _ = tmux::wait_for_content(session, "/add-dir");
+    let _ = tmux::wait_for_content(&session, "/add-dir");
 
     // Press Tab without navigation (should complete to first command)
-    tmux::send_keys(session, "Tab");
+    tmux::send_keys(&session, "Tab");
     // Wait for completion - the input line should show /add-dir
-    let capture = tmux::wait_for_content(session, "❯ /add-dir");
+    let capture = tmux::wait_for_content(&session, "❯ /add-dir");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("/add-dir"),
@@ -357,18 +358,18 @@ fn test_tui_slash_tab_shows_argument_hint() {
         "#,
     );
 
-    let session = "claudeless-slash-arg-hint";
-    let _previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("slash-arg-hint");
+    let _previous = start_tui(&session, &scenario);
 
     // Type / and Tab (complete to /add-dir which takes <path>)
-    tmux::send_keys(session, "/");
+    tmux::send_keys(&session, "/");
     // Wait for menu to appear
-    let _ = tmux::wait_for_content(session, "/add-dir");
-    tmux::send_keys(session, "Tab");
+    let _ = tmux::wait_for_content(&session, "/add-dir");
+    tmux::send_keys(&session, "Tab");
     // Wait for completion and hint
-    let capture = tmux::wait_for_content(session, "<path>");
+    let capture = tmux::wait_for_content(&session, "<path>");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("<path>"),
@@ -391,12 +392,12 @@ fn test_tui_slash_tab_closes_menu() {
         "#,
     );
 
-    let session = "claudeless-slash-tab-close";
-    let _previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("slash-tab-close");
+    let _previous = start_tui(&session, &scenario);
 
     // Type /
-    tmux::send_keys(session, "/");
-    let menu = tmux::wait_for_content(session, "/add-dir");
+    tmux::send_keys(&session, "/");
+    let menu = tmux::wait_for_content(&session, "/add-dir");
 
     // Verify menu is showing multiple commands
     assert!(
@@ -406,11 +407,11 @@ fn test_tui_slash_tab_closes_menu() {
     );
 
     // Press Tab
-    tmux::send_keys(session, "Tab");
+    tmux::send_keys(&session, "Tab");
     // Wait for the completion to be in the input line
-    let capture = tmux::wait_for_content(session, "❯ /add-dir");
+    let capture = tmux::wait_for_content(&session, "❯ /add-dir");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Menu should be closed (only show completed command, not the list)
     // After Tab, the menu items (/agents, /bug, etc.) should not be visible
@@ -440,18 +441,18 @@ fn test_tui_slash_escape_closes_menu_keeps_text() {
         "#,
     );
 
-    let session = "claudeless-slash-escape";
-    let _previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("slash-escape");
+    let _previous = start_tui(&session, &scenario);
 
     // Type /
-    tmux::send_keys(session, "/");
-    let _ = tmux::wait_for_content(session, "/add-dir");
+    tmux::send_keys(&session, "/");
+    let _ = tmux::wait_for_content(&session, "/add-dir");
 
     // Press Escape
-    tmux::send_keys(session, "Escape");
-    let capture = tmux::wait_for_content(session, "Esc to clear again");
+    tmux::send_keys(&session, "Escape");
+    let capture = tmux::wait_for_content(&session, "Esc to clear again");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should still show / in input but menu closed
     assert!(
@@ -480,18 +481,18 @@ fn test_tui_slash_escape_from_filtered_keeps_text() {
         "#,
     );
 
-    let session = "claudeless-slash-escape-filter";
-    let _previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("slash-escape-filter");
+    let _previous = start_tui(&session, &scenario);
 
     // Type /he
-    tmux::send_keys(session, "/he");
-    let _ = tmux::wait_for_content(session, "/help");
+    tmux::send_keys(&session, "/he");
+    let _ = tmux::wait_for_content(&session, "/help");
 
     // Press Escape
-    tmux::send_keys(session, "Escape");
-    let capture = tmux::wait_for_content(session, "Esc to clear again");
+    tmux::send_keys(&session, "Escape");
+    let capture = tmux::wait_for_content(&session, "Esc to clear again");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should still show /he in input
     assert!(

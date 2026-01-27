@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! Context command tests - /context slash command behavior.
 //!
@@ -36,16 +37,16 @@ fn test_context_shows_usage_grid() {
         "#,
     );
 
-    let session = "claudeless-context-usage-grid";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("context-usage-grid");
+    start_tui(&session, &scenario);
 
     // Execute /context command
-    tmux::send_line(session, "/context");
+    tmux::send_line(&session, "/context");
 
     // Wait for the context grid to appear
-    let capture = tmux::wait_for_content(session, "Estimated usage by category");
+    let capture = tmux::wait_for_content(&session, "Estimated usage by category");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show the grid header
     assert!(
@@ -91,16 +92,16 @@ fn test_context_shows_memory_files() {
         "#,
     );
 
-    let session = "claudeless-context-memory-files";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("context-memory-files");
+    start_tui(&session, &scenario);
 
     // Execute /context command
-    tmux::send_line(session, "/context");
+    tmux::send_line(&session, "/context");
 
     // Wait for the memory files section
-    let capture = tmux::wait_for_content(session, "Memory files");
+    let capture = tmux::wait_for_content(&session, "Memory files");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show memory files section with /memory reference
     assert!(
@@ -127,16 +128,16 @@ fn test_context_in_autocomplete() {
         "#,
     );
 
-    let session = "claudeless-context-autocomplete";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("context-autocomplete");
+    start_tui(&session, &scenario);
 
     // Type /context to trigger autocomplete
-    tmux::send_keys(session, "/context");
+    tmux::send_keys(&session, "/context");
 
     // Wait for autocomplete to appear
-    let capture = tmux::wait_for_content(session, "/context");
+    let capture = tmux::wait_for_content(&session, "/context");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show /context in autocomplete
     assert!(
@@ -171,16 +172,16 @@ fn test_context_shows_visual_grid() {
         "#,
     );
 
-    let session = "claudeless-context-visual-grid";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("context-visual-grid");
+    start_tui(&session, &scenario);
 
     // Execute /context command
-    tmux::send_line(session, "/context");
+    tmux::send_line(&session, "/context");
 
     // Wait for the grid symbols to appear
-    let capture = tmux::wait_for_content(session, "Estimated usage");
+    let capture = tmux::wait_for_content(&session, "Estimated usage");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should contain grid symbols (⛶ for free space, ⛝ for autocompact buffer)
     let has_grid_symbols = capture.contains('⛶') || capture.contains('⛝') || capture.contains('⛁');
@@ -208,16 +209,16 @@ fn test_context_shows_token_percentages() {
         "#,
     );
 
-    let session = "claudeless-context-percentages";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("context-percentages");
+    start_tui(&session, &scenario);
 
     // Execute /context command
-    tmux::send_line(session, "/context");
+    tmux::send_line(&session, "/context");
 
     // Wait for percentage to appear
-    let capture = tmux::wait_for_content(session, "tokens");
+    let capture = tmux::wait_for_content(&session, "tokens");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show token counts with percentages (e.g., "2.8k tokens (1.4%)")
     assert!(

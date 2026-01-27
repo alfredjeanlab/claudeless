@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! TUI setup and login flow tests.
 //!
@@ -49,21 +50,21 @@ fn test_tui_setup_theme_selection_dark_mode_default() {
         "#,
     );
 
-    let session = "claudeless-setup-theme-dark";
-    tmux::kill_session(session);
-    tmux::new_session(session, 120, 40);
+    let session = tmux::unique_session("setup-theme-dark");
+    tmux::kill_session(&session);
+    tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
         "{} --scenario {} --tui",
         common::claudeless_bin(),
         scenario.path().display()
     );
-    tmux::send_line(session, &cmd);
+    tmux::send_line(&session, &cmd);
 
     // Wait for theme selection screen
-    let capture = tmux::wait_for_content(session, "Choose the text style");
+    let capture = tmux::wait_for_content(&session, "Choose the text style");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Verify theme options are shown
     assert!(
@@ -123,25 +124,25 @@ fn test_tui_setup_theme_selection_light_mode() {
         "#,
     );
 
-    let session = "claudeless-setup-theme-light";
-    tmux::kill_session(session);
-    tmux::new_session(session, 120, 40);
+    let session = tmux::unique_session("setup-theme-light");
+    tmux::kill_session(&session);
+    tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
         "{} --scenario {} --tui",
         common::claudeless_bin(),
         scenario.path().display()
     );
-    tmux::send_line(session, &cmd);
+    tmux::send_line(&session, &cmd);
 
     // Wait for theme selection screen
-    let _ = tmux::wait_for_content(session, "Choose the text style");
+    let _ = tmux::wait_for_content(&session, "Choose the text style");
 
     // Navigate to Light mode (press Down once)
-    tmux::send_keys(session, "Down");
-    let capture = tmux::wait_for_content(session, "GitHub");
+    tmux::send_keys(&session, "Down");
+    let capture = tmux::wait_for_content(&session, "GitHub");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Verify light mode is now selected (cursor on option 2)
     assert!(
@@ -173,28 +174,28 @@ fn test_tui_setup_theme_selection_ansi_mode() {
         "#,
     );
 
-    let session = "claudeless-setup-theme-ansi";
-    tmux::kill_session(session);
-    tmux::new_session(session, 120, 40);
+    let session = tmux::unique_session("setup-theme-ansi");
+    tmux::kill_session(&session);
+    tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
         "{} --scenario {} --tui",
         common::claudeless_bin(),
         scenario.path().display()
     );
-    tmux::send_line(session, &cmd);
+    tmux::send_line(&session, &cmd);
 
     // Wait for theme selection screen
-    let _ = tmux::wait_for_content(session, "Choose the text style");
+    let _ = tmux::wait_for_content(&session, "Choose the text style");
 
     // Navigate to Dark mode ANSI (option 5 - press Down 4 times)
-    tmux::send_keys(session, "Down");
-    tmux::send_keys(session, "Down");
-    tmux::send_keys(session, "Down");
-    tmux::send_keys(session, "Down");
-    let capture = tmux::wait_for_content(session, "Syntax theme: ansi");
+    tmux::send_keys(&session, "Down");
+    tmux::send_keys(&session, "Down");
+    tmux::send_keys(&session, "Down");
+    tmux::send_keys(&session, "Down");
+    let capture = tmux::wait_for_content(&session, "Syntax theme: ansi");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Verify ANSI mode is selected
     assert!(
@@ -225,29 +226,29 @@ fn test_tui_setup_theme_ctrl_t_toggles_syntax_highlighting() {
         "#,
     );
 
-    let session = "claudeless-setup-theme-toggle";
-    tmux::kill_session(session);
-    tmux::new_session(session, 120, 40);
+    let session = tmux::unique_session("setup-theme-toggle");
+    tmux::kill_session(&session);
+    tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
         "{} --scenario {} --tui",
         common::claudeless_bin(),
         scenario.path().display()
     );
-    tmux::send_line(session, &cmd);
+    tmux::send_line(&session, &cmd);
 
     // Wait for theme selection with syntax enabled
-    let enabled = tmux::wait_for_content(session, "Syntax theme:");
+    let enabled = tmux::wait_for_content(&session, "Syntax theme:");
 
     // Press Ctrl+T to disable
-    tmux::send_keys(session, "C-t");
-    let disabled = tmux::wait_for_content(session, "Syntax highlighting disabled");
+    tmux::send_keys(&session, "C-t");
+    let disabled = tmux::wait_for_content(&session, "Syntax highlighting disabled");
 
     // Press Ctrl+T to re-enable
-    tmux::send_keys(session, "C-t");
-    let re_enabled = tmux::wait_for_content(session, "Syntax theme:");
+    tmux::send_keys(&session, "C-t");
+    let re_enabled = tmux::wait_for_content(&session, "Syntax theme:");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         enabled.contains("Syntax theme:"),
@@ -280,25 +281,25 @@ fn test_tui_setup_login_method_shows_options() {
         "#,
     );
 
-    let session = "claudeless-setup-login-method";
-    tmux::kill_session(session);
-    tmux::new_session(session, 120, 40);
+    let session = tmux::unique_session("setup-login-method");
+    tmux::kill_session(&session);
+    tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
         "{} --scenario {} --tui",
         common::claudeless_bin(),
         scenario.path().display()
     );
-    tmux::send_line(session, &cmd);
+    tmux::send_line(&session, &cmd);
 
     // Wait for theme selection then proceed
-    let _ = tmux::wait_for_content(session, "Choose the text style");
-    tmux::send_keys(session, "Enter");
+    let _ = tmux::wait_for_content(&session, "Choose the text style");
+    tmux::send_keys(&session, "Enter");
 
     // Wait for login method selection
-    let capture = tmux::wait_for_content(session, "Select login method");
+    let capture = tmux::wait_for_content(&session, "Select login method");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("Claude account with subscription"),
@@ -347,46 +348,46 @@ fn test_tui_setup_full_login_flow_to_initial_state() {
         "#,
     );
 
-    let session = "claudeless-setup-full-flow";
-    tmux::kill_session(session);
-    tmux::new_session(session, 120, 40);
+    let session = tmux::unique_session("setup-full-flow");
+    tmux::kill_session(&session);
+    tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
         "{} --scenario {} --tui",
         common::claudeless_bin(),
         scenario.path().display()
     );
-    tmux::send_line(session, &cmd);
+    tmux::send_line(&session, &cmd);
 
     // Step 1: Theme selection
-    let theme_screen = tmux::wait_for_content(session, "Choose the text style");
+    let theme_screen = tmux::wait_for_content(&session, "Choose the text style");
     assert!(
         theme_screen.contains("Dark mode"),
         "Should show theme options.\nCapture:\n{}",
         theme_screen
     );
-    tmux::send_keys(session, "Enter");
+    tmux::send_keys(&session, "Enter");
 
     // Step 2: Login method selection
-    let login_method = tmux::wait_for_content(session, "Select login method");
+    let login_method = tmux::wait_for_content(&session, "Select login method");
     assert!(
         login_method.contains("Claude account"),
         "Should show login method.\nCapture:\n{}",
         login_method
     );
-    tmux::send_keys(session, "Enter");
+    tmux::send_keys(&session, "Enter");
 
     // Step 3: Login success (auto-login bypasses browser step)
-    let login_success = tmux::wait_for_content(session, "Login successful");
+    let login_success = tmux::wait_for_content(&session, "Login successful");
     assert!(
         login_success.contains("Logged in as"),
         "Should show logged in user.\nCapture:\n{}",
         login_success
     );
-    tmux::send_keys(session, "Enter");
+    tmux::send_keys(&session, "Enter");
 
     // Step 4: Security notes
-    let security = tmux::wait_for_content(session, "Security notes");
+    let security = tmux::wait_for_content(&session, "Security notes");
     assert!(
         security.contains("Claude can make mistakes"),
         "Should show security warning.\nCapture:\n{}",
@@ -397,21 +398,21 @@ fn test_tui_setup_full_login_flow_to_initial_state() {
         "Should mention prompt injection.\nCapture:\n{}",
         security
     );
-    tmux::send_keys(session, "Enter");
+    tmux::send_keys(&session, "Enter");
 
     // Step 5: Terminal setup
-    let terminal = tmux::wait_for_content(session, "terminal setup");
+    let terminal = tmux::wait_for_content(&session, "terminal setup");
     assert!(
         terminal.contains("recommended settings"),
         "Should show terminal setup options.\nCapture:\n{}",
         terminal
     );
-    tmux::send_keys(session, "Escape"); // Skip terminal setup
+    tmux::send_keys(&session, "Escape"); // Skip terminal setup
 
     // Step 6: Initial state
-    let initial = tmux::wait_for_content(session, "? for shortcuts");
+    let initial = tmux::wait_for_content(&session, "? for shortcuts");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Verify we reached the normal TUI state
     assert!(
@@ -447,18 +448,18 @@ fn test_tui_slash_logout_exits_to_shell() {
         "#,
     );
 
-    let session = "claudeless-logout";
-    let previous = common::start_tui(session, &scenario);
+    let session = tmux::unique_session("logout");
+    let previous = common::start_tui(&session, &scenario);
 
     // Type /logout and submit
-    tmux::send_keys(session, "/logout");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
+    tmux::send_keys(&session, "/logout");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
 
     // Wait for logout message and shell prompt
-    let capture = tmux::wait_for_any(session, &["$", "%", "❯"]);
+    let capture = tmux::wait_for_any(&session, &["$", "%", "❯"]);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show logout success message
     assert!(
@@ -494,21 +495,21 @@ fn test_tui_failed_to_open_socket_exits() {
         "#,
     );
 
-    let session = "claudeless-socket-fail";
-    tmux::kill_session(session);
-    tmux::new_session(session, 120, 40);
+    let session = tmux::unique_session("socket-fail");
+    tmux::kill_session(&session);
+    tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
         "{} --scenario {} --tui",
         common::claudeless_bin(),
         scenario.path().display()
     );
-    tmux::send_line(session, &cmd);
+    tmux::send_line(&session, &cmd);
 
     // Wait for error message and shell prompt
-    let capture = tmux::wait_for_any(session, &["$", "%", "❯"]);
+    let capture = tmux::wait_for_any(&session, &["$", "%", "❯"]);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show connection error
     assert!(
@@ -544,21 +545,21 @@ fn test_tui_failed_to_open_socket_shows_helpful_message() {
         "#,
     );
 
-    let session = "claudeless-socket-fail-msg";
-    tmux::kill_session(session);
-    tmux::new_session(session, 120, 40);
+    let session = tmux::unique_session("socket-fail-msg");
+    tmux::kill_session(&session);
+    tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
         "{} --scenario {} --tui",
         common::claudeless_bin(),
         scenario.path().display()
     );
-    tmux::send_line(session, &cmd);
+    tmux::send_line(&session, &cmd);
 
     // Wait for error to appear
-    let capture = tmux::wait_for_content(session, "FailedToOpenSocket");
+    let capture = tmux::wait_for_content(&session, "FailedToOpenSocket");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show helpful troubleshooting information
     assert!(

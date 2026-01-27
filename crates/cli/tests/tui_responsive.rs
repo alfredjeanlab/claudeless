@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! Integration tests for responsive terminal width rendering.
 //!
@@ -23,10 +24,10 @@ fn find_separator_line(capture: &str) -> Option<&str> {
 #[test]
 fn test_separator_width_80() {
     let scenario = write_scenario(r#"{ "default_response": "ok", "trusted": true }"#);
-    let session = "claudeless-responsive-80";
+    let session = tmux::unique_session("responsive-80");
 
-    let capture = start_tui_ext(session, &scenario, 80, 24, TUI_READY_PATTERN);
-    tmux::kill_session(session);
+    let capture = start_tui_ext(&session, &scenario, 80, 24, TUI_READY_PATTERN);
+    tmux::kill_session(&session);
 
     // Find separator line and verify width
     let separator_line = find_separator_line(&capture).expect("Should have separator line");
@@ -42,10 +43,10 @@ fn test_separator_width_80() {
 #[test]
 fn test_separator_width_100() {
     let scenario = write_scenario(r#"{ "default_response": "ok", "trusted": true }"#);
-    let session = "claudeless-responsive-100";
+    let session = tmux::unique_session("responsive-100");
 
-    let capture = start_tui_ext(session, &scenario, 100, 24, TUI_READY_PATTERN);
-    tmux::kill_session(session);
+    let capture = start_tui_ext(&session, &scenario, 100, 24, TUI_READY_PATTERN);
+    tmux::kill_session(&session);
 
     let separator_line = find_separator_line(&capture).expect("Should have separator line");
 
@@ -60,10 +61,10 @@ fn test_separator_width_100() {
 #[test]
 fn test_separator_width_150() {
     let scenario = write_scenario(r#"{ "default_response": "ok", "trusted": true }"#);
-    let session = "claudeless-responsive-150";
+    let session = tmux::unique_session("responsive-150");
 
-    let capture = start_tui_ext(session, &scenario, 150, 24, TUI_READY_PATTERN);
-    tmux::kill_session(session);
+    let capture = start_tui_ext(&session, &scenario, 150, 24, TUI_READY_PATTERN);
+    tmux::kill_session(&session);
 
     let separator_line = find_separator_line(&capture).expect("Should have separator line");
 
@@ -84,19 +85,19 @@ fn test_compact_separator_width() {
         "compact_delay_ms": 100
     }"#,
     );
-    let session = "claudeless-compact-width";
+    let session = tmux::unique_session("compact-width");
 
-    let _ = start_tui_ext(session, &scenario, 100, 24, TUI_READY_PATTERN);
+    let _ = start_tui_ext(&session, &scenario, 100, 24, TUI_READY_PATTERN);
 
     // Type a message and wait for response
-    tmux::send_line(session, "hello");
-    let _ = tmux::wait_for_content(session, "ok");
+    tmux::send_line(&session, "hello");
+    let _ = tmux::wait_for_content(&session, "ok");
 
     // Type /compact
-    tmux::send_line(session, "/compact");
-    let capture = tmux::wait_for_content(session, "compacted");
+    tmux::send_line(&session, "/compact");
+    let capture = tmux::wait_for_content(&session, "compacted");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Find compact separator line (uses ═ character)
     let compact_line = capture

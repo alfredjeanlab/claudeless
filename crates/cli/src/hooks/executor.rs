@@ -102,6 +102,7 @@ impl HookExecutor {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
+            .kill_on_drop(true) // Ensure process is killed if we drop the handle
             .spawn()
             .map_err(|e| HookError::Spawn(e.to_string()))?;
 
@@ -114,12 +115,16 @@ impl HookExecutor {
             drop(stdin); // Close stdin to signal EOF
         }
 
-        // Wait with timeout
-        let timeout = std::time::Duration::from_millis(config.timeout_ms);
-        let output = tokio::time::timeout(timeout, child.wait_with_output())
-            .await
-            .map_err(|_| HookError::Timeout)?
-            .map_err(|e| HookError::Io(e.to_string()))?;
+        // Wait with timeout, killing the process if it takes too long
+        let timeout_duration = std::time::Duration::from_millis(config.timeout_ms);
+        let output = match tokio::time::timeout(timeout_duration, child.wait_with_output()).await {
+            Ok(result) => result.map_err(|e| HookError::Io(e.to_string()))?,
+            Err(_) => {
+                // Timeout elapsed - kill_on_drop(true) ensures the process is killed
+                // when the child handle is dropped (which happens when this function returns)
+                return Err(HookError::Timeout);
+            }
+        };
 
         // Check exit status
         if !output.status.success() {

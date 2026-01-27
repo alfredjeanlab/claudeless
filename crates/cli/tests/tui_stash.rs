@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! TUI stash prompt tests - Ctrl+S to stash and restore prompts.
 //!
@@ -38,18 +39,18 @@ fn test_tui_ctrl_s_stashes_prompt_with_message() {
         "#,
     );
 
-    let session = "claudeless-stash-message";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("stash-message");
+    let previous = start_tui(&session, &scenario);
 
     // Type some text
-    tmux::send_keys(session, "hello world stash test");
-    let with_input = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "hello world stash test");
+    let with_input = tmux::wait_for_change(&session, &previous);
 
     // Press Ctrl+S to stash
-    tmux::send_keys(session, "C-s");
-    let capture = tmux::wait_for_change(session, &with_input);
+    tmux::send_keys(&session, "C-s");
+    let capture = tmux::wait_for_change(&session, &with_input);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show the stash message
     assert!(
@@ -81,16 +82,16 @@ fn test_tui_ctrl_s_restores_stashed_prompt() {
         "#,
     );
 
-    let session = "claudeless-stash-restore";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("stash-restore");
+    let previous = start_tui(&session, &scenario);
 
     // Type some text
-    tmux::send_keys(session, "my stashed prompt");
-    let _with_input = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "my stashed prompt");
+    let _with_input = tmux::wait_for_change(&session, &previous);
 
     // Press Ctrl+S to stash
-    tmux::send_keys(session, "C-s");
-    let stashed = tmux::wait_for_content(session, "Stashed (auto-restores after submit)");
+    tmux::send_keys(&session, "C-s");
+    let stashed = tmux::wait_for_content(&session, "Stashed (auto-restores after submit)");
 
     // Verify stash state was captured correctly
     assert!(
@@ -100,10 +101,10 @@ fn test_tui_ctrl_s_restores_stashed_prompt() {
     );
 
     // Press Ctrl+S again to restore
-    tmux::send_keys(session, "C-s");
-    let capture = tmux::wait_for_content(session, "my stashed prompt");
+    tmux::send_keys(&session, "C-s");
+    let capture = tmux::wait_for_content(&session, "my stashed prompt");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // The stashed text should be restored
     assert!(
@@ -134,16 +135,16 @@ fn test_tui_ctrl_s_empty_input_does_nothing() {
         "#,
     );
 
-    let session = "claudeless-stash-empty";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("stash-empty");
+    let previous = start_tui(&session, &scenario);
 
     // Press Ctrl+S on empty input
-    tmux::send_keys(session, "C-s");
+    tmux::send_keys(&session, "C-s");
 
     // Screen should not change (nothing to stash)
-    let capture = tmux::assert_unchanged_ms(session, &previous, 300);
+    let capture = tmux::assert_unchanged_ms(&session, &previous, 300);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should not show stash message
     assert!(
@@ -168,21 +169,21 @@ fn test_tui_stash_message_persists() {
         "#,
     );
 
-    let session = "claudeless-stash-persist";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("stash-persist");
+    let previous = start_tui(&session, &scenario);
 
     // Type and stash
-    tmux::send_keys(session, "persistent stash");
-    let with_input = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "persistent stash");
+    let with_input = tmux::wait_for_change(&session, &previous);
 
-    tmux::send_keys(session, "C-s");
-    let stashed = tmux::wait_for_change(session, &with_input);
+    tmux::send_keys(&session, "C-s");
+    let stashed = tmux::wait_for_change(&session, &with_input);
 
     // Wait and verify message persists
     std::thread::sleep(std::time::Duration::from_secs(2));
-    let capture = tmux::capture_pane(session);
+    let capture = tmux::capture_pane(&session);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Stash message should still be visible
     assert!(
@@ -218,26 +219,26 @@ fn test_tui_stash_auto_restores_after_submit() {
         "#,
     );
 
-    let session = "claudeless-stash-auto-restore";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("stash-auto-restore");
+    let previous = start_tui(&session, &scenario);
 
     // Type and stash the main prompt
-    tmux::send_keys(session, "my stashed prompt");
-    let with_input = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "my stashed prompt");
+    let with_input = tmux::wait_for_change(&session, &previous);
 
-    tmux::send_keys(session, "C-s");
-    let stashed = tmux::wait_for_change(session, &with_input);
+    tmux::send_keys(&session, "C-s");
+    let stashed = tmux::wait_for_change(&session, &with_input);
 
     // Type and submit a different prompt
-    tmux::send_keys(session, "say hello");
-    let new_input = tmux::wait_for_change(session, &stashed);
+    tmux::send_keys(&session, "say hello");
+    let new_input = tmux::wait_for_change(&session, &stashed);
 
-    tmux::send_keys(session, "Enter");
+    tmux::send_keys(&session, "Enter");
 
     // Wait for response and auto-restore
-    let capture = tmux::wait_for_content(session, "my stashed prompt");
+    let capture = tmux::wait_for_content(&session, "my stashed prompt");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Verify new prompt was submitted
     assert!(

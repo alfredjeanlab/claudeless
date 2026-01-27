@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! Tasks tests - /tasks command behavior.
 //!
@@ -35,16 +36,16 @@ fn test_tasks_empty_shows_no_tasks_message() {
         "#,
     );
 
-    let session = "claudeless-tasks-empty";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("tasks-empty");
+    start_tui(&session, &scenario);
 
     // Execute /tasks
-    tmux::send_line(session, "/tasks");
+    tmux::send_line(&session, "/tasks");
 
     // Wait for dialog to appear
-    let capture = tmux::wait_for_content(session, "Background tasks");
+    let capture = tmux::wait_for_content(&session, "Background tasks");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("No tasks currently running"),
@@ -70,16 +71,16 @@ fn test_tasks_dialog_has_controls() {
         "#,
     );
 
-    let session = "claudeless-tasks-controls";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("tasks-controls");
+    start_tui(&session, &scenario);
 
     // Execute /tasks
-    tmux::send_line(session, "/tasks");
+    tmux::send_line(&session, "/tasks");
 
     // Wait for dialog to appear
-    let capture = tmux::wait_for_content(session, "Background tasks");
+    let capture = tmux::wait_for_content(&session, "Background tasks");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Check for header
     assert!(
@@ -117,16 +118,16 @@ fn test_tasks_empty_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-tasks-empty";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("fixture-tasks-empty");
+    start_tui(&session, &scenario);
 
     // Execute /tasks
-    tmux::send_line(session, "/tasks");
+    tmux::send_line(&session, "/tasks");
 
     // Wait for dialog to appear
-    let capture = tmux::wait_for_content(session, "Background tasks");
+    let capture = tmux::wait_for_content(&session, "Background tasks");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "tasks_empty_dialog.txt", None);
 }
@@ -148,22 +149,22 @@ fn test_tasks_dialog_dismiss_with_escape() {
         "#,
     );
 
-    let session = "claudeless-tasks-dismiss";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("tasks-dismiss");
+    start_tui(&session, &scenario);
 
     // Execute /tasks
-    tmux::send_line(session, "/tasks");
+    tmux::send_line(&session, "/tasks");
 
     // Wait for dialog to appear
-    let _ = tmux::wait_for_content(session, "Background tasks");
+    let _ = tmux::wait_for_content(&session, "Background tasks");
 
     // Press Escape to dismiss
-    tmux::send_keys(session, "Escape");
+    tmux::send_keys(&session, "Escape");
 
     // Wait for dialog to be dismissed
-    let capture = tmux::wait_for_content(session, "dialog dismissed");
+    let capture = tmux::wait_for_content(&session, "dialog dismissed");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("Background tasks dialog dismissed"),
@@ -189,16 +190,16 @@ fn test_tasks_in_autocomplete() {
         "#,
     );
 
-    let session = "claudeless-tasks-autocomplete";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("tasks-autocomplete");
+    start_tui(&session, &scenario);
 
     // Type /tasks to trigger autocomplete
-    tmux::send_keys(session, "/tasks");
+    tmux::send_keys(&session, "/tasks");
 
     // Wait for autocomplete to appear
-    let capture = tmux::wait_for_content(session, "/tasks");
+    let capture = tmux::wait_for_content(&session, "/tasks");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show /tasks in autocomplete
     assert!(

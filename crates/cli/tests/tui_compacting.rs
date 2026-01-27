@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! Compacting tests - /compact command behavior.
 //!
@@ -28,27 +29,27 @@ fn run_compact_test(session: &str) -> (String, String, String) {
         "#,
     );
 
-    start_tui(session, &scenario);
+    start_tui(&session, &scenario);
 
-    tmux::send_line(session, "read the file");
-    tmux::wait_for_content(session, "file contains test content");
+    tmux::send_line(&session, "read the file");
+    tmux::wait_for_content(&session, "file contains test content");
 
-    tmux::send_line(session, "generate lorem ipsum");
-    tmux::wait_for_content(session, "Lorem ipsum");
+    tmux::send_line(&session, "generate lorem ipsum");
+    tmux::wait_for_content(&session, "Lorem ipsum");
 
-    let before_capture = tmux::capture_pane(session);
+    let before_capture = tmux::capture_pane(&session);
 
-    tmux::send_line(session, "/compact");
+    tmux::send_line(&session, "/compact");
 
     // Capture during compacting (look for compacting indicator)
-    let during_capture = tmux::wait_for_content(session, "Compacting");
+    let during_capture = tmux::wait_for_content(&session, "Compacting");
 
     // Wait for completion
-    let after_capture = tmux::wait_for_content(session, "Compacted");
+    let after_capture = tmux::wait_for_content(&session, "Compacted");
 
-    tmux::send_keys(session, "C-c");
-    tmux::send_keys(session, "C-c");
-    tmux::kill_session(session);
+    tmux::send_keys(&session, "C-c");
+    tmux::send_keys(&session, "C-c");
+    tmux::kill_session(&session);
 
     (before_capture, during_capture, after_capture)
 }
@@ -159,17 +160,17 @@ fn test_compact_before_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-compact-before";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("fixture-compact-before");
+    start_tui(&session, &scenario);
 
     // Build up conversation
-    tmux::send_line(session, "read Cargo.toml and tell me the package name");
-    tmux::wait_for_content(session, "workspace configuration");
+    tmux::send_line(&session, "read Cargo.toml and tell me the package name");
+    tmux::wait_for_content(&session, "workspace configuration");
 
-    tmux::send_line(session, "generate 3 paragraphs of lorem ipsum");
-    let capture = tmux::wait_for_content(session, "dolor repellendus");
+    tmux::send_line(&session, "generate 3 paragraphs of lorem ipsum");
+    let capture = tmux::wait_for_content(&session, "dolor repellendus");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "compact_before.txt", None);
 }
@@ -190,20 +191,20 @@ fn test_compact_during_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-compact-during";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("fixture-compact-during");
+    start_tui(&session, &scenario);
 
     // Build up some conversation
-    tmux::send_line(session, "lorem");
-    tmux::wait_for_content(session, "Lorem ipsum");
+    tmux::send_line(&session, "lorem");
+    tmux::wait_for_content(&session, "Lorem ipsum");
 
     // Trigger compact
-    tmux::send_line(session, "/compact");
+    tmux::send_line(&session, "/compact");
 
     // Capture during compacting
-    let capture = tmux::wait_for_content(session, "Compacting");
+    let capture = tmux::wait_for_content(&session, "Compacting");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "compact_during.txt", None);
 }
@@ -224,18 +225,18 @@ fn test_compact_after_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-compact-after";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("fixture-compact-after");
+    start_tui(&session, &scenario);
 
     // Build up some conversation
-    tmux::send_line(session, "read Cargo.toml and tell me about it");
-    tmux::wait_for_content(session, "workspace configuration");
+    tmux::send_line(&session, "read Cargo.toml and tell me about it");
+    tmux::wait_for_content(&session, "workspace configuration");
 
     // Trigger compact and wait for completion
-    tmux::send_line(session, "/compact");
-    let capture = tmux::wait_for_content(session, "Compacted");
+    tmux::send_line(&session, "/compact");
+    let capture = tmux::wait_for_content(&session, "Compacted");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "compact_after.txt", None);
 }

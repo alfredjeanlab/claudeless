@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! Permission mode behavioral tests - shift+tab cycling behavior.
 //!
@@ -26,21 +27,21 @@ fn capture_after_shift_tabs(session: &str, num_tabs: usize) -> String {
         response = "ok"
         "#,
     );
-    let mut previous = start_tui_ext(session, &scenario, 120, 20, TUI_READY_PATTERN);
+    let mut previous = start_tui_ext(&session, &scenario, 120, 20, TUI_READY_PATTERN);
 
     // Send shift+tabs, waiting for UI to update after each
     for _ in 0..num_tabs {
-        tmux::send_keys(session, "BTab");
-        previous = tmux::wait_for_change(session, &previous);
+        tmux::send_keys(&session, "BTab");
+        previous = tmux::wait_for_change(&session, &previous);
     }
 
     let capture = previous;
 
     // Cleanup: first C-c cancels operation, wait for effect, second C-c exits
-    tmux::send_keys(session, "C-c");
-    let _ = tmux::wait_for_change(session, &capture);
-    tmux::send_keys(session, "C-c");
-    tmux::kill_session(session);
+    tmux::send_keys(&session, "C-c");
+    let _ = tmux::wait_for_change(&session, &capture);
+    tmux::send_keys(&session, "C-c");
+    tmux::kill_session(&session);
 
     capture
 }
@@ -101,10 +102,10 @@ fn test_permission_default_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-perm-default";
-    let capture = start_tui(session, &scenario);
+    let session = tmux::unique_session("fixture-perm-default");
+    let capture = start_tui(&session, &scenario);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "permission_default.txt", None);
 }
@@ -127,11 +128,11 @@ fn test_permission_plan_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-perm-plan";
+    let session = tmux::unique_session("fixture-perm-plan");
     // Plan mode shows "plan mode on" instead of "? for shortcuts"
-    let capture = start_tui_ext(session, &scenario, 120, 40, "plan mode");
+    let capture = start_tui_ext(&session, &scenario, 120, 40, "plan mode");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "permission_plan.txt", None);
 }
@@ -156,17 +157,17 @@ fn test_permission_bash_command_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-perm-bash";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("fixture-perm-bash");
+    start_tui(&session, &scenario);
 
     // Type the trigger prompt
-    tmux::send_keys(session, "test bash permission");
-    tmux::send_keys(session, "Enter");
+    tmux::send_keys(&session, "test bash permission");
+    tmux::send_keys(&session, "Enter");
 
     // Wait for bash permission dialog to appear
-    let capture = tmux::wait_for_content(session, "Bash command");
+    let capture = tmux::wait_for_content(&session, "Bash command");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "permission_bash_command.txt", None);
 }
@@ -186,17 +187,17 @@ fn test_permission_edit_file_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-perm-edit";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("fixture-perm-edit");
+    start_tui(&session, &scenario);
 
     // Type the trigger prompt
-    tmux::send_keys(session, "test edit permission");
-    tmux::send_keys(session, "Enter");
+    tmux::send_keys(&session, "test edit permission");
+    tmux::send_keys(&session, "Enter");
 
     // Wait for edit permission dialog to appear
-    let capture = tmux::wait_for_content(session, "Edit file");
+    let capture = tmux::wait_for_content(&session, "Edit file");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "permission_edit_file.txt", None);
 }
@@ -216,17 +217,17 @@ fn test_permission_write_file_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-perm-write";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("fixture-perm-write");
+    start_tui(&session, &scenario);
 
     // Type the trigger prompt
-    tmux::send_keys(session, "test write permission");
-    tmux::send_keys(session, "Enter");
+    tmux::send_keys(&session, "test write permission");
+    tmux::send_keys(&session, "Enter");
 
     // Wait for write permission dialog to appear
-    let capture = tmux::wait_for_content(session, "Create file");
+    let capture = tmux::wait_for_content(&session, "Create file");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "permission_write_file.txt", None);
 }
@@ -246,11 +247,11 @@ fn test_permission_trust_folder_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-perm-trust";
+    let session = tmux::unique_session("fixture-perm-trust");
     // Would need trust prompt to appear
-    let capture = start_tui_ext(session, &scenario, 120, 40, "trust the files");
+    let capture = start_tui_ext(&session, &scenario, 120, 40, "trust the files");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "permission_trust_folder.txt", None);
 }
@@ -272,11 +273,11 @@ fn test_status_bar_extended_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-status-extended";
+    let session = tmux::unique_session("fixture-status-extended");
     // Accept edits mode should show extended status bar
-    let capture = start_tui_ext(session, &scenario, 120, 40, "accept edits");
+    let capture = start_tui_ext(&session, &scenario, 120, 40, "accept edits");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "status_bar_extended.txt", None);
 }
@@ -295,18 +296,18 @@ fn start_tui_ansi(
 ) -> String {
     use common::claudeless_bin;
 
-    tmux::kill_session(session);
-    tmux::new_session(session, width, height);
+    tmux::kill_session(&session);
+    tmux::new_session(&session, width, height);
 
     let cmd = format!(
         "{} --scenario {} --tui",
         claudeless_bin(),
         scenario.path().display()
     );
-    tmux::send_line(session, &cmd);
+    tmux::send_line(&session, &cmd);
 
     // Wait for pattern, then capture with ANSI sequences
-    tmux::wait_for_content_ansi(session, wait_for)
+    tmux::wait_for_content_ansi(&session, wait_for)
 }
 
 /// Compare default permission mode ANSI output against v2.1.15 fixture
@@ -322,10 +323,10 @@ fn test_permission_default_ansi_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-perm-default-ansi";
-    let capture = start_tui_ansi(session, &scenario, 120, 40, TUI_READY_PATTERN);
+    let session = tmux::unique_session("fixture-perm-default-ansi");
+    let capture = start_tui_ansi(&session, &scenario, 120, 40, TUI_READY_PATTERN);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_versioned_ansi_matches_fixture(&capture, "v2.1.15", "permission_default_ansi.txt", None);
 }
@@ -348,10 +349,10 @@ fn test_permission_plan_ansi_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-perm-plan-ansi";
-    let capture = start_tui_ansi(session, &scenario, 120, 40, "plan mode");
+    let session = tmux::unique_session("fixture-perm-plan-ansi");
+    let capture = start_tui_ansi(&session, &scenario, 120, 40, "plan mode");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_versioned_ansi_matches_fixture(&capture, "v2.1.15", "permission_plan_ansi.txt", None);
 }
@@ -374,10 +375,10 @@ fn test_permission_accept_edits_ansi_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-perm-accept-edits-ansi";
-    let capture = start_tui_ansi(session, &scenario, 120, 40, "accept edits");
+    let session = tmux::unique_session("fixture-perm-accept-edits-ansi");
+    let capture = start_tui_ansi(&session, &scenario, 120, 40, "accept edits");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_versioned_ansi_matches_fixture(
         &capture,
@@ -405,10 +406,10 @@ fn test_permission_bypass_ansi_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-perm-bypass-ansi";
-    let capture = start_tui_ansi(session, &scenario, 120, 40, "bypass permissions");
+    let session = tmux::unique_session("fixture-perm-bypass-ansi");
+    let capture = start_tui_ansi(&session, &scenario, 120, 40, "bypass permissions");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_versioned_ansi_matches_fixture(&capture, "v2.1.15", "permission_bypass_ansi.txt", None);
 }

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! TUI /hooks command tests - hooks management dialog behavior.
 //!
@@ -52,14 +53,14 @@ fn test_tui_hooks_command_shows_autocomplete() {
         "#,
     );
 
-    let session = "claudeless-hooks-autocomplete";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("hooks-autocomplete");
+    let previous = start_tui(&session, &scenario);
 
     // Type /hooks
-    tmux::send_keys(session, "/hooks");
-    let capture = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "/hooks");
+    let capture = tmux::wait_for_change(&session, &previous);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("/hooks")
@@ -88,16 +89,16 @@ fn test_tui_hooks_shows_dialog_with_hook_types() {
         "#,
     );
 
-    let session = "claudeless-hooks-dialog";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("hooks-dialog");
+    let previous = start_tui(&session, &scenario);
 
     // Type /hooks and press Enter
-    tmux::send_keys(session, "/hooks");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let capture = tmux::wait_for_content(session, "Hooks");
+    tmux::send_keys(&session, "/hooks");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let capture = tmux::wait_for_content(&session, "Hooks");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show the hooks dialog with hook types
     assert!(
@@ -132,16 +133,16 @@ fn test_tui_hooks_shows_active_hooks_count() {
         "#,
     );
 
-    let session = "claudeless-hooks-count";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("hooks-count");
+    let previous = start_tui(&session, &scenario);
 
     // Type /hooks and press Enter
-    tmux::send_keys(session, "/hooks");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let capture = tmux::wait_for_content(session, "Hooks");
+    tmux::send_keys(&session, "/hooks");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let capture = tmux::wait_for_content(&session, "Hooks");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show count of active hooks
     assert!(
@@ -170,14 +171,14 @@ fn test_tui_hooks_arrow_navigation() {
         "#,
     );
 
-    let session = "claudeless-hooks-nav";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("hooks-nav");
+    let previous = start_tui(&session, &scenario);
 
     // Open hooks dialog
-    tmux::send_keys(session, "/hooks");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let initial = tmux::wait_for_content(session, "PreToolUse");
+    tmux::send_keys(&session, "/hooks");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let initial = tmux::wait_for_content(&session, "PreToolUse");
 
     // Should start with first hook selected
     assert!(
@@ -187,10 +188,10 @@ fn test_tui_hooks_arrow_navigation() {
     );
 
     // Press Down to move to next hook
-    tmux::send_keys(session, "Down");
-    let after_down = tmux::wait_for_change(session, &initial);
+    tmux::send_keys(&session, "Down");
+    let after_down = tmux::wait_for_change(&session, &initial);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show next hook selected (PostToolUse)
     assert!(
@@ -215,22 +216,22 @@ fn test_tui_hooks_list_scrolls() {
         "#,
     );
 
-    let session = "claudeless-hooks-scroll";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("hooks-scroll");
+    let previous = start_tui(&session, &scenario);
 
     // Open hooks dialog
-    tmux::send_keys(session, "/hooks");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let initial = tmux::wait_for_content(session, "Hooks");
+    tmux::send_keys(&session, "/hooks");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let initial = tmux::wait_for_content(&session, "Hooks");
 
     // Navigate down multiple times to trigger scrolling
     for _ in 0..6 {
-        tmux::send_keys(session, "Down");
+        tmux::send_keys(&session, "Down");
     }
-    let after_scroll = tmux::wait_for_change(session, &initial);
+    let after_scroll = tmux::wait_for_change(&session, &initial);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show later hooks that weren't initially visible
     assert!(
@@ -259,18 +260,18 @@ fn test_tui_hooks_select_shows_matchers() {
         "#,
     );
 
-    let session = "claudeless-hooks-matchers";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("hooks-matchers");
+    let previous = start_tui(&session, &scenario);
 
     // Open hooks dialog and select PreToolUse
-    tmux::send_keys(session, "/hooks");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let hooks = tmux::wait_for_content(session, "PreToolUse");
-    tmux::send_keys(session, "Enter");
-    let capture = tmux::wait_for_change(session, &hooks);
+    tmux::send_keys(&session, "/hooks");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let hooks = tmux::wait_for_content(&session, "PreToolUse");
+    tmux::send_keys(&session, "Enter");
+    let capture = tmux::wait_for_change(&session, &hooks);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show matchers dialog for PreToolUse
     assert!(
@@ -300,18 +301,18 @@ fn test_tui_hooks_matchers_shows_exit_code_help() {
         "#,
     );
 
-    let session = "claudeless-hooks-exit-codes";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("hooks-exit-codes");
+    let previous = start_tui(&session, &scenario);
 
     // Open hooks dialog and select PreToolUse
-    tmux::send_keys(session, "/hooks");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let hooks = tmux::wait_for_content(session, "PreToolUse");
-    tmux::send_keys(session, "Enter");
-    let capture = tmux::wait_for_change(session, &hooks);
+    tmux::send_keys(&session, "/hooks");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let hooks = tmux::wait_for_content(&session, "PreToolUse");
+    tmux::send_keys(&session, "Enter");
+    let capture = tmux::wait_for_change(&session, &hooks);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show exit code documentation
     assert!(
@@ -345,20 +346,20 @@ fn test_tui_hooks_escape_dismisses_dialog() {
         "#,
     );
 
-    let session = "claudeless-hooks-dismiss";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("hooks-dismiss");
+    let previous = start_tui(&session, &scenario);
 
     // Open hooks dialog
-    tmux::send_keys(session, "/hooks");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let dialog = tmux::wait_for_content(session, "Hooks");
+    tmux::send_keys(&session, "/hooks");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let dialog = tmux::wait_for_content(&session, "Hooks");
 
     // Press Escape to dismiss
-    tmux::send_keys(session, "Escape");
-    let capture = tmux::wait_for_change(session, &dialog);
+    tmux::send_keys(&session, "Escape");
+    let capture = tmux::wait_for_change(&session, &dialog);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("Hooks dialog dismissed"),
@@ -382,22 +383,22 @@ fn test_tui_hooks_escape_from_matchers_returns_to_hooks() {
         "#,
     );
 
-    let session = "claudeless-hooks-back";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("hooks-back");
+    let previous = start_tui(&session, &scenario);
 
     // Open hooks dialog and select PreToolUse
-    tmux::send_keys(session, "/hooks");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let _ = tmux::wait_for_content(session, "PreToolUse");
-    tmux::send_keys(session, "Enter");
-    let matchers = tmux::wait_for_content(session, "Tool Matchers");
+    tmux::send_keys(&session, "/hooks");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let _ = tmux::wait_for_content(&session, "PreToolUse");
+    tmux::send_keys(&session, "Enter");
+    let matchers = tmux::wait_for_content(&session, "Tool Matchers");
 
     // Press Escape to go back to hooks list
-    tmux::send_keys(session, "Escape");
-    let capture = tmux::wait_for_change(session, &matchers);
+    tmux::send_keys(&session, "Escape");
+    let capture = tmux::wait_for_change(&session, &matchers);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should return to main hooks dialog
     assert!(

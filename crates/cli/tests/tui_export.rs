@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! TUI /export command tests - conversation export behavior.
 //!
@@ -38,14 +39,14 @@ fn test_tui_export_command_shows_autocomplete() {
         "#,
     );
 
-    let session = "claudeless-export-autocomplete";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("export-autocomplete");
+    let previous = start_tui(&session, &scenario);
 
     // Type /export
-    tmux::send_keys(session, "/export");
-    let capture = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "/export");
+    let capture = tmux::wait_for_change(&session, &previous);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("/export")
@@ -73,22 +74,22 @@ fn test_tui_export_shows_method_dialog() {
         "#,
     );
 
-    let session = "claudeless-export-method-dialog";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("export-method-dialog");
+    let previous = start_tui(&session, &scenario);
 
     // First, create a conversation by sending a message
-    tmux::send_keys(session, "test message");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let after_message = tmux::wait_for_content(session, "Hello!");
+    tmux::send_keys(&session, "test message");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let after_message = tmux::wait_for_content(&session, "Hello!");
 
     // Type /export and press Enter
-    tmux::send_keys(session, "/export");
-    let _ = tmux::wait_for_change(session, &after_message);
-    tmux::send_keys(session, "Enter");
-    let capture = tmux::wait_for_content(session, "Export Conversation");
+    tmux::send_keys(&session, "/export");
+    let _ = tmux::wait_for_change(&session, &after_message);
+    tmux::send_keys(&session, "Enter");
+    let capture = tmux::wait_for_content(&session, "Export Conversation");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show the export dialog
     assert!(
@@ -127,24 +128,24 @@ fn test_tui_export_clipboard_shows_confirmation() {
         "#,
     );
 
-    let session = "claudeless-export-clipboard";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("export-clipboard");
+    let previous = start_tui(&session, &scenario);
 
     // First, create a conversation by sending a message
-    tmux::send_keys(session, "test message");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let after_message = tmux::wait_for_content(session, "Hello!");
+    tmux::send_keys(&session, "test message");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let after_message = tmux::wait_for_content(&session, "Hello!");
 
     // Type /export, press Enter to open dialog, then Enter again to select clipboard
-    tmux::send_keys(session, "/export");
-    let _ = tmux::wait_for_change(session, &after_message);
-    tmux::send_keys(session, "Enter");
-    let dialog = tmux::wait_for_content(session, "Export Conversation");
-    tmux::send_keys(session, "Enter");
-    let capture = tmux::wait_for_change(session, &dialog);
+    tmux::send_keys(&session, "/export");
+    let _ = tmux::wait_for_change(&session, &after_message);
+    tmux::send_keys(&session, "Enter");
+    let dialog = tmux::wait_for_content(&session, "Export Conversation");
+    tmux::send_keys(&session, "Enter");
+    let capture = tmux::wait_for_change(&session, &dialog);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Clipboard may not be available in CI/headless environments
     assert!(
@@ -169,26 +170,26 @@ fn test_tui_export_file_shows_filename_dialog() {
         "#,
     );
 
-    let session = "claudeless-export-filename-dialog";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("export-filename-dialog");
+    let previous = start_tui(&session, &scenario);
 
     // First, create a conversation by sending a message
-    tmux::send_keys(session, "test message");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let after_message = tmux::wait_for_content(session, "Hello!");
+    tmux::send_keys(&session, "test message");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let after_message = tmux::wait_for_content(&session, "Hello!");
 
     // Type /export, press Enter to open dialog, Down to select file, Enter
-    tmux::send_keys(session, "/export");
-    let _ = tmux::wait_for_change(session, &after_message);
-    tmux::send_keys(session, "Enter");
-    let dialog = tmux::wait_for_content(session, "Export Conversation");
-    tmux::send_keys(session, "Down");
-    let _ = tmux::wait_for_change(session, &dialog);
-    tmux::send_keys(session, "Enter");
-    let capture = tmux::wait_for_content(session, "Enter filename:");
+    tmux::send_keys(&session, "/export");
+    let _ = tmux::wait_for_change(&session, &after_message);
+    tmux::send_keys(&session, "Enter");
+    let dialog = tmux::wait_for_content(&session, "Export Conversation");
+    tmux::send_keys(&session, "Down");
+    let _ = tmux::wait_for_change(&session, &dialog);
+    tmux::send_keys(&session, "Enter");
+    let capture = tmux::wait_for_content(&session, "Enter filename:");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("Enter filename:"),
@@ -226,28 +227,28 @@ fn test_tui_export_file_shows_save_confirmation() {
         "#,
     );
 
-    let session = "claudeless-export-file-save";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("export-file-save");
+    let previous = start_tui(&session, &scenario);
 
     // First, create a conversation by sending a message
-    tmux::send_keys(session, "test message");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let after_message = tmux::wait_for_content(session, "Hello!");
+    tmux::send_keys(&session, "test message");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let after_message = tmux::wait_for_content(&session, "Hello!");
 
     // Type /export, open dialog, select file, press Enter to save with default name
-    tmux::send_keys(session, "/export");
-    let _ = tmux::wait_for_change(session, &after_message);
-    tmux::send_keys(session, "Enter");
-    let dialog = tmux::wait_for_content(session, "Export Conversation");
-    tmux::send_keys(session, "Down");
-    let _ = tmux::wait_for_change(session, &dialog);
-    tmux::send_keys(session, "Enter");
-    let filename_dialog = tmux::wait_for_content(session, "Enter filename:");
-    tmux::send_keys(session, "Enter");
-    let capture = tmux::wait_for_change(session, &filename_dialog);
+    tmux::send_keys(&session, "/export");
+    let _ = tmux::wait_for_change(&session, &after_message);
+    tmux::send_keys(&session, "Enter");
+    let dialog = tmux::wait_for_content(&session, "Export Conversation");
+    tmux::send_keys(&session, "Down");
+    let _ = tmux::wait_for_change(&session, &dialog);
+    tmux::send_keys(&session, "Enter");
+    let filename_dialog = tmux::wait_for_content(&session, "Enter filename:");
+    tmux::send_keys(&session, "Enter");
+    let capture = tmux::wait_for_change(&session, &filename_dialog);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("Conversation exported to:"),
@@ -274,24 +275,24 @@ fn test_tui_export_escape_cancels() {
         "#,
     );
 
-    let session = "claudeless-export-cancel";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("export-cancel");
+    let previous = start_tui(&session, &scenario);
 
     // First, create a conversation by sending a message
-    tmux::send_keys(session, "test message");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let after_message = tmux::wait_for_content(session, "Hello!");
+    tmux::send_keys(&session, "test message");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let after_message = tmux::wait_for_content(&session, "Hello!");
 
     // Type /export, open dialog, then cancel with Escape
-    tmux::send_keys(session, "/export");
-    let _ = tmux::wait_for_change(session, &after_message);
-    tmux::send_keys(session, "Enter");
-    let dialog = tmux::wait_for_content(session, "Export Conversation");
-    tmux::send_keys(session, "Escape");
-    let capture = tmux::wait_for_change(session, &dialog);
+    tmux::send_keys(&session, "/export");
+    let _ = tmux::wait_for_change(&session, &after_message);
+    tmux::send_keys(&session, "Enter");
+    let dialog = tmux::wait_for_content(&session, "Export Conversation");
+    tmux::send_keys(&session, "Escape");
+    let capture = tmux::wait_for_change(&session, &dialog);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("Export cancelled"),
@@ -314,28 +315,28 @@ fn test_tui_export_filename_escape_returns_to_method() {
         "#,
     );
 
-    let session = "claudeless-export-filename-back";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("export-filename-back");
+    let previous = start_tui(&session, &scenario);
 
     // First, create a conversation by sending a message
-    tmux::send_keys(session, "test message");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let after_message = tmux::wait_for_content(session, "Hello!");
+    tmux::send_keys(&session, "test message");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let after_message = tmux::wait_for_content(&session, "Hello!");
 
     // Navigate to filename dialog, then press Escape
-    tmux::send_keys(session, "/export");
-    let _ = tmux::wait_for_change(session, &after_message);
-    tmux::send_keys(session, "Enter");
-    let dialog = tmux::wait_for_content(session, "Export Conversation");
-    tmux::send_keys(session, "Down");
-    let _ = tmux::wait_for_change(session, &dialog);
-    tmux::send_keys(session, "Enter");
-    let filename_dialog = tmux::wait_for_content(session, "Enter filename:");
-    tmux::send_keys(session, "Escape");
-    let capture = tmux::wait_for_change(session, &filename_dialog);
+    tmux::send_keys(&session, "/export");
+    let _ = tmux::wait_for_change(&session, &after_message);
+    tmux::send_keys(&session, "Enter");
+    let dialog = tmux::wait_for_content(&session, "Export Conversation");
+    tmux::send_keys(&session, "Down");
+    let _ = tmux::wait_for_change(&session, &dialog);
+    tmux::send_keys(&session, "Enter");
+    let filename_dialog = tmux::wait_for_content(&session, "Enter filename:");
+    tmux::send_keys(&session, "Escape");
+    let capture = tmux::wait_for_change(&session, &filename_dialog);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should return to method selection
     assert!(
@@ -368,20 +369,20 @@ fn test_tui_export_arrow_navigation() {
         "#,
     );
 
-    let session = "claudeless-export-navigation";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("export-navigation");
+    let previous = start_tui(&session, &scenario);
 
     // First, create a conversation by sending a message
-    tmux::send_keys(session, "test message");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let after_message = tmux::wait_for_content(session, "Hello!");
+    tmux::send_keys(&session, "test message");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let after_message = tmux::wait_for_content(&session, "Hello!");
 
     // Open export dialog
-    tmux::send_keys(session, "/export");
-    let _ = tmux::wait_for_change(session, &after_message);
-    tmux::send_keys(session, "Enter");
-    let initial = tmux::wait_for_content(session, "Export Conversation");
+    tmux::send_keys(&session, "/export");
+    let _ = tmux::wait_for_change(&session, &after_message);
+    tmux::send_keys(&session, "Enter");
+    let initial = tmux::wait_for_content(&session, "Export Conversation");
 
     // Default should have cursor on first option
     assert!(
@@ -391,10 +392,10 @@ fn test_tui_export_arrow_navigation() {
     );
 
     // Press Down to move to second option
-    tmux::send_keys(session, "Down");
-    let after_down = tmux::wait_for_change(session, &initial);
+    tmux::send_keys(&session, "Down");
+    let after_down = tmux::wait_for_change(&session, &initial);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         after_down.contains("❯ 2. Save to file"),

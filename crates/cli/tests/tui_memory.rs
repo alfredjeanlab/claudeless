@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! TUI /memory command tests - memory management dialog behavior.
 //!
@@ -40,14 +41,14 @@ fn test_tui_memory_command_shows_autocomplete() {
         "#,
     );
 
-    let session = "claudeless-memory-autocomplete";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("memory-autocomplete");
+    let previous = start_tui(&session, &scenario);
 
     // Type /memory
-    tmux::send_keys(session, "/memory");
-    let capture = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "/memory");
+    let capture = tmux::wait_for_change(&session, &previous);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("/memory") && capture.contains("View or manage conversation memory"),
@@ -74,16 +75,16 @@ fn test_tui_memory_shows_dialog_with_sources() {
         "#,
     );
 
-    let session = "claudeless-memory-dialog";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("memory-dialog");
+    let previous = start_tui(&session, &scenario);
 
     // Type /memory and press Enter
-    tmux::send_keys(session, "/memory");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let capture = tmux::wait_for_content(session, "Memory");
+    tmux::send_keys(&session, "/memory");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let capture = tmux::wait_for_content(&session, "Memory");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show the memory dialog header
     assert!(
@@ -113,16 +114,16 @@ fn test_tui_memory_shows_active_files_count() {
         "#,
     );
 
-    let session = "claudeless-memory-count";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("memory-count");
+    let previous = start_tui(&session, &scenario);
 
     // Type /memory and press Enter
-    tmux::send_keys(session, "/memory");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let capture = tmux::wait_for_content(session, "Memory");
+    tmux::send_keys(&session, "/memory");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let capture = tmux::wait_for_content(&session, "Memory");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show count of active files
     assert!(
@@ -150,20 +151,20 @@ fn test_tui_memory_arrow_navigation() {
         "#,
     );
 
-    let session = "claudeless-memory-nav";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("memory-nav");
+    let previous = start_tui(&session, &scenario);
 
     // Open memory dialog
-    tmux::send_keys(session, "/memory");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let initial = tmux::wait_for_content(session, "Memory");
+    tmux::send_keys(&session, "/memory");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let initial = tmux::wait_for_content(&session, "Memory");
 
     // Press Down to move to next entry
-    tmux::send_keys(session, "Down");
-    let after_down = tmux::wait_for_change(session, &initial);
+    tmux::send_keys(&session, "Down");
+    let after_down = tmux::wait_for_change(&session, &initial);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should still show memory dialog
     assert!(
@@ -191,20 +192,20 @@ fn test_tui_memory_escape_dismisses_dialog() {
         "#,
     );
 
-    let session = "claudeless-memory-dismiss";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("memory-dismiss");
+    let previous = start_tui(&session, &scenario);
 
     // Open memory dialog
-    tmux::send_keys(session, "/memory");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let dialog = tmux::wait_for_content(session, "Memory");
+    tmux::send_keys(&session, "/memory");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let dialog = tmux::wait_for_content(&session, "Memory");
 
     // Press Escape to dismiss
-    tmux::send_keys(session, "Escape");
-    let capture = tmux::wait_for_change(session, &dialog);
+    tmux::send_keys(&session, "Escape");
+    let capture = tmux::wait_for_change(&session, &dialog);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("Memory dialog dismissed"),
@@ -231,20 +232,20 @@ fn test_tui_memory_enter_shows_selected() {
         "#,
     );
 
-    let session = "claudeless-memory-select";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("memory-select");
+    let previous = start_tui(&session, &scenario);
 
     // Open memory dialog
-    tmux::send_keys(session, "/memory");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let dialog = tmux::wait_for_content(session, "Memory");
+    tmux::send_keys(&session, "/memory");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let dialog = tmux::wait_for_content(&session, "Memory");
 
     // Press Enter to select
-    tmux::send_keys(session, "Enter");
-    let capture = tmux::wait_for_change(session, &dialog);
+    tmux::send_keys(&session, "Enter");
+    let capture = tmux::wait_for_change(&session, &dialog);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show selected entry info
     assert!(
@@ -272,16 +273,16 @@ fn test_tui_memory_shows_no_files_gracefully() {
         "#,
     );
 
-    let session = "claudeless-memory-no-files";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("memory-no-files");
+    let previous = start_tui(&session, &scenario);
 
     // Type /memory and press Enter
-    tmux::send_keys(session, "/memory");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let capture = tmux::wait_for_content(session, "Memory");
+    tmux::send_keys(&session, "/memory");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let capture = tmux::wait_for_content(&session, "Memory");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should still show dialog with all source types (even if inactive)
     assert!(

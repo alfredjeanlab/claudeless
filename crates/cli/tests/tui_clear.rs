@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! Clear tests - /clear command behavior.
 //!
@@ -28,17 +29,17 @@ fn test_clear_before_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-clear-before";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("fixture-clear-before");
+    start_tui(&session, &scenario);
 
     // Build up conversation
-    tmux::send_line(session, "what is 2 + 2?");
-    tmux::wait_for_content(session, "2 + 2 = 4");
+    tmux::send_line(&session, "what is 2 + 2?");
+    tmux::wait_for_content(&session, "2 + 2 = 4");
 
-    tmux::send_line(session, "and 3 + 3?");
-    let capture = tmux::wait_for_content(session, "3 + 3 = 6");
+    tmux::send_line(&session, "and 3 + 3?");
+    let capture = tmux::wait_for_content(&session, "3 + 3 = 6");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "clear_before.txt", None);
 }
@@ -59,20 +60,20 @@ fn test_clear_after_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-clear-after";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("fixture-clear-after");
+    start_tui(&session, &scenario);
 
     // Build up some conversation
-    tmux::send_line(session, "what is 2 + 2?");
-    tmux::wait_for_content(session, "2 + 2 = 4");
+    tmux::send_line(&session, "what is 2 + 2?");
+    tmux::wait_for_content(&session, "2 + 2 = 4");
 
     // Trigger clear
-    tmux::send_line(session, "/clear");
+    tmux::send_line(&session, "/clear");
 
     // Wait for clear to complete (shows "(no content)")
-    let capture = tmux::wait_for_content(session, "no content");
+    let capture = tmux::wait_for_content(&session, "no content");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "clear_after.txt", None);
 }
@@ -92,16 +93,16 @@ fn test_clear_empty_session_succeeds() {
         "#,
     );
 
-    let session = "claudeless-clear-empty";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("clear-empty");
+    start_tui(&session, &scenario);
 
     // Clear without any conversation
-    tmux::send_line(session, "/clear");
+    tmux::send_line(&session, "/clear");
 
     // Should show "(no content)" without error
-    let capture = tmux::wait_for_content(session, "no content");
+    let capture = tmux::wait_for_content(&session, "no content");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Verify no error message appears
     assert!(!capture.contains("error"));

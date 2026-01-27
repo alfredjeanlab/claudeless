@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! TUI shortcuts tests - keyboard shortcut display and handling.
 //!
@@ -49,14 +50,14 @@ fn test_tui_question_mark_shows_shortcuts_on_empty_input() {
         "#,
     );
 
-    let session = "claudeless-shortcuts-empty";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("shortcuts-empty");
+    let previous = start_tui(&session, &scenario);
 
     // Press '?' to show shortcuts
-    tmux::send_keys(session, "?");
-    let capture = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "?");
+    let capture = tmux::wait_for_change(&session, &previous);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show shortcuts panel with key bindings
     assert!(
@@ -91,14 +92,14 @@ fn test_tui_shortcuts_display_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-shortcuts-fixture";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("shortcuts-fixture");
+    let previous = start_tui(&session, &scenario);
 
     // Press '?' to show shortcuts
-    tmux::send_keys(session, "?");
-    let capture = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "?");
+    let capture = tmux::wait_for_change(&session, &previous);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "shortcuts_display.txt", None);
 }
@@ -117,12 +118,12 @@ fn test_tui_escape_dismisses_shortcuts_panel() {
         "#,
     );
 
-    let session = "claudeless-shortcuts-dismiss";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("shortcuts-dismiss");
+    let previous = start_tui(&session, &scenario);
 
     // Press '?' to show shortcuts
-    tmux::send_keys(session, "?");
-    let after_question = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "?");
+    let after_question = tmux::wait_for_change(&session, &previous);
 
     // Verify shortcuts are shown
     assert!(
@@ -132,10 +133,10 @@ fn test_tui_escape_dismisses_shortcuts_panel() {
     );
 
     // Press Escape to dismiss
-    tmux::send_keys(session, "Escape");
-    let after_escape = tmux::wait_for_change(session, &after_question);
+    tmux::send_keys(&session, "Escape");
+    let after_escape = tmux::wait_for_change(&session, &after_question);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should be back to normal state without shortcuts panel
     assert!(
@@ -168,18 +169,18 @@ fn test_tui_question_mark_types_literal_when_input_present() {
         "#,
     );
 
-    let session = "claudeless-shortcuts-literal";
-    let _previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("shortcuts-literal");
+    let _previous = start_tui(&session, &scenario);
 
     // Type some text first
-    tmux::send_keys(session, "Hello");
-    let _after_hello = tmux::wait_for_content(session, "Hello");
+    tmux::send_keys(&session, "Hello");
+    let _after_hello = tmux::wait_for_content(&session, "Hello");
 
     // Now press '?' - should type literal '?', not show shortcuts
-    tmux::send_keys(session, "?");
-    let capture = tmux::wait_for_content(session, "Hello?");
+    tmux::send_keys(&session, "?");
+    let capture = tmux::wait_for_content(&session, "Hello?");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show "Hello?" in input, NOT the shortcuts panel
     assert!(

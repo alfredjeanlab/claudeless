@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! TUI shell mode tests - '!' prefix shell mode handling.
 //!
@@ -40,14 +41,14 @@ fn test_tui_exclamation_shows_shell_prefix() {
         "#,
     );
 
-    let session = "claudeless-shell-prefix";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("shell-prefix");
+    let previous = start_tui(&session, &scenario);
 
     // Press '!' to enter shell mode
-    tmux::send_keys(session, "!");
-    let capture = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "!");
+    let capture = tmux::wait_for_change(&session, &previous);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show '! Try "..."' or '! for bash mode' in the UI
     assert!(
@@ -72,14 +73,14 @@ fn test_tui_shell_prefix_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-shell-prefix-fixture";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("shell-prefix-fixture");
+    let previous = start_tui(&session, &scenario);
 
     // Press '!' to enter shell mode
-    tmux::send_keys(session, "!");
-    let capture = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "!");
+    let capture = tmux::wait_for_change(&session, &previous);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "shell_mode_prefix.txt", None);
 }
@@ -102,16 +103,16 @@ fn test_tui_shell_mode_shows_command() {
         "#,
     );
 
-    let session = "claudeless-shell-command";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("shell-command");
+    let previous = start_tui(&session, &scenario);
 
     // Enter shell mode and type a command
-    tmux::send_keys(session, "!");
-    tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "ls -la");
-    let capture = tmux::wait_for_content(session, "ls -la");
+    tmux::send_keys(&session, "!");
+    tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "ls -la");
+    let capture = tmux::wait_for_content(&session, "ls -la");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show '! ls -la' in input (with space after !)
     assert!(
@@ -136,16 +137,16 @@ fn test_tui_shell_command_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-shell-command-fixture";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("shell-command-fixture");
+    let previous = start_tui(&session, &scenario);
 
     // Enter shell mode and type a command
-    tmux::send_keys(session, "!");
-    tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "ls -la");
-    let capture = tmux::wait_for_content(session, "ls -la");
+    tmux::send_keys(&session, "!");
+    tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "ls -la");
+    let capture = tmux::wait_for_content(&session, "ls -la");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "shell_mode_command.txt", None);
 }
@@ -170,20 +171,20 @@ fn test_tui_shell_mode_executes_command() {
         "#,
     );
 
-    let session = "claudeless-shell-execute";
-    let previous = start_tui_ext(session, &scenario, 120, 40, BYPASS_MODE_PATTERN);
+    let session = tmux::unique_session("shell-execute");
+    let previous = start_tui_ext(&session, &scenario, 120, 40, BYPASS_MODE_PATTERN);
 
     // Enter shell mode, type command, and submit
-    tmux::send_keys(session, "!");
-    tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "echo hello");
-    tmux::wait_for_content(session, "echo hello");
-    tmux::send_keys(session, "Enter");
+    tmux::send_keys(&session, "!");
+    tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "echo hello");
+    tmux::wait_for_content(&session, "echo hello");
+    tmux::send_keys(&session, "Enter");
 
     // Wait for command execution (Bash output)
-    let capture = tmux::wait_for_content(session, "Bash");
+    let capture = tmux::wait_for_content(&session, "Bash");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show the command was executed as Bash
     assert!(
@@ -209,20 +210,20 @@ fn test_tui_shell_mode_shows_prefixed_prompt_in_history() {
         "#,
     );
 
-    let session = "claudeless-shell-history";
-    let previous = start_tui_ext(session, &scenario, 120, 40, BYPASS_MODE_PATTERN);
+    let session = tmux::unique_session("shell-history");
+    let previous = start_tui_ext(&session, &scenario, 120, 40, BYPASS_MODE_PATTERN);
 
     // Enter shell mode, type command, and submit
-    tmux::send_keys(session, "!");
-    tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "pwd");
-    tmux::wait_for_content(session, "pwd");
-    tmux::send_keys(session, "Enter");
+    tmux::send_keys(&session, "!");
+    tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "pwd");
+    tmux::wait_for_content(&session, "pwd");
+    tmux::send_keys(&session, "Enter");
 
     // Wait for response
-    let capture = tmux::wait_for_content(session, "Done");
+    let capture = tmux::wait_for_content(&session, "Done");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show the prompt with shell prefix in history
     assert!(
@@ -250,12 +251,12 @@ fn test_tui_shell_mode_backspace_exits_shell_mode() {
         "#,
     );
 
-    let session = "claudeless-shell-backspace";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("shell-backspace");
+    let previous = start_tui(&session, &scenario);
 
     // Enter shell mode
-    tmux::send_keys(session, "!");
-    let with_prefix = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "!");
+    let with_prefix = tmux::wait_for_change(&session, &previous);
 
     // Verify we're in shell mode (shows '! for bash mode' in status)
     assert!(
@@ -265,10 +266,10 @@ fn test_tui_shell_mode_backspace_exits_shell_mode() {
     );
 
     // Backspace to exit shell mode
-    tmux::send_keys(session, "BSpace");
-    let capture = tmux::wait_for_change(session, &with_prefix);
+    tmux::send_keys(&session, "BSpace");
+    let capture = tmux::wait_for_change(&session, &with_prefix);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should no longer show bash mode indicator and should show normal placeholder
     assert!(
@@ -301,16 +302,16 @@ fn test_tui_shell_mode_with_pipe_command() {
         "#,
     );
 
-    let session = "claudeless-shell-pipe";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("shell-pipe");
+    let previous = start_tui(&session, &scenario);
 
     // Enter shell mode and type a command with pipe
-    tmux::send_keys(session, "!");
-    tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "ls | head");
-    let capture = tmux::wait_for_content(session, "ls | head");
+    tmux::send_keys(&session, "!");
+    tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "ls | head");
+    let capture = tmux::wait_for_content(&session, "ls | head");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show the full command with pipe
     assert!(
@@ -334,17 +335,17 @@ fn test_tui_shell_mode_with_quoted_string() {
         "#,
     );
 
-    let session = "claudeless-shell-quotes";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("shell-quotes");
+    let previous = start_tui(&session, &scenario);
 
     // Enter shell mode and type a command with quotes
-    tmux::send_keys(session, "!");
-    tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "!");
+    tmux::wait_for_change(&session, &previous);
     // Note: We use single quotes to avoid tmux key interpretation issues
-    tmux::send_keys(session, "echo 'hello world'");
-    let capture = tmux::wait_for_content(session, "echo");
+    tmux::send_keys(&session, "echo 'hello world'");
+    let capture = tmux::wait_for_content(&session, "echo");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show the command with quotes
     assert!(
@@ -368,16 +369,16 @@ fn test_tui_shell_mode_with_env_variable() {
         "#,
     );
 
-    let session = "claudeless-shell-env";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("shell-env");
+    let previous = start_tui(&session, &scenario);
 
     // Enter shell mode and type a command with env variable
-    tmux::send_keys(session, "!");
-    tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "echo $HOME");
-    let capture = tmux::wait_for_content(session, "$HOME");
+    tmux::send_keys(&session, "!");
+    tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "echo $HOME");
+    let capture = tmux::wait_for_content(&session, "$HOME");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show the command with env variable
     assert!(
@@ -414,14 +415,14 @@ fn test_tui_shell_prefix_ansi_matches_fixture_v2117() {
         "#,
     );
 
-    let session = "claudeless-shell-prefix-ansi";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("shell-prefix-ansi");
+    let previous = start_tui(&session, &scenario);
 
     // Press '!' to enter shell mode
-    tmux::send_keys(session, "!");
-    let capture = tmux::wait_for_change_ansi(session, &previous);
+    tmux::send_keys(&session, "!");
+    let capture = tmux::wait_for_change_ansi(&session, &previous);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_versioned_ansi_matches_fixture(&capture, "v2.1.17", "shell_mode_prefix_ansi.txt", None);
 }

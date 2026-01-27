@@ -6,8 +6,11 @@
 //! Tmux wrapper for TUI tests.
 //!
 //! Provides a clean API for tmux operations used in testing.
+//! All functions accept `impl AsRef<str>` for session names, allowing
+//! both `String` and `&str` to be passed without explicit borrowing.
 
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::OnceLock;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
@@ -45,8 +48,9 @@ pub fn require_tmux() {
 /// - tmux capture-pane: ~5ms
 /// - claudeless startup + render: ~40-50ms
 /// - Total typical ready time: ~90ms with 10ms polling
-///   Default of 1000ms provides headroom for slow CI environments.
-const DEFAULT_TIMEOUT_MS: u64 = 1000;
+///   Default of 2000ms provides headroom for parallel test execution
+///   and slow CI environments where resource contention causes delays.
+const DEFAULT_TIMEOUT_MS: u64 = 2000;
 
 /// Default poll interval when waiting for TUI (in milliseconds).
 /// Override with `TMUX_TEST_POLL_MS` environment variable.
@@ -73,9 +77,32 @@ pub fn poll_interval() -> Duration {
     Duration::from_millis(ms)
 }
 
+/// Counter for generating unique session names.
+static SESSION_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Generate a unique tmux session name from a prefix.
+///
+/// This prevents race conditions when tests run in parallel by ensuring
+/// each test gets a unique session name. The generated name includes:
+/// - The provided prefix (for debugging/identification)
+/// - The process ID (isolates parallel test processes)
+/// - A monotonic counter (isolates tests within the same process)
+///
+/// # Example
+/// ```ignore
+/// let session = unique_session("hooks-test");
+/// // Returns something like "hooks-test-12345-1"
+/// ```
+pub fn unique_session(prefix: &str) -> String {
+    let pid = std::process::id();
+    let counter = SESSION_COUNTER.fetch_add(1, Ordering::SeqCst);
+    format!("{}-{}-{}", prefix, pid, counter)
+}
+
 /// Create a new detached tmux session with specified dimensions.
 /// Waits for the shell to be ready before returning.
-pub fn new_session(session: &str, width: u16, height: u16) {
+pub fn new_session(session: impl AsRef<str>, width: u16, height: u16) {
+    let session = session.as_ref();
     let status = Command::new("tmux")
         .args([
             "new-session",
@@ -117,42 +144,42 @@ pub fn new_session(session: &str, width: u16, height: u16) {
 }
 
 /// Kill a tmux session, ignoring errors if it doesn't exist.
-pub fn kill_session(session: &str) {
+pub fn kill_session(session: impl AsRef<str>) {
     let _ = Command::new("tmux")
-        .args(["kill-session", "-t", session])
+        .args(["kill-session", "-t", session.as_ref()])
         .output();
 }
 
 /// Send keys to a tmux session (without pressing Enter).
-pub fn send_keys(session: &str, keys: &str) {
+pub fn send_keys(session: impl AsRef<str>, keys: &str) {
     Command::new("tmux")
-        .args(["send-keys", "-t", session, keys])
+        .args(["send-keys", "-t", session.as_ref(), keys])
         .status()
         .expect("Failed to send keys");
 }
 
 /// Send a literal control character to a tmux session.
 /// Uses tmux's -H flag to send hexadecimal keys.
-pub fn send_ctrl_char(session: &str, ascii_code: u8) {
+pub fn send_ctrl_char(session: impl AsRef<str>, ascii_code: u8) {
     let hex = format!("{:02X}", ascii_code);
     Command::new("tmux")
-        .args(["send-keys", "-H", "-t", session, &hex])
+        .args(["send-keys", "-H", "-t", session.as_ref(), &hex])
         .status()
         .expect("Failed to send control character");
 }
 
 /// Send keys followed by Enter to a tmux session.
-pub fn send_line(session: &str, line: &str) {
+pub fn send_line(session: impl AsRef<str>, line: &str) {
     Command::new("tmux")
-        .args(["send-keys", "-t", session, line, "Enter"])
+        .args(["send-keys", "-t", session.as_ref(), line, "Enter"])
         .status()
         .expect("Failed to send line");
 }
 
 /// Capture the current pane content (plain text, no ANSI sequences).
-pub fn capture_pane(session: &str) -> String {
+pub fn capture_pane(session: impl AsRef<str>) -> String {
     let output = Command::new("tmux")
-        .args(["capture-pane", "-t", session, "-p"])
+        .args(["capture-pane", "-t", session.as_ref(), "-p"])
         .output()
         .expect("Failed to capture tmux pane");
 
@@ -163,9 +190,9 @@ pub fn capture_pane(session: &str) -> String {
 ///
 /// Uses `tmux capture-pane -e` flag to include escape sequences in the output.
 /// This is useful for color comparison testing.
-pub fn capture_pane_ansi(session: &str) -> String {
+pub fn capture_pane_ansi(session: impl AsRef<str>) -> String {
     let output = Command::new("tmux")
-        .args(["capture-pane", "-e", "-p", "-t", session])
+        .args(["capture-pane", "-e", "-p", "-t", session.as_ref()])
         .output()
         .expect("Failed to capture tmux pane with ANSI");
 
@@ -174,7 +201,7 @@ pub fn capture_pane_ansi(session: &str) -> String {
 
 /// Wait for specific content to appear in the tmux pane.
 /// Returns the captured pane content when found, or panics on timeout.
-pub fn wait_for_content(session: &str, pattern: &str) -> String {
+pub fn wait_for_content(session: impl AsRef<str>, pattern: &str) -> String {
     wait_for_content_timeout(session, pattern, timeout())
 }
 
@@ -182,14 +209,20 @@ pub fn wait_for_content(session: &str, pattern: &str) -> String {
 ///
 /// Waits for the pattern using plain text matching (for reliability),
 /// then captures with ANSI escape sequences included.
-pub fn wait_for_content_ansi(session: &str, pattern: &str) -> String {
+pub fn wait_for_content_ansi(session: impl AsRef<str>, pattern: &str) -> String {
+    let session = session.as_ref();
     wait_for_content_timeout(session, pattern, timeout());
     capture_pane_ansi(session)
 }
 
 /// Wait for specific content to appear in the tmux pane with a custom timeout.
 /// Returns the captured pane content when found, or panics on timeout.
-pub fn wait_for_content_timeout(session: &str, pattern: &str, timeout: Duration) -> String {
+pub fn wait_for_content_timeout(
+    session: impl AsRef<str>,
+    pattern: &str,
+    timeout: Duration,
+) -> String {
+    let session = session.as_ref();
     let poll = poll_interval();
     let start = Instant::now();
 
@@ -214,7 +247,8 @@ pub fn wait_for_content_timeout(session: &str, pattern: &str, timeout: Duration)
 
 /// Wait for any of the specified patterns to appear in the tmux pane.
 /// Returns the captured pane content when any pattern is found, or panics on timeout.
-pub fn wait_for_any(session: &str, patterns: &[&str]) -> String {
+pub fn wait_for_any(session: impl AsRef<str>, patterns: &[&str]) -> String {
+    let session = session.as_ref();
     let timeout = timeout();
     let poll = poll_interval();
     let start = Instant::now();
@@ -241,7 +275,8 @@ pub fn wait_for_any(session: &str, patterns: &[&str]) -> String {
 /// Assert that pane content remains unchanged for the specified duration.
 /// Polls periodically and panics if content changes during the wait period.
 /// Returns the final capture (which should match `previous`).
-pub fn assert_unchanged_ms(session: &str, previous: &str, duration_ms: u64) -> String {
+pub fn assert_unchanged_ms(session: impl AsRef<str>, previous: &str, duration_ms: u64) -> String {
+    let session = session.as_ref();
     let duration = Duration::from_millis(duration_ms);
     let poll = poll_interval();
     let start = Instant::now();
@@ -269,7 +304,8 @@ pub fn assert_unchanged_ms(session: &str, previous: &str, duration_ms: u64) -> S
 
 /// Wait for pane content to change from a previous state.
 /// Returns the new captured pane content when it differs, or panics on timeout.
-pub fn wait_for_change(session: &str, previous: &str) -> String {
+pub fn wait_for_change(session: impl AsRef<str>, previous: &str) -> String {
+    let session = session.as_ref();
     let timeout = timeout();
     let poll = poll_interval();
     let start = Instant::now();
@@ -297,7 +333,8 @@ pub fn wait_for_change(session: &str, previous: &str) -> String {
 ///
 /// Waits for content to change using plain text matching (for reliability),
 /// then captures with ANSI escape sequences included.
-pub fn wait_for_change_ansi(session: &str, previous: &str) -> String {
+pub fn wait_for_change_ansi(session: impl AsRef<str>, previous: &str) -> String {
+    let session = session.as_ref();
     wait_for_change(session, previous);
     capture_pane_ansi(session)
 }

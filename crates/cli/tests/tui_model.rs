@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! Model display tests - showing model name in TUI.
 //!
@@ -103,14 +104,14 @@ fn test_tui_meta_p_opens_model_picker() {
         "#,
     );
 
-    let session = "claudeless-meta-p-picker";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("meta-p-picker");
+    let previous = start_tui(&session, &scenario);
 
     // Press Meta+P to open model picker
-    tmux::send_keys(session, "M-p");
-    let capture = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "M-p");
+    let capture = tmux::wait_for_change(&session, &previous);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("Select model"),
@@ -133,13 +134,13 @@ fn test_tui_model_picker_shows_available_models() {
         "#,
     );
 
-    let session = "claudeless-picker-models";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("picker-models");
+    let previous = start_tui(&session, &scenario);
 
-    tmux::send_keys(session, "M-p");
-    let capture = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "M-p");
+    let capture = tmux::wait_for_change(&session, &previous);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("Default") && capture.contains("Sonnet") && capture.contains("Haiku"),
@@ -162,13 +163,13 @@ fn test_tui_model_picker_shows_active_model_checkmark() {
         "#,
     );
 
-    let session = "claudeless-picker-checkmark";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("picker-checkmark");
+    let previous = start_tui(&session, &scenario);
 
-    tmux::send_keys(session, "M-p");
-    let capture = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "M-p");
+    let capture = tmux::wait_for_change(&session, &previous);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("✔"),
@@ -191,18 +192,18 @@ fn test_tui_model_picker_arrow_navigation() {
         "#,
     );
 
-    let session = "claudeless-picker-nav";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("picker-nav");
+    let previous = start_tui(&session, &scenario);
 
     // Open model picker
-    tmux::send_keys(session, "M-p");
-    let after_open = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "M-p");
+    let after_open = tmux::wait_for_change(&session, &previous);
 
     // Navigate up
-    tmux::send_keys(session, "Up");
-    let after_up = tmux::wait_for_change(session, &after_open);
+    tmux::send_keys(&session, "Up");
+    let after_up = tmux::wait_for_change(&session, &after_open);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // The cursor position (❯) should have moved
     assert!(
@@ -227,18 +228,18 @@ fn test_tui_model_picker_escape_closes() {
         "#,
     );
 
-    let session = "claudeless-picker-escape";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("picker-escape");
+    let previous = start_tui(&session, &scenario);
 
     // Open model picker
-    tmux::send_keys(session, "M-p");
-    let _ = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "M-p");
+    let _ = tmux::wait_for_change(&session, &previous);
 
     // Press Escape to close
-    tmux::send_keys(session, "Escape");
-    let after_escape = tmux::wait_for_content(session, "? for shortcuts");
+    tmux::send_keys(&session, "Escape");
+    let after_escape = tmux::wait_for_content(&session, "? for shortcuts");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         !after_escape.contains("Select model"),
@@ -261,13 +262,13 @@ fn test_tui_model_picker_shows_footer_hints() {
         "#,
     );
 
-    let session = "claudeless-picker-footer";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("picker-footer");
+    let previous = start_tui(&session, &scenario);
 
-    tmux::send_keys(session, "M-p");
-    let capture = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "M-p");
+    let capture = tmux::wait_for_change(&session, &previous);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("Enter to confirm") && capture.contains("esc to exit"),

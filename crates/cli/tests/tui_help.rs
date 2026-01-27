@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! TUI /help command tests - help dialog behavior.
 //!
@@ -40,14 +41,14 @@ fn test_tui_help_command_shows_autocomplete() {
         "#,
     );
 
-    let session = "claudeless-help-autocomplete";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("help-autocomplete");
+    let previous = start_tui(&session, &scenario);
 
     // Type /help
-    tmux::send_keys(session, "/help");
-    let capture = tmux::wait_for_change(session, &previous);
+    tmux::send_keys(&session, "/help");
+    let capture = tmux::wait_for_change(&session, &previous);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("/help") && capture.contains("Show help and available commands"),
@@ -75,16 +76,16 @@ fn test_tui_help_shows_dialog_with_general_tab() {
         "#,
     );
 
-    let session = "claudeless-help-general-tab";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("help-general-tab");
+    let previous = start_tui(&session, &scenario);
 
     // Type /help and press Enter
-    tmux::send_keys(session, "/help");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let capture = tmux::wait_for_content(session, "general");
+    tmux::send_keys(&session, "/help");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let capture = tmux::wait_for_content(&session, "general");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show the help dialog with tabs
     assert!(
@@ -124,18 +125,18 @@ fn test_tui_help_tab_shows_commands_tab() {
         "#,
     );
 
-    let session = "claudeless-help-commands-tab";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("help-commands-tab");
+    let previous = start_tui(&session, &scenario);
 
     // Type /help, press Enter, then Tab to go to commands tab
-    tmux::send_keys(session, "/help");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let general = tmux::wait_for_content(session, "general");
-    tmux::send_keys(session, "Tab");
-    let capture = tmux::wait_for_change(session, &general);
+    tmux::send_keys(&session, "/help");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let general = tmux::wait_for_content(&session, "general");
+    tmux::send_keys(&session, "Tab");
+    let capture = tmux::wait_for_change(&session, &general);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("Browse default commands:"),
@@ -164,18 +165,18 @@ fn test_tui_help_tab_cycles_through_all_tabs() {
         "#,
     );
 
-    let session = "claudeless-help-tab-cycle";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("help-tab-cycle");
+    let previous = start_tui(&session, &scenario);
 
     // Type /help and press Enter
-    tmux::send_keys(session, "/help");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let general = tmux::wait_for_content(session, "general");
+    tmux::send_keys(&session, "/help");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let general = tmux::wait_for_content(&session, "general");
 
     // Tab to commands
-    tmux::send_keys(session, "Tab");
-    let commands = tmux::wait_for_change(session, &general);
+    tmux::send_keys(&session, "Tab");
+    let commands = tmux::wait_for_change(&session, &general);
     assert!(
         commands.contains("Browse default commands:"),
         "First tab should show commands tab.\nCapture:\n{}",
@@ -183,15 +184,15 @@ fn test_tui_help_tab_cycles_through_all_tabs() {
     );
 
     // Tab to custom-commands
-    tmux::send_keys(session, "Tab");
-    let custom = tmux::wait_for_change(session, &commands);
+    tmux::send_keys(&session, "Tab");
+    let custom = tmux::wait_for_change(&session, &commands);
     assert!(
         custom.contains("custom-commands") || custom.contains("Browse custom commands:"),
         "Second tab should show custom-commands tab.\nCapture:\n{}",
         custom
     );
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -208,18 +209,18 @@ fn test_tui_help_arrow_keys_navigate_tabs() {
         "#,
     );
 
-    let session = "claudeless-help-arrow-tabs";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("help-arrow-tabs");
+    let previous = start_tui(&session, &scenario);
 
     // Open help dialog
-    tmux::send_keys(session, "/help");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let general = tmux::wait_for_content(session, "general");
+    tmux::send_keys(&session, "/help");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let general = tmux::wait_for_content(&session, "general");
 
     // Right arrow should go to commands tab
-    tmux::send_keys(session, "Right");
-    let commands = tmux::wait_for_change(session, &general);
+    tmux::send_keys(&session, "Right");
+    let commands = tmux::wait_for_change(&session, &general);
     assert!(
         commands.contains("Browse default commands:"),
         "Right arrow should navigate to commands tab.\nCapture:\n{}",
@@ -227,10 +228,10 @@ fn test_tui_help_arrow_keys_navigate_tabs() {
     );
 
     // Left arrow should go back to general tab
-    tmux::send_keys(session, "Left");
-    let back_to_general = tmux::wait_for_change(session, &commands);
+    tmux::send_keys(&session, "Left");
+    let back_to_general = tmux::wait_for_change(&session, &commands);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         back_to_general.contains("/ for commands"),
@@ -258,16 +259,16 @@ fn test_tui_help_commands_arrow_navigation() {
         "#,
     );
 
-    let session = "claudeless-help-commands-nav";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("help-commands-nav");
+    let previous = start_tui(&session, &scenario);
 
     // Navigate to commands tab
-    tmux::send_keys(session, "/help");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let general = tmux::wait_for_content(session, "general");
-    tmux::send_keys(session, "Tab");
-    let commands = tmux::wait_for_change(session, &general);
+    tmux::send_keys(&session, "/help");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let general = tmux::wait_for_content(&session, "general");
+    tmux::send_keys(&session, "Tab");
+    let commands = tmux::wait_for_change(&session, &general);
 
     // Should start with first command selected
     assert!(
@@ -277,10 +278,10 @@ fn test_tui_help_commands_arrow_navigation() {
     );
 
     // Press Down to move to next command
-    tmux::send_keys(session, "Down");
-    let after_down = tmux::wait_for_change(session, &commands);
+    tmux::send_keys(&session, "Down");
+    let after_down = tmux::wait_for_change(&session, &commands);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show next command selected (e.g., /agents)
     assert!(
@@ -309,20 +310,20 @@ fn test_tui_help_escape_dismisses_dialog() {
         "#,
     );
 
-    let session = "claudeless-help-dismiss";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("help-dismiss");
+    let previous = start_tui(&session, &scenario);
 
     // Open help dialog
-    tmux::send_keys(session, "/help");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let dialog = tmux::wait_for_content(session, "general");
+    tmux::send_keys(&session, "/help");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let dialog = tmux::wait_for_content(&session, "general");
 
     // Press Escape to dismiss
-    tmux::send_keys(session, "Escape");
-    let capture = tmux::wait_for_change(session, &dialog);
+    tmux::send_keys(&session, "Escape");
+    let capture = tmux::wait_for_change(&session, &dialog);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("Help dialog dismissed"),
@@ -346,18 +347,18 @@ fn test_tui_help_dismiss_returns_to_clean_input() {
         "#,
     );
 
-    let session = "claudeless-help-dismiss-clean";
-    let previous = start_tui(session, &scenario);
+    let session = tmux::unique_session("help-dismiss-clean");
+    let previous = start_tui(&session, &scenario);
 
     // Open and dismiss help dialog
-    tmux::send_keys(session, "/help");
-    let _ = tmux::wait_for_change(session, &previous);
-    tmux::send_keys(session, "Enter");
-    let dialog = tmux::wait_for_content(session, "general");
-    tmux::send_keys(session, "Escape");
-    let capture = tmux::wait_for_change(session, &dialog);
+    tmux::send_keys(&session, "/help");
+    let _ = tmux::wait_for_change(&session, &previous);
+    tmux::send_keys(&session, "Enter");
+    let dialog = tmux::wait_for_content(&session, "general");
+    tmux::send_keys(&session, "Escape");
+    let capture = tmux::wait_for_change(&session, &dialog);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show empty input area (with placeholder)
     assert!(

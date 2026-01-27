@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! TUI trust prompt behavioral tests.
 //!
@@ -25,16 +26,16 @@ fn test_trust_prompt_yes_proceeds() {
         "#,
     );
 
-    let session = "claudeless-trust-yes";
-    start_tui_ext(session, &scenario, 120, 30, "trust");
+    let session = tmux::unique_session("trust-yes");
+    start_tui_ext(&session, &scenario, 120, 30, "trust");
 
     // Press Enter to accept trust
-    tmux::send_keys(session, "Enter");
+    tmux::send_keys(&session, "Enter");
 
     // Wait for main TUI to appear (header pattern indicates ready)
-    let capture = tmux::wait_for_content(session, TUI_READY_PATTERN);
+    let capture = tmux::wait_for_content(&session, TUI_READY_PATTERN);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // After accepting trust, should show main TUI (not trust prompt)
     assert!(
@@ -60,16 +61,16 @@ fn test_trust_prompt_escape_cancels() {
         "#,
     );
 
-    let session = "claudeless-trust-esc";
-    start_tui_ext(session, &scenario, 120, 30, "trust");
+    let session = tmux::unique_session("trust-esc");
+    start_tui_ext(&session, &scenario, 120, 30, "trust");
 
     // Press Escape to cancel
-    tmux::send_keys(session, "Escape");
+    tmux::send_keys(&session, "Escape");
 
     // Wait for shell prompt or exit indication
-    let capture = tmux::wait_for_any(session, &["$", "❯", "%"]);
+    let capture = tmux::wait_for_any(&session, &["$", "❯", "%"]);
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // After escape, should either exit or show shell prompt (not TUI)
     let has_trust_prompt = capture.to_lowercase().contains("do you trust");
@@ -97,10 +98,10 @@ fn test_trust_prompt_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-trust";
-    let capture = start_tui_ext(session, &scenario, 120, 40, "trust");
+    let session = tmux::unique_session("fixture-trust");
+    let capture = start_tui_ext(&session, &scenario, 120, 40, "trust");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "trust_prompt.txt", None);
 }

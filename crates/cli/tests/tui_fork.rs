@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::needless_borrows_for_generic_args)]
 
 //! Fork tests - /fork command behavior.
 //!
@@ -33,16 +34,16 @@ fn test_fork_no_conversation_shows_error() {
         "#,
     );
 
-    let session = "claudeless-fork-no-conversation";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("fork-no-conversation");
+    start_tui(&session, &scenario);
 
     // Execute /fork with no conversation
-    tmux::send_line(session, "/fork");
+    tmux::send_line(&session, "/fork");
 
     // Wait for error message
-    let capture = tmux::wait_for_content(session, "Failed to fork");
+    let capture = tmux::wait_for_content(&session, "Failed to fork");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert!(
         capture.contains("Failed to fork conversation: No conversation to fork"),
@@ -68,16 +69,16 @@ fn test_fork_no_conversation_matches_fixture() {
         "#,
     );
 
-    let session = "claudeless-fixture-fork-no-conv";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("fixture-fork-no-conv");
+    start_tui(&session, &scenario);
 
     // Execute /fork with no conversation
-    tmux::send_line(session, "/fork");
+    tmux::send_line(&session, "/fork");
 
     // Wait for error message
-    let capture = tmux::wait_for_content(session, "Failed to fork");
+    let capture = tmux::wait_for_content(&session, "Failed to fork");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     assert_tui_matches_fixture(&capture, "fork_no_conversation.txt", None);
 }
@@ -99,16 +100,16 @@ fn test_fork_in_autocomplete() {
         "#,
     );
 
-    let session = "claudeless-fork-autocomplete";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("fork-autocomplete");
+    start_tui(&session, &scenario);
 
     // Type /fork to trigger autocomplete
-    tmux::send_keys(session, "/fork");
+    tmux::send_keys(&session, "/fork");
 
     // Wait for autocomplete to appear
-    let capture = tmux::wait_for_content(session, "/fork");
+    let capture = tmux::wait_for_content(&session, "/fork");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show /fork in autocomplete
     assert!(
@@ -143,20 +144,20 @@ fn test_fork_success_with_conversation() {
         "#,
     );
 
-    let session = "claudeless-fork-success";
-    start_tui(session, &scenario);
+    let session = tmux::unique_session("fork-success");
+    start_tui(&session, &scenario);
 
     // Build up a conversation first
-    tmux::send_line(session, "hello");
-    tmux::wait_for_content(session, "How can I help you");
+    tmux::send_line(&session, "hello");
+    tmux::wait_for_content(&session, "How can I help you");
 
     // Execute /fork with existing conversation
-    tmux::send_line(session, "/fork");
+    tmux::send_line(&session, "/fork");
 
     // Wait for success message
-    let capture = tmux::wait_for_content(session, "Conversation forked");
+    let capture = tmux::wait_for_content(&session, "Conversation forked");
 
-    tmux::kill_session(session);
+    tmux::kill_session(&session);
 
     // Should show success message (not error)
     assert!(
