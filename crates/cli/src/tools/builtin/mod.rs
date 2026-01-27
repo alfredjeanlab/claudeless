@@ -15,9 +15,12 @@ mod bash;
 mod edit;
 mod glob;
 mod grep;
+mod input;
 mod read;
 pub mod stateful;
 mod write;
+
+pub use input::*;
 
 use std::collections::HashMap;
 use std::path::PathBuf;

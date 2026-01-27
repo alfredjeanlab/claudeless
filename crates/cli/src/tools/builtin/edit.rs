@@ -8,7 +8,7 @@ use std::fs;
 use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
-use super::{BuiltinContext, BuiltinToolExecutor};
+use super::{extract_bool, extract_file_path, extract_str, BuiltinContext, BuiltinToolExecutor};
 
 /// Executor for file editing (search and replace).
 #[derive(Clone, Debug, Default)]
@@ -19,32 +19,6 @@ impl EditExecutor {
     pub fn new() -> Self {
         Self
     }
-
-    /// Extract file path from tool input.
-    fn extract_path(input: &serde_json::Value) -> Option<&str> {
-        input
-            .get("file_path")
-            .or_else(|| input.get("path"))
-            .and_then(|v| v.as_str())
-    }
-
-    /// Extract old_string from tool input.
-    fn extract_old_string(input: &serde_json::Value) -> Option<&str> {
-        input.get("old_string").and_then(|v| v.as_str())
-    }
-
-    /// Extract new_string from tool input.
-    fn extract_new_string(input: &serde_json::Value) -> Option<&str> {
-        input.get("new_string").and_then(|v| v.as_str())
-    }
-
-    /// Check if replace_all is enabled.
-    fn replace_all(input: &serde_json::Value) -> bool {
-        input
-            .get("replace_all")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false)
-    }
 }
 
 impl BuiltinToolExecutor for EditExecutor {
@@ -54,7 +28,7 @@ impl BuiltinToolExecutor for EditExecutor {
         tool_use_id: &str,
         _ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let path = match Self::extract_path(&call.input) {
+        let path = match extract_file_path(&call.input) {
             Some(p) => p,
             None => {
                 return ToolExecutionResult::error(
@@ -64,7 +38,7 @@ impl BuiltinToolExecutor for EditExecutor {
             }
         };
 
-        let old_string = match Self::extract_old_string(&call.input) {
+        let old_string = match extract_str(&call.input, "old_string") {
             Some(s) => s,
             None => {
                 return ToolExecutionResult::error(
@@ -74,7 +48,7 @@ impl BuiltinToolExecutor for EditExecutor {
             }
         };
 
-        let new_string = match Self::extract_new_string(&call.input) {
+        let new_string = match extract_str(&call.input, "new_string") {
             Some(s) => s,
             None => {
                 return ToolExecutionResult::error(
@@ -109,7 +83,7 @@ impl BuiltinToolExecutor for EditExecutor {
         }
 
         // Perform replacement
-        let replace_all = Self::replace_all(&call.input);
+        let replace_all = extract_bool(&call.input, "replace_all", false);
         let (new_content, count) = if replace_all {
             let count = content.matches(old_string).count();
             (content.replace(old_string, new_string), count)

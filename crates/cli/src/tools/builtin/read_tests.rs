@@ -3,6 +3,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 use super::*;
+use crate::tools::builtin::extract_file_path;
 use serde_json::json;
 use std::io::Write;
 use tempfile::NamedTempFile;
@@ -10,13 +11,13 @@ use tempfile::NamedTempFile;
 #[test]
 fn test_extract_path() {
     let input1 = json!({ "file_path": "/tmp/test.txt" });
-    assert_eq!(ReadExecutor::extract_path(&input1), Some("/tmp/test.txt"));
+    assert_eq!(extract_file_path(&input1), Some("/tmp/test.txt"));
 
     let input2 = json!({ "path": "/tmp/test.txt" });
-    assert_eq!(ReadExecutor::extract_path(&input2), Some("/tmp/test.txt"));
+    assert_eq!(extract_file_path(&input2), Some("/tmp/test.txt"));
 
     let empty = json!({});
-    assert_eq!(ReadExecutor::extract_path(&empty), None);
+    assert_eq!(extract_file_path(&empty), None);
 }
 
 #[test]

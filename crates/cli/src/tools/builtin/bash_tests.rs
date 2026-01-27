@@ -3,15 +3,16 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 use super::*;
+use crate::tools::builtin::extract_command;
 use serde_json::json;
 
 #[test]
 fn test_extract_command() {
     let input = json!({ "command": "ls -la" });
-    assert_eq!(BashExecutor::extract_command(&input), Some("ls -la"));
+    assert_eq!(extract_command(&input), Some("ls -la"));
 
     let empty = json!({});
-    assert_eq!(BashExecutor::extract_command(&empty), None);
+    assert_eq!(extract_command(&empty), None);
 }
 
 #[test]

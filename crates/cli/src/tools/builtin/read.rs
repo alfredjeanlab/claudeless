@@ -8,7 +8,7 @@ use std::fs;
 use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
-use super::{BuiltinContext, BuiltinToolExecutor};
+use super::{extract_file_path, BuiltinContext, BuiltinToolExecutor};
 
 /// Executor for file reading.
 #[derive(Clone, Debug, Default)]
@@ -19,14 +19,6 @@ impl ReadExecutor {
     pub fn new() -> Self {
         Self
     }
-
-    /// Extract file path from tool input.
-    fn extract_path(input: &serde_json::Value) -> Option<&str> {
-        input
-            .get("file_path")
-            .or_else(|| input.get("path"))
-            .and_then(|v| v.as_str())
-    }
 }
 
 impl BuiltinToolExecutor for ReadExecutor {
@@ -36,7 +28,7 @@ impl BuiltinToolExecutor for ReadExecutor {
         tool_use_id: &str,
         _ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let path = match Self::extract_path(&call.input) {
+        let path = match extract_file_path(&call.input) {
             Some(p) => p,
             None => {
                 return ToolExecutionResult::error(
