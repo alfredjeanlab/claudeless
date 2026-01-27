@@ -33,71 +33,56 @@ use crate::tui::separator::make_separator;
 
 use super::types::{AppMode, RenderState};
 
+/// Render modal dialog if one is active, otherwise return None.
+fn render_active_dialog(state: &RenderState, width: usize) -> Option<AnyElement<'static>> {
+    match state.mode {
+        AppMode::Trust => state
+            .trust_prompt
+            .as_ref()
+            .map(|p| render_trust_prompt(p, width)),
+        AppMode::ThinkingToggle => state
+            .thinking_dialog
+            .as_ref()
+            .map(|d| render_thinking_dialog(d, width)),
+        AppMode::TasksDialog => state
+            .tasks_dialog
+            .as_ref()
+            .map(|d| render_tasks_dialog(d, width)),
+        AppMode::ExportDialog => state
+            .export_dialog
+            .as_ref()
+            .map(|d| render_export_dialog(d, width)),
+        AppMode::HelpDialog => state
+            .help_dialog
+            .as_ref()
+            .map(|d| render_help_dialog(d, width)),
+        AppMode::HooksDialog => state
+            .hooks_dialog
+            .as_ref()
+            .map(|d| render_hooks_dialog(d, width)),
+        AppMode::MemoryDialog => state
+            .memory_dialog
+            .as_ref()
+            .map(|d| render_memory_dialog(d, width)),
+        AppMode::ModelPicker => state
+            .model_picker_dialog
+            .as_ref()
+            .map(|d| render_model_picker_dialog(d, width)),
+        AppMode::Permission => state
+            .pending_permission
+            .as_ref()
+            .map(|p| render_permission_dialog(p, width)),
+        _ => None,
+    }
+}
+
 /// Render the main content based on current mode
 pub(crate) fn render_main_content(state: &RenderState) -> AnyElement<'static> {
     let width = state.terminal_width as usize;
 
-    // If in trust mode, render trust prompt
-    if state.mode == AppMode::Trust {
-        if let Some(ref prompt) = state.trust_prompt {
-            return render_trust_prompt(prompt, width);
-        }
-    }
-
-    // If in thinking toggle mode, render just the thinking dialog
-    if state.mode == AppMode::ThinkingToggle {
-        if let Some(ref dialog) = state.thinking_dialog {
-            return render_thinking_dialog(dialog, width);
-        }
-    }
-
-    // If in tasks dialog mode, render just the tasks dialog
-    if state.mode == AppMode::TasksDialog {
-        if let Some(ref dialog) = state.tasks_dialog {
-            return render_tasks_dialog(dialog, width);
-        }
-    }
-
-    // If in export dialog mode, render just the export dialog
-    if state.mode == AppMode::ExportDialog {
-        if let Some(ref dialog) = state.export_dialog {
-            return render_export_dialog(dialog, width);
-        }
-    }
-
-    // If in help dialog mode, render just the help dialog
-    if state.mode == AppMode::HelpDialog {
-        if let Some(ref dialog) = state.help_dialog {
-            return render_help_dialog(dialog, width);
-        }
-    }
-
-    // If in hooks dialog mode, render just the hooks dialog
-    if state.mode == AppMode::HooksDialog {
-        if let Some(ref dialog) = state.hooks_dialog {
-            return render_hooks_dialog(dialog, width);
-        }
-    }
-
-    // If in memory dialog mode, render just the memory dialog
-    if state.mode == AppMode::MemoryDialog {
-        if let Some(ref dialog) = state.memory_dialog {
-            return render_memory_dialog(dialog, width);
-        }
-    }
-
-    // If in model picker mode, render just the model picker dialog
-    if state.mode == AppMode::ModelPicker {
-        if let Some(ref dialog) = state.model_picker_dialog {
-            return render_model_picker_dialog(dialog, width);
-        }
-    }
-
-    // If in permission mode, render just the permission dialog (full-screen)
-    if state.mode == AppMode::Permission {
-        if let Some(ref perm) = state.pending_permission {
-            return render_permission_dialog(perm, width);
-        }
+    // Modal dialogs take over the full screen
+    if let Some(dialog) = render_active_dialog(state, width) {
+        return dialog;
     }
 
     // Format header lines

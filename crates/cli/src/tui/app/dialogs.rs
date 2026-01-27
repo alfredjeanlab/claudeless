@@ -196,11 +196,7 @@ impl TuiAppState {
         let mut inner = self.inner.lock();
         match key.code {
             KeyCode::Esc => {
-                // Close dialog with dismissal message
-                inner.mode = AppMode::Input;
-                inner.tasks_dialog = None;
-                inner.response_content = "Background tasks dialog dismissed".to_string();
-                inner.is_command_output = true;
+                inner.dismiss_dialog("Background tasks dialog");
             }
             KeyCode::Up => {
                 if let Some(ref mut dialog) = inner.tasks_dialog {
@@ -305,10 +301,7 @@ impl TuiAppState {
 
         match key.code {
             KeyCode::Esc => {
-                inner.mode = AppMode::Input;
-                inner.help_dialog = None;
-                inner.response_content = "Help dialog dismissed".to_string();
-                inner.is_command_output = true;
+                inner.dismiss_dialog("Help dialog");
             }
             KeyCode::Tab | KeyCode::Right => dialog.next_tab(),
             KeyCode::Left | KeyCode::BackTab => dialog.prev_tab(),
@@ -329,10 +322,7 @@ impl TuiAppState {
         match dialog.view {
             HooksView::HookList => match key.code {
                 KeyCode::Esc => {
-                    inner.mode = AppMode::Input;
-                    inner.hooks_dialog = None;
-                    inner.response_content = "Hooks dialog dismissed".to_string();
-                    inner.is_command_output = true;
+                    inner.dismiss_dialog("Hooks dialog");
                 }
                 KeyCode::Up => dialog.select_prev(),
                 KeyCode::Down => dialog.select_next(),
@@ -365,10 +355,7 @@ impl TuiAppState {
 
         match key.code {
             KeyCode::Esc => {
-                inner.mode = AppMode::Input;
-                inner.memory_dialog = None;
-                inner.response_content = "Memory dialog dismissed".to_string();
-                inner.is_command_output = true;
+                inner.dismiss_dialog("Memory dialog");
             }
             KeyCode::Up => dialog.select_prev(),
             KeyCode::Down => dialog.select_next(),

@@ -168,6 +168,26 @@ pub(super) struct TuiAppStateInner {
     pub show_stash_indicator: bool,
 }
 
+impl TuiAppStateInner {
+    /// Dismiss any active dialog and return to input mode.
+    pub fn dismiss_dialog(&mut self, name: &str) {
+        self.mode = AppMode::Input;
+        self.response_content = format!("{} dismissed", name);
+        self.is_command_output = true;
+
+        // Clear all dialog states
+        self.thinking_dialog = None;
+        self.tasks_dialog = None;
+        self.model_picker_dialog = None;
+        self.export_dialog = None;
+        self.help_dialog = None;
+        self.hooks_dialog = None;
+        self.memory_dialog = None;
+        self.trust_prompt = None;
+        self.pending_permission = None;
+    }
+}
+
 impl TuiAppState {
     /// Create a new TUI app state
     pub fn new(
