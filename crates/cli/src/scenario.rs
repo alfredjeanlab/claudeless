@@ -309,6 +309,24 @@ impl Scenario {
         }
         self.reset_turns();
     }
+
+    /// Get response text for a match result, or empty string if none.
+    pub fn response_text(&self, result: &MatchResult) -> String {
+        self.get_response(result)
+            .map(|r| r.text().to_string())
+            .unwrap_or_default()
+    }
+
+    /// Get response text, falling back to default response.
+    pub fn response_text_or_default(&mut self, prompt: &str) -> String {
+        if let Some(result) = self.match_prompt(prompt) {
+            self.response_text(&result)
+        } else if let Some(default) = self.default_response() {
+            default.text().to_string()
+        } else {
+            String::new()
+        }
+    }
 }
 
 /// Resolve file references in the scenario config.

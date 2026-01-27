@@ -90,19 +90,11 @@ impl TuiAppState {
             // Get scenario response for the command
             let response_text = {
                 let mut scenario = inner.scenario.lock();
-                if let Some(result) = scenario.match_prompt(&command) {
-                    match scenario.get_response(&result) {
-                        Some(crate::config::ResponseSpec::Simple(text)) => text.clone(),
-                        Some(crate::config::ResponseSpec::Detailed { text, .. }) => text.clone(),
-                        None => String::new(),
-                    }
-                } else if let Some(default) = scenario.default_response() {
-                    match default {
-                        crate::config::ResponseSpec::Simple(text) => text.clone(),
-                        crate::config::ResponseSpec::Detailed { text, .. } => text.clone(),
-                    }
-                } else {
+                let text = scenario.response_text_or_default(&command);
+                if text.is_empty() {
                     format!("$ {}", command)
+                } else {
+                    text
                 }
             };
 
@@ -167,19 +159,11 @@ impl TuiAppState {
         // Match scenario
         let response_text = {
             let mut scenario = inner.scenario.lock();
-            if let Some(result) = scenario.match_prompt(&prompt) {
-                match scenario.get_response(&result) {
-                    Some(crate::config::ResponseSpec::Simple(text)) => text.clone(),
-                    Some(crate::config::ResponseSpec::Detailed { text, .. }) => text.clone(),
-                    None => String::new(),
-                }
-            } else if let Some(default) = scenario.default_response() {
-                match default {
-                    crate::config::ResponseSpec::Simple(text) => text.clone(),
-                    crate::config::ResponseSpec::Detailed { text, .. } => text.clone(),
-                }
-            } else {
+            let text = scenario.response_text_or_default(&prompt);
+            if text.is_empty() {
                 "I'm not sure how to help with that.".to_string()
+            } else {
+                text
             }
         };
 

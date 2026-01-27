@@ -336,3 +336,66 @@ fn test_default_trusted_value() {
     let config = ScenarioConfig::default();
     assert!(config.trusted);
 }
+
+#[test]
+fn test_response_spec_text_simple() {
+    let spec = ResponseSpec::Simple("Hello".to_string());
+    assert_eq!(spec.text(), "Hello");
+}
+
+#[test]
+fn test_response_spec_text_detailed() {
+    let spec = ResponseSpec::Detailed {
+        text: "Detailed text".to_string(),
+        tool_calls: vec![],
+        usage: None,
+        delay_ms: None,
+    };
+    assert_eq!(spec.text(), "Detailed text");
+}
+
+#[test]
+fn test_response_spec_into_text() {
+    let spec = ResponseSpec::Simple("Owned".to_string());
+    assert_eq!(spec.into_text(), "Owned");
+}
+
+#[test]
+fn test_response_spec_tool_calls_simple() {
+    let spec = ResponseSpec::Simple("text".to_string());
+    assert!(spec.tool_calls().is_empty());
+}
+
+#[test]
+fn test_response_spec_tool_calls_detailed() {
+    let call = ToolCallSpec {
+        tool: "Bash".to_string(),
+        input: serde_json::json!({"command": "ls"}),
+        result: None,
+    };
+    let spec = ResponseSpec::Detailed {
+        text: "".to_string(),
+        tool_calls: vec![call],
+        usage: None,
+        delay_ms: None,
+    };
+    assert_eq!(spec.tool_calls().len(), 1);
+    assert_eq!(spec.tool_calls()[0].tool, "Bash");
+}
+
+#[test]
+fn test_response_spec_delay_ms_simple() {
+    let spec = ResponseSpec::Simple("text".to_string());
+    assert_eq!(spec.delay_ms(), None);
+}
+
+#[test]
+fn test_response_spec_delay_ms_detailed() {
+    let spec = ResponseSpec::Detailed {
+        text: "".to_string(),
+        tool_calls: vec![],
+        usage: None,
+        delay_ms: Some(100),
+    };
+    assert_eq!(spec.delay_ms(), Some(100));
+}
