@@ -80,7 +80,7 @@ pub struct ScenarioConfig {
     #[serde(default)]
     pub permission_mode: Option<String>,
 
-    /// Delay in milliseconds before compact completes (default: 500)
+    /// Delay in milliseconds before compact completes (default: 20)
     /// Used for deterministic testing of /compact command
     #[serde(default)]
     pub compact_delay_ms: Option<u64>,

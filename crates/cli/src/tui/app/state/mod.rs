@@ -268,7 +268,7 @@ impl TuiAppState {
         let mut inner = self.inner.lock();
         if inner.is_compacting {
             if let Some(started) = inner.compacting_started {
-                let delay_ms = inner.config.compact_delay_ms.unwrap_or(500);
+                let delay_ms = inner.config.compact_delay_ms.unwrap_or(20);
                 if started.elapsed() >= std::time::Duration::from_millis(delay_ms) {
                     inner.is_compacting = false;
                     inner.compacting_started = None;

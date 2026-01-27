@@ -22,7 +22,7 @@ pub struct TuiConfig {
     pub permission_mode: PermissionMode,
     /// Whether bypass permissions mode is allowed (requires --dangerously-skip-permissions)
     pub allow_bypass_permissions: bool,
-    /// Delay in milliseconds before compact completes (default: 500)
+    /// Delay in milliseconds before compact completes (default: 20)
     pub compact_delay_ms: Option<u64>,
     /// Explicit Claude version, or None for Claudeless-native mode
     pub claude_version: Option<String>,

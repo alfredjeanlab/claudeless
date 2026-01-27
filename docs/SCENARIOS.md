@@ -50,7 +50,7 @@ response = "Hello from Claudeless!"
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `default_model` | string | `"claude-sonnet-4-20250514"` | Model to report (overridden by `--model` CLI flag) |
+| `default_model` | string | `"claude-opus-4-5-20251101"` | Model to report (overridden by `--model` CLI flag) |
 | `claude_version` | string | `"2.1.12"` | Claude version string |
 | `user_name` | string | `"Alfred"` | User display name |
 | `session_id` | string | (random) | Fixed UUID for deterministic tests |
@@ -58,9 +58,10 @@ response = "Hello from Claudeless!"
 
 ### Timing
 
-| Field | Type | Format | Description |
-|-------|------|--------|-------------|
-| `launch_timestamp` | string | ISO 8601 with timezone | Fixed timestamp (e.g., `"2025-01-15T10:30:00Z"`) |
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `launch_timestamp` | string | (now) | Fixed timestamp in ISO 8601 with timezone (e.g., `"2025-01-15T10:30:00Z"`) |
+| `compact_delay_ms` | int | `20` | Delay before `/compact` completes (for deterministic tests) |
 
 ### Environment
 
@@ -141,6 +142,8 @@ pattern = { type = "any" }
 
 Responses can be simple strings or detailed objects.
 
+> **Note:** For top-level response rules, the `response` field is optional when `failure` is set (failures don't produce responses). For turn sequences, `response` is always required (can be empty string `""`).
+
 ### Simple Response
 
 ```toml
@@ -185,13 +188,15 @@ result = "fn main() { ... }"
 
 ### File References
 
-Reference external files using the `$file` key (resolved relative to scenario file):
+Reference external files using the `$file` key (resolved relative to scenario file). The file contents replace the `$file` object:
 
 ```toml
 [[responses.response.tool_calls]]
-tool = "Read"
-input = { file_path = { "$file" = "fixtures/plan.md" } }
+tool = "Write"
+input = { file_path = "/tmp/plan.md", content = { "$file" = "fixtures/plan.md" } }
 ```
+
+For JSON files (`.json` extension), content is parsed as JSON; otherwise loaded as a string.
 
 ### Match Limits
 
@@ -347,7 +352,7 @@ The system enforces strict validation with clear error messages.
 
 Must be a valid UUID:
 
-```
+```example
 Valid:   550e8400-e29b-41d4-a716-446655440000
 Invalid: not-a-uuid
 Error:   Invalid session_id 'not-a-uuid': must be a valid UUID
@@ -357,7 +362,7 @@ Error:   Invalid session_id 'not-a-uuid': must be a valid UUID
 
 Must be ISO 8601 with timezone:
 
-```
+```example
 Valid:   2025-01-15T10:30:00Z
 Valid:   2025-01-15T10:30:00-08:00
 Invalid: 2025-01-15T10:30:00
@@ -368,7 +373,7 @@ Error:   Invalid launch_timestamp '...': must be ISO 8601 format
 
 Must be a recognized value:
 
-```
+```example
 Valid:   default, plan, bypass-permissions, accept-edits, dont-ask, delegate
 Invalid: invalid-mode
 Error:   Invalid permission_mode 'invalid-mode': must be one of [...]
@@ -378,7 +383,7 @@ Error:   Invalid permission_mode 'invalid-mode': must be one of [...]
 
 Typos in field names are rejected:
 
-```
+```example
 Invalid: defualt_model, moode, auto_aprove
 Error:   unknown field `defualt_model`
 ```
@@ -445,7 +450,7 @@ response = "Normal response."
 
 ```toml
 name = "full-featured"
-default_model = "claude-opus-4-20250514"
+default_model = "claude-opus-4-5-20251101"
 claude_version = "2.1.12"
 user_name = "Developer"
 session_id = "550e8400-e29b-41d4-a716-446655440000"

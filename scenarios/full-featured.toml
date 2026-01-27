@@ -4,7 +4,7 @@
 name = "full-featured-demo"
 
 # Session Identity
-default_model = "claude-sonnet-4-20250514"  # Overridden by --model CLI flag
+default_model = "claude-opus-4-5-20251101"  # Overridden by --model CLI flag
 claude_version = "2.1.12"
 user_name = "Alfred"
 session_id = "550e8400-e29b-41d4-a716-446655440000"  # Fixed UUID for deterministic tests

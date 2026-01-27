@@ -110,9 +110,11 @@ failure = { type = "connection_timeout", after_ms = 5000 }
 ### Multi-Turn Conversations
 
 ```toml
-[conversations.debug-session]
+[[responses]]
+pattern = { type = "contains", text = "help" }
+response = "What do you need?"
 turns = [
-    { expect = { type = "contains", text = "help" }, response = "What do you need?" },
+    { expect = { type = "contains", text = "debug" }, response = "Starting debugger..." },
     { expect = { type = "any" }, response = "I'll look into that." }
 ]
 ```
@@ -143,7 +145,7 @@ error = "Permission denied"
 
 Claudeless accepts all standard Claude CLI flags for compatibility:
 
-```
+```example
 -p, --print                    Non-interactive single response
 --model <MODEL>                Model name (ignored, for compatibility)
 --output-format <FORMAT>       text | json | stream-json
