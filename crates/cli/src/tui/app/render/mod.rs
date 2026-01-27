@@ -129,10 +129,25 @@ pub(crate) fn render_main_content(state: &RenderState) -> AnyElement<'static> {
             }
         } else {
             // After conversation started, show just the cursor
-            "❯".to_string()
+            // Reset to clear dim/gray from separator so chevron is white
+            if use_colors {
+                format!("{}❯", crate::tui::colors::escape::RESET)
+            } else {
+                "❯".to_string()
+            }
         }
     } else {
-        format!("❯ {}", state.input.buffer)
+        // User is typing - reset to clear dim/gray from separator
+        // so chevron and input text are white
+        if use_colors {
+            format!(
+                "{}❯ {}",
+                crate::tui::colors::escape::RESET,
+                state.input.buffer
+            )
+        } else {
+            format!("❯ {}", state.input.buffer)
+        }
     };
 
     // Format separators - pink in bash mode, gray otherwise
