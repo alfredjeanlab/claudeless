@@ -61,6 +61,7 @@ pub fn start_tui_ext(
     height: u16,
     wait_for: &str,
 ) -> String {
+    tmux::require_tmux();
     tmux::kill_session(session);
     tmux::new_session(session, width, height);
 
@@ -76,6 +77,7 @@ pub fn start_tui_ext(
 
 /// Helper to start claudeless TUI and capture initial state
 pub fn capture_tui_initial(session: &str, extra_args: &str) -> String {
+    tmux::require_tmux();
     let scenario = write_scenario(
         r#"
         name = "test"
@@ -336,6 +338,7 @@ fn diff_strings(expected: &str, actual: &str) -> String {
 /// Helper to run claudeless and execute a sequence of keys, capturing at each step.
 /// After each key press, waits for the screen content to change before capturing.
 pub fn capture_key_sequence(session: &str, keys: &[&str]) -> Vec<String> {
+    tmux::require_tmux();
     let scenario = write_scenario(
         r#"
         name = "test"

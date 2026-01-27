@@ -8,8 +8,31 @@
 //! Provides a clean API for tmux operations used in testing.
 
 use std::process::Command;
+use std::sync::OnceLock;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+
+/// Cached result of tmux availability check.
+static TMUX_AVAILABLE: OnceLock<bool> = OnceLock::new();
+
+/// Check if tmux is available on the system.
+fn is_tmux_available() -> bool {
+    *TMUX_AVAILABLE.get_or_init(|| {
+        Command::new("tmux")
+            .arg("-V")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    })
+}
+
+/// Ensure tmux is available, panicking with a clear message if not.
+/// Call this at the start of tests that require tmux.
+pub fn require_tmux() {
+    if !is_tmux_available() {
+        panic!("tmux is required for TUI tests but was not found. Install tmux to run these tests.");
+    }
+}
 
 /// Default timeout for waiting for TUI to be ready (in milliseconds).
 /// Override with `TMUX_TEST_TIMEOUT_MS` environment variable.
