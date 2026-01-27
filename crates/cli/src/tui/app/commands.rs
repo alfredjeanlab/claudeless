@@ -10,6 +10,7 @@
 //! - `confirm_permission` - Permission confirmation handling
 //! - Export helpers
 
+use crate::tui::spinner;
 use crate::tui::streaming::{StreamingConfig, StreamingResponse};
 use crate::tui::widgets::context::ContextUsage;
 use crate::tui::widgets::export::ExportDialog;
@@ -111,6 +112,9 @@ impl TuiAppState {
         inner.mode = AppMode::Thinking;
         inner.display.response_content.clear();
         inner.display.is_command_output = false;
+        // Reset spinner for thinking animation
+        inner.display.spinner_frame = 0;
+        inner.display.spinner_verb = spinner::random_verb().to_string();
 
         drop(inner);
 
@@ -151,6 +155,9 @@ impl TuiAppState {
         inner.mode = AppMode::Thinking;
         inner.display.response_content.clear();
         inner.display.is_command_output = false;
+        // Reset spinner for thinking animation
+        inner.display.spinner_frame = 0;
+        inner.display.spinner_verb = spinner::random_verb().to_string();
 
         // Record the turn
         {
@@ -325,9 +332,11 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
                 inner.mode = AppMode::Responding;
                 inner.is_compacting = true;
                 inner.compacting_started = Some(std::time::Instant::now());
-                // Use correct symbol (✻) and ellipsis (…)
-                inner.display.response_content =
-                    "✻ Compacting conversation… (ctrl+c to interrupt)".to_string();
+                // Reset spinner for compacting animation
+                inner.display.spinner_frame = 0;
+                inner.display.spinner_verb = "Compacting".to_string();
+                // Clear response content - spinner will be rendered dynamically
+                inner.display.response_content.clear();
             }
         }
         "/fork" => {
@@ -410,6 +419,9 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
 pub(super) fn start_streaming_inner(inner: &mut TuiAppStateInner, text: String) {
     inner.mode = AppMode::Responding;
     inner.display.is_streaming = true;
+    // Reset spinner for responding animation
+    inner.display.spinner_frame = 0;
+    inner.display.spinner_verb = spinner::random_verb().to_string();
 
     let config = StreamingConfig::default();
     let clock = inner.clock.clone();

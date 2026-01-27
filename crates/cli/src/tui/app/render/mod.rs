@@ -36,7 +36,10 @@ use super::types::{AppMode, RenderState};
 /// Render modal dialog if one is active, otherwise return None.
 fn render_active_dialog(state: &RenderState, width: usize) -> Option<AnyElement<'static>> {
     match state.mode {
-        AppMode::Trust => state.dialog.as_trust().map(|p| render_trust_prompt(p, width)),
+        AppMode::Trust => state
+            .dialog
+            .as_trust()
+            .map(|p| render_trust_prompt(p, width)),
         AppMode::ThinkingToggle => state
             .dialog
             .as_thinking()
@@ -49,10 +52,7 @@ fn render_active_dialog(state: &RenderState, width: usize) -> Option<AnyElement<
             .dialog
             .as_export()
             .map(|d| render_export_dialog(d, width)),
-        AppMode::HelpDialog => state
-            .dialog
-            .as_help()
-            .map(|d| render_help_dialog(d, width)),
+        AppMode::HelpDialog => state.dialog.as_help().map(|d| render_help_dialog(d, width)),
         AppMode::HooksDialog => state
             .dialog
             .as_hooks()

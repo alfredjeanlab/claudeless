@@ -76,11 +76,12 @@ pub fn App(mut hooks: Hooks, props: &AppProps) -> impl Into<AnyElement<'static>>
         }
     });
 
-    // Periodic timer for updates (compacting, streaming, etc.)
+    // Periodic timer for updates (compacting, streaming, spinner animation, etc.)
+    // 120ms matches Claude Code's spinner timing
     hooks.use_future({
         async move {
             loop {
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                tokio::time::sleep(std::time::Duration::from_millis(120)).await;
                 let current = *timer_counter.read();
                 timer_counter.set(current.wrapping_add(1));
             }
@@ -90,6 +91,14 @@ pub fn App(mut hooks: Hooks, props: &AppProps) -> impl Into<AnyElement<'static>>
     // Check for timeouts (both compacting and exit hint)
     state_clone.check_compacting();
     state_clone.check_exit_hint_timeout();
+
+    // Advance spinner animation when in Responding or Thinking mode
+    {
+        let mode = state_clone.mode();
+        if matches!(mode, AppMode::Responding | AppMode::Thinking) {
+            state_clone.advance_spinner();
+        }
+    }
 
     // Get current render state
     let render_state = state_clone.render_state();

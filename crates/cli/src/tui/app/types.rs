@@ -151,6 +151,12 @@ pub struct RenderState {
     pub claude_version: Option<String>,
     /// Whether output is connected to a TTY
     pub is_tty: bool,
+    /// Whether compacting is in progress
+    pub is_compacting: bool,
+    /// Current spinner frame index
+    pub spinner_frame: usize,
+    /// Current spinner verb
+    pub spinner_verb: String,
 }
 
 /// Permission request state using the rich permission dialog

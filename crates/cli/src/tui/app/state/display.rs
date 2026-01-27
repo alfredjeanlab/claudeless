@@ -30,6 +30,10 @@ pub struct DisplayState {
     pub exit_hint: Option<ExitHint>,
     /// When exit hint was shown (milliseconds from clock)
     pub exit_hint_shown_at: Option<u64>,
+    /// Current spinner animation frame index
+    pub spinner_frame: usize,
+    /// Current spinner verb (e.g., "Thinking", "Pondering")
+    pub spinner_verb: String,
 }
 
 impl DisplayState {
