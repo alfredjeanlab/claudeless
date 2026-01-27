@@ -30,7 +30,9 @@ fn is_tmux_available() -> bool {
 /// Call this at the start of tests that require tmux.
 pub fn require_tmux() {
     if !is_tmux_available() {
-        panic!("tmux is required for TUI tests but was not found. Install tmux to run these tests.");
+        panic!(
+            "tmux is required for TUI tests but was not found. Install tmux to run these tests."
+        );
     }
 }
 
@@ -72,6 +74,7 @@ pub fn poll_interval() -> Duration {
 }
 
 /// Create a new detached tmux session with specified dimensions.
+/// Waits for the shell to be ready before returning.
 pub fn new_session(session: &str, width: u16, height: u16) {
     let status = Command::new("tmux")
         .args([
@@ -92,6 +95,25 @@ pub fn new_session(session: &str, width: u16, height: u16) {
         "Failed to create tmux session '{}'",
         session
     );
+
+    // Wait for shell to be ready by checking that the pane has content
+    // This prevents race conditions where commands are sent before the shell initializes
+    let start = Instant::now();
+    let timeout = Duration::from_secs(5);
+    loop {
+        let capture = capture_pane(session);
+        // Shell is ready when there's any content (prompt, etc.)
+        if !capture.trim().is_empty() {
+            break;
+        }
+        if start.elapsed() >= timeout {
+            panic!(
+                "Timeout waiting for shell to initialize in tmux session '{}'",
+                session
+            );
+        }
+        sleep(Duration::from_millis(10));
+    }
 }
 
 /// Kill a tmux session, ignoring errors if it doesn't exist.
