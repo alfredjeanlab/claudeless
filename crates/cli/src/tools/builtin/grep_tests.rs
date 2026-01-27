@@ -3,6 +3,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 use super::*;
+use crate::tools::builtin::extract_pattern;
 use serde_json::json;
 use std::io::Write;
 use tempfile::TempDir;
@@ -10,7 +11,7 @@ use tempfile::TempDir;
 #[test]
 fn test_extract_pattern() {
     let input = json!({ "pattern": "fn main" });
-    assert_eq!(GrepExecutor::extract_pattern(&input), Some("fn main"));
+    assert_eq!(extract_pattern(&input), Some("fn main"));
 }
 
 #[test]

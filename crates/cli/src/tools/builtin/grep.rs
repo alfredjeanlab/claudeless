@@ -11,7 +11,7 @@ use regex::Regex;
 use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
-use super::{BuiltinContext, BuiltinToolExecutor};
+use super::{extract_bool, extract_pattern, extract_str, BuiltinContext, BuiltinToolExecutor};
 
 /// Executor for content search (grep-like functionality).
 #[derive(Clone, Debug, Default)]
@@ -21,26 +21,6 @@ impl GrepExecutor {
     /// Create a new Grep executor.
     pub fn new() -> Self {
         Self
-    }
-
-    /// Extract pattern from tool input.
-    fn extract_pattern(input: &serde_json::Value) -> Option<&str> {
-        input.get("pattern").and_then(|v| v.as_str())
-    }
-
-    /// Extract path from tool input.
-    fn extract_path(input: &serde_json::Value) -> Option<&str> {
-        input.get("path").and_then(|v| v.as_str())
-    }
-
-    /// Extract glob filter from tool input.
-    fn extract_glob(input: &serde_json::Value) -> Option<&str> {
-        input.get("glob").and_then(|v| v.as_str())
-    }
-
-    /// Check if case-insensitive mode is enabled.
-    fn case_insensitive(input: &serde_json::Value) -> bool {
-        input.get("-i").and_then(|v| v.as_bool()).unwrap_or(false)
     }
 
     /// Recursively collect files from a directory.
@@ -86,7 +66,7 @@ impl BuiltinToolExecutor for GrepExecutor {
         tool_use_id: &str,
         ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let pattern_str = match Self::extract_pattern(&call.input) {
+        let pattern_str = match extract_pattern(&call.input) {
             Some(p) => p,
             None => {
                 return ToolExecutionResult::error(
@@ -97,7 +77,7 @@ impl BuiltinToolExecutor for GrepExecutor {
         };
 
         // Build regex
-        let case_insensitive = Self::case_insensitive(&call.input);
+        let case_insensitive = extract_bool(&call.input, "-i", false);
         let regex = if case_insensitive {
             Regex::new(&format!("(?i){}", pattern_str))
         } else {
@@ -115,13 +95,13 @@ impl BuiltinToolExecutor for GrepExecutor {
         };
 
         // Get search path
-        let search_path = Self::extract_path(&call.input)
+        let search_path = extract_str(&call.input, "path")
             .map(PathBuf::from)
             .or_else(|| ctx.cwd.clone())
             .unwrap_or_else(|| PathBuf::from("."));
 
         // Get glob filter
-        let glob_pattern = Self::extract_glob(&call.input);
+        let glob_pattern = extract_str(&call.input, "glob");
 
         // Collect files to search
         let files = Self::collect_files(&search_path, glob_pattern);

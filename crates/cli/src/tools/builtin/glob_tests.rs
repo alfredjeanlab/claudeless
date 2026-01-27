@@ -3,6 +3,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 use super::*;
+use crate::tools::builtin::{extract_directory, extract_pattern};
 use serde_json::json;
 use std::fs;
 use tempfile::TempDir;
@@ -10,16 +11,16 @@ use tempfile::TempDir;
 #[test]
 fn test_extract_pattern() {
     let input = json!({ "pattern": "*.txt" });
-    assert_eq!(GlobExecutor::extract_pattern(&input), Some("*.txt"));
+    assert_eq!(extract_pattern(&input), Some("*.txt"));
 }
 
 #[test]
 fn test_extract_path() {
     let input1 = json!({ "path": "/tmp" });
-    assert_eq!(GlobExecutor::extract_path(&input1), Some("/tmp"));
+    assert_eq!(extract_directory(&input1), Some("/tmp"));
 
     let input2 = json!({ "directory": "/var" });
-    assert_eq!(GlobExecutor::extract_path(&input2), Some("/var"));
+    assert_eq!(extract_directory(&input2), Some("/var"));
 }
 
 #[test]

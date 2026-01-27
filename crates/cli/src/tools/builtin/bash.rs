@@ -8,7 +8,7 @@ use std::process::Command;
 use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
-use super::{BuiltinContext, BuiltinToolExecutor};
+use super::{extract_command, BuiltinContext, BuiltinToolExecutor};
 
 /// Executor for Bash commands.
 #[derive(Clone, Debug, Default)]
@@ -18,11 +18,6 @@ impl BashExecutor {
     /// Create a new Bash executor.
     pub fn new() -> Self {
         Self
-    }
-
-    /// Extract command from tool input.
-    fn extract_command(input: &serde_json::Value) -> Option<&str> {
-        input.get("command").and_then(|v| v.as_str())
     }
 
     /// Execute command for real.
@@ -63,7 +58,7 @@ impl BuiltinToolExecutor for BashExecutor {
         tool_use_id: &str,
         ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let command = match Self::extract_command(&call.input) {
+        let command = match extract_command(&call.input) {
             Some(cmd) => cmd,
             None => {
                 return ToolExecutionResult::error(

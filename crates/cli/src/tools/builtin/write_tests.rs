@@ -3,25 +3,23 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 use super::*;
+use crate::tools::builtin::{extract_file_path, extract_str};
 use serde_json::json;
 use tempfile::TempDir;
 
 #[test]
 fn test_extract_path() {
     let input1 = json!({ "file_path": "/tmp/test.txt" });
-    assert_eq!(WriteExecutor::extract_path(&input1), Some("/tmp/test.txt"));
+    assert_eq!(extract_file_path(&input1), Some("/tmp/test.txt"));
 
     let input2 = json!({ "path": "/tmp/test.txt" });
-    assert_eq!(WriteExecutor::extract_path(&input2), Some("/tmp/test.txt"));
+    assert_eq!(extract_file_path(&input2), Some("/tmp/test.txt"));
 }
 
 #[test]
 fn test_extract_content() {
     let input = json!({ "content": "Hello, World!" });
-    assert_eq!(
-        WriteExecutor::extract_content(&input),
-        Some("Hello, World!")
-    );
+    assert_eq!(extract_str(&input, "content"), Some("Hello, World!"));
 }
 
 #[test]

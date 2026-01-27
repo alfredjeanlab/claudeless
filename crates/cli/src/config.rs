@@ -277,12 +277,7 @@ pub struct ToolCallSpec {
 }
 
 /// Token usage statistics
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct UsageSpec {
-    pub input_tokens: u32,
-    pub output_tokens: u32,
-}
+pub use crate::usage::TokenCounts as UsageSpec;
 
 /// Failure specification
 #[derive(Clone, Debug, Deserialize, Serialize)]

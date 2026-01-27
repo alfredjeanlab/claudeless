@@ -8,7 +8,7 @@ use std::fs;
 use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
-use super::{BuiltinContext, BuiltinToolExecutor};
+use super::{extract_file_path, extract_str, BuiltinContext, BuiltinToolExecutor};
 
 /// Executor for file writing.
 #[derive(Clone, Debug, Default)]
@@ -19,19 +19,6 @@ impl WriteExecutor {
     pub fn new() -> Self {
         Self
     }
-
-    /// Extract file path from tool input.
-    fn extract_path(input: &serde_json::Value) -> Option<&str> {
-        input
-            .get("file_path")
-            .or_else(|| input.get("path"))
-            .and_then(|v| v.as_str())
-    }
-
-    /// Extract content from tool input.
-    fn extract_content(input: &serde_json::Value) -> Option<&str> {
-        input.get("content").and_then(|v| v.as_str())
-    }
 }
 
 impl BuiltinToolExecutor for WriteExecutor {
@@ -41,7 +28,7 @@ impl BuiltinToolExecutor for WriteExecutor {
         tool_use_id: &str,
         _ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let path = match Self::extract_path(&call.input) {
+        let path = match extract_file_path(&call.input) {
             Some(p) => p,
             None => {
                 return ToolExecutionResult::error(
@@ -51,7 +38,7 @@ impl BuiltinToolExecutor for WriteExecutor {
             }
         };
 
-        let content = match Self::extract_content(&call.input) {
+        let content = match extract_str(&call.input, "content") {
             Some(c) => c,
             None => {
                 return ToolExecutionResult::error(

@@ -17,42 +17,13 @@ pub use output_events::{
 };
 
 /// Detailed usage statistics for result output
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ResultUsage {
-    pub input_tokens: u32,
-    pub output_tokens: u32,
-    pub cache_creation_input_tokens: u32,
-    pub cache_read_input_tokens: u32,
-    /// Cost breakdown for this request
-    pub cost_usd: f64,
-}
-
-impl ResultUsage {
-    /// Create usage from basic token counts
-    pub fn from_tokens(input: u32, output: u32) -> Self {
-        Self {
-            input_tokens: input,
-            output_tokens: output,
-            cache_creation_input_tokens: 0,
-            cache_read_input_tokens: 0,
-            cost_usd: estimate_cost(input, output),
-        }
-    }
-}
+pub use crate::usage::UsageWithCost as ResultUsage;
 
 /// Per-model usage breakdown
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ModelUsage {
     #[serde(flatten)]
     pub models: std::collections::HashMap<String, ResultUsage>,
-}
-
-/// Estimate cost based on token counts (simulated Claude Sonnet pricing)
-fn estimate_cost(input_tokens: u32, output_tokens: u32) -> f64 {
-    // Approximate Claude Sonnet pricing: $3/M input, $15/M output
-    let input_cost = (input_tokens as f64) * 0.000003;
-    let output_cost = (output_tokens as f64) * 0.000015;
-    input_cost + output_cost
 }
 
 /// Result wrapper for JSON output matching real Claude's `--output-format json`
@@ -204,11 +175,7 @@ pub enum ContentBlock {
 }
 
 /// Token usage statistics
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Usage {
-    pub input_tokens: u32,
-    pub output_tokens: u32,
-}
+pub use crate::usage::TokenCounts as Usage;
 
 /// Streaming JSON event types
 #[derive(Clone, Debug, Serialize, Deserialize)]

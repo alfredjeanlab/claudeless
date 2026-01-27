@@ -3,6 +3,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 use super::*;
+use crate::tools::builtin::{extract_bool, extract_file_path, extract_str};
 use serde_json::json;
 use std::io::Write;
 use tempfile::NamedTempFile;
@@ -16,10 +17,10 @@ fn test_extract_fields() {
         "replace_all": true
     });
 
-    assert_eq!(EditExecutor::extract_path(&input), Some("/tmp/test.txt"));
-    assert_eq!(EditExecutor::extract_old_string(&input), Some("old"));
-    assert_eq!(EditExecutor::extract_new_string(&input), Some("new"));
-    assert!(EditExecutor::replace_all(&input));
+    assert_eq!(extract_file_path(&input), Some("/tmp/test.txt"));
+    assert_eq!(extract_str(&input, "old_string"), Some("old"));
+    assert_eq!(extract_str(&input, "new_string"), Some("new"));
+    assert!(extract_bool(&input, "replace_all", false));
 }
 
 #[test]

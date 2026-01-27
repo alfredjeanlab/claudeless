@@ -10,7 +10,7 @@ use glob::glob as glob_match;
 use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
-use super::{BuiltinContext, BuiltinToolExecutor};
+use super::{extract_directory, extract_pattern, BuiltinContext, BuiltinToolExecutor};
 
 /// Executor for glob pattern matching.
 #[derive(Clone, Debug, Default)]
@@ -21,19 +21,6 @@ impl GlobExecutor {
     pub fn new() -> Self {
         Self
     }
-
-    /// Extract pattern from tool input.
-    fn extract_pattern(input: &serde_json::Value) -> Option<&str> {
-        input.get("pattern").and_then(|v| v.as_str())
-    }
-
-    /// Extract path/directory from tool input.
-    fn extract_path(input: &serde_json::Value) -> Option<&str> {
-        input
-            .get("path")
-            .or_else(|| input.get("directory"))
-            .and_then(|v| v.as_str())
-    }
 }
 
 impl BuiltinToolExecutor for GlobExecutor {
@@ -43,7 +30,7 @@ impl BuiltinToolExecutor for GlobExecutor {
         tool_use_id: &str,
         ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let pattern = match Self::extract_pattern(&call.input) {
+        let pattern = match extract_pattern(&call.input) {
             Some(p) => p,
             None => {
                 return ToolExecutionResult::error(
@@ -54,7 +41,7 @@ impl BuiltinToolExecutor for GlobExecutor {
         };
 
         // Get the base directory
-        let base_dir = Self::extract_path(&call.input)
+        let base_dir = extract_directory(&call.input)
             .map(PathBuf::from)
             .or_else(|| ctx.cwd.clone())
             .unwrap_or_else(|| PathBuf::from("."));

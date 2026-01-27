@@ -24,6 +24,7 @@ pub mod state;
 pub mod time;
 pub mod tools;
 pub mod tui;
+pub mod usage;
 pub mod validation;
 
 pub use api::{BinarySimulatorHandle, SimulatorBuilder, SimulatorHandle};
