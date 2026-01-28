@@ -36,7 +36,12 @@
 pub mod config;
 pub mod server;
 pub mod tools;
+pub mod transport;
 
 pub use config::{load_mcp_config, McpConfig, McpConfigError, McpServerDef, McpToolDef};
 pub use server::{McpManager, McpServer, McpServerStatus};
 pub use tools::{McpToolCall, McpToolResult, McpToolTemplates};
+pub use transport::{
+    JsonRpcError, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse, StdioTransport,
+    TransportError,
+};
