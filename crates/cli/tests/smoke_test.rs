@@ -767,6 +767,21 @@ mod exit_codes {
     use super::*;
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
+    ///
+    /// When stdin is not a TTY and no prompt is provided, real Claude errors:
+    /// "Error: Input must be provided either through stdin or as a prompt argument when using --print"
+    #[test]
+    fn test_no_prompt_non_tty_errors() {
+        let mut cmd = Command::cargo_bin("claudeless").unwrap();
+        cmd.assert()
+            .failure()
+            .code(1)
+            .stderr(predicate::str::contains(
+                "Input must be provided either through stdin or as a prompt argument when using --print",
+            ));
+    }
+
+    /// Behavior observed with: claude --version 2.1.12 (Claude Code)
     #[test]
     fn test_success_exit_code_0() {
         let scenario = write_scenario(

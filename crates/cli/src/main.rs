@@ -49,6 +49,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return run_tui_mode(&cli, bypass.is_active());
     }
 
+    // In non-TUI mode (print mode), require a prompt
+    if cli.prompt.is_none() {
+        eprintln!("Error: Input must be provided either through stdin or as a prompt argument when using --print");
+        std::process::exit(1);
+    }
+
     // Initialize capture log if requested
     let capture = if let Some(ref path) = cli.capture {
         Some(CaptureLog::with_file(Path::new(path))?)
