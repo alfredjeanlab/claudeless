@@ -3,27 +3,36 @@
 
 //! MCP client for communicating with MCP servers.
 //!
-//! This module provides the [`McpClient`] struct that manages the full lifecycle
-//! of an MCP connection: spawning the server process, initializing the protocol,
-//! discovering tools, executing tool calls, and graceful shutdown.
+//! This module provides the high-level client interface that combines the transport layer
+//! and protocol types into a cohesive API for managing MCP server communication.
 //!
 //! # Example
 //!
-//! ```ignore
+//! ```no_run
 //! use claudeless::mcp::client::McpClient;
 //! use claudeless::mcp::config::McpServerDef;
 //!
-//! // Quick setup
-//! let client = McpClient::connect_and_initialize(&server_def).await?;
-//! let result = client.call_tool("my_tool", serde_json::json!({"arg": "value"})).await?;
-//! client.shutdown().await?;
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! let def = McpServerDef {
+//!     command: "mcp-server".to_string(),
+//!     ..Default::default()
+//! };
+//!
+//! // Quick setup with connect_and_initialize
+//! let client = McpClient::connect_and_initialize(&def).await?;
 //!
 //! // Or step-by-step for more control
-//! let mut client = McpClient::connect(&server_def).await?;
+//! let mut client = McpClient::connect(&def).await?;
 //! let server_info = client.initialize().await?;
-//! println!("Connected to {}", server_info.name);
 //! let tools = client.list_tools().await?;
-//! println!("Found {} tools", tools.len());
+//!
+//! // Call a tool
+//! let result = client.call_tool("echo", serde_json::json!({"msg": "hello"})).await?;
+//!
+//! // Shutdown when done
+//! client.shutdown().await?;
+//! # Ok(())
+//! # }
 //! ```
 
 use super::config::McpServerDef;
@@ -32,13 +41,10 @@ use super::protocol::{
     ToolsListResult, PROTOCOL_VERSION,
 };
 use super::transport::{JsonRpcNotification, StdioTransport, TransportError};
-
-// =============================================================================
-// Client Error
-// =============================================================================
+use thiserror::Error;
 
 /// Errors that can occur during MCP client operations.
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Error)]
 pub enum ClientError {
     /// Transport-level error.
     #[error("transport error: {0}")]
@@ -68,10 +74,6 @@ pub enum ClientError {
     #[error("tool error: {0}")]
     ToolError(String),
 }
-
-// =============================================================================
-// MCP Client
-// =============================================================================
 
 /// MCP client for communicating with a server.
 ///

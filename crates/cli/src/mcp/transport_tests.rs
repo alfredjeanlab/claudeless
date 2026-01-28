@@ -443,3 +443,102 @@ mod error_display {
         assert_eq!(format!("{}", err), "JSON-RPC error -32600: Invalid Request");
     }
 }
+
+mod json_rpc_edge_cases {
+    use super::*;
+
+    #[test]
+    fn response_with_null_result() {
+        let json = r#"{"jsonrpc":"2.0","id":1,"result":null}"#;
+        let resp: JsonRpcResponse = serde_json::from_str(json).unwrap();
+        let result = resp.into_result().unwrap();
+        assert!(result.is_null());
+    }
+
+    #[test]
+    fn request_with_complex_params() {
+        let params = serde_json::json!({
+            "nested": {"array": [1, 2, 3], "bool": true},
+            "unicode": "こんにちは"
+        });
+        let req = JsonRpcRequest::new(99, "complex", Some(params.clone()));
+        let json = serde_json::to_string(&req).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed["params"]["nested"]["array"][0], 1);
+        assert_eq!(parsed["params"]["unicode"], "こんにちは");
+    }
+
+    #[test]
+    fn error_with_numeric_data() {
+        let json =
+            r#"{"jsonrpc":"2.0","id":1,"error":{"code":-32000,"message":"Custom","data":42}}"#;
+        let resp: JsonRpcResponse = serde_json::from_str(json).unwrap();
+        let err = resp.error.unwrap();
+        assert_eq!(err.data.unwrap(), 42);
+    }
+}
+
+mod transport_error_coverage {
+    use super::*;
+
+    #[test]
+    fn all_error_variants_display() {
+        let errors: Vec<TransportError> = vec![
+            TransportError::Spawn("test".into()),
+            TransportError::StdinNotAvailable,
+            TransportError::StdoutNotAvailable,
+            TransportError::Io(std::io::Error::new(std::io::ErrorKind::NotFound, "file")),
+            TransportError::Serialize(serde_json::from_str::<()>("invalid").unwrap_err()),
+            TransportError::Parse("parse".into()),
+            TransportError::ProcessExited,
+            TransportError::Timeout(1000),
+            TransportError::IdMismatch {
+                request: 1,
+                response: 2,
+            },
+            TransportError::JsonRpc(JsonRpcError {
+                code: -32600,
+                message: "test".into(),
+                data: None,
+            }),
+            TransportError::Shutdown,
+        ];
+
+        for err in errors {
+            let msg = format!("{}", err);
+            assert!(!msg.is_empty(), "Error should have display: {:?}", err);
+        }
+    }
+}
+
+mod concurrent_operations {
+    use super::*;
+
+    #[tokio::test]
+    async fn sequential_requests_maintain_order() {
+        // Verifies ID generation is sequential
+        let def = McpServerDef {
+            command: "python3".to_string(),
+            args: vec![
+                "-c".to_string(),
+                r#"
+import sys, json
+for line in sys.stdin:
+    req = json.loads(line)
+    print(json.dumps({"jsonrpc": "2.0", "id": req["id"], "result": {"id": req["id"]}}), flush=True)
+"#
+                .to_string(),
+            ],
+            ..Default::default()
+        };
+
+        let transport = StdioTransport::spawn(&def).await.unwrap();
+
+        for expected_id in 1..=5 {
+            let result = transport.request("test", None, 5000).await.unwrap();
+            assert_eq!(result["id"], expected_id);
+        }
+
+        transport.shutdown().await.unwrap();
+    }
+}

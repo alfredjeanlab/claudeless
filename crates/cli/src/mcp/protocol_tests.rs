@@ -304,3 +304,155 @@ fn client_info_default() {
     // Version should be the crate version
     assert!(!info.version.is_empty());
 }
+
+mod initialization_edge_cases {
+    use super::*;
+
+    #[test]
+    fn deserialize_initialize_result_with_extra_fields() {
+        // Servers may include additional fields we don't know about
+        let json = json!({
+            "protocolVersion": "2024-11-05",
+            "capabilities": {"tools": {}, "unknownCap": true},
+            "serverInfo": {"name": "test", "extraField": "ignored"},
+            "extraTopLevel": 123
+        });
+
+        let result: InitializeResult = serde_json::from_value(json).unwrap();
+        assert_eq!(result.protocol_version, "2024-11-05");
+        assert_eq!(result.server_info.name, "test");
+    }
+
+    #[test]
+    fn client_capabilities_empty_by_default() {
+        let caps = ClientCapabilities::default();
+        let json = serde_json::to_value(&caps).unwrap();
+        // Should be empty object, not null
+        assert!(json.is_object());
+    }
+}
+
+mod tools_list_edge_cases {
+    use super::*;
+
+    #[test]
+    fn deserialize_empty_tools_list() {
+        let json = json!({"tools": []});
+        let result: ToolsListResult = serde_json::from_value(json).unwrap();
+        assert!(result.tools.is_empty());
+    }
+
+    #[test]
+    fn deserialize_tool_with_complex_schema() {
+        let json = json!({
+            "tools": [{
+                "name": "complex",
+                "description": "Complex tool",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "required_field": {"type": "string"},
+                        "optional_array": {
+                            "type": "array",
+                            "items": {"type": "number"}
+                        }
+                    },
+                    "required": ["required_field"]
+                }
+            }]
+        });
+
+        let result: ToolsListResult = serde_json::from_value(json).unwrap();
+        assert_eq!(result.tools[0].name, "complex");
+        assert!(result.tools[0].input_schema["required"].is_array());
+    }
+}
+
+mod tool_call_edge_cases {
+    use super::*;
+
+    #[test]
+    fn tool_call_result_empty_content() {
+        let result = ToolCallResult {
+            content: vec![],
+            is_error: false,
+        };
+        let mcp_result = result.into_tool_result();
+        assert!(mcp_result.success);
+        assert!(mcp_result.content.is_array());
+    }
+
+    #[test]
+    fn deserialize_tool_result_with_mixed_content() {
+        let json = json!({
+            "content": [
+                {"type": "text", "text": "Output line 1"},
+                {"type": "image", "data": "base64data", "mimeType": "image/png"},
+                {"type": "text", "text": "Output line 2"}
+            ],
+            "isError": false
+        });
+
+        let result: ToolCallResult = serde_json::from_value(json).unwrap();
+        assert_eq!(result.content.len(), 3);
+
+        // Extract text content
+        let text: Vec<_> = result.content.iter().filter_map(|c| c.as_text()).collect();
+        assert_eq!(text, vec!["Output line 1", "Output line 2"]);
+    }
+
+    #[test]
+    fn tool_call_params_empty_arguments() {
+        let params = ToolCallParams {
+            name: "no_args".into(),
+            arguments: Some(json!({})),
+        };
+        let json = serde_json::to_value(&params).unwrap();
+        assert!(json["arguments"].is_object());
+        assert!(json["arguments"].as_object().unwrap().is_empty());
+    }
+}
+
+mod content_block_edge_cases {
+    use super::*;
+
+    #[test]
+    fn resource_with_all_fields() {
+        let json = json!({
+            "type": "resource",
+            "uri": "file:///test",
+            "text": "content",
+            "mimeType": "application/json"
+        });
+        let block: ContentBlock = serde_json::from_value(json).unwrap();
+        match block {
+            ContentBlock::Resource {
+                uri,
+                text,
+                mime_type,
+            } => {
+                assert_eq!(uri, "file:///test");
+                assert_eq!(text, Some("content".into()));
+                assert_eq!(mime_type, Some("application/json".into()));
+            }
+            _ => panic!("Expected Resource"),
+        }
+    }
+
+    #[test]
+    fn text_block_with_empty_string() {
+        let block = ContentBlock::Text { text: "".into() };
+        assert_eq!(block.as_text(), Some(""));
+    }
+
+    #[test]
+    fn image_block_preserves_base64() {
+        let data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+        let block = ContentBlock::Image {
+            data: data.into(),
+            mime_type: "image/png".into(),
+        };
+        let json = serde_json::to_value(&block).unwrap();
+        assert_eq!(json["data"], data);
+    }
+}
