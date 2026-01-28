@@ -3,7 +3,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 use super::*;
-use crate::interaction::{CapturedArgs, CapturedOutcome};
+use crate::capture::interaction::{CapturedArgs, CapturedOutcome};
 use proptest::prelude::*;
 use rstest::rstest;
 use std::thread;

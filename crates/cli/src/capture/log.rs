@@ -3,7 +3,7 @@
 
 //! Capture log implementation.
 
-use crate::interaction::{CapturedArgs, CapturedInteraction, CapturedOutcome};
+use super::interaction::{CapturedArgs, CapturedInteraction, CapturedOutcome};
 use parking_lot::Mutex;
 use std::fs::File;
 use std::io::BufWriter;
