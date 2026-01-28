@@ -67,7 +67,7 @@ pub fn start_tui_ext(
     tmux::new_session(session, width, height);
 
     let cmd = format!(
-        "{} --scenario {} --tui",
+        "{} --scenario {}",
         claudeless_bin(),
         scenario.path().display()
     );
@@ -93,7 +93,7 @@ pub fn capture_tui_initial(session: impl AsRef<str>, extra_args: &str) -> String
     tmux::new_session(session, 120, 20);
 
     let cmd = format!(
-        "{} --scenario {} --tui {}",
+        "{} --scenario {} {}",
         claudeless_bin(),
         scenario.path().display(),
         extra_args
@@ -355,7 +355,7 @@ pub fn capture_key_sequence(session: impl AsRef<str>, keys: &[&str]) -> Vec<Stri
     tmux::new_session(session, 120, 25);
 
     let cmd = format!(
-        "{} --scenario {} --tui",
+        "{} --scenario {}",
         claudeless_bin(),
         scenario.path().display()
     );

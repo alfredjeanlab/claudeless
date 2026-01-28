@@ -132,14 +132,6 @@ pub struct Cli {
     #[arg(long, env = "CLAUDELESS_DELAY_MS")]
     pub delay_ms: Option<u64>,
 
-    /// Enable TUI mode (interactive terminal interface)
-    #[arg(long, env = "CLAUDELESS_TUI")]
-    pub tui: bool,
-
-    /// Force non-TUI mode even if stdin is a TTY
-    #[arg(long)]
-    pub no_tui: bool,
-
     /// Tool execution mode (overrides scenario config)
     #[arg(long, value_enum, env = "CLAUDELESS_TOOL_MODE")]
     pub tool_mode: Option<CliToolExecutionMode>,
@@ -174,13 +166,6 @@ impl From<CliToolExecutionMode> for ToolExecutionMode {
 impl Cli {
     /// Determine if TUI mode should be used
     pub fn should_use_tui(&self) -> bool {
-        if self.no_tui {
-            return false;
-        }
-        if self.tui {
-            return true;
-        }
-        // Auto-detect: use TUI if stdin is a TTY and not in print mode
         use std::io::IsTerminal;
         !self.print && std::io::stdin().is_terminal()
     }

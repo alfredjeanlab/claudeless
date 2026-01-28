@@ -300,7 +300,7 @@ fn start_tui_ansi(
     tmux::new_session(&session, width, height);
 
     let cmd = format!(
-        "{} --scenario {} --tui",
+        "{} --scenario {}",
         claudeless_bin(),
         scenario.path().display()
     );
