@@ -276,29 +276,46 @@ impl StdioTransport {
         })
     }
 
+    // =========================================================================
+    // Private Helpers
+    // =========================================================================
+
     /// Generate the next request ID.
     fn next_request_id(&self) -> u64 {
         self.next_id.fetch_add(1, Ordering::Relaxed)
     }
 
-    /// Send a JSON-RPC request to the child process.
-    ///
-    /// Writes the serialized request followed by a newline.
-    pub async fn send(&self, request: &JsonRpcRequest) -> Result<(), TransportError> {
+    /// Check if transport is shut down, returning an error if so.
+    fn require_not_shutdown(&self) -> Result<(), TransportError> {
         if self.shutdown.load(Ordering::Acquire) {
-            return Err(TransportError::Shutdown);
+            Err(TransportError::Shutdown)
+        } else {
+            Ok(())
         }
+    }
+
+    /// Write a serializable message to stdin with newline delimiter.
+    async fn write_message<T: Serialize>(&self, message: &T) -> Result<(), TransportError> {
+        self.require_not_shutdown()?;
 
         let mut guard = self.stdin.lock().await;
         let stdin = guard.as_mut().ok_or(TransportError::StdinNotAvailable)?;
 
-        // Serialize and write
-        let json = serde_json::to_string(request)?;
+        let json = serde_json::to_string(message)?;
         stdin.write_all(json.as_bytes()).await?;
         stdin.write_all(b"\n").await?;
         stdin.flush().await?;
 
         Ok(())
+    }
+
+    // =========================================================================
+    // Public API
+    // =========================================================================
+
+    /// Send a JSON-RPC request to the child process.
+    pub async fn send(&self, request: &JsonRpcRequest) -> Result<(), TransportError> {
+        self.write_message(request).await
     }
 
     /// Send a JSON-RPC notification (no response expected).
@@ -306,28 +323,14 @@ impl StdioTransport {
         &self,
         notification: &JsonRpcNotification,
     ) -> Result<(), TransportError> {
-        if self.shutdown.load(Ordering::Acquire) {
-            return Err(TransportError::Shutdown);
-        }
-
-        let mut guard = self.stdin.lock().await;
-        let stdin = guard.as_mut().ok_or(TransportError::StdinNotAvailable)?;
-
-        let json = serde_json::to_string(notification)?;
-        stdin.write_all(json.as_bytes()).await?;
-        stdin.write_all(b"\n").await?;
-        stdin.flush().await?;
-
-        Ok(())
+        self.write_message(notification).await
     }
 
     /// Receive a JSON-RPC response from the child process.
     ///
     /// Reads one line and parses it as a JSON-RPC response.
     pub async fn receive(&self) -> Result<JsonRpcResponse, TransportError> {
-        if self.shutdown.load(Ordering::Acquire) {
-            return Err(TransportError::Shutdown);
-        }
+        self.require_not_shutdown()?;
 
         let mut guard = self.stdout.lock().await;
         let stdout = guard.as_mut().ok_or(TransportError::StdoutNotAvailable)?;
@@ -384,15 +387,6 @@ impl StdioTransport {
 
         // Extract result or error
         response.into_result().map_err(TransportError::from)
-    }
-
-    /// Send a JSON-RPC request and wait for the response, using the default timeout.
-    pub async fn request_with_default_timeout(
-        &self,
-        method: impl Into<String>,
-        params: Option<serde_json::Value>,
-    ) -> Result<serde_json::Value, TransportError> {
-        self.request(method, params, 30000).await
     }
 
     /// Gracefully shut down the transport and terminate the child process.
