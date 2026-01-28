@@ -28,6 +28,8 @@ pub mod capture {
     pub use claudeless_capture::{CaptureLog, CapturedArgs, CapturedInteraction, CapturedOutcome};
 }
 #[doc(hidden)]
+pub mod capture_spec;
+#[doc(hidden)]
 pub mod cli;
 #[doc(hidden)]
 pub mod config;

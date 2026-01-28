@@ -3,6 +3,7 @@
 
 //! Scenario configuration types for TOML/JSON scenario files.
 
+use crate::capture_spec::CaptureSpec;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -84,6 +85,10 @@ pub struct ScenarioConfig {
     /// Used for deterministic testing of /compact command
     #[serde(default)]
     pub compact_delay_ms: Option<u64>,
+
+    /// Capture specification for recording/playback
+    #[serde(default)]
+    pub capture: Option<CaptureSpec>,
 }
 
 impl Default for ScenarioConfig {
@@ -103,6 +108,7 @@ impl Default for ScenarioConfig {
             trusted: true, // Default to trusted
             permission_mode: None,
             compact_delay_ms: None,
+            capture: None,
         }
     }
 }

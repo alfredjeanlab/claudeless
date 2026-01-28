@@ -1,0 +1,15 @@
+# Basic capture scenario
+# Demonstrates minimal capture configuration with CLI output normalization
+
+name = "basic-capture"
+
+[capture]
+name = "simple-capture"
+capture_type = "cli"
+timeout_ms = 5000
+
+[[capture.normalization_rules]]
+type = "normalize_timestamps"
+
+[[capture.normalization_rules]]
+type = "normalize_uuids"
