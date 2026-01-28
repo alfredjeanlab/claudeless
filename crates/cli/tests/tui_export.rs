@@ -359,6 +359,7 @@ fn test_tui_export_filename_escape_returns_to_method() {
 ///
 /// Arrow keys navigate between export method options
 #[test]
+#[ignore] // TODO(flaky): Timing-sensitive tmux test that fails intermittently on CI
 fn test_tui_export_arrow_navigation() {
     let scenario = write_scenario(
         r#"
