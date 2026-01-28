@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use crate::config::{ScenarioConfig, DEFAULT_MODEL, DEFAULT_USER_NAME};
 use crate::permission::PermissionMode;
-use crate::tui::widgets::permission::{PermissionSelection, RichPermissionDialog};
+use crate::tui::widgets::permission::RichPermissionDialog;
 use crate::tui::widgets::trust::TrustChoice;
 
 use super::state::{DialogState, DisplayState, InputState};
@@ -163,24 +163,6 @@ pub struct RenderState {
 #[derive(Clone, Debug)]
 pub struct PermissionRequest {
     pub dialog: RichPermissionDialog,
-}
-
-/// Legacy permission choice (for compatibility)
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum PermissionChoice {
-    Allow,
-    AllowSession,
-    Deny,
-}
-
-impl From<PermissionSelection> for PermissionChoice {
-    fn from(selection: PermissionSelection) -> Self {
-        match selection {
-            PermissionSelection::Yes => PermissionChoice::Allow,
-            PermissionSelection::YesSession => PermissionChoice::AllowSession,
-            PermissionSelection::No => PermissionChoice::Deny,
-        }
-    }
 }
 
 /// Reason for app exit

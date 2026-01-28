@@ -12,8 +12,8 @@ mod types;
 
 pub use state::TuiAppState;
 pub use types::{
-    AppMode, ExitHint, ExitReason, PermissionChoice, PermissionRequest, RenderState, StatusInfo,
-    TrustPromptState, TuiConfig,
+    AppMode, ExitHint, ExitReason, PermissionRequest, RenderState, StatusInfo, TrustPromptState,
+    TuiConfig,
 };
 
 use iocraft::prelude::*;
