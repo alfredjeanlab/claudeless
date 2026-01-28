@@ -6,15 +6,12 @@
 mod commands;
 mod dialogs;
 mod input;
-mod render;
-mod state;
-mod types;
+pub(crate) mod render;
+pub(crate) mod state;
+pub(crate) mod types;
 
 pub use state::TuiAppState;
-pub use types::{
-    AppMode, ExitHint, ExitReason, PermissionRequest, RenderState, StatusInfo, TrustPromptState,
-    TuiConfig,
-};
+pub use types::{AppMode, ExitReason, PermissionRequest, StatusInfo, TrustPromptState, TuiConfig};
 
 use iocraft::prelude::*;
 
@@ -258,18 +255,6 @@ impl TuiApp {
         self.state.show_write_permission(file_path, content_lines);
     }
 }
-
-// Re-exports for tests
-#[cfg(test)]
-pub(crate) use crate::permission::PermissionMode;
-#[cfg(test)]
-pub(crate) use crate::tui::widgets::permission::PermissionSelection;
-#[cfg(test)]
-pub(crate) use render::{format_header_lines, format_status_bar};
-#[cfg(test)]
-pub use state::{DialogState, DisplayState, InputState};
-#[cfg(test)]
-pub use types::DEFAULT_TERMINAL_WIDTH;
 
 #[cfg(test)]
 #[path = "app_tests.rs"]

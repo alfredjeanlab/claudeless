@@ -3,7 +3,7 @@
 
 //! Captured interaction data types.
 
-use crate::duration_serde;
+use super::duration_serde;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime};
 

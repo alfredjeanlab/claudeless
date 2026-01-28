@@ -3,12 +3,16 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+use super::render::{format_header_lines, format_status_bar};
+use super::types::ExitHint;
 use super::*;
 use crate::ansi::strip_ansi;
 use crate::config::ScenarioConfig;
+use crate::permission::PermissionMode;
 use crate::scenario::Scenario;
 use crate::state::session::SessionManager;
 use crate::time::ClockHandle;
+use crate::tui::widgets::permission::PermissionSelection;
 
 fn create_test_app() -> TuiAppState {
     let config = ScenarioConfig::default();

@@ -5,8 +5,9 @@
 
 //! Unit tests for responsive terminal width rendering.
 
-use super::app::{format_status_bar, AppMode, RenderState, StatusInfo, DEFAULT_TERMINAL_WIDTH};
-use super::app::{DialogState, DisplayState, InputState};
+use super::app::render::format_status_bar;
+use super::app::state::{DialogState, DisplayState, InputState};
+use super::app::types::{AppMode, RenderState, StatusInfo, DEFAULT_TERMINAL_WIDTH};
 use super::separator::{make_compact_separator, make_separator};
 use crate::permission::PermissionMode;
 

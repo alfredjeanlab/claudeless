@@ -416,7 +416,7 @@ pub(super) fn start_streaming_inner(inner: &mut TuiAppStateInner, text: String) 
     inner.display.spinner_frame = 0;
     inner.display.spinner_verb = spinner::random_verb().to_string();
 
-    let config = StreamingConfig::default();
+    let config = StreamingConfig;
     let clock = inner.clock.clone();
     let response = StreamingResponse::new(text, config, clock);
 
