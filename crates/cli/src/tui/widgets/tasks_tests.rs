@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::panic)]
 use super::*;
 
 fn make_task(id: &str, desc: &str, status: TaskStatus) -> TaskInfo {
