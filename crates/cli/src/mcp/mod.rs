@@ -34,9 +34,15 @@
 //! ```
 
 pub mod config;
+pub mod protocol;
 pub mod server;
 pub mod tools;
 
 pub use config::{load_mcp_config, McpConfig, McpConfigError, McpServerDef, McpToolDef};
+pub use protocol::{
+    ClientCapabilities, ClientInfo, ContentBlock, InitializeParams, InitializeResult,
+    ServerCapabilities, ServerInfo, ToolCallParams, ToolCallResult, ToolInfo, ToolsCapability,
+    ToolsListResult, PROTOCOL_VERSION,
+};
 pub use server::{McpManager, McpServer, McpServerStatus};
 pub use tools::{McpToolCall, McpToolResult, McpToolTemplates};
