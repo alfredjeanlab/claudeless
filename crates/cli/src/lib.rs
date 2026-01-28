@@ -23,8 +23,10 @@ pub mod docs {
 pub mod ansi;
 #[doc(hidden)]
 pub mod api;
-#[doc(hidden)]
-pub mod capture;
+/// Re-exported capture types from claudeless-capture crate.
+pub mod capture {
+    pub use claudeless_capture::{CaptureLog, CapturedArgs, CapturedInteraction, CapturedOutcome};
+}
 #[doc(hidden)]
 pub mod cli;
 #[doc(hidden)]

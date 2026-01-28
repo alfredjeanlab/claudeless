@@ -276,6 +276,7 @@ dependencies = [
  "assert_cmd",
  "chrono",
  "clap",
+ "claudeless-capture",
  "crossterm",
  "fastrand",
  "glob",
@@ -300,6 +301,18 @@ dependencies = [
  "unicode-width 0.2.2",
  "uuid",
  "yare",
+]
+
+[[package]]
+name = "claudeless-capture"
+version = "0.1.0"
+dependencies = [
+ "parking_lot",
+ "proptest",
+ "rstest",
+ "serde",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

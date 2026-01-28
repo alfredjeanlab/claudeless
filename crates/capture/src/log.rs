@@ -1,66 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Interaction capture and recording for test assertions.
+//! Capture log implementation.
 
+use crate::interaction::{CapturedArgs, CapturedInteraction, CapturedOutcome};
 use parking_lot::Mutex;
-use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
 use std::sync::Arc;
-use std::time::{Duration, Instant, SystemTime};
-
-/// Captured interaction record
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CapturedInteraction {
-    /// Sequence number
-    pub seq: u64,
-
-    /// Wall-clock timestamp
-    pub timestamp: SystemTime,
-
-    /// Elapsed time since capture started
-    #[serde(with = "duration_serde")]
-    pub elapsed: Duration,
-
-    /// CLI arguments received
-    pub args: CapturedArgs,
-
-    /// Response returned (or error)
-    pub outcome: CapturedOutcome,
-}
-
-/// Captured CLI arguments
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CapturedArgs {
-    pub prompt: Option<String>,
-    pub model: String,
-    pub output_format: String,
-    pub print_mode: bool,
-    pub continue_conversation: bool,
-    pub resume: Option<String>,
-    pub allowed_tools: Vec<String>,
-    pub cwd: Option<String>,
-}
-
-/// Captured outcome (response or failure)
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum CapturedOutcome {
-    Response {
-        text: String,
-        matched_rule: Option<String>,
-        delay_ms: u64,
-    },
-    Failure {
-        failure_type: String,
-        message: String,
-    },
-    NoMatch {
-        used_default: bool,
-    },
-}
+use std::time::{Instant, SystemTime};
 
 /// Capture log for recording interactions
 pub struct CaptureLog {
@@ -192,37 +141,6 @@ impl Clone for CaptureLog {
     }
 }
 
-/// Serde helpers for Duration
-mod duration_serde {
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-    use std::time::Duration;
-
-    #[derive(Serialize, Deserialize)]
-    struct DurationDef {
-        secs: u64,
-        nanos: u32,
-    }
-
-    pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        DurationDef {
-            secs: duration.as_secs(),
-            nanos: duration.subsec_nanos(),
-        }
-        .serialize(serializer)
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let def = DurationDef::deserialize(deserializer)?;
-        Ok(Duration::new(def.secs, def.nanos))
-    }
-}
-
 #[cfg(test)]
-#[path = "capture_tests.rs"]
+#[path = "log_tests.rs"]
 mod tests;
