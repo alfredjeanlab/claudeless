@@ -5,26 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2026-01-26
+## [0.1.0] - 2026-01-27
 
-### Added
+Initial release of claudeless - a Claude CLI simulator for integration testing.
 
-- Animated spinner component for TUI
-- Improved TUI state management with focused state structs
-- Simplified dialog handling patterns
-- Shared input helpers module
-- Unified token usage types
-- Unified ResponseSpec text extraction
-- Unified ToolResultContentBlock with ToolResultContent
-- Modular TUI architecture (split app.rs into focused modules)
-- Extracted JSONL types to session submodule
-- Improved slash command navigation and error handling
+### Features
 
-### Fixed
-
-- User input text and chevron now display as white instead of grey
-- Export integration tests now require conversation first
-
-## [0.1.0] - Initial Release
-
-Initial release of claudeless.
+- **CLI Interface**: Emulates the `claude` CLI with text, JSON, and stream-JSON output formats
+- **TUI Rendering**: Interactive terminal UI with spinner, dialogs, and screenshot-testable output
+- **Scenario System**: Pattern matching, multi-turn conversations, failure injection, and mock responses
+- **Built-in Tools**: Sandboxed Bash, Read, Write, Edit, Glob, Grep, TodoWrite, ExitPlanMode
+- **Permission Modes**: All 6 modes (default, acceptEdits, bypassPermissions, delegate, dontAsk, plan)
+- **Hook Protocol**: All 7 events (pre/post tool, notification, permission, session start/end, prompt submit)
+- **MCP Config**: JSON/JSON5 parsing and tool registration via `--mcp-config`
+- **State Directory**: Simulated projects, todos, plans, sessions, and settings.json
+- **Slash Commands**: `/clear`, `/compact`, `/fork`, `/help`, `/context`, `/exit`, `/todos`, `/tasks`, `/export`, `/hooks`, `/memory`

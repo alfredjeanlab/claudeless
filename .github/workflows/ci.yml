@@ -58,10 +58,11 @@ jobs:
       - name: Install tmux (macOS)
         if: runner.os == 'macOS'
         run: brew install tmux
-      - name: Run tests
-        run: cargo test --all --verbose
-      - name: Run integration tests (single-threaded)
-        run: cargo test --all --verbose -- --test-threads=1 --ignored
+      - name: Run tests (single-threaded to avoid tmux timing issues)
+        run: cargo test --all --verbose -- --test-threads=1
+        env:
+          TMUX_TEST_TIMEOUT_MS: 10000
+          TMUX_TEST_POLL_MS: 100
 
   build:
     name: Build

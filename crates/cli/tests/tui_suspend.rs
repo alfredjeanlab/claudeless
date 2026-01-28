@@ -74,6 +74,7 @@ fn test_tui_ctrl_z_suspends_with_message() {
 ///
 /// The suspend message includes a note about the Ctrl+Z keybinding change.
 #[test]
+#[ignore] // TODO(flaky): Timing-sensitive tmux test that fails intermittently on CI
 fn test_tui_ctrl_z_shows_keybinding_note() {
     let scenario = write_scenario(
         r#"

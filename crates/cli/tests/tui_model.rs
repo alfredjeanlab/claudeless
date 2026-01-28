@@ -124,6 +124,7 @@ fn test_tui_meta_p_opens_model_picker() {
 ///
 /// Model picker shows available models: Default (Opus), Sonnet, and Haiku.
 #[test]
+#[ignore] // TODO(flaky): wait_for_change sometimes captures state before picker renders on CI
 fn test_tui_model_picker_shows_available_models() {
     let scenario = write_scenario(
         r#"

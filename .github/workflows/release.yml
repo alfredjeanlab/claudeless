@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: claudeless-linux-x86_64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            name: claudeless-macos-x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            name: claudeless-macos-aarch64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+      - name: Package
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czf ../../../${{ matrix.name }}.tar.gz claudeless
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}.tar.gz
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Create source tarball
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p dist
+          git archive --format=tar.gz --prefix=claudeless-${VERSION}/ -o "dist/claudeless-${VERSION}.tar.gz" HEAD
+          echo "Created dist/claudeless-${VERSION}.tar.gz"
+
+      - uses: actions/download-artifact@v7
+        with:
+          path: dist
+
+      - name: Flatten artifacts
+        run: |
+          cd dist
+          mv claudeless-linux-x86_64/claudeless-linux-x86_64.tar.gz .
+          mv claudeless-macos-x86_64/claudeless-macos-x86_64.tar.gz .
+          mv claudeless-macos-aarch64/claudeless-macos-aarch64.tar.gz .
+          rmdir claudeless-linux-x86_64 claudeless-macos-x86_64 claudeless-macos-aarch64
+
+      - name: Generate checksums
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cd dist
+          sha256sum claudeless-${VERSION}.tar.gz > claudeless-${VERSION}.tar.gz.sha256
+          sha256sum claudeless-linux-x86_64.tar.gz > claudeless-linux-x86_64.tar.gz.sha256
+          sha256sum claudeless-macos-x86_64.tar.gz > claudeless-macos-x86_64.tar.gz.sha256
+          sha256sum claudeless-macos-aarch64.tar.gz > claudeless-macos-aarch64.tar.gz.sha256
+          echo "Checksums:"
+          cat *.sha256
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: claudeless ${{ steps.version.outputs.tag }}
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
+          generate_release_notes: true
+          files: |
+            dist/claudeless-${{ steps.version.outputs.version }}.tar.gz
+            dist/claudeless-${{ steps.version.outputs.version }}.tar.gz.sha256
+            dist/claudeless-linux-x86_64.tar.gz
+            dist/claudeless-linux-x86_64.tar.gz.sha256
+            dist/claudeless-macos-x86_64.tar.gz
+            dist/claudeless-macos-x86_64.tar.gz.sha256
+            dist/claudeless-macos-aarch64.tar.gz
+            dist/claudeless-macos-aarch64.tar.gz.sha256
