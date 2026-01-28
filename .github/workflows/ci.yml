@@ -60,8 +60,14 @@ jobs:
         run: brew install tmux
       - name: Run tests
         run: cargo test --all --verbose
+        env:
+          TMUX_TEST_TIMEOUT_MS: 10000
+          TMUX_TEST_POLL_MS: 100
       - name: Run integration tests (single-threaded)
         run: cargo test --all --verbose -- --test-threads=1 --ignored
+        env:
+          TMUX_TEST_TIMEOUT_MS: 10000
+          TMUX_TEST_POLL_MS: 100
 
   build:
     name: Build

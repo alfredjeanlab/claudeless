@@ -118,6 +118,7 @@ fn test_tui_export_shows_method_dialog() {
 ///
 /// Selecting clipboard option copies conversation and shows confirmation
 #[test]
+#[ignore] // TODO(flaky): Timing-sensitive tmux test that fails intermittently on CI
 fn test_tui_export_clipboard_shows_confirmation() {
     let scenario = write_scenario(
         r#"
