@@ -37,8 +37,6 @@ fn default_cli() -> Cli {
         capture: None,
         failure: None,
         delay_ms: None,
-        tui: false,
-        no_tui: false,
         tool_mode: None,
         claude_version: None,
     }

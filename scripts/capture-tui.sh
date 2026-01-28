@@ -24,7 +24,7 @@
 #   capture-tui.sh -o initial_state.txt 'claude --model haiku'
 #
 #   # Capture simulator TUI
-#   capture-tui.sh -o sim_state.txt 'claudeless --scenario test.json --tui'
+#   capture-tui.sh -o sim_state.txt 'claudeless --scenario test.json'
 #
 #   # Capture after sending keys (trust prompt response)
 #   capture-tui.sh -k 'Enter' 'claude --model haiku'

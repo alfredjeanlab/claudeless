@@ -24,8 +24,6 @@ These flags and environment variables are unique to claudeless (not in the real 
 | `--capture <FILE>` | `CLAUDELESS_CAPTURE` | Log all interactions to file |
 | `--failure <MODE>` | `CLAUDELESS_FAILURE` | Inject failure (see below) |
 | `--delay-ms <MS>` | `CLAUDELESS_DELAY_MS` | Response delay in milliseconds |
-| `--tui` | `CLAUDELESS_TUI` | Force TUI mode |
-| `--no-tui` | — | Force non-TUI mode |
 | `--tool-mode <MODE>` | `CLAUDELESS_TOOL_MODE` | Tool execution mode |
 
 ### Environment Variables

@@ -67,7 +67,7 @@ fn test_initial_state_ansi_matches_fixture() {
     tmux::kill_session(&session);
     tmux::new_session(&session, 120, 40);
     let cmd = format!(
-        "{} --scenario {} --tui",
+        "{} --scenario {}",
         common::claudeless_bin(),
         scenario.path().display()
     );

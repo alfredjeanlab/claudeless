@@ -55,7 +55,7 @@ fn test_tui_setup_theme_selection_dark_mode_default() {
     tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
-        "{} --scenario {} --tui",
+        "{} --scenario {}",
         common::claudeless_bin(),
         scenario.path().display()
     );
@@ -129,7 +129,7 @@ fn test_tui_setup_theme_selection_light_mode() {
     tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
-        "{} --scenario {} --tui",
+        "{} --scenario {}",
         common::claudeless_bin(),
         scenario.path().display()
     );
@@ -179,7 +179,7 @@ fn test_tui_setup_theme_selection_ansi_mode() {
     tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
-        "{} --scenario {} --tui",
+        "{} --scenario {}",
         common::claudeless_bin(),
         scenario.path().display()
     );
@@ -231,7 +231,7 @@ fn test_tui_setup_theme_ctrl_t_toggles_syntax_highlighting() {
     tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
-        "{} --scenario {} --tui",
+        "{} --scenario {}",
         common::claudeless_bin(),
         scenario.path().display()
     );
@@ -286,7 +286,7 @@ fn test_tui_setup_login_method_shows_options() {
     tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
-        "{} --scenario {} --tui",
+        "{} --scenario {}",
         common::claudeless_bin(),
         scenario.path().display()
     );
@@ -353,7 +353,7 @@ fn test_tui_setup_full_login_flow_to_initial_state() {
     tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
-        "{} --scenario {} --tui",
+        "{} --scenario {}",
         common::claudeless_bin(),
         scenario.path().display()
     );
@@ -500,7 +500,7 @@ fn test_tui_failed_to_open_socket_exits() {
     tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
-        "{} --scenario {} --tui",
+        "{} --scenario {}",
         common::claudeless_bin(),
         scenario.path().display()
     );
@@ -550,7 +550,7 @@ fn test_tui_failed_to_open_socket_shows_helpful_message() {
     tmux::new_session(&session, 120, 40);
 
     let cmd = format!(
-        "{} --scenario {} --tui",
+        "{} --scenario {}",
         common::claudeless_bin(),
         scenario.path().display()
     );

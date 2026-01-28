@@ -107,7 +107,7 @@ if [[ -z "$SIM_CMD" ]]; then
     fi
 
     if [[ -n "$SCENARIO" ]]; then
-        SIM_CMD="$SIM_BIN --scenario $SCENARIO --tui"
+        SIM_CMD="$SIM_BIN --scenario $SCENARIO"
     else
         echo "Error: --scenario required when using auto-detected simulator" >&2
         exit 1
