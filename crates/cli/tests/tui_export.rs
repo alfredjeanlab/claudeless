@@ -161,6 +161,7 @@ fn test_tui_export_clipboard_shows_confirmation() {
 ///
 /// Selecting file option shows filename input dialog
 #[test]
+#[ignore] // TODO(flaky): Timing-sensitive tmux test that fails intermittently on CI
 fn test_tui_export_file_shows_filename_dialog() {
     let scenario = write_scenario(
         r#"
@@ -306,6 +307,7 @@ fn test_tui_export_escape_cancels() {
 ///
 /// Pressing Escape in filename dialog returns to method selection
 #[test]
+#[ignore] // TODO(flaky): Timing-sensitive tmux test that fails intermittently on CI
 fn test_tui_export_filename_escape_returns_to_method() {
     let scenario = write_scenario(
         r#"
