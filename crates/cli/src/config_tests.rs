@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-#![allow(clippy::panic)]
 use super::*;
 
 #[test]
@@ -50,7 +49,7 @@ input = { command = "ls" }
             assert_eq!(tool_calls.len(), 1);
             assert_eq!(tool_calls[0].tool, "Bash");
         }
-        _ => panic!("Expected Detailed response"),
+        _ => unreachable!("Expected Detailed response"),
     }
 }
 
@@ -68,7 +67,7 @@ failure = { type = "rate_limit", retry_after = 30 }
         Some(FailureSpec::RateLimit { retry_after }) => {
             assert_eq!(*retry_after, 30);
         }
-        _ => panic!("Expected RateLimit failure"),
+        _ => unreachable!("Expected RateLimit failure"),
     }
 }
 
@@ -206,7 +205,7 @@ result = "file1.txt\nfile2.txt"
             Some("file1.txt\nfile2.txt".to_string())
         );
     } else {
-        panic!("Expected Detailed response");
+        unreachable!("Expected Detailed response");
     }
 }
 

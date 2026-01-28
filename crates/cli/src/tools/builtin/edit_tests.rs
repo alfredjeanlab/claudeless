@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-#![allow(clippy::panic)]
 use super::*;
 use crate::tools::builtin::{extract_bool, extract_file_path, extract_str};
 use serde_json::json;

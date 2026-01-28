@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-#![allow(clippy::panic)]
 use super::*;
 
 #[test]
@@ -51,7 +50,7 @@ fn test_hook_message_notification() {
         assert_eq!(title, "Warning");
         assert_eq!(message, "Something happened");
     } else {
-        panic!("Expected Notification payload");
+        unreachable!("Expected Notification payload");
     }
 }
 
@@ -79,7 +78,7 @@ fn test_hook_message_session() {
     if let HookPayload::Session { project_path } = &msg.payload {
         assert_eq!(*project_path, Some("/project".to_string()));
     } else {
-        panic!("Expected Session payload");
+        unreachable!("Expected Session payload");
     }
 }
 
