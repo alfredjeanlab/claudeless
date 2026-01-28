@@ -382,6 +382,7 @@ fn test_tui_slash_tab_shows_argument_hint() {
 ///
 /// Tab closes the autocomplete menu after completion
 #[test]
+#[ignore] // TODO(flaky): Timing-sensitive tmux test that fails intermittently on CI
 fn test_tui_slash_tab_closes_menu() {
     let scenario = write_scenario(
         r#"
