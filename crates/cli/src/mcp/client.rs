@@ -26,6 +26,8 @@
 //! println!("Found {} tools", tools.len());
 //! ```
 
+use serde::{de::DeserializeOwned, Serialize};
+
 use super::config::McpServerDef;
 use super::protocol::{
     InitializeParams, InitializeResult, ServerInfo, ToolCallParams, ToolCallResult, ToolInfo,
@@ -63,10 +65,6 @@ pub enum ClientError {
     /// Tool not found on server.
     #[error("tool not found: {0}")]
     ToolNotFound(String),
-
-    /// Tool execution returned an error.
-    #[error("tool error: {0}")]
-    ToolError(String),
 }
 
 // =============================================================================
@@ -119,6 +117,36 @@ impl McpClient {
         })
     }
 
+    // =========================================================================
+    // Private Helpers
+    // =========================================================================
+
+    /// Check that the client is initialized, returning an error if not.
+    fn require_initialized(&self) -> Result<(), ClientError> {
+        if self.initialized {
+            Ok(())
+        } else {
+            Err(ClientError::NotInitialized)
+        }
+    }
+
+    /// Serialize params to JSON, mapping errors consistently.
+    fn serialize_params<T: Serialize>(&self, params: &T) -> Result<serde_json::Value, ClientError> {
+        serde_json::to_value(params).map_err(|e| ClientError::InvalidResponse(e.to_string()))
+    }
+
+    /// Deserialize a JSON response, mapping errors consistently.
+    fn deserialize_response<T: DeserializeOwned>(
+        &self,
+        value: serde_json::Value,
+    ) -> Result<T, ClientError> {
+        serde_json::from_value(value).map_err(|e| ClientError::InvalidResponse(e.to_string()))
+    }
+
+    // =========================================================================
+    // Public API
+    // =========================================================================
+
     /// Initialize the MCP protocol.
     ///
     /// Sends the `initialize` request and waits for server response.
@@ -129,21 +157,19 @@ impl McpClient {
         }
 
         let params = InitializeParams::default();
-        let params_json = serde_json::to_value(&params)
-            .map_err(|e| ClientError::InvalidResponse(e.to_string()))?;
+        let params_json = self.serialize_params(&params)?;
 
         let result = self
             .transport
             .request("initialize", Some(params_json), self.timeout_ms)
             .await?;
 
-        let init_result: InitializeResult = serde_json::from_value(result)
-            .map_err(|e| ClientError::InvalidResponse(e.to_string()))?;
+        let init_result: InitializeResult = self.deserialize_response(result)?;
 
         // Verify protocol version compatibility
         if init_result.protocol_version != PROTOCOL_VERSION {
             return Err(ClientError::UnsupportedVersion(
-                init_result.protocol_version.clone(),
+                init_result.protocol_version,
             ));
         }
 
@@ -154,7 +180,10 @@ impl McpClient {
         self.send_initialized_notification().await?;
 
         // server_info is guaranteed to be Some since we just set it above
-        self.server_info.as_ref().ok_or(ClientError::NotInitialized)
+        Ok(self
+            .server_info
+            .as_ref()
+            .unwrap_or_else(|| unreachable!("server_info was just set to Some")))
     }
 
     /// Send the `initialized` notification after successful init.
@@ -169,17 +198,14 @@ impl McpClient {
     /// Calls the `tools/list` method and caches the results.
     /// Can be called multiple times to refresh the tool list.
     pub async fn list_tools(&mut self) -> Result<&[ToolInfo], ClientError> {
-        if !self.initialized {
-            return Err(ClientError::NotInitialized);
-        }
+        self.require_initialized()?;
 
         let result = self
             .transport
             .request("tools/list", None, self.timeout_ms)
             .await?;
 
-        let tools_result: ToolsListResult = serde_json::from_value(result)
-            .map_err(|e| ClientError::InvalidResponse(e.to_string()))?;
+        let tools_result: ToolsListResult = self.deserialize_response(result)?;
 
         self.tools = tools_result.tools;
         Ok(&self.tools)
@@ -200,36 +226,14 @@ impl McpClient {
         self.tools.iter().find(|t| t.name == name)
     }
 
-    /// Execute a tool call.
-    ///
-    /// Sends the `tools/call` method with the given name and arguments.
-    /// Returns the raw `ToolCallResult` for caller to handle.
+    /// Execute a tool call using the default client timeout.
     pub async fn call_tool(
         &self,
         name: &str,
         arguments: serde_json::Value,
     ) -> Result<ToolCallResult, ClientError> {
-        if !self.initialized {
-            return Err(ClientError::NotInitialized);
-        }
-
-        let params = ToolCallParams {
-            name: name.to_string(),
-            arguments: Some(arguments),
-        };
-
-        let params_json = serde_json::to_value(&params)
-            .map_err(|e| ClientError::InvalidResponse(e.to_string()))?;
-
-        let result = self
-            .transport
-            .request("tools/call", Some(params_json), self.timeout_ms)
-            .await?;
-
-        let tool_result: ToolCallResult = serde_json::from_value(result)
-            .map_err(|e| ClientError::InvalidResponse(e.to_string()))?;
-
-        Ok(tool_result)
+        self.call_tool_with_timeout(name, arguments, self.timeout_ms)
+            .await
     }
 
     /// Execute a tool call with a custom timeout.
@@ -239,27 +243,20 @@ impl McpClient {
         arguments: serde_json::Value,
         timeout_ms: u64,
     ) -> Result<ToolCallResult, ClientError> {
-        if !self.initialized {
-            return Err(ClientError::NotInitialized);
-        }
+        self.require_initialized()?;
 
         let params = ToolCallParams {
             name: name.to_string(),
             arguments: Some(arguments),
         };
-
-        let params_json = serde_json::to_value(&params)
-            .map_err(|e| ClientError::InvalidResponse(e.to_string()))?;
+        let params_json = self.serialize_params(&params)?;
 
         let result = self
             .transport
             .request("tools/call", Some(params_json), timeout_ms)
             .await?;
 
-        let tool_result: ToolCallResult = serde_json::from_value(result)
-            .map_err(|e| ClientError::InvalidResponse(e.to_string()))?;
-
-        Ok(tool_result)
+        self.deserialize_response(result)
     }
 
     /// Gracefully shut down the client.
