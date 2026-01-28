@@ -26,6 +26,8 @@ pub mod api;
 #[doc(hidden)]
 pub mod capture;
 #[doc(hidden)]
+pub mod capture_spec;
+#[doc(hidden)]
 pub mod cli;
 #[doc(hidden)]
 pub mod config;
