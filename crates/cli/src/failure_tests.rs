@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-#![allow(clippy::panic)]
 use super::*;
 
 #[test]
@@ -26,7 +25,7 @@ fn test_from_mode_auth_error() {
         FailureSpec::AuthError { message } => {
             assert_eq!(message, "Invalid API key");
         }
-        _ => panic!("Expected AuthError"),
+        _ => unreachable!("Expected AuthError"),
     }
 }
 
@@ -37,7 +36,7 @@ fn test_from_mode_rate_limit() {
         FailureSpec::RateLimit { retry_after } => {
             assert_eq!(retry_after, 60);
         }
-        _ => panic!("Expected RateLimit"),
+        _ => unreachable!("Expected RateLimit"),
     }
 }
 
@@ -54,7 +53,7 @@ fn test_from_mode_partial_response() {
         FailureSpec::PartialResponse { partial_text } => {
             assert!(!partial_text.is_empty());
         }
-        _ => panic!("Expected PartialResponse"),
+        _ => unreachable!("Expected PartialResponse"),
     }
 }
 
@@ -66,7 +65,7 @@ fn test_from_mode_malformed_json() {
             // Verify it's actually malformed JSON
             assert!(serde_json::from_str::<serde_json::Value>(&raw).is_err());
         }
-        _ => panic!("Expected MalformedJson"),
+        _ => unreachable!("Expected MalformedJson"),
     }
 }
 

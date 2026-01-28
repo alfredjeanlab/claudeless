@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-#![allow(clippy::panic)]
 use super::*;
 use proptest::prelude::*;
 use std::time::{Duration, SystemTime};
@@ -74,7 +73,7 @@ fn test_captured_outcome_response_serialization() {
             assert_eq!(matched_rule, Some("greeting".to_string()));
             assert_eq!(delay_ms, 100);
         }
-        _ => panic!("Expected Response variant"),
+        _ => unreachable!("Expected Response variant"),
     }
 }
 
@@ -97,7 +96,7 @@ fn test_captured_outcome_failure_serialization() {
             assert_eq!(failure_type, "network");
             assert_eq!(message, "Connection refused");
         }
-        _ => panic!("Expected Failure variant"),
+        _ => unreachable!("Expected Failure variant"),
     }
 }
 
@@ -113,7 +112,7 @@ fn test_captured_outcome_no_match_serialization() {
         CapturedOutcome::NoMatch { used_default } => {
             assert!(used_default);
         }
-        _ => panic!("Expected NoMatch variant"),
+        _ => unreachable!("Expected NoMatch variant"),
     }
 }
 

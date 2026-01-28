@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-#![allow(clippy::panic)]
 use super::*;
 
 #[test]
@@ -384,7 +383,7 @@ fn key_sequence_with_wait_for() {
     if let Some(StateCondition::TextVisible { pattern }) = &spec.key_sequences[0].wait_for {
         assert_eq!(pattern, "ready");
     } else {
-        panic!("Expected TextVisible condition");
+        unreachable!("Expected TextVisible condition");
     }
 }
 

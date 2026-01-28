@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-#![allow(clippy::panic)]
-
 //! Unit tests for responsive terminal width rendering.
 
 use super::app::render::format_status_bar;
