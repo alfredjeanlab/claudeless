@@ -782,6 +782,28 @@ mod exit_codes {
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
+    ///
+    /// When stdin is not a TTY but a prompt IS provided (positional arg, no -p flag),
+    /// real Claude outputs a response. This tests that positional prompts work without -p.
+    #[test]
+    fn test_positional_prompt_non_tty_succeeds() {
+        let scenario = write_scenario(
+            r#"
+            name = "test"
+            [[responses]]
+            pattern = { type = "contains", text = "hello" }
+            response = "Hello! How can I help you today?"
+            "#,
+        );
+
+        let mut cmd = Command::cargo_bin("claudeless").unwrap();
+        cmd.args(["--scenario", scenario.path().to_str().unwrap(), "Say hello"])
+            .assert()
+            .success()
+            .stdout(predicate::str::contains("Hello! How can I help you today?"));
+    }
+
+    /// Behavior observed with: claude --version 2.1.12 (Claude Code)
     #[test]
     fn test_success_exit_code_0() {
         let scenario = write_scenario(
