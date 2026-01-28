@@ -25,11 +25,11 @@ pub struct HookConfig {
 }
 
 impl HookConfig {
-    /// Create a new hook config
-    pub fn new(script_path: impl Into<PathBuf>) -> Self {
+    /// Create a new hook config with specified timeout
+    pub fn new(script_path: impl Into<PathBuf>, default_timeout_ms: u64) -> Self {
         Self {
             script_path: script_path.into(),
-            timeout_ms: 5000,
+            timeout_ms: default_timeout_ms,
             blocking: false,
         }
     }

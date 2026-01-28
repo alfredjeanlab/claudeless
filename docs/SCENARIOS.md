@@ -61,7 +61,31 @@ response = "Hello from Claudeless!"
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `launch_timestamp` | string | (now) | Fixed timestamp in ISO 8601 with timezone (e.g., `"2025-01-15T10:30:00Z"`) |
-| `compact_delay_ms` | int | `20` | Delay before `/compact` completes (for deterministic tests) |
+
+### Timeouts
+
+Configure various timeout values in the `[timeouts]` section:
+
+```toml
+[timeouts]
+exit_hint_ms = 2000      # "Press Ctrl-C again" hint duration
+compact_delay_ms = 20    # /compact spinner delay
+hook_timeout_ms = 5000   # Hook script execution limit
+mcp_timeout_ms = 30000   # MCP server response timeout
+response_delay_ms = 100  # Delay before sending response
+```
+
+All timeouts can also be set via environment variables:
+
+| Field | Env Variable | Default |
+|-------|--------------|---------|
+| `exit_hint_ms` | `CLAUDELESS_EXIT_HINT_TIMEOUT_MS` | 2000 |
+| `compact_delay_ms` | `CLAUDELESS_COMPACT_DELAY_MS` | 20 |
+| `hook_timeout_ms` | `CLAUDELESS_HOOK_TIMEOUT_MS` | 5000 |
+| `mcp_timeout_ms` | `CLAUDELESS_MCP_TIMEOUT_MS` | 30000 |
+| `response_delay_ms` | `CLAUDELESS_RESPONSE_DELAY_MS` | 0 |
+
+**Precedence:** scenario config > environment variable > default
 
 ### Environment
 

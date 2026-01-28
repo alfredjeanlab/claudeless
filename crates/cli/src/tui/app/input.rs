@@ -10,7 +10,7 @@ use crate::tui::widgets::permission::PermissionSelection;
 use crate::tui::widgets::thinking::ThinkingDialog;
 
 use super::state::{DialogState, TuiAppState};
-use super::types::{AppMode, ExitHint, ExitReason, EXIT_HINT_TIMEOUT_MS};
+use super::types::{AppMode, ExitHint, ExitReason};
 
 /// Matches a control key that may be encoded as raw ASCII or as modifier+char.
 ///
@@ -115,11 +115,12 @@ impl TuiAppState {
             (m, KeyCode::Char('d')) if m.contains(KeyModifiers::CONTROL) => {
                 if inner.input.buffer.is_empty() {
                     let now = inner.clock.now_millis();
+                    let exit_hint_timeout = inner.config.timeouts.exit_hint_ms;
                     let within_timeout = inner.display.exit_hint == Some(ExitHint::CtrlD)
                         && inner
                             .display
                             .exit_hint_shown_at
-                            .map(|t| now.saturating_sub(t) < EXIT_HINT_TIMEOUT_MS)
+                            .map(|t| now.saturating_sub(t) < exit_hint_timeout)
                             .unwrap_or(false);
 
                     if within_timeout {
@@ -199,11 +200,12 @@ impl TuiAppState {
                 } else if !inner.input.buffer.is_empty() {
                     // Input has text - check for double-tap
                     let now = inner.clock.now_millis();
+                    let exit_hint_timeout = inner.config.timeouts.exit_hint_ms;
                     let within_timeout = inner.display.exit_hint == Some(ExitHint::Escape)
                         && inner
                             .display
                             .exit_hint_shown_at
-                            .map(|t| now.saturating_sub(t) < EXIT_HINT_TIMEOUT_MS)
+                            .map(|t| now.saturating_sub(t) < exit_hint_timeout)
                             .unwrap_or(false);
 
                     if within_timeout {
@@ -412,11 +414,12 @@ impl TuiAppState {
             AppMode::Input => {
                 // Check if within exit hint timeout
                 let now = inner.clock.now_millis();
+                let exit_hint_timeout = inner.config.timeouts.exit_hint_ms;
                 let within_timeout = inner.display.exit_hint == Some(ExitHint::CtrlC)
                     && inner
                         .display
                         .exit_hint_shown_at
-                        .map(|t| now.saturating_sub(t) < EXIT_HINT_TIMEOUT_MS)
+                        .map(|t| now.saturating_sub(t) < exit_hint_timeout)
                         .unwrap_or(false);
 
                 if within_timeout {

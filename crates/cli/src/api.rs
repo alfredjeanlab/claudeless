@@ -36,7 +36,6 @@ pub enum SimulatorError {
 pub struct SimulatorBuilder {
     scenario: ScenarioConfig,
     capture: Option<PathBuf>,
-    delay_ms: Option<u64>,
 }
 
 impl SimulatorBuilder {
@@ -45,7 +44,6 @@ impl SimulatorBuilder {
         Self {
             scenario: ScenarioConfig::default(),
             capture: None,
-            delay_ms: None,
         }
     }
 
@@ -116,12 +114,6 @@ impl SimulatorBuilder {
         self
     }
 
-    /// Set response delay for all responses
-    pub fn delay_ms(mut self, ms: u64) -> Self {
-        self.delay_ms = Some(ms);
-        self
-    }
-
     /// Build an in-process simulator handle
     pub fn build_in_process(self) -> Result<SimulatorHandle, SimulatorError> {
         let scenario = Scenario::from_config(self.scenario)?;
@@ -132,7 +124,6 @@ impl SimulatorBuilder {
         Ok(SimulatorHandle::InProcess {
             scenario: Arc::new(Mutex::new(scenario)),
             capture: Arc::new(capture),
-            delay_ms: self.delay_ms,
         })
     }
 
@@ -154,7 +145,6 @@ impl SimulatorBuilder {
             _temp_dir: temp_dir,
             scenario_path,
             capture_path,
-            delay_ms: self.delay_ms,
         })
     }
 }
@@ -170,7 +160,6 @@ pub enum SimulatorHandle {
     InProcess {
         scenario: Arc<Mutex<Scenario>>,
         capture: Arc<CaptureLog>,
-        delay_ms: Option<u64>,
     },
 }
 
@@ -190,9 +179,7 @@ impl SimulatorHandle {
     /// Execute a simulated request with additional args
     pub fn execute_with_args(&self, prompt: &str, model: Option<&str>) -> String {
         match self {
-            Self::InProcess {
-                scenario, capture, ..
-            } => {
+            Self::InProcess { scenario, capture } => {
                 let mut s = scenario.lock();
 
                 let args = CapturedArgs {
@@ -312,9 +299,7 @@ impl SimulatorHandle {
     /// Reset the scenario match counts
     pub fn reset(&self) {
         match self {
-            Self::InProcess {
-                scenario, capture, ..
-            } => {
+            Self::InProcess { scenario, capture } => {
                 scenario.lock().reset_counts();
                 capture.clear();
             }
@@ -327,13 +312,12 @@ pub struct BinarySimulatorHandle {
     _temp_dir: TempDir,
     scenario_path: PathBuf,
     capture_path: PathBuf,
-    delay_ms: Option<u64>,
 }
 
 impl BinarySimulatorHandle {
     /// Get environment variables to set for subprocess
     pub fn env_vars(&self) -> Vec<(&str, String)> {
-        let mut vars = vec![
+        vec![
             (
                 "CLAUDELESS_SCENARIO",
                 self.scenario_path.to_string_lossy().to_string(),
@@ -342,11 +326,7 @@ impl BinarySimulatorHandle {
                 "CLAUDELESS_CAPTURE",
                 self.capture_path.to_string_lossy().to_string(),
             ),
-        ];
-        if let Some(delay) = self.delay_ms {
-            vars.push(("CLAUDELESS_DELAY_MS", delay.to_string()));
-        }
-        vars
+        ]
     }
 
     /// Get the path to use for the simulator binary

@@ -82,7 +82,7 @@ fn test_compact_separator_width() {
         r#"{
         "default_response": "ok",
         "trusted": true,
-        "compact_delay_ms": 100
+        "timeouts": { "compact_delay_ms": 100 }
     }"#,
     );
     let session = tmux::unique_session("compact-width");

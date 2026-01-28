@@ -128,10 +128,6 @@ pub struct Cli {
     #[arg(long, env = "CLAUDELESS_FAILURE")]
     pub failure: Option<FailureMode>,
 
-    /// Response delay in milliseconds
-    #[arg(long, env = "CLAUDELESS_DELAY_MS")]
-    pub delay_ms: Option<u64>,
-
     /// Tool execution mode (overrides scenario config)
     #[arg(long, value_enum, env = "CLAUDELESS_TOOL_MODE")]
     pub tool_mode: Option<CliToolExecutionMode>,

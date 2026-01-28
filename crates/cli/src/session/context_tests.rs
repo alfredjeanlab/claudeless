@@ -35,7 +35,6 @@ fn default_cli() -> Cli {
         scenario: None,
         capture: None,
         failure: None,
-        delay_ms: None,
         tool_mode: None,
         claude_version: None,
     }

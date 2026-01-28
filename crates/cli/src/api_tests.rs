@@ -114,16 +114,12 @@ fn test_execute_with_args() {
 fn test_binary_handle_env_vars() {
     let handle = SimulatorBuilder::new()
         .respond_to("test", "ok")
-        .delay_ms(100)
         .build_binary()
         .unwrap();
 
     let vars = handle.env_vars();
     assert!(vars.iter().any(|(k, _)| *k == "CLAUDELESS_SCENARIO"));
     assert!(vars.iter().any(|(k, _)| *k == "CLAUDELESS_CAPTURE"));
-    assert!(vars
-        .iter()
-        .any(|(k, v)| *k == "CLAUDELESS_DELAY_MS" && v == "100"));
 }
 
 #[test]

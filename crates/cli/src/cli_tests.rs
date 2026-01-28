@@ -62,8 +62,6 @@ fn test_parse_simulator_flags() {
         "/tmp/capture.jsonl",
         "--failure",
         "rate-limit",
-        "--delay-ms",
-        "100",
         "-p",
         "test",
     ])
@@ -71,7 +69,6 @@ fn test_parse_simulator_flags() {
     assert_eq!(cli.scenario, Some("/path/to/scenario.toml".to_string()));
     assert_eq!(cli.capture, Some("/tmp/capture.jsonl".to_string()));
     assert!(matches!(cli.failure, Some(FailureMode::RateLimit)));
-    assert_eq!(cli.delay_ms, Some(100));
 }
 
 #[test]

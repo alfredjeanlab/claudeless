@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 
-use crate::config::{ScenarioConfig, DEFAULT_MODEL, DEFAULT_USER_NAME};
+use crate::config::{ResolvedTimeouts, ScenarioConfig, DEFAULT_MODEL, DEFAULT_USER_NAME};
 use crate::permission::PermissionMode;
 use crate::tui::widgets::permission::RichPermissionDialog;
 use crate::tui::widgets::trust::TrustChoice;
@@ -22,8 +22,8 @@ pub struct TuiConfig {
     pub permission_mode: PermissionMode,
     /// Whether bypass permissions mode is allowed (requires --dangerously-skip-permissions)
     pub allow_bypass_permissions: bool,
-    /// Delay in milliseconds before compact completes (default: 20)
-    pub compact_delay_ms: Option<u64>,
+    /// Resolved timeout configuration
+    pub timeouts: ResolvedTimeouts,
     /// Explicit Claude version, or None for Claudeless-native mode
     pub claude_version: Option<String>,
     /// Whether output is connected to a TTY
@@ -39,7 +39,7 @@ impl Default for TuiConfig {
             working_directory: std::env::current_dir().unwrap_or_default(),
             permission_mode: PermissionMode::Default,
             allow_bypass_permissions: false,
-            compact_delay_ms: None,
+            timeouts: ResolvedTimeouts::default(),
             claude_version: None,
             is_tty: false,
         }
@@ -88,7 +88,7 @@ impl TuiConfig {
                 .unwrap_or_else(|| std::env::current_dir().unwrap_or_default()),
             permission_mode,
             allow_bypass_permissions,
-            compact_delay_ms: config.compact_delay_ms,
+            timeouts: ResolvedTimeouts::resolve(config.timeouts.as_ref()),
             claude_version,
             is_tty,
         }
@@ -185,9 +185,6 @@ pub enum ExitHint {
     /// "Esc to clear again" (after closing slash menu)
     Escape,
 }
-
-/// Exit hint timeout in milliseconds (2 seconds)
-pub const EXIT_HINT_TIMEOUT_MS: u64 = 2000;
 
 /// Default terminal width when not detected
 pub const DEFAULT_TERMINAL_WIDTH: u16 = 120;

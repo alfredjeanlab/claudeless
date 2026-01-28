@@ -13,7 +13,7 @@ use parking_lot::RwLock;
 
 use claudeless::capture::{CaptureLog, CapturedArgs, CapturedOutcome};
 use claudeless::cli::Cli;
-use claudeless::config::{ResponseSpec, ToolExecutionMode};
+use claudeless::config::{ResolvedTimeouts, ResponseSpec, ToolExecutionMode};
 use claudeless::failure::FailureExecutor;
 use claudeless::mcp::{load_mcp_config, McpConfig, McpManager};
 use claudeless::output::OutputWriter;
@@ -96,17 +96,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    // Apply delay if configured
-    if let Some(delay_ms) = cli.delay_ms {
-        tokio::time::sleep(Duration::from_millis(delay_ms)).await;
-    }
-
     // Load scenario if specified
     let mut scenario = if let Some(ref path) = cli.scenario {
         Some(Scenario::load(Path::new(path))?)
     } else {
         None
     };
+
+    // Apply response delay if configured
+    let timeouts =
+        ResolvedTimeouts::resolve(scenario.as_ref().and_then(|s| s.config().timeouts.as_ref()));
+    if timeouts.response_delay_ms > 0 {
+        tokio::time::sleep(Duration::from_millis(timeouts.response_delay_ms)).await;
+    }
 
     // Match prompt to get response
     let (response, matched_rule) = if let Some(ref mut s) = scenario {

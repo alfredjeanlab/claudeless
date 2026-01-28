@@ -23,9 +23,7 @@ use crate::time::{Clock, ClockHandle};
 use crate::tui::widgets::context::ContextUsage;
 use crate::tui::widgets::permission::{RichPermissionDialog, SessionPermissionKey};
 
-use super::types::{
-    AppMode, ExitReason, RenderState, StatusInfo, TrustPromptState, TuiConfig, EXIT_HINT_TIMEOUT_MS,
-};
+use super::types::{AppMode, ExitReason, RenderState, StatusInfo, TrustPromptState, TuiConfig};
 
 /// Shared state for the TUI app that can be accessed from outside the component
 #[derive(Clone)]
@@ -257,7 +255,8 @@ impl TuiAppState {
             (&inner.display.exit_hint, inner.display.exit_hint_shown_at)
         {
             let now = inner.clock.now_millis();
-            if now.saturating_sub(shown_at) >= EXIT_HINT_TIMEOUT_MS {
+            let exit_hint_timeout = inner.config.timeouts.exit_hint_ms;
+            if now.saturating_sub(shown_at) >= exit_hint_timeout {
                 inner.display.clear_exit_hint();
             }
         }
@@ -268,7 +267,7 @@ impl TuiAppState {
         let mut inner = self.inner.lock();
         if inner.is_compacting {
             if let Some(started) = inner.compacting_started {
-                let delay_ms = inner.config.compact_delay_ms.unwrap_or(20);
+                let delay_ms = inner.config.timeouts.compact_delay_ms;
                 if started.elapsed() >= std::time::Duration::from_millis(delay_ms) {
                     inner.is_compacting = false;
                     inner.compacting_started = None;

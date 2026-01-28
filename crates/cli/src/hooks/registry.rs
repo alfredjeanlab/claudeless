@@ -8,18 +8,28 @@ use super::protocol::HookEvent;
 use std::io::Write;
 use tempfile::TempPath;
 
+/// Default hook timeout in milliseconds
+const DEFAULT_HOOK_TIMEOUT_MS: u64 = 5000;
+
 /// Hook registry for test configuration
 pub struct HookRegistry {
     executor: HookExecutor,
     temp_scripts: Vec<TempPath>,
+    default_timeout_ms: u64,
 }
 
 impl HookRegistry {
-    /// Create a new registry
+    /// Create a new registry with default timeout
     pub fn new() -> Self {
+        Self::with_timeout(DEFAULT_HOOK_TIMEOUT_MS)
+    }
+
+    /// Create a new registry with custom default timeout
+    pub fn with_timeout(default_timeout_ms: u64) -> Self {
         Self {
             executor: HookExecutor::new(),
             temp_scripts: Vec::new(),
+            default_timeout_ms,
         }
     }
 
@@ -50,9 +60,7 @@ impl HookRegistry {
 
         self.executor.register(
             event,
-            HookConfig::new(path.to_path_buf())
-                .with_timeout(5000)
-                .with_blocking(blocking),
+            HookConfig::new(path.to_path_buf(), self.default_timeout_ms).with_blocking(blocking),
         );
 
         self.temp_scripts.push(path);

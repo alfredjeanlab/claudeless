@@ -81,10 +81,9 @@ pub struct ScenarioConfig {
     #[serde(default)]
     pub permission_mode: Option<String>,
 
-    /// Delay in milliseconds before compact completes (default: 20)
-    /// Used for deterministic testing of /compact command
+    /// Timeout configuration
     #[serde(default)]
-    pub compact_delay_ms: Option<u64>,
+    pub timeouts: Option<TimeoutConfig>,
 
     /// Capture specification for recording/playback
     #[serde(default)]
@@ -107,7 +106,7 @@ impl Default for ScenarioConfig {
             working_directory: None,
             trusted: true, // Default to trusted
             permission_mode: None,
-            compact_delay_ms: None,
+            timeouts: None,
             capture: None,
         }
     }
@@ -309,6 +308,72 @@ pub struct ConversationTurn {
     /// Optional failure for this turn
     #[serde(default)]
     pub failure: Option<FailureSpec>,
+}
+
+/// Timeout configuration (scenario [timeouts] section)
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct TimeoutConfig {
+    pub exit_hint_ms: Option<u64>,
+    pub compact_delay_ms: Option<u64>,
+    pub hook_timeout_ms: Option<u64>,
+    pub mcp_timeout_ms: Option<u64>,
+    pub response_delay_ms: Option<u64>,
+}
+
+/// Resolved timeouts with defaults applied
+#[derive(Clone, Debug)]
+pub struct ResolvedTimeouts {
+    pub exit_hint_ms: u64,
+    pub compact_delay_ms: u64,
+    pub hook_timeout_ms: u64,
+    pub mcp_timeout_ms: u64,
+    pub response_delay_ms: u64,
+}
+
+impl ResolvedTimeouts {
+    pub const DEFAULT_EXIT_HINT_MS: u64 = 2000;
+    pub const DEFAULT_COMPACT_DELAY_MS: u64 = 20;
+    pub const DEFAULT_HOOK_TIMEOUT_MS: u64 = 5000;
+    pub const DEFAULT_MCP_TIMEOUT_MS: u64 = 30000;
+    pub const DEFAULT_RESPONSE_DELAY_MS: u64 = 0;
+
+    /// Resolve from optional config with precedence: scenario > env > default
+    pub fn resolve(config: Option<&TimeoutConfig>) -> Self {
+        let cfg = config.cloned().unwrap_or_default();
+        Self {
+            exit_hint_ms: cfg
+                .exit_hint_ms
+                .or_else(|| Self::env_u64("CLAUDELESS_EXIT_HINT_TIMEOUT_MS"))
+                .unwrap_or(Self::DEFAULT_EXIT_HINT_MS),
+            compact_delay_ms: cfg
+                .compact_delay_ms
+                .or_else(|| Self::env_u64("CLAUDELESS_COMPACT_DELAY_MS"))
+                .unwrap_or(Self::DEFAULT_COMPACT_DELAY_MS),
+            hook_timeout_ms: cfg
+                .hook_timeout_ms
+                .or_else(|| Self::env_u64("CLAUDELESS_HOOK_TIMEOUT_MS"))
+                .unwrap_or(Self::DEFAULT_HOOK_TIMEOUT_MS),
+            mcp_timeout_ms: cfg
+                .mcp_timeout_ms
+                .or_else(|| Self::env_u64("CLAUDELESS_MCP_TIMEOUT_MS"))
+                .unwrap_or(Self::DEFAULT_MCP_TIMEOUT_MS),
+            response_delay_ms: cfg
+                .response_delay_ms
+                .or_else(|| Self::env_u64("CLAUDELESS_RESPONSE_DELAY_MS"))
+                .unwrap_or(Self::DEFAULT_RESPONSE_DELAY_MS),
+        }
+    }
+
+    fn env_u64(name: &str) -> Option<u64> {
+        std::env::var(name).ok().and_then(|v| v.parse().ok())
+    }
+}
+
+impl Default for ResolvedTimeouts {
+    fn default() -> Self {
+        Self::resolve(None)
+    }
 }
 
 #[cfg(test)]

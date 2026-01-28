@@ -534,12 +534,14 @@ mod failure_modes {
 mod delay {
     use super::*;
 
-    /// Behavior observed with: claude --version 2.1.12 (Claude Code)
+    /// Response delay via [timeouts] section in scenario
     #[test]
-    fn test_delay_ms_adds_response_delay() {
+    fn test_response_delay_via_scenario_timeouts() {
         let scenario = write_scenario(
             r#"
             name = "test"
+            [timeouts]
+            response_delay_ms = 200
             [[responses]]
             pattern = { type = "any" }
             response = "delayed"
@@ -552,8 +554,6 @@ mod delay {
         cmd.args([
             "--scenario",
             scenario.path().to_str().unwrap(),
-            "--delay-ms",
-            "200",
             "-p",
             "test",
         ])

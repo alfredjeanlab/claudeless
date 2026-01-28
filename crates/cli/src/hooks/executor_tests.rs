@@ -5,7 +5,7 @@ use super::*;
 
 #[test]
 fn test_hook_config_new() {
-    let config = HookConfig::new("/path/to/script.sh");
+    let config = HookConfig::new("/path/to/script.sh", 5000);
     assert_eq!(config.script_path, PathBuf::from("/path/to/script.sh"));
     assert_eq!(config.timeout_ms, 5000);
     assert!(!config.blocking);
@@ -13,7 +13,7 @@ fn test_hook_config_new() {
 
 #[test]
 fn test_hook_config_builder() {
-    let config = HookConfig::new("/script.sh")
+    let config = HookConfig::new("/script.sh", 5000)
         .with_timeout(10000)
         .with_blocking(true);
 
@@ -30,7 +30,10 @@ fn test_hook_executor_new() {
 #[test]
 fn test_hook_executor_register() {
     let mut executor = HookExecutor::new();
-    executor.register(HookEvent::PreToolExecution, HookConfig::new("/script.sh"));
+    executor.register(
+        HookEvent::PreToolExecution,
+        HookConfig::new("/script.sh", 5000),
+    );
 
     assert!(executor.has_hooks(&HookEvent::PreToolExecution));
     assert_eq!(executor.hook_count(&HookEvent::PreToolExecution), 1);
@@ -39,8 +42,8 @@ fn test_hook_executor_register() {
 #[test]
 fn test_hook_executor_clear() {
     let mut executor = HookExecutor::new();
-    executor.register(HookEvent::PreToolExecution, HookConfig::new("/a.sh"));
-    executor.register(HookEvent::PostToolExecution, HookConfig::new("/b.sh"));
+    executor.register(HookEvent::PreToolExecution, HookConfig::new("/a.sh", 5000));
+    executor.register(HookEvent::PostToolExecution, HookConfig::new("/b.sh", 5000));
 
     executor.clear_event(&HookEvent::PreToolExecution);
     assert!(!executor.has_hooks(&HookEvent::PreToolExecution));
@@ -53,8 +56,8 @@ fn test_hook_executor_clear() {
 #[test]
 fn test_hook_executor_registered_events() {
     let mut executor = HookExecutor::new();
-    executor.register(HookEvent::PreToolExecution, HookConfig::new("/a.sh"));
-    executor.register(HookEvent::SessionStart, HookConfig::new("/b.sh"));
+    executor.register(HookEvent::PreToolExecution, HookConfig::new("/a.sh", 5000));
+    executor.register(HookEvent::SessionStart, HookConfig::new("/b.sh", 5000));
 
     let events = executor.registered_events();
     assert_eq!(events.len(), 2);
