@@ -33,7 +33,6 @@ mod error_types {
             ClientError::NotInitialized,
             ClientError::AlreadyInitialized,
             ClientError::ToolNotFound("missing".into()),
-            ClientError::ToolError("failed".into()),
             ClientError::InvalidResponse("bad json".into()),
             ClientError::UnsupportedVersion("1.0".into()),
         ];
