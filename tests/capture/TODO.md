@@ -5,7 +5,6 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 ## TODO
 
 - `hooks_dialog` - Hooks dialog
-- `hooks_matcher_dialog` - Hooks matcher dialog
 - `export_autocomplete` - /export autocomplete
 - `export_filename_dialog` - Export filename dialog
 - `export_method_dialog` - Export method dialog
@@ -87,6 +86,7 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 | `slash_search_filter` | `slash_menu_filtered` |
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 | `with_input` | `with_input` |
 | `shortcuts_display` | `shortcuts_display` |
 | `slash_search_tab_complete` | `slash_search_tab_complete` |
@@ -99,3 +99,6 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 =======
 | `hooks_autocomplete` | `hooks_autocomplete` |
 >>>>>>> 4639cac (Chore: add hooks_autocomplete fixture capture)
+=======
+| `hooks_matcher_dialog` | `hooks_matcher_dialog` |
+>>>>>>> da1da30 (Chore: capture hooks_matcher_dialog fixture)

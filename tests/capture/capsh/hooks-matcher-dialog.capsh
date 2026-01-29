@@ -1,0 +1,19 @@
+# Capture hooks matcher dialog (PreToolUse - Tool Matchers).
+
+wait "for shortcuts" 10s
+
+# Open hooks dialog
+send "/hooks"
+wait "/hooks" 3s
+send <Enter>
+wait "PreToolUse" 3s
+
+# Select first item (PreToolUse) to open matcher dialog
+send <Enter>
+wait "Tool Matchers" 3s
+snapshot "hooks_matcher_dialog"
+
+# Close dialogs and exit
+send <Esc> 100 <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
