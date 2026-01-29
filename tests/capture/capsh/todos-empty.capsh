@@ -1,0 +1,18 @@
+# Capture todos empty state (no todos tracked).
+
+wait "for shortcuts" 10s
+
+# Type /todos and submit
+send "/todos"
+wait "/todos" 3s
+send <Enter>
+wait "No todos currently tracked" 10s
+
+# Wait for idle state (processing complete)
+wait "for shortcuts" 10s
+snapshot "todos_empty"
+
+# Exit
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

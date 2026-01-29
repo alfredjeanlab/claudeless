@@ -5,7 +5,6 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 ## TODO
 
 - `hooks_dialog` - Hooks dialog
-- `todos_empty` - Todos empty state
 - `ctrl_s_stash_active` - Ctrl-S stash active
 - `ctrl_z_suspend` - Ctrl-Z suspend
 - `thinking_off_status` - Status bar with thinking off
@@ -92,33 +91,16 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 | `slash_search_tab_complete` | `slash_search_tab_complete` |
 | `exit_autocomplete` | `exit_autocomplete` |
 | `help_autocomplete` | `help_autocomplete` |
-
-=======
 | `help_commands_tab` | `help_commands_tab` |
->>>>>>> d5aabd1 (Chore: add help-commands-tab capture script)
-=======
 | `hooks_autocomplete` | `hooks_autocomplete` |
->>>>>>> 4639cac (Chore: add hooks_autocomplete fixture capture)
-=======
 | `hooks_matcher_dialog` | `hooks_matcher_dialog` |
->>>>>>> da1da30 (Chore: capture hooks_matcher_dialog fixture)
-=======
 | `export_autocomplete` | `export_autocomplete` |
->>>>>>> f6a0288 (Chore: capture export_autocomplete fixture)
-=======
 | `export_filename_dialog` | `export_filename_dialog` |
->>>>>>> 7d874f0 (Chore: capture export_filename_dialog fixture)
-=======
 | `export_method_dialog` | `export_method_dialog` |
->>>>>>> c10aa0c (Chore: capture export_method_dialog fixture)
-=======
 | `context_autocomplete` | `context_autocomplete` |
->>>>>>> 646039d (Chore: capture context_autocomplete fixture)
-=======
 | `context_usage` | `context_usage` |
->>>>>>> 353db1a (Chore: capture context_usage fixture)
-=======
 | `fork_no_conversation` | `fork_no_conversation` |
+<<<<<<< HEAD
 >>>>>>> 75a6f84 (Chore: capture fork_no_conversation fixture)
 =======
 | `status_bar_extended` | `status_bar_extended` |
@@ -126,3 +108,6 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 =======
 | `tasks_empty_dialog` | `tasks_empty_dialog` |
 >>>>>>> 684fdc4 (Chore: capture tasks_empty_dialog fixture)
+=======
+| `todos_empty` | `todos_empty` |
+>>>>>>> acd03c7 (Chore: capture todos_empty fixture)
