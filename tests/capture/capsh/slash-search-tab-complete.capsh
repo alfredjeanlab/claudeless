@@ -1,0 +1,13 @@
+# Capture tab completion in slash menu.
+
+wait "for shortcuts" 10s
+
+send "/"
+wait "add-dir" 3s
+send <Tab>
+wait 500
+snapshot "slash_search_tab_complete"
+
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
