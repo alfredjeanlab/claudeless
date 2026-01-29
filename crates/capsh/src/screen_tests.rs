@@ -1,5 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 use super::*;
+use tempfile::TempDir;
 
 #[test]
 fn screen_renders_text() {
@@ -26,4 +27,105 @@ fn screen_matches_pattern() {
     screen.feed(b"Ready> ");
     let pattern = Regex::new("Ready>").unwrap();
     assert!(screen.matches(&pattern));
+}
+
+#[test]
+fn screen_render_ansi_includes_escapes() {
+    let mut screen = Screen::new(80, 24);
+    // Bold text: ESC[1m
+    screen.feed(b"\x1b[1mBold\x1b[0m Normal");
+    let ansi = screen.render_ansi();
+
+    // Should contain escape sequences
+    assert!(ansi.contains("\x1b["));
+    // Should contain the text
+    assert!(ansi.contains("Bold"));
+    assert!(ansi.contains("Normal"));
+}
+
+#[test]
+fn screen_render_ansi_handles_colors() {
+    let mut screen = Screen::new(80, 24);
+    // Red foreground: ESC[31m
+    screen.feed(b"\x1b[31mRed\x1b[0m");
+    let ansi = screen.render_ansi();
+
+    assert!(ansi.contains("Red"));
+    // Should have color codes
+    assert!(ansi.contains("\x1b["));
+}
+
+#[test]
+fn screen_changed_detects_differences() {
+    let mut screen = Screen::new(80, 24);
+
+    // Initially changed (no last_frame)
+    assert!(screen.changed());
+
+    // After save, not changed
+    let dir = TempDir::new().unwrap();
+    screen.save_frame(dir.path()).unwrap();
+    assert!(!screen.changed());
+
+    // After new content, changed again
+    screen.feed(b"new content");
+    assert!(screen.changed());
+}
+
+#[test]
+fn screen_save_frame_creates_both_files() {
+    let mut screen = Screen::new(80, 24);
+    screen.feed(b"Hello");
+
+    let dir = TempDir::new().unwrap();
+    let seq = screen.save_frame(dir.path()).unwrap();
+
+    assert_eq!(seq, 1);
+    assert!(dir.path().join("000001.txt").exists());
+    assert!(dir.path().join("000001.ansi.txt").exists());
+    assert!(dir.path().join("latest.txt").exists());
+
+    // Plain text content
+    let plain = std::fs::read_to_string(dir.path().join("000001.txt")).unwrap();
+    assert!(plain.contains("Hello"));
+
+    // ANSI content should also have the text
+    let ansi = std::fs::read_to_string(dir.path().join("000001.ansi.txt")).unwrap();
+    assert!(ansi.contains("Hello"));
+}
+
+#[test]
+fn screen_save_frame_increments_seq() {
+    let mut screen = Screen::new(80, 24);
+    let dir = TempDir::new().unwrap();
+
+    screen.feed(b"frame 1");
+    let seq1 = screen.save_frame(dir.path()).unwrap();
+
+    screen.feed(b"frame 2");
+    let seq2 = screen.save_frame(dir.path()).unwrap();
+
+    assert_eq!(seq1, 1);
+    assert_eq!(seq2, 2);
+    assert!(dir.path().join("000002.txt").exists());
+}
+
+#[test]
+fn pen_to_ansi_empty_for_default() {
+    let pen = avt::Pen::default();
+    let ansi = pen_to_ansi(&pen);
+    assert!(ansi.is_empty());
+}
+
+#[test]
+fn pen_to_ansi_handles_attributes() {
+    // Test via render_ansi with actual terminal sequences
+    let mut screen = Screen::new(80, 24);
+    // Feed bold text (SGR 1)
+    screen.feed(b"\x1b[1mBold\x1b[0m");
+    let ansi = screen.render_ansi();
+
+    // Should contain SGR codes
+    assert!(ansi.contains("\x1b["), "should have escape sequences");
+    assert!(ansi.contains("Bold"), "should have text");
 }

@@ -66,6 +66,48 @@ impl Recording {
         Ok(())
     }
 
+    pub fn log_exit(&mut self, code: i32) -> Result<()> {
+        writeln!(
+            self.jsonl,
+            r#"{{"ms":{},"exit":{}}}"#,
+            self.elapsed_ms(),
+            code
+        )?;
+        Ok(())
+    }
+
+    /// Log when a wait pattern was found on screen.
+    pub fn log_wait_ok(&mut self, pattern: &str) -> Result<()> {
+        let escaped = Self::escape_json(pattern);
+        writeln!(
+            self.jsonl,
+            r#"{{"ms":{},"wait_ok":"{}"}}"#,
+            self.elapsed_ms(),
+            escaped
+        )?;
+        Ok(())
+    }
+
+    /// Log when a wait ended due to EOF without the pattern matching.
+    pub fn log_wait_eof(&mut self, pattern: &str) -> Result<()> {
+        let escaped = Self::escape_json(pattern);
+        writeln!(
+            self.jsonl,
+            r#"{{"ms":{},"wait_eof":"{}"}}"#,
+            self.elapsed_ms(),
+            escaped
+        )?;
+        Ok(())
+    }
+
+    fn escape_json(s: &str) -> String {
+        s.replace('\\', "\\\\")
+            .replace('"', "\\\"")
+            .replace('\n', "\\n")
+            .replace('\r', "\\r")
+            .replace('\t', "\\t")
+    }
+
     pub fn append_raw(&mut self, data: &[u8]) -> Result<()> {
         self.raw.write_all(data)?;
         Ok(())
@@ -77,3 +119,7 @@ impl Recording {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "recording_tests.rs"]
+mod tests;

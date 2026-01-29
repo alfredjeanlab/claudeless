@@ -41,10 +41,12 @@ pub async fn run(config: Config) -> Result<i32> {
             match timeout(Duration::from_millis(10), pty.read(&mut buf)).await {
                 Ok(Ok(0)) => {
                     // EOF
+                    let exit_code = pty.wait().await?;
                     if let Some(ref mut rec) = recording {
+                        rec.log_exit(exit_code)?;
                         rec.flush()?;
                     }
-                    return pty.wait().await;
+                    return Ok(exit_code);
                 }
                 Ok(Ok(n)) => {
                     if let Some(ref mut rec) = recording {
@@ -67,13 +69,30 @@ pub async fn run(config: Config) -> Result<i32> {
 
         match cmd {
             Command::WaitPattern(regex) => {
+                let pattern_str = regex.as_str();
                 let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
                 while !screen.matches(&regex) {
                     if tokio::time::Instant::now() > deadline {
                         return Err(anyhow::anyhow!("timeout waiting for: {}", regex));
                     }
                     match timeout(Duration::from_millis(100), pty.read(&mut buf)).await {
-                        Ok(Ok(0)) => return Err(anyhow::anyhow!("EOF waiting for: {}", regex)),
+                        Ok(Ok(0)) => {
+                            // EOF - child exited. Check if pattern is on screen.
+                            let matched = screen.matches(&regex);
+                            if let Some(ref mut rec) = recording {
+                                if matched {
+                                    rec.log_wait_ok(pattern_str)?;
+                                } else {
+                                    rec.log_wait_eof(pattern_str)?;
+                                }
+                            }
+                            let exit_code = pty.wait().await?;
+                            if let Some(ref mut rec) = recording {
+                                rec.log_exit(exit_code)?;
+                                rec.flush()?;
+                            }
+                            return Ok(exit_code);
+                        }
                         Ok(Ok(n)) => {
                             if let Some(ref mut rec) = recording {
                                 rec.append_raw(&buf[..n])?;
@@ -91,6 +110,10 @@ pub async fn run(config: Config) -> Result<i32> {
                         Ok(Err(e)) => return Err(e),
                         Err(_) => {} // Timeout, keep waiting
                     }
+                }
+                // Pattern matched normally
+                if let Some(ref mut rec) = recording {
+                    rec.log_wait_ok(pattern_str)?;
                 }
             }
             Command::WaitMs(ms) => {
@@ -136,10 +159,12 @@ pub async fn run(config: Config) -> Result<i32> {
         }
     }
 
+    let exit_code = pty.wait().await?;
     if let Some(ref mut rec) = recording {
+        rec.log_exit(exit_code)?;
         rec.flush()?;
     }
-    pty.wait().await
+    Ok(exit_code)
 }
 
 /// Format send bytes for log (reverse of parse_send_args).

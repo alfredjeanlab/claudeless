@@ -121,7 +121,7 @@ send "command\n"
 
 When `--frames` is specified, capsh creates:
 
-```
+```diagram
 frames/
 ├── 000001.txt       # Plain text frame
 ├── 000001.ansi.txt  # Frame with ANSI colors
