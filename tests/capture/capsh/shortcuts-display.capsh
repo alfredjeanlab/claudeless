@@ -1,0 +1,12 @@
+# Capture keyboard shortcuts display.
+
+wait "for shortcuts" 10s
+
+send "?"
+wait "for bash mode" 3s
+snapshot "shortcuts_display"
+
+# Exit
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

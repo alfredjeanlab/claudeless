@@ -4,7 +4,6 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 
 ## TODO
 
-- `shortcuts_display` - Keyboard shortcuts display
 - `slash_search_tab_complete` - Tab completion in slash menu
 - `exit_autocomplete` - /exit autocomplete
 - `help_autocomplete` - /help autocomplete
@@ -92,3 +91,4 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 | `slash_search_menu` | `slash_menu` |
 | `slash_search_filter` | `slash_menu_filtered` |
 | `with_input` | `with_input` |
+| `shortcuts_display` | `shortcuts_display` |
