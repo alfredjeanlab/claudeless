@@ -26,8 +26,6 @@ pub mod api;
 /// Interaction capture and recording for test assertions.
 pub mod capture;
 #[doc(hidden)]
-pub mod capture_spec;
-#[doc(hidden)]
 pub mod cli;
 #[doc(hidden)]
 pub mod config;

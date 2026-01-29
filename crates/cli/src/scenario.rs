@@ -3,7 +3,6 @@
 
 //! Scenario matching and loading.
 
-use crate::capture_spec::CaptureSpecError;
 use crate::config::{FailureSpec, PatternSpec, ResponseSpec, ScenarioConfig, ToolCallSpec};
 use std::path::Path;
 use std::sync::Arc;
@@ -36,9 +35,6 @@ pub enum ScenarioError {
         #[source]
         source: std::io::Error,
     },
-
-    #[error("Invalid capture spec: {0}")]
-    CaptureSpec(#[from] CaptureSpecError),
 }
 
 /// Result of matching a prompt
@@ -160,11 +156,6 @@ impl Scenario {
                     mode, valid
                 )));
             }
-        }
-
-        // Validate capture spec if present
-        if let Some(ref capture) = config.capture {
-            capture.validate()?;
         }
 
         // Compile response patterns and turn patterns
