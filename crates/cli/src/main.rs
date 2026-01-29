@@ -24,7 +24,9 @@ use claudeless::state::session::SessionManager;
 use claudeless::state::StateWriter;
 use claudeless::time::ClockHandle;
 use claudeless::tools::builtin::BuiltinExecutor;
-use claudeless::tools::{create_executor, ExecutionContext, ToolExecutor};
+use claudeless::tools::{
+    create_executor, CompositeExecutor, ExecutionContext, McpToolExecutor, ToolExecutor,
+};
 use claudeless::tui::{ExitReason, TuiApp, TuiConfig};
 
 #[tokio::main]
@@ -41,12 +43,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(1);
     }
 
-    // Load MCP configuration if specified
-    let _mcp_manager = load_mcp_configs(&cli)?;
+    // Load and initialize MCP servers
+    let mcp_manager = load_mcp_configs(&cli).await?;
 
     // Check for TUI mode first
     if cli.should_use_tui() {
-        return run_tui_mode(&cli, bypass.is_active());
+        return run_tui_mode(&cli, bypass.is_active(), mcp_manager).await;
     }
 
     // In non-TUI mode (print mode), require a prompt
@@ -235,10 +237,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ctx = ctx.with_cwd(cwd);
             }
 
-            // Create executor with state writer for stateful tools
+            // Create executor with state writer for stateful tools and MCP support
             let executor: Box<dyn ToolExecutor> = match execution_mode {
                 ToolExecutionMode::Live => {
-                    Box::new(BuiltinExecutor::new().with_state_writer(Arc::clone(&state_writer)))
+                    // Create composite executor with MCP support
+                    let builtin =
+                        BuiltinExecutor::new().with_state_writer(Arc::clone(&state_writer));
+                    let mcp = mcp_manager
+                        .as_ref()
+                        .map(|m| McpToolExecutor::new(Arc::clone(m)));
+                    Box::new(CompositeExecutor::new(mcp, builtin))
                 }
                 _ => create_executor(execution_mode),
             };
@@ -283,15 +291,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     stdout.flush()?;
 
+    // Shutdown MCP servers gracefully
+    if let Some(mgr) = mcp_manager {
+        shutdown_mcp_manager(mgr).await;
+    }
+
     Ok(())
 }
 
-/// Load MCP configurations from CLI flags
-fn load_mcp_configs(cli: &Cli) -> Result<McpManager, Box<dyn std::error::Error>> {
+/// Shutdown MCP manager gracefully.
+///
+/// Attempts to take exclusive ownership for clean shutdown. Falls back to
+/// holding the lock across await if other references exist (safe at exit time).
+#[allow(clippy::await_holding_lock)]
+async fn shutdown_mcp_manager(mgr: Arc<RwLock<McpManager>>) {
+    match Arc::try_unwrap(mgr) {
+        Ok(rwlock) => {
+            rwlock.into_inner().shutdown().await;
+        }
+        Err(arc) => {
+            // Other references exist; holding lock across await is safe at exit
+            arc.write().shutdown().await;
+        }
+    }
+}
+
+/// Load and initialize MCP servers from CLI flags.
+async fn load_mcp_configs(
+    cli: &Cli,
+) -> Result<Option<Arc<RwLock<McpManager>>>, Box<dyn std::error::Error>> {
     if cli.mcp_config.is_empty() {
-        return Ok(McpManager::new());
+        return Ok(None);
     }
 
+    // Load config files
     let mut configs = Vec::new();
     for config_input in &cli.mcp_config {
         match load_mcp_config(config_input) {
@@ -304,23 +337,58 @@ fn load_mcp_configs(cli: &Cli) -> Result<McpManager, Box<dyn std::error::Error>>
     }
 
     let merged = McpConfig::merge(configs);
-    let manager = McpManager::from_config(&merged);
+    let mut manager = McpManager::from_config(&merged);
 
     if cli.mcp_debug {
         eprintln!(
-            "MCP: Loaded {} server(s): {:?}",
+            "MCP: Loading {} server(s): {:?}",
             manager.server_count(),
             manager.server_names()
         );
     }
 
-    Ok(manager)
+    // Initialize servers (spawn processes, discover tools)
+    let results = manager.initialize().await;
+
+    // Handle initialization results
+    for (name, result) in &results {
+        match result {
+            Ok(()) => {
+                if cli.mcp_debug {
+                    if let Some(server) = manager.get_server(name) {
+                        eprintln!(
+                            "MCP: Server '{}' started with {} tool(s): {:?}",
+                            name,
+                            server.tools.len(),
+                            server.tool_names()
+                        );
+                    }
+                }
+            }
+            Err(e) => {
+                if cli.strict_mcp_config {
+                    eprintln!("MCP error: Server '{}' failed to start: {}", name, e);
+                    std::process::exit(1);
+                } else if cli.mcp_debug {
+                    eprintln!("MCP warning: Server '{}' failed to start: {}", name, e);
+                }
+            }
+        }
+    }
+
+    // Check if any servers are running
+    if manager.running_server_count() == 0 && cli.mcp_debug {
+        eprintln!("MCP: No servers running");
+    }
+
+    Ok(Some(Arc::new(RwLock::new(manager))))
 }
 
-/// Run in TUI mode
-fn run_tui_mode(
+/// Run in TUI mode with MCP support
+async fn run_tui_mode(
     cli: &Cli,
     allow_bypass_permissions: bool,
+    mcp_manager: Option<Arc<RwLock<McpManager>>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Ignore SIGINT so Ctrl+C is captured as a key event rather than killing the process.
     // This is required because raw mode alone doesn't prevent SIGINT generation on macOS/tmux.
@@ -367,6 +435,11 @@ fn run_tui_mode(
     // Print exit message if any (e.g., farewell from /exit)
     if let Some(msg) = app.exit_message() {
         println!("{}", msg);
+    }
+
+    // Shutdown MCP servers before exiting
+    if let Some(mgr) = mcp_manager {
+        shutdown_mcp_manager(mgr).await;
     }
 
     match exit_reason {

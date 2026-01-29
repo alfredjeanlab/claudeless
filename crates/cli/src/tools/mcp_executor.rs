@@ -11,7 +11,7 @@ use super::builtin::BuiltinExecutor;
 use super::executor::{ExecutionContext, ToolExecutor};
 use super::result::ToolExecutionResult;
 use crate::config::ToolCallSpec;
-use crate::mcp::server::McpManager;
+use crate::mcp::McpManager;
 
 /// Executor that handles MCP tool calls.
 pub struct McpToolExecutor {

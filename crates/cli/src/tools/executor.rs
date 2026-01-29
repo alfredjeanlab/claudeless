@@ -9,7 +9,7 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 
 use crate::config::{ToolCallSpec, ToolExecutionMode};
-use crate::mcp::server::McpManager;
+use crate::mcp::McpManager;
 use crate::permission::{PermissionChecker, PermissionResult};
 
 use super::mcp_executor::{CompositeExecutor, McpToolExecutor};
@@ -214,6 +214,7 @@ pub fn create_executor_with_mcp_and_permissions(
     let inner = create_executor_with_mcp(mode, mcp_manager);
     Box::new(PermissionCheckingExecutor::new(inner, checker))
 }
+
 
 #[cfg(test)]
 #[path = "executor_tests.rs"]

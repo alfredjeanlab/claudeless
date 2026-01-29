@@ -78,7 +78,10 @@ mod config_loading {
 
     #[test]
     fn test_strict_mcp_config_flag() {
-        let config = write_config(r#"{"mcpServers":{"only":{"command":"echo"}}}"#);
+        // With strict mode, invalid MCP server commands should cause exit
+        // This tests that --strict-mcp-config is recognized as a flag
+        // We use a command that doesn't speak MCP protocol to verify it fails
+        let config = write_config(r#"{"mcpServers":{"bad":{"command":"nonexistent_cmd_xyz"}}}"#);
 
         let mut cmd = Command::cargo_bin("claudeless").unwrap();
         cmd.args([
@@ -89,7 +92,8 @@ mod config_loading {
             "hello",
         ])
         .assert()
-        .success();
+        .failure()
+        .stderr(predicate::str::contains("failed to start"));
     }
 
     #[test]
