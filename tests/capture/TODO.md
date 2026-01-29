@@ -4,7 +4,6 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 
 ## TODO
 
-- `help_autocomplete` - /help autocomplete
 - `help_commands_tab` - Help dialog commands tab
 - `hooks_autocomplete` - /hooks autocomplete
 - `hooks_dialog` - Hooks dialog
@@ -92,3 +91,5 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 | `shortcuts_display` | `shortcuts_display` |
 | `slash_search_tab_complete` | `slash_search_tab_complete` |
 | `exit_autocomplete` | `exit_autocomplete` |
+| `help_autocomplete` | `help_autocomplete` |
+
