@@ -2,17 +2,16 @@
 
 wait "for shortcuts" 10s
 
-# Type shell mode prefix
+# Type shell mode prefix and wait for it to render
 send "!"
-wait 100
+wait "! for bash mode" 3s
 snapshot "shell_mode_prefix"
 
 # Add a command
 send "ls -la"
-wait 100
+wait "ls -la" 3s
 snapshot "shell_mode_command"
 
-# Clear and exit
-send <C-u> 100 "/exit" 100 <Enter>
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
 wait 500
 kill TERM

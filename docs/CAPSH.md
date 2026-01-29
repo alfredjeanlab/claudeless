@@ -135,6 +135,93 @@ kill 9                # Same
 
 Supported signals: HUP, INT, QUIT, KILL, TERM, USR1, USR2, STOP, CONT.
 
+### if / else if / else / end
+
+Conditional execution based on wait result.
+
+```
+if wait "pattern" [timeout]
+    # commands if pattern matches
+else if wait "other" [timeout]
+    # commands if other matches
+else
+    # commands if all conditions timeout (optional)
+end
+```
+
+The `else` and `else if` blocks are optional. Unlike regular `wait`, `if wait` does not error on timeout - it executes the else branch instead.
+
+**Example:**
+```
+if wait "Ctrl-C again" 2s
+    snapshot "with_hint"
+else
+    snapshot "no_hint"
+end
+```
+
+**Chained conditions:**
+```
+if wait "Ready" 2s
+    snapshot "ready"
+else if wait "Loading" 2s
+    snapshot "loading"
+else if wait "Error" 2s
+    snapshot "error"
+else
+    snapshot "unknown"
+end
+```
+
+Supports negation:
+```
+if wait !"Loading" 5s
+    snapshot "loaded"
+end
+```
+
+### match
+
+Wait for the first of multiple patterns to appear, then execute corresponding commands.
+
+```
+match [timeout]
+    "pattern1" -> command
+    "pattern2" ->
+        command1
+        command2
+    ...
+else
+    # commands if no pattern matches (optional)
+end
+```
+
+Unlike chained `if wait` statements, `match` checks all patterns against the current screen simultaneously. The first pattern that matches wins.
+
+**Inline command:**
+```
+match 3s
+    "Sonnet" -> snapshot "model_sonnet"
+    "Opus" -> snapshot "model_opus"
+    "Haiku" -> snapshot "model_haiku"
+else
+    snapshot "unknown_model"
+end
+```
+
+**Block commands:**
+```
+match 3s
+    "Sonnet" ->
+        snapshot "model_sonnet"
+        send "selected sonnet\n"
+    "Opus" ->
+        snapshot "model_opus"
+        send "selected opus\n"
+    "Haiku" -> snapshot "model_haiku"
+end
+```
+
 ### Comments
 
 Lines starting with `#` are ignored.
@@ -187,6 +274,7 @@ JSON Lines file with timing information:
 | `wait_match` | Wait pattern matched successfully |
 | `wait_timeout` | Wait timed out without matching |
 | `wait_eof` | Wait ended due to EOF without matching |
+| `match_timeout` | Match timed out; value is array of patterns |
 | `kill` | Signal sent to child process |
 | `exit` | Process exit code |
 

@@ -1,0 +1,10 @@
+# Capture header showing Sonnet model.
+# Args: --model sonnet
+
+wait "for shortcuts" 10s
+wait "Sonnet 4.5" 3s
+snapshot "model_sonnet"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

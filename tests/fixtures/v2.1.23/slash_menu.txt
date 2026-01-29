@@ -1,0 +1,23 @@
+
+▗ ▗   ▖ ▖  Claude Code v2.1.23
+           Haiku 4.5 · Claude Max
+  ▘▘ ▝▝    ~/Developer/claudeless
+
+────────────────────────────────────────────────────────────────────────────────
+❯ /
+────────────────────────────────────────────────────────────────────────────────
+  /add-dir                Add a new working directory
+  /agents                 Manage agent configurations
+  /chrome                 Claude in Chrome (Beta) settings
+  /clear                  Clear conversation history and free up context
+  /compact                Clear conversation history but keep a summary in co…
+  /config                 Open config panel
+
+
+
+
+
+
+
+
+

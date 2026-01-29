@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: check install license outdated lint lint-shell lint-policy capture capture-experimental
+.PHONY: check install license outdated lint lint-shell lint-policy capture capture-retry capture-skipped
 
 # Run all CI checks
 check: lint
@@ -46,10 +46,14 @@ lint-policy:
 license:
 	@scripts/license
 
-# Capture TUI fixtures from real Claude CLI (reliable scripts only)
+# Capture TUI fixtures from real Claude CLI
 capture:
-	./tests/capture/capture.sh --skip-requires-config
+	./tests/capture/capture.sh
 
-# Capture all TUI fixtures including experimental (may fail)
-capture-experimental:
-	RUN_EXPERIMENTAL=1 ./tests/capture/capture.sh
+# Retry only failed capture scripts
+capture-retry:
+	./tests/capture/capture.sh --retry
+
+# Capture all TUI fixtures including skipped (may fail)
+capture-skipped:
+	RUN_SKIPPED=1 ./tests/capture/capture.sh

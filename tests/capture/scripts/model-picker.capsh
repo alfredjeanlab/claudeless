@@ -1,0 +1,13 @@
+# Capture model picker dialog.
+# Args: --model haiku
+
+wait "for shortcuts" 10s
+
+# Open model picker
+send <M-p>
+wait "Select model" 3s
+snapshot "model_picker"
+
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

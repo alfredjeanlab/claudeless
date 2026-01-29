@@ -1,21 +1,8 @@
-# Experimental Scripts
+# Skipped Scripts
 
 Scripts in this directory capture states that we are still working on reproducing reliably.
 
 ## Challenges
-
-### permission-dialogs.capsh
-
-Captures permission request dialogs. Challenges:
-
-- Need Claude to request a specific permission (bash, file edit, etc.)
-- Response timing is unpredictable
-- Requires actual API interaction
-
-Potential approaches:
-- Mock API server that returns permission-requesting responses
-- Pre-recorded sessions with known timing
-- CI environment with specific prompts
 
 ### after-response.capsh
 
@@ -33,14 +20,14 @@ Captures context compaction states. Challenges:
 - Compaction timing is model-dependent
 - Requires multiple interactions
 
-## Running Experimental Scripts
+## Running Skipped Scripts
 
 ```bash
-# Run all including experimental (may fail)
-RUN_EXPERIMENTAL=1 ./capture-all.sh
+# Run all including skipped (may fail)
+RUN_SKIPPED=1 ./capture.sh
 
-# Run single experimental script manually
-capsh --frames /tmp/experimental -- claude < experimental/permission-dialogs.capsh
+# Run single skipped script manually
+capsh --frames /tmp/skipped -- claude < skipped/permission-dialogs.capsh
 ```
 
 ## Contributing

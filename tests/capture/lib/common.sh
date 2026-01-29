@@ -5,9 +5,13 @@
 set -euo pipefail
 
 # Colors for output
+BOLD='\033[1m'
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
+YELLOW='\033[0;33m'
+CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+DIM='\033[0;90m'
 NC='\033[0m' # No Color
 
 # Detect Claude CLI version
@@ -45,7 +49,7 @@ extract_fixtures() {
                 if [[ -f "$plain_frame" ]]; then
                     cp "$plain_frame" "$fixtures_dir/${fixture_name}.txt"
                     ((count++)) || true
-                    echo -e "${GREEN}  $fixture_name${NC}"
+                    echo -e "${DIM}  $fixture_name${NC}"
                 else
                     echo -e "${YELLOW}Warning: Frame $frame_num not found for $fixture_name${NC}" >&2
                 fi
@@ -109,8 +113,8 @@ run_capture() {
     local claude_args
     claude_args=$(parse_claude_args "$script")
 
-    echo -e "${GREEN}Running: $script_name${NC}"
-    [[ -n "$claude_args" ]] && echo -e "  ${YELLOW}Args: $claude_args${NC}"
+    echo -e "Running: ${CYAN}$script_name${NC}"
+    [[ -n "$claude_args" ]] && echo -e "  Args: ${CYAN}$claude_args${NC}"
 
     # Run capsh with timeout
     # shellcheck disable=SC2086  # intentional word splitting for claude_args

@@ -155,6 +155,24 @@ impl Recording {
         Ok(())
     }
 
+    /// Log when a match statement timed out without any pattern matching.
+    pub fn log_match_timeout(&mut self, patterns: &[&str]) -> Result<()> {
+        let escaped: Vec<_> = patterns.iter().map(|p| Self::escape_json(p)).collect();
+        let json_array = escaped
+            .iter()
+            .map(|s| format!("\"{}\"", s))
+            .collect::<Vec<_>>()
+            .join(",");
+        writeln!(
+            self.jsonl,
+            r#"{{"ms":{},"match_timeout":[{}]}}"#,
+            self.elapsed_ms(),
+            json_array
+        )?;
+        self.jsonl.flush()?;
+        Ok(())
+    }
+
     fn escape_json(s: &str) -> String {
         s.replace('\\', "\\\\")
             .replace('"', "\\\"")

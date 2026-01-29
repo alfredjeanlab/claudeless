@@ -1,11 +1,10 @@
 #!/bin/bash
 # Master script for capturing TUI fixtures from Claude CLI
 #
-# Usage: capture-all.sh [--skip-experimental] [--skip-requires-config]
+# Usage: capture.sh [OPTIONS]
 #
 # Environment variables:
-#   SKIP_REQUIRES_CONFIG=1  Skip scripts requiring special configuration
-#   RUN_EXPERIMENTAL=1      Run experimental scripts (may fail)
+#   RUN_SKIPPED=1  Run skipped scripts (may fail)
 
 set -euo pipefail
 
@@ -14,21 +13,26 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/common.sh"
 
 # Parse arguments
-SKIP_REQUIRES_CONFIG="${SKIP_REQUIRES_CONFIG:-0}"
-RUN_EXPERIMENTAL="${RUN_EXPERIMENTAL:-0}"
+RUN_SKIPPED="${RUN_SKIPPED:-0}"
+RETRY_MODE=0
+SINGLE_SCRIPT=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --skip-requires-config)
-            SKIP_REQUIRES_CONFIG=1
+        --retry)
+            RETRY_MODE=1
             shift
             ;;
-        --skip-experimental)
-            RUN_EXPERIMENTAL=0
+        --script)
+            SINGLE_SCRIPT="$2"
+            shift 2
+            ;;
+        --skip-skipped)
+            RUN_SKIPPED=0
             shift
             ;;
-        --run-experimental)
-            RUN_EXPERIMENTAL=1
+        --run-skipped)
+            RUN_SKIPPED=1
             shift
             ;;
         -h|--help)
@@ -37,14 +41,14 @@ while [[ $# -gt 0 ]]; do
             echo "Capture TUI fixtures from real Claude CLI using capsh scripts."
             echo ""
             echo "Options:"
-            echo "  --skip-requires-config  Skip scripts needing special configuration"
-            echo "  --skip-experimental     Skip experimental scripts (default)"
-            echo "  --run-experimental      Run experimental scripts (may fail)"
+            echo "  --script <name>         Run only the specified script (without .capsh)"
+            echo "  --retry                 Only re-run failed scripts from previous run"
+            echo "  --skip-skipped          Skip skipped scripts (default)"
+            echo "  --run-skipped           Run skipped scripts (may fail)"
             echo "  -h, --help              Show this help"
             echo ""
             echo "Environment variables:"
-            echo "  SKIP_REQUIRES_CONFIG=1  Same as --skip-requires-config"
-            echo "  RUN_EXPERIMENTAL=1      Same as --run-experimental"
+            echo "  RUN_SKIPPED=1           Same as --run-skipped"
             exit 0
             ;;
         *)
@@ -65,15 +69,68 @@ if [[ -z "$VERSION" ]]; then
     exit 1
 fi
 
-echo -e "${GREEN}Claude CLI version: $VERSION${NC}"
+echo -e "${BOLD}Claude CLI version:${NC} ${GREEN}$VERSION${NC}"
 
 # Raw output goes in git-ignored directory
 RAW_OUTPUT="$SCRIPT_DIR/output/v${VERSION}"
 # Fixtures go in tests/fixtures/
 FIXTURES_DIR="$(dirname "$SCRIPT_DIR")/fixtures/v${VERSION}"
+# Track failures
+FAILURES_FILE="$RAW_OUTPUT/.failures"
 
-# Clean previous output
-rm -rf "$RAW_OUTPUT" "$FIXTURES_DIR"
+# Check if script should run (retry mode and single script logic)
+should_run_script() {
+    local script_name="$1"
+
+    # Single script mode: only run the specified script
+    if [[ -n "$SINGLE_SCRIPT" ]]; then
+        [[ "$script_name" == "$SINGLE_SCRIPT" ]]
+        return $?
+    fi
+
+    if [[ "$RETRY_MODE" != "1" ]]; then
+        return 0  # Not in retry mode, run everything
+    fi
+
+    # In retry mode: run if in failures file
+    if [[ -f "$FAILURES_FILE" ]] && grep -q "^${script_name}$" "$FAILURES_FILE"; then
+        return 0
+    fi
+
+    return 1  # Skip in retry mode
+}
+
+# Record failure
+record_failure() {
+    local script_name="$1"
+    echo "$script_name" >> "$FAILURES_FILE"
+}
+
+# Clear failure (on success)
+clear_failure() {
+    local script_name="$1"
+    if [[ -f "$FAILURES_FILE" ]]; then
+        grep -v "^${script_name}$" "$FAILURES_FILE" > "$FAILURES_FILE.tmp" || true
+        mv "$FAILURES_FILE.tmp" "$FAILURES_FILE"
+    fi
+}
+
+# Clean or preserve output based on mode
+if [[ "$RETRY_MODE" == "1" ]]; then
+    echo "Retry mode: only re-running failed scripts"
+    if [[ -f "$FAILURES_FILE" ]]; then
+        echo -e "${DIM}Failures to retry: $(wc -l < "$FAILURES_FILE" | tr -d ' ')${NC}"
+    else
+        echo -e "${YELLOW}No failures file found, nothing to retry${NC}"
+        exit 0
+    fi
+elif [[ -n "$SINGLE_SCRIPT" ]]; then
+    # Single script mode: only clean that script's output
+    rm -rf "$RAW_OUTPUT/$SINGLE_SCRIPT"
+else
+    # Clean previous output
+    rm -rf "$RAW_OUTPUT" "$FIXTURES_DIR"
+fi
 mkdir -p "$RAW_OUTPUT" "$FIXTURES_DIR"
 
 TOTAL=0
@@ -85,59 +142,53 @@ run_script() {
     local script="$1"
     local timeout="$2"
     local allow_failure="${3:-false}"
-
-    ((TOTAL++)) || true
+    local script_name
+    script_name=$(basename "$script" .capsh)
 
     if [[ ! -f "$script" ]]; then
-        echo -e "${YELLOW}Skipping: $script (not found)${NC}"
-        ((SKIPPED++)) || true
         return 0
     fi
 
+    # Check if we should run this script
+    if ! should_run_script "$script_name"; then
+        return 0
+    fi
+
+    ((TOTAL++)) || true
+
     if run_capture "$script" "$RAW_OUTPUT" "$FIXTURES_DIR" "$timeout"; then
         ((PASSED++)) || true
+        clear_failure "$script_name"
     else
         if [[ "$allow_failure" == "true" ]]; then
-            echo -e "${YELLOW}Experimental script failed (expected): $(basename "$script")${NC}"
+            echo -e "${YELLOW}Skipped script failed (expected): $script_name${NC}"
             ((SKIPPED++)) || true
         else
             ((FAILED++)) || true
+            record_failure "$script_name"
         fi
     fi
 }
 
 # Run reliable scripts (keyboard interactions only)
 echo ""
-echo -e "${GREEN}=== Running reliable scripts ===${NC}"
+echo "=== Running reliable scripts ==="
 for script in "$SCRIPT_DIR"/reliable/*.capsh; do
     [[ -f "$script" ]] || continue
     run_script "$script" "$KEYBOARD_TIMEOUT"
 done
 
-# Run requires-config scripts (optional)
-if [[ "$SKIP_REQUIRES_CONFIG" != "1" ]]; then
+# Run skipped scripts (may involve API calls)
+if [[ "$RUN_SKIPPED" == "1" ]]; then
     echo ""
-    echo -e "${GREEN}=== Running requires-config scripts ===${NC}"
-    for script in "$SCRIPT_DIR"/requires-config/*.capsh; do
-        [[ -f "$script" ]] || continue
-        run_script "$script" "$KEYBOARD_TIMEOUT"
-    done
-else
-    echo ""
-    echo -e "${YELLOW}=== Skipping requires-config scripts ===${NC}"
-fi
-
-# Run experimental scripts (may involve API calls)
-if [[ "$RUN_EXPERIMENTAL" == "1" ]]; then
-    echo ""
-    echo -e "${YELLOW}=== Running experimental scripts (may fail) ===${NC}"
-    for script in "$SCRIPT_DIR"/experimental/*.capsh; do
+    echo -e "${YELLOW}=== Running skipped scripts (may fail) ===${NC}"
+    for script in "$SCRIPT_DIR"/skipped/*.capsh; do
         [[ -f "$script" ]] || continue
         run_script "$script" "$THINKING_TIMEOUT" true
     done
 else
     echo ""
-    echo -e "${YELLOW}=== Skipping experimental scripts ===${NC}"
+    echo "=== Skipping skipped scripts ==="
 fi
 
 # Summary
@@ -148,9 +199,12 @@ echo -e "${GREEN}Passed: $PASSED${NC}"
 echo -e "${YELLOW}Skipped: $SKIPPED${NC}"
 if [[ $FAILED -gt 0 ]]; then
     echo -e "${RED}Failed: $FAILED${NC}"
+    echo -e "${DIM}Run with --retry to re-run only failed scripts${NC}"
     exit 1
 else
     echo "Failed: $FAILED"
+    # Clear failures file on full success
+    rm -f "$FAILURES_FILE"
 fi
 
 echo ""

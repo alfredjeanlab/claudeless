@@ -1,0 +1,15 @@
+# Capture help response.
+
+wait "for shortcuts" 10s
+
+# Type /help and wait for autocomplete, then submit
+send "/help"
+wait "/help" 3s
+send <Enter>
+wait "claude.com" 10s
+snapshot "help_response"
+
+# Exit
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

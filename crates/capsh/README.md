@@ -55,6 +55,14 @@ snapshot           # Force save frame even if unchanged
 snapshot "name"    # Named snapshot (recorded in jsonl)
 kill SIGTERM       # Send signal to child process
 kill 9             # Send signal by number
+if wait "pat" 2s   # Conditional on wait result
+else if wait "x"   # Optional else-if chain
+else               # Optional else branch
+end                # End if block
+match 3s           # Wait for first matching pattern
+    "A" -> snap    # Pattern arms with commands
+else               # Optional else on timeout
+end                # End match block
 ```
 
 ### Special Keys

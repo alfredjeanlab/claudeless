@@ -1,0 +1,17 @@
+# Capture the "Press Ctrl-C again to exit" hint.
+# Note: Ctrl-C cannot be sent correctly via PTY in raw mode.
+
+wait "for shortcuts" 10s
+
+# Type some text
+send "hello world"
+wait "hello world" 3s
+
+# Send Ctrl-C
+send <C-c>
+wait "Ctrl-C" 5s
+snapshot "ctrl_c_hint"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

@@ -1,0 +1,10 @@
+# Capture header showing Opus model.
+# Args: --model opus
+
+wait "for shortcuts" 10s
+wait "Opus 4.5" 3s
+snapshot "model_opus"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

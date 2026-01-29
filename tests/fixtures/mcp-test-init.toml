@@ -1,0 +1,20 @@
+# Scenario: MCP Server Initialization Test
+# Lists available tools including MCP tools
+
+name = "mcp-init-test"
+
+[[responses]]
+pattern = { type = "contains", text = "tool" }
+response = """I have access to the following MCP filesystem tools:
+- mcp__filesystem__read_file
+- mcp__filesystem__write_file
+- mcp__filesystem__list_directory
+- mcp__filesystem__create_directory
+- mcp__filesystem__move_file
+- mcp__filesystem__search_files
+- mcp__filesystem__get_file_info
+"""
+
+[[responses]]
+pattern = { type = "any" }
+response = "Hello! I'm ready to help with MCP filesystem operations."
