@@ -1,0 +1,145 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC
+
+//! MCP tool executor for routing tool calls to MCP servers.
+
+use std::sync::Arc;
+
+use parking_lot::RwLock;
+
+use super::builtin::BuiltinExecutor;
+use super::executor::{ExecutionContext, ToolExecutor};
+use super::result::ToolExecutionResult;
+use crate::config::ToolCallSpec;
+use crate::mcp::server::McpManager;
+
+/// Executor that handles MCP tool calls.
+pub struct McpToolExecutor {
+    /// Shared MCP manager with server connections.
+    manager: Arc<RwLock<McpManager>>,
+}
+
+impl McpToolExecutor {
+    /// Create a new MCP tool executor.
+    pub fn new(manager: Arc<RwLock<McpManager>>) -> Self {
+        Self { manager }
+    }
+
+    /// Check if a tool is handled by MCP.
+    pub fn has_tool(&self, name: &str) -> bool {
+        self.manager.read().has_tool(name)
+    }
+}
+
+impl ToolExecutor for McpToolExecutor {
+    fn execute(
+        &self,
+        call: &ToolCallSpec,
+        tool_use_id: &str,
+        _ctx: &ExecutionContext,
+    ) -> ToolExecutionResult {
+        // Check if we handle this tool
+        let manager = self.manager.read();
+        if !manager.has_tool(&call.tool) {
+            return ToolExecutionResult::error(
+                tool_use_id,
+                format!("MCP tool not found: {}", call.tool),
+            );
+        }
+
+        // Bridge async to sync using tokio's block_on
+        // SAFETY: This assumes we're running inside a tokio runtime
+        let handle = match tokio::runtime::Handle::try_current() {
+            Ok(h) => h,
+            Err(_) => {
+                return ToolExecutionResult::error(
+                    tool_use_id,
+                    "No tokio runtime available for MCP execution",
+                );
+            }
+        };
+
+        // Execute the async call
+        let result =
+            handle.block_on(async { manager.call_tool(&call.tool, call.input.clone()).await });
+
+        // Convert McpToolResult to ToolExecutionResult
+        match result {
+            Ok(mcp_result) => {
+                if mcp_result.success {
+                    // Format content as string for tool result
+                    let text = format_mcp_content(&mcp_result.content);
+                    ToolExecutionResult::success(tool_use_id, text)
+                } else {
+                    ToolExecutionResult::error(
+                        tool_use_id,
+                        mcp_result
+                            .error
+                            .unwrap_or_else(|| "MCP tool execution failed".into()),
+                    )
+                }
+            }
+            Err(e) => ToolExecutionResult::error(tool_use_id, e.to_string()),
+        }
+    }
+
+    fn name(&self) -> &'static str {
+        "mcp"
+    }
+}
+
+/// Format MCP content Value as string for tool result.
+fn format_mcp_content(content: &serde_json::Value) -> String {
+    match content {
+        serde_json::Value::String(s) => s.clone(),
+        serde_json::Value::Null => String::new(),
+        other => serde_json::to_string_pretty(other).unwrap_or_else(|_| other.to_string()),
+    }
+}
+
+/// Executor that routes to MCP first, then falls back to builtin.
+pub struct CompositeExecutor {
+    /// Optional MCP executor (None if no MCP servers configured).
+    mcp: Option<McpToolExecutor>,
+    /// Builtin tool executor as fallback.
+    builtin: BuiltinExecutor,
+}
+
+impl CompositeExecutor {
+    /// Create a new composite executor.
+    pub fn new(mcp: Option<McpToolExecutor>, builtin: BuiltinExecutor) -> Self {
+        Self { mcp, builtin }
+    }
+
+    /// Create with just builtin (no MCP).
+    pub fn builtin_only(builtin: BuiltinExecutor) -> Self {
+        Self { mcp: None, builtin }
+    }
+}
+
+impl ToolExecutor for CompositeExecutor {
+    fn execute(
+        &self,
+        call: &ToolCallSpec,
+        tool_use_id: &str,
+        ctx: &ExecutionContext,
+    ) -> ToolExecutionResult {
+        // Check MCP first - user-configured tools take precedence
+        if let Some(ref mcp) = self.mcp {
+            if mcp.has_tool(&call.tool) {
+                return mcp.execute(call, tool_use_id, ctx);
+            }
+        }
+
+        // Fall back to builtin
+        self.builtin.execute(call, tool_use_id, ctx)
+    }
+
+    fn name(&self) -> &'static str {
+        "composite"
+    }
+}
+
+#[cfg(test)]
+#[path = "mcp_executor_tests.rs"]
+mod tests;

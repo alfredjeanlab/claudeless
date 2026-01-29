@@ -4,10 +4,15 @@
 //! Tool execution engine trait and implementations.
 
 use std::path::PathBuf;
+use std::sync::Arc;
+
+use parking_lot::RwLock;
 
 use crate::config::{ToolCallSpec, ToolExecutionMode};
+use crate::mcp::server::McpManager;
 use crate::permission::{PermissionChecker, PermissionResult};
 
+use super::mcp_executor::{CompositeExecutor, McpToolExecutor};
 use super::result::ToolExecutionResult;
 
 /// Context for tool execution.
@@ -178,6 +183,35 @@ pub fn create_executor_with_permissions(
     checker: PermissionChecker,
 ) -> Box<dyn ToolExecutor> {
     let inner = create_executor(mode);
+    Box::new(PermissionCheckingExecutor::new(inner, checker))
+}
+
+/// Create an executor with MCP support.
+///
+/// If `mcp_manager` is provided, MCP tools are checked first before falling
+/// back to builtin tools. This allows MCP servers to override builtin behavior.
+pub fn create_executor_with_mcp(
+    mode: ToolExecutionMode,
+    mcp_manager: Option<Arc<RwLock<McpManager>>>,
+) -> Box<dyn ToolExecutor> {
+    match mode {
+        ToolExecutionMode::Disabled => Box::new(DisabledExecutor::new()),
+        ToolExecutionMode::Mock => Box::new(MockExecutor::new()),
+        ToolExecutionMode::Live => {
+            let builtin = super::builtin::BuiltinExecutor::new();
+            let mcp = mcp_manager.map(McpToolExecutor::new);
+            Box::new(CompositeExecutor::new(mcp, builtin))
+        }
+    }
+}
+
+/// Create an executor with MCP and permission checking.
+pub fn create_executor_with_mcp_and_permissions(
+    mode: ToolExecutionMode,
+    mcp_manager: Option<Arc<RwLock<McpManager>>>,
+    checker: PermissionChecker,
+) -> Box<dyn ToolExecutor> {
+    let inner = create_executor_with_mcp(mode, mcp_manager);
     Box::new(PermissionCheckingExecutor::new(inner, checker))
 }
 

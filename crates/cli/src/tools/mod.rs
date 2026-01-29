@@ -27,10 +27,13 @@
 
 pub mod builtin;
 pub mod executor;
+pub mod mcp_executor;
 pub mod result;
 
 pub use executor::{
-    create_executor, create_executor_with_permissions, ExecutionContext, MockExecutor,
-    PermissionCheckingExecutor, ToolExecutor,
+    create_executor, create_executor_with_mcp, create_executor_with_mcp_and_permissions,
+    create_executor_with_permissions, ExecutionContext, MockExecutor, PermissionCheckingExecutor,
+    ToolExecutor,
 };
+pub use mcp_executor::{CompositeExecutor, McpToolExecutor};
 pub use result::{ToolExecutionResult, ToolResultContent};
