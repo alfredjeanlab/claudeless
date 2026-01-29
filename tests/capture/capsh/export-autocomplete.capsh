@@ -1,0 +1,11 @@
+# Capture /export autocomplete menu.
+
+wait "for shortcuts" 10s
+
+send "/export"
+wait "Export the current" 3s
+snapshot "export_autocomplete"
+
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
