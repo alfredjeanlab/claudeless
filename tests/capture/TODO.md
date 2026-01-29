@@ -5,7 +5,6 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 ## TODO
 
 - `hooks_dialog` - Hooks dialog
-- `status_bar_extended` - Extended status bar
 - `tasks_empty_dialog` - Tasks dialog (empty)
 - `todos_empty` - Todos empty state
 - `ctrl_s_stash_active` - Ctrl-S stash active
@@ -87,6 +86,7 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 | `with_input` | `with_input` |
 | `shortcuts_display` | `shortcuts_display` |
 | `slash_search_tab_complete` | `slash_search_tab_complete` |
@@ -120,3 +120,6 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 =======
 | `fork_no_conversation` | `fork_no_conversation` |
 >>>>>>> 75a6f84 (Chore: capture fork_no_conversation fixture)
+=======
+| `status_bar_extended` | `status_bar_extended` |
+>>>>>>> 0bb0250 (Chore: capture status_bar_extended fixture)
