@@ -1,0 +1,15 @@
+# Capture export method dialog.
+
+wait "for shortcuts" 10s
+
+# Type /export and wait for autocomplete, then submit
+send "/export"
+wait "/export" 3s
+send <Enter>
+wait "Select export method" 10s
+snapshot "export_method_dialog"
+
+# Exit (Esc to cancel dialog, then exit)
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
