@@ -1,0 +1,19 @@
+# Capture help dialog with commands tab selected.
+
+wait "for shortcuts" 10s
+
+# Type /help and submit
+send "/help"
+wait "/help" 3s
+send <Enter>
+wait "claude.com" 10s
+
+# Press Tab to switch to commands tab
+send <Tab>
+wait "add-dir" 3s
+snapshot "help_commands_tab"
+
+# Exit
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

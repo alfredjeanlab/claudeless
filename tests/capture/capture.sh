@@ -128,7 +128,7 @@ if [[ "$RETRY_MODE" == "1" ]]; then
     fi
 elif [[ -n "$SINGLE_SCRIPT" ]]; then
     # Single script mode: only clean that script's output
-    rm -rf "$RAW_OUTPUT/$SINGLE_SCRIPT"
+    rm -rf "${RAW_OUTPUT:?}/${SINGLE_SCRIPT:?}"
 else
     # Clean previous output
     rm -rf "$RAW_OUTPUT" "$FIXTURES_DIR"
