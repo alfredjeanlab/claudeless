@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "updated": "2026-01-29T00:24:42.429956Z",
+  "updated": "2026-01-29T00:25:12.538989Z",
   "commit": "1884c37",
   "metrics": {
     "escapes": {
       "source": {
-        "unsafe": 0,
-        "transmute": 0
+        "transmute": 0,
+        "unsafe": 0
       },
       "test": {
-        "unsafe": 0,
-        "transmute": 0
+        "transmute": 0,
+        "unsafe": 0
       }
     }
   }
