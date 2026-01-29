@@ -11,6 +11,7 @@ use super::builtin::BuiltinExecutor;
 use super::executor::{ExecutionContext, ToolExecutor};
 use super::result::ToolExecutionResult;
 use crate::config::ToolCallSpec;
+use crate::mcp::config::McpToolDef;
 use crate::mcp::McpManager;
 
 /// Executor that handles MCP tool calls.
@@ -26,8 +27,24 @@ impl McpToolExecutor {
     }
 
     /// Check if a tool is handled by MCP.
+    ///
+    /// Handles both raw tool names (`read_file`) and qualified names
+    /// (`mcp__filesystem__read_file`).
     pub fn has_tool(&self, name: &str) -> bool {
-        self.manager.read().has_tool(name)
+        let raw_name = Self::get_raw_tool_name(name);
+        self.manager.read().has_tool(&raw_name)
+    }
+
+    /// Get the raw tool name from a potentially qualified name.
+    ///
+    /// Qualified names have the format `mcp__<server>__<tool>`.
+    /// Raw names are returned as-is.
+    fn get_raw_tool_name(name: &str) -> String {
+        if let Some((_server, tool)) = McpToolDef::parse_qualified_name(name) {
+            tool
+        } else {
+            name.to_string()
+        }
     }
 }
 
@@ -38,17 +55,20 @@ impl ToolExecutor for McpToolExecutor {
         tool_use_id: &str,
         _ctx: &ExecutionContext,
     ) -> ToolExecutionResult {
+        // Extract raw tool name from potentially qualified name (mcp__server__tool)
+        let raw_tool_name = Self::get_raw_tool_name(&call.tool);
+
         // Check if we handle this tool
         let manager = self.manager.read();
-        if !manager.has_tool(&call.tool) {
+        if !manager.has_tool(&raw_tool_name) {
             return ToolExecutionResult::error(
                 tool_use_id,
                 format!("MCP tool not found: {}", call.tool),
             );
         }
 
-        // Bridge async to sync using tokio's block_on
-        // SAFETY: This assumes we're running inside a tokio runtime
+        // Bridge async to sync safely within an async runtime
+        // Use block_in_place to avoid "Cannot start a runtime from within a runtime" panic
         let handle = match tokio::runtime::Handle::try_current() {
             Ok(h) => h,
             Err(_) => {
@@ -59,9 +79,11 @@ impl ToolExecutor for McpToolExecutor {
             }
         };
 
-        // Execute the async call
-        let result =
-            handle.block_on(async { manager.call_tool(&call.tool, call.input.clone()).await });
+        // Execute the async call using block_in_place to safely block
+        let input = call.input.clone();
+        let result = tokio::task::block_in_place(|| {
+            handle.block_on(async { manager.call_tool(&raw_tool_name, input).await })
+        });
 
         // Convert McpToolResult to ToolExecutionResult
         match result {
@@ -124,9 +146,13 @@ impl ToolExecutor for CompositeExecutor {
         tool_use_id: &str,
         ctx: &ExecutionContext,
     ) -> ToolExecutionResult {
-        // Check MCP first - user-configured tools take precedence
+        // Check if this is an MCP tool (qualified name or known raw name)
         if let Some(ref mcp) = self.mcp {
-            if mcp.has_tool(&call.tool) {
+            // Check for qualified name (mcp__server__tool) or raw MCP tool name
+            let is_mcp_qualified = call.tool.starts_with("mcp__");
+            let is_mcp_tool = mcp.has_tool(&call.tool);
+
+            if is_mcp_qualified || is_mcp_tool {
                 return mcp.execute(call, tool_use_id, ctx);
             }
         }

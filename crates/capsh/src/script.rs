@@ -33,8 +33,7 @@ pub fn parse(source: &str) -> Result<Vec<Command>> {
             continue;
         }
 
-        let cmd = parse_line(line)
-            .map_err(|e| anyhow!("line {}: {}", lineno + 1, e))?;
+        let cmd = parse_line(line).map_err(|e| anyhow!("line {}: {}", lineno + 1, e))?;
         commands.push(cmd);
     }
 
@@ -85,17 +84,15 @@ fn parse_send_args(s: &str) -> Result<Vec<u8>> {
             loop {
                 match chars.next() {
                     Some('"') => break,
-                    Some('\\') => {
-                        match chars.next() {
-                            Some('n') => text.push('\n'),
-                            Some('r') => text.push('\r'),
-                            Some('t') => text.push('\t'),
-                            Some('\\') => text.push('\\'),
-                            Some('"') => text.push('"'),
-                            Some(c) => return Err(anyhow!("unknown escape: \\{}", c)),
-                            None => return Err(anyhow!("unterminated string")),
-                        }
-                    }
+                    Some('\\') => match chars.next() {
+                        Some('n') => text.push('\n'),
+                        Some('r') => text.push('\r'),
+                        Some('t') => text.push('\t'),
+                        Some('\\') => text.push('\\'),
+                        Some('"') => text.push('"'),
+                        Some(c) => return Err(anyhow!("unknown escape: \\{}", c)),
+                        None => return Err(anyhow!("unterminated string")),
+                    },
                     Some(c) => text.push(c),
                     None => return Err(anyhow!("unterminated string")),
                 }

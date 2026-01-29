@@ -1,0 +1,15 @@
+# Scenario: MCP Read File Test (Live execution)
+# Tool call without canned result - will execute via MCP
+
+name = "mcp-read-live-test"
+
+[[responses]]
+pattern = { type = "contains", text = "read" }
+
+[responses.response]
+text = "I'll read the file for you."
+
+[[responses.response.tool_calls]]
+tool = "mcp__filesystem__read_file"
+input = { path = "/tmp/mcp-test/sample.txt" }
+# No result field - will execute via MCP server
