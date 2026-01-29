@@ -1,0 +1,23 @@
+
+ ▐▛███▜▌   Claude Code v2.1.23
+▝▜█████▛▘  Haiku 4.5 · Claude Max
+  ▘▘ ▝▝    ~/.local/state/v0/claudeless/tree/v0-chore-worker/claudeless
+
+────────────────────────────────────────────────────────────────────────────────
+❯ /exit
+────────────────────────────────────────────────────────────────────────────────
+  /exit                   Exit the REPL
+  /context                Visualize current context usage as a colored grid
+  /memory                 Edit Claude memory files
+  /vim                    Toggle between Vim and Normal editing modes
+  /clear                  Clear conversation history and free up context
+  /compact                Clear conversation history but keep a summary in co…
+
+
+
+
+
+
+
+
+
