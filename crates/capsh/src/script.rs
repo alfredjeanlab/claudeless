@@ -143,7 +143,7 @@ fn parse_if_statement(
             (parse_block(iter, true)?, false)
         } else if let Some(rest) = line.strip_prefix("else if ") {
             iter.next(); // consume "else if ..."
-            // Parse as nested if - it will consume the shared "end"
+                         // Parse as nested if - it will consume the shared "end"
             let nested_if = parse_if_statement(rest.trim(), iter, *ln)?;
             (vec![nested_if], true)
         } else {
@@ -157,7 +157,9 @@ fn parse_if_statement(
     if !had_else_if {
         match iter.next() {
             Some(&(_, "end")) => {}
-            Some(&(ln, other)) => return Err(anyhow!("line {}: expected 'end', got '{}'", ln, other)),
+            Some(&(ln, other)) => {
+                return Err(anyhow!("line {}: expected 'end', got '{}'", ln, other))
+            }
             None => return Err(anyhow!("unexpected end of script, expected 'end'")),
         }
     }
@@ -217,9 +219,7 @@ fn parse_match_statement(
     // Expect "end"
     match iter.next() {
         Some(&(_, "end")) => {}
-        Some(&(ln, other)) => {
-            return Err(anyhow!("line {}: expected 'end', got '{}'", ln, other))
-        }
+        Some(&(ln, other)) => return Err(anyhow!("line {}: expected 'end', got '{}'", ln, other)),
         None => return Err(anyhow!("unexpected end of script, expected 'end'")),
     }
 
@@ -246,10 +246,7 @@ fn parse_match_arm(
 
     // Parse the pattern (quoted string)
     if !pattern_part.starts_with('"') || !pattern_part.ends_with('"') || pattern_part.len() < 2 {
-        return Err(anyhow!(
-            "line {}: match arm pattern must be quoted",
-            lineno
-        ));
+        return Err(anyhow!("line {}: match arm pattern must be quoted", lineno));
     }
 
     let pattern_str = &pattern_part[1..pattern_part.len() - 1];

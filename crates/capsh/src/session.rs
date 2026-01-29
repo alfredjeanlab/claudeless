@@ -35,6 +35,15 @@ enum WaitResult {
     Eof,
 }
 
+/// Execution context shared across command execution functions.
+struct ExecutionContext<'a> {
+    pty: &'a Pty,
+    screen: &'a mut Screen,
+    recording: &'a mut Option<Recording>,
+    frames_dir: &'a Option<PathBuf>,
+    buf: &'a mut [u8],
+}
+
 pub async fn run(config: Config) -> Result<i32> {
     if let Some(ref dir) = config.frames_dir {
         std::fs::create_dir_all(dir)?;
@@ -50,15 +59,15 @@ pub async fn run(config: Config) -> Result<i32> {
     let mut screen = Screen::new(config.cols, config.rows);
     let mut buf = [0u8; 4096];
 
-    let result = execute_commands(
-        &pty,
-        &mut screen,
-        &mut recording,
-        &config.frames_dir,
-        &mut buf,
-        &config.script,
-    )
-    .await;
+    let mut ctx = ExecutionContext {
+        pty: &pty,
+        screen: &mut screen,
+        recording: &mut recording,
+        frames_dir: &config.frames_dir,
+        buf: &mut buf,
+    };
+
+    let result = execute_commands(&mut ctx, &config.script).await;
 
     match result {
         ExecResult::Continue => {
@@ -98,18 +107,10 @@ pub async fn run(config: Config) -> Result<i32> {
 }
 
 /// Execute a list of commands.
-#[allow(clippy::too_many_arguments)]
-async fn execute_commands(
-    pty: &Pty,
-    screen: &mut Screen,
-    recording: &mut Option<Recording>,
-    frames_dir: &Option<PathBuf>,
-    buf: &mut [u8],
-    commands: &[Command],
-) -> ExecResult {
+async fn execute_commands(ctx: &mut ExecutionContext<'_>, commands: &[Command]) -> ExecResult {
     for cmd in commands {
         // Drain pending PTY output before each command
-        match drain_pty(pty, screen, recording, frames_dir, buf).await {
+        match drain_pty(ctx).await {
             ExecResult::Continue => {}
             other => return other,
         }
@@ -118,9 +119,7 @@ async fn execute_commands(
             Command::WaitPattern(regex, negated, timeout_ms) => {
                 let wait_timeout =
                     timeout_ms.map_or(Duration::from_secs(30), Duration::from_millis);
-                match do_wait(pty, screen, recording, frames_dir, buf, regex, *negated, wait_timeout)
-                    .await
-                {
+                match do_wait(ctx, regex, *negated, wait_timeout).await {
                     Ok(WaitResult::Matched) => {}
                     Ok(WaitResult::Timeout) => {
                         let msg = if *negated {
@@ -141,12 +140,12 @@ async fn execute_commands(
                 for part in parts {
                     match part {
                         SendPart::Bytes(bytes) => {
-                            if let Some(ref mut rec) = recording {
+                            if let Some(ref mut rec) = ctx.recording {
                                 if let Err(e) = rec.log_send(&format_send_for_log(bytes)) {
                                     return ExecResult::Error(e);
                                 }
                             }
-                            if let Err(e) = pty.write(bytes).await {
+                            if let Err(e) = ctx.pty.write(bytes).await {
                                 return ExecResult::Error(e);
                             }
                         }
@@ -157,10 +156,10 @@ async fn execute_commands(
                 }
             }
             Command::Snapshot(ref name) => {
-                if let Some(ref dir) = frames_dir {
-                    match screen.save_frame(dir) {
+                if let Some(ref dir) = ctx.frames_dir {
+                    match ctx.screen.save_frame(dir) {
                         Ok(seq) => {
-                            if let Some(ref mut rec) = recording {
+                            if let Some(ref mut rec) = ctx.recording {
                                 if let Err(e) = rec.log_snapshot(seq, name.as_deref()) {
                                     return ExecResult::Error(e);
                                 }
@@ -171,12 +170,12 @@ async fn execute_commands(
                 }
             }
             Command::Kill(signal) => {
-                if let Some(ref mut rec) = recording {
+                if let Some(ref mut rec) = ctx.recording {
                     if let Err(e) = rec.log_kill(*signal) {
                         return ExecResult::Error(e);
                     }
                 }
-                if let Err(e) = pty.kill(*signal) {
+                if let Err(e) = ctx.pty.kill(*signal) {
                     return ExecResult::Error(e);
                 }
             }
@@ -189,34 +188,15 @@ async fn execute_commands(
             } => {
                 let wait_timeout =
                     timeout_ms.map_or(Duration::from_secs(30), Duration::from_millis);
-                match do_wait(
-                    pty,
-                    screen,
-                    recording,
-                    frames_dir,
-                    buf,
-                    pattern,
-                    *negated,
-                    wait_timeout,
-                )
-                .await
-                {
+                match do_wait(ctx, pattern, *negated, wait_timeout).await {
                     Ok(WaitResult::Matched) => {
-                        match Box::pin(execute_commands(
-                            pty, screen, recording, frames_dir, buf, then_cmds,
-                        ))
-                        .await
-                        {
+                        match Box::pin(execute_commands(ctx, then_cmds)).await {
                             ExecResult::Continue => {}
                             other => return other,
                         }
                     }
                     Ok(WaitResult::Timeout) => {
-                        match Box::pin(execute_commands(
-                            pty, screen, recording, frames_dir, buf, else_cmds,
-                        ))
-                        .await
-                        {
+                        match Box::pin(execute_commands(ctx, else_cmds)).await {
                             ExecResult::Continue => {}
                             other => return other,
                         }
@@ -232,29 +212,16 @@ async fn execute_commands(
             } => {
                 let wait_timeout =
                     timeout_ms.map_or(Duration::from_secs(30), Duration::from_millis);
-                match do_match(pty, screen, recording, frames_dir, buf, arms, wait_timeout).await {
+                match do_match(ctx, arms, wait_timeout).await {
                     Ok(Some(matched_cmds)) => {
-                        match Box::pin(execute_commands(
-                            pty,
-                            screen,
-                            recording,
-                            frames_dir,
-                            buf,
-                            matched_cmds,
-                        ))
-                        .await
-                        {
+                        match Box::pin(execute_commands(ctx, matched_cmds)).await {
                             ExecResult::Continue => {}
                             other => return other,
                         }
                     }
                     Ok(None) => {
                         // No match - execute else block
-                        match Box::pin(execute_commands(
-                            pty, screen, recording, frames_dir, buf, else_cmds,
-                        ))
-                        .await
-                        {
+                        match Box::pin(execute_commands(ctx, else_cmds)).await {
                             ExecResult::Continue => {}
                             other => return other,
                         }
@@ -268,28 +235,22 @@ async fn execute_commands(
 }
 
 /// Drain pending PTY output.
-async fn drain_pty(
-    pty: &Pty,
-    screen: &mut Screen,
-    recording: &mut Option<Recording>,
-    frames_dir: &Option<PathBuf>,
-    buf: &mut [u8],
-) -> ExecResult {
+async fn drain_pty(ctx: &mut ExecutionContext<'_>) -> ExecResult {
     loop {
-        match timeout(Duration::from_millis(10), pty.read(buf)).await {
+        match timeout(Duration::from_millis(10), ctx.pty.read(ctx.buf)).await {
             Ok(Ok(0)) => return ExecResult::Eof,
             Ok(Ok(n)) => {
-                if let Some(ref mut rec) = recording {
-                    if let Err(e) = rec.append_raw(&buf[..n]) {
+                if let Some(ref mut rec) = ctx.recording {
+                    if let Err(e) = rec.append_raw(&ctx.buf[..n]) {
                         return ExecResult::Error(e);
                     }
                 }
-                screen.feed(&buf[..n]);
-                if let Some(ref dir) = frames_dir {
-                    if screen.changed() {
-                        match screen.save_frame(dir) {
+                ctx.screen.feed(&ctx.buf[..n]);
+                if let Some(ref dir) = ctx.frames_dir {
+                    if ctx.screen.changed() {
+                        match ctx.screen.save_frame(dir) {
                             Ok(seq) => {
-                                if let Some(ref mut rec) = recording {
+                                if let Some(ref mut rec) = ctx.recording {
                                     if let Err(e) = rec.log_frame(seq) {
                                         return ExecResult::Error(e);
                                     }
@@ -308,13 +269,8 @@ async fn drain_pty(
 }
 
 /// Perform a wait operation.
-#[allow(clippy::too_many_arguments)]
 async fn do_wait(
-    pty: &Pty,
-    screen: &mut Screen,
-    recording: &mut Option<Recording>,
-    frames_dir: &Option<PathBuf>,
-    buf: &mut [u8],
+    ctx: &mut ExecutionContext<'_>,
     pattern: &Regex,
     negated: bool,
     wait_timeout: Duration,
@@ -330,17 +286,17 @@ async fn do_wait(
         }
     };
 
-    while !condition_met(screen) {
+    while !condition_met(ctx.screen) {
         if tokio::time::Instant::now() > deadline {
-            if let Some(ref mut rec) = recording {
+            if let Some(ref mut rec) = ctx.recording {
                 rec.log_wait_timeout(pattern_str)?;
             }
             return Ok(WaitResult::Timeout);
         }
-        match timeout(Duration::from_millis(100), pty.read(buf)).await {
+        match timeout(Duration::from_millis(100), ctx.pty.read(ctx.buf)).await {
             Ok(Ok(0)) => {
-                let met = condition_met(screen);
-                if let Some(ref mut rec) = recording {
+                let met = condition_met(ctx.screen);
+                if let Some(ref mut rec) = ctx.recording {
                     if met {
                         rec.log_wait_match(pattern_str)?;
                     } else {
@@ -350,14 +306,14 @@ async fn do_wait(
                 return Ok(WaitResult::Eof);
             }
             Ok(Ok(n)) => {
-                if let Some(ref mut rec) = recording {
-                    rec.append_raw(&buf[..n])?;
+                if let Some(ref mut rec) = ctx.recording {
+                    rec.append_raw(&ctx.buf[..n])?;
                 }
-                screen.feed(&buf[..n]);
-                if let Some(ref dir) = frames_dir {
-                    if screen.changed() {
-                        let seq = screen.save_frame(dir)?;
-                        if let Some(ref mut rec) = recording {
+                ctx.screen.feed(&ctx.buf[..n]);
+                if let Some(ref dir) = ctx.frames_dir {
+                    if ctx.screen.changed() {
+                        let seq = ctx.screen.save_frame(dir)?;
+                        if let Some(ref mut rec) = ctx.recording {
                             rec.log_frame(seq)?;
                         }
                     }
@@ -368,7 +324,7 @@ async fn do_wait(
         }
     }
 
-    if let Some(ref mut rec) = recording {
+    if let Some(ref mut rec) = ctx.recording {
         rec.log_wait_match(pattern_str)?;
     }
     Ok(WaitResult::Matched)
@@ -376,13 +332,8 @@ async fn do_wait(
 
 /// Perform a match operation - wait for any of the patterns to match.
 /// Returns Some(commands) if a pattern matched, None on timeout.
-#[allow(clippy::too_many_arguments)]
 async fn do_match<'a>(
-    pty: &Pty,
-    screen: &mut Screen,
-    recording: &mut Option<Recording>,
-    frames_dir: &Option<PathBuf>,
-    buf: &mut [u8],
+    ctx: &mut ExecutionContext<'_>,
     arms: &'a [MatchArm],
     wait_timeout: Duration,
 ) -> Result<Option<&'a Vec<Command>>> {
@@ -391,8 +342,8 @@ async fn do_match<'a>(
     loop {
         // Check all patterns against current screen
         for arm in arms {
-            if screen.matches(&arm.pattern) {
-                if let Some(ref mut rec) = recording {
+            if ctx.screen.matches(&arm.pattern) {
+                if let Some(ref mut rec) = ctx.recording {
                     rec.log_wait_match(arm.pattern.as_str())?;
                 }
                 return Ok(Some(&arm.commands));
@@ -401,7 +352,7 @@ async fn do_match<'a>(
 
         // Check timeout
         if tokio::time::Instant::now() > deadline {
-            if let Some(ref mut rec) = recording {
+            if let Some(ref mut rec) = ctx.recording {
                 // Log timeout for all patterns
                 let patterns: Vec<_> = arms.iter().map(|a| a.pattern.as_str()).collect();
                 rec.log_match_timeout(&patterns)?;
@@ -410,12 +361,12 @@ async fn do_match<'a>(
         }
 
         // Wait for more PTY output
-        match timeout(Duration::from_millis(100), pty.read(buf)).await {
+        match timeout(Duration::from_millis(100), ctx.pty.read(ctx.buf)).await {
             Ok(Ok(0)) => {
                 // EOF - check one more time then return None
                 for arm in arms {
-                    if screen.matches(&arm.pattern) {
-                        if let Some(ref mut rec) = recording {
+                    if ctx.screen.matches(&arm.pattern) {
+                        if let Some(ref mut rec) = ctx.recording {
                             rec.log_wait_match(arm.pattern.as_str())?;
                         }
                         return Ok(Some(&arm.commands));
@@ -424,14 +375,14 @@ async fn do_match<'a>(
                 return Ok(None);
             }
             Ok(Ok(n)) => {
-                if let Some(ref mut rec) = recording {
-                    rec.append_raw(&buf[..n])?;
+                if let Some(ref mut rec) = ctx.recording {
+                    rec.append_raw(&ctx.buf[..n])?;
                 }
-                screen.feed(&buf[..n]);
-                if let Some(ref dir) = frames_dir {
-                    if screen.changed() {
-                        let seq = screen.save_frame(dir)?;
-                        if let Some(ref mut rec) = recording {
+                ctx.screen.feed(&ctx.buf[..n]);
+                if let Some(ref dir) = ctx.frames_dir {
+                    if ctx.screen.changed() {
+                        let seq = ctx.screen.save_frame(dir)?;
+                        if let Some(ref mut rec) = ctx.recording {
                             rec.log_frame(seq)?;
                         }
                     }

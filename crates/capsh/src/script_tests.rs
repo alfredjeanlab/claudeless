@@ -386,9 +386,13 @@ end
         assert_eq!(arms[0].pattern.as_str(), "Sonnet");
         assert_eq!(arms[1].pattern.as_str(), "Opus");
         assert_eq!(arms[2].pattern.as_str(), "Haiku");
-        assert!(matches!(arms[0].commands[0], Command::Snapshot(Some(ref n)) if n == "model_sonnet"));
+        assert!(
+            matches!(arms[0].commands[0], Command::Snapshot(Some(ref n)) if n == "model_sonnet")
+        );
         assert!(matches!(arms[1].commands[0], Command::Snapshot(Some(ref n)) if n == "model_opus"));
-        assert!(matches!(arms[2].commands[0], Command::Snapshot(Some(ref n)) if n == "model_haiku"));
+        assert!(
+            matches!(arms[2].commands[0], Command::Snapshot(Some(ref n)) if n == "model_haiku")
+        );
         assert!(else_cmds.is_empty());
     } else {
         panic!("expected Match");
@@ -468,7 +472,9 @@ end
         // Sonnet arm has 2 commands (block)
         assert_eq!(arms[0].pattern.as_str(), "Sonnet");
         assert_eq!(arms[0].commands.len(), 2);
-        assert!(matches!(arms[0].commands[0], Command::Snapshot(Some(ref n)) if n == "model_sonnet"));
+        assert!(
+            matches!(arms[0].commands[0], Command::Snapshot(Some(ref n)) if n == "model_sonnet")
+        );
         assert!(matches!(arms[0].commands[1], Command::Send(_)));
 
         // Opus arm has 2 commands (block)
