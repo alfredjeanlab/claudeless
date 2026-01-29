@@ -534,3 +534,137 @@ fn test_result_output_error_has_zero_usage() {
     assert_eq!(parsed["usage"]["output_tokens"], 0);
     assert_eq!(parsed["cost_usd"], 0.0);
 }
+
+// =============================================================================
+// Real Claude CLI Compatibility Tests
+// =============================================================================
+// These tests document expected behaviors observed from real Claude CLI output.
+// They serve as compatibility targets for claudeless to match.
+
+/// Real Claude CLI outputs MCP tools in `tools` array with `mcp__<server>__<tool>` prefix.
+///
+/// Observed format from `claude --mcp-config ... --output-format stream-json --verbose`:
+/// ```json
+/// {"tools": ["Read", "Write", ..., "mcp__filesystem__read_file", "mcp__filesystem__write_file", ...]}
+/// ```
+#[test]
+fn test_mcp_tool_naming_convention() {
+    // MCP tools should be prefixed: mcp__<server>__<tool>
+    let tool_name = format!("mcp__{}__{}", "filesystem", "read_file");
+    assert_eq!(tool_name, "mcp__filesystem__read_file");
+
+    // Multiple underscores in tool name should be preserved
+    let tool_name2 = format!("mcp__{}__{}", "filesystem", "read_text_file");
+    assert_eq!(tool_name2, "mcp__filesystem__read_text_file");
+}
+
+/// Real Claude CLI outputs mcp_servers as array of objects with name and status.
+///
+/// Observed format:
+/// ```json
+/// {"mcp_servers": [{"name": "filesystem", "status": "connected"}]}
+/// ```
+///
+/// Current claudeless format (incorrect):
+/// ```json
+/// {"mcp_servers": ["filesystem"]}
+/// ```
+#[test]
+#[ignore = "claudeless currently outputs mcp_servers as string array, not object array"]
+fn test_mcp_servers_format_matches_real_claude() {
+    // This test documents the expected format from real Claude CLI
+    let expected_format = serde_json::json!([
+        {"name": "filesystem", "status": "connected"}
+    ]);
+
+    // When claudeless is updated, it should produce this format
+    let init =
+        SystemInitEvent::with_mcp_servers("session-123", vec![], vec!["filesystem".to_string()]);
+
+    let json = serde_json::to_string(&init).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+    // Currently fails: claudeless outputs ["filesystem"] instead of [{"name":"filesystem","status":"connected"}]
+    assert_eq!(parsed["mcp_servers"], expected_format);
+}
+
+/// Real Claude CLI includes additional fields in the init event.
+///
+/// Observed fields from real Claude CLI:
+/// - cwd: current working directory
+/// - model: model name
+/// - permissionMode: "default" | "bypassPermissions" | ...
+/// - slash_commands: available slash commands
+/// - apiKeySource: "none" | ...
+/// - claude_code_version: version string
+/// - output_style: "default" | ...
+/// - agents: available agent types
+/// - skills: available skills
+/// - plugins: loaded plugins
+#[test]
+#[ignore = "claudeless init event is missing these fields"]
+fn test_init_event_has_extended_fields() {
+    // Document expected fields from real Claude CLI
+    let expected_fields = vec![
+        "type",
+        "subtype",
+        "session_id",
+        "cwd",
+        "tools",
+        "mcp_servers",
+        "model",
+        "permissionMode",
+        "slash_commands",
+        "apiKeySource",
+        "claude_code_version",
+        "output_style",
+        "agents",
+        "skills",
+        "plugins",
+        "uuid",
+    ];
+
+    let init = SystemInitEvent::new("session-123", vec![]);
+    let json = serde_json::to_string(&init).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+    for field in expected_fields {
+        assert!(
+            parsed.get(field).is_some(),
+            "Missing expected field: {}",
+            field
+        );
+    }
+}
+
+/// Real Claude CLI includes MCP tools in the tools array alongside built-in tools.
+///
+/// When MCP servers are configured, the init event should include both:
+/// - Built-in tools: Read, Write, Edit, Bash, etc.
+/// - MCP tools: mcp__<server>__<tool> format
+#[test]
+fn test_init_event_tools_includes_builtin_and_mcp() {
+    let builtin_tools = vec!["Read".to_string(), "Write".to_string(), "Bash".to_string()];
+    let mcp_tools = vec![
+        "mcp__filesystem__read_file".to_string(),
+        "mcp__filesystem__write_file".to_string(),
+    ];
+
+    let mut all_tools = builtin_tools.clone();
+    all_tools.extend(mcp_tools.clone());
+
+    let init = SystemInitEvent::new("session-123", all_tools);
+    let json = serde_json::to_string(&init).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+    let tools = parsed["tools"].as_array().unwrap();
+
+    // Should contain built-in tools
+    assert!(tools.iter().any(|t| t == "Read"));
+    assert!(tools.iter().any(|t| t == "Write"));
+    assert!(tools.iter().any(|t| t == "Bash"));
+
+    // Should contain MCP tools with prefix
+    assert!(tools.iter().any(|t| t == "mcp__filesystem__read_file"));
+    assert!(tools.iter().any(|t| t == "mcp__filesystem__write_file"));
+}
