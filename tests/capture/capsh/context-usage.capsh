@@ -1,0 +1,15 @@
+# Capture context usage display.
+
+wait "for shortcuts" 10s
+
+# Type /context and submit to show context usage
+send "/context"
+wait "/context" 3s
+send <Enter>
+wait "Estimated usage" 10s
+snapshot "context_usage"
+
+# Exit
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
