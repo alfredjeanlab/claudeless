@@ -1,0 +1,11 @@
+# Capture /context autocomplete dropdown.
+
+wait "for shortcuts" 10s
+
+send "/context"
+wait "Visualize current context" 3s
+snapshot "context_autocomplete"
+
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
