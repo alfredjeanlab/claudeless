@@ -1,0 +1,17 @@
+# Capture status bar with thinking off.
+
+wait "for shortcuts" 10s
+
+# Open thinking dialog (Meta+T / Option+T)
+send <M-t>
+wait "thinking" 3s
+
+# Select "Disabled" option (press 2)
+send "2" 100 <Enter>
+wait "Thinking off" 3s
+snapshot "thinking_off_status"
+
+# Exit
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
