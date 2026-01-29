@@ -1,0 +1,17 @@
+# Capture hooks dialog.
+
+wait "for shortcuts" 10s
+
+# Type /hooks and wait for autocomplete
+send "/hooks"
+wait "Manage hook" 3s
+
+# Submit to open hooks dialog
+send <Enter>
+wait "PreToolUse" 10s
+snapshot "hooks_dialog"
+
+# Close dialog and exit
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

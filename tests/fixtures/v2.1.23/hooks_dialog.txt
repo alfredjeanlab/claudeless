@@ -1,0 +1,23 @@
+
+ ▐▛███▜▌   Claude Code v2.1.23
+▝▜█████▛▘  Haiku 4.5 · Claude Max
+  ▘▘ ▝▝    ~/.local/state/v0/claudeless/tree/v0-chore-worker/claudeless
+
+❯ /hooks
+────────────────────────────────────────────────────────────────────────────────
+ Hooks
+ 3 hooks
+
+ ❯ 1.  PreToolUse - Before tool execution
+   2.  PostToolUse - After tool execution
+   3.  PostToolUseFailure - After tool execution fails
+   4.  Notification - When notifications are sent
+ ↓ 5.  UserPromptSubmit - When the user submits a prompt
+
+ Enter to confirm · Esc to cancel
+
+
+
+
+
+
