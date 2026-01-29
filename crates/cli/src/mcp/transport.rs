@@ -226,6 +226,15 @@ pub struct StdioTransport {
     shutdown: AtomicBool,
 }
 
+impl std::fmt::Debug for StdioTransport {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StdioTransport")
+            .field("next_id", &self.next_id.load(Ordering::Relaxed))
+            .field("shutdown", &self.shutdown.load(Ordering::Relaxed))
+            .finish_non_exhaustive()
+    }
+}
+
 impl StdioTransport {
     /// Spawn a new child process and create a transport for communication.
     ///

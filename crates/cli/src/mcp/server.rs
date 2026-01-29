@@ -1,16 +1,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Simulated MCP server state.
+//! MCP server state and management.
 //!
-//! This module provides simulated MCP server functionality. It doesn't actually
-//! run MCP servers, but maintains the state needed to simulate their presence.
+//! This module provides MCP server functionality, managing server connections
+//! and routing tool calls through the client layer.
 
+use super::client::{ClientError, McpClient};
 use super::config::{McpConfig, McpServerDef, McpToolDef};
+use super::tools::McpToolResult;
+use super::transport::TransportError;
 use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
-/// Simulated MCP server.
-#[derive(Clone, Debug)]
+/// MCP server with optional live client connection.
+#[derive(Debug)]
 pub struct McpServer {
     /// Server name.
     pub name: String,
@@ -23,15 +28,18 @@ pub struct McpServer {
 
     /// Server status.
     pub status: McpServerStatus,
+
+    /// Live client connection (None until spawned).
+    client: Option<Arc<Mutex<McpClient>>>,
 }
 
-/// Status of a simulated MCP server.
+/// Status of an MCP server.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum McpServerStatus {
     /// Server not yet initialized.
     #[default]
     Uninitialized,
-    /// Server running (simulated).
+    /// Server running with active connection.
     Running,
     /// Server failed to start.
     Failed(String),
@@ -47,26 +55,97 @@ impl McpServer {
             definition: def,
             tools: Vec::new(),
             status: McpServerStatus::Uninitialized,
+            client: None,
         }
     }
 
-    /// Spawn the MCP server process and return a client for communication.
+    /// Spawn the MCP server process and initialize the connection.
     ///
-    /// This spawns the actual MCP server process using the command and args
-    /// from the definition, establishes JSON-RPC communication, and initializes
-    /// the MCP protocol.
-    ///
-    /// Note: This is currently a stub that returns an error. Full implementation
-    /// will be completed when real MCP execution is needed.
-    pub fn spawn(&mut self) -> Result<(), String> {
-        // Validate the definition
+    /// This spawns the actual MCP server process, initializes the MCP protocol,
+    /// and discovers available tools via `tools/list`.
+    pub async fn spawn(&mut self) -> Result<(), ClientError> {
+        // Validate definition
         if self.definition.command.is_empty() {
-            return Err("No command specified for MCP server".to_string());
+            return Err(ClientError::Transport(TransportError::Spawn(
+                "No command specified".into(),
+            )));
         }
 
-        // Mark server as running (in simulation mode, we just mark it)
-        // For real MCP execution, we would spawn the process here
+        // Connect, initialize, and discover tools
+        let client = McpClient::connect_and_initialize(&self.definition).await?;
+
+        // Convert discovered tools to McpToolDef
+        self.tools = client
+            .tools()
+            .iter()
+            .map(|t| t.clone().into_tool_def(&self.name))
+            .collect();
+
+        self.client = Some(Arc::new(Mutex::new(client)));
         self.status = McpServerStatus::Running;
+        Ok(())
+    }
+
+    /// Check if the server has an active client connection.
+    pub fn is_connected(&self) -> bool {
+        self.client.is_some()
+    }
+
+    /// Get the client (for internal use).
+    // NOTE(compat): Reserved for future use by McpManager or advanced scenarios
+    #[allow(dead_code)]
+    pub(crate) fn client(&self) -> Option<&Arc<Mutex<McpClient>>> {
+        self.client.as_ref()
+    }
+
+    /// Execute a tool call on this server.
+    ///
+    /// Returns error if server is not connected or tool execution fails.
+    pub async fn call_tool(
+        &self,
+        name: &str,
+        arguments: serde_json::Value,
+    ) -> Result<McpToolResult, ClientError> {
+        let client = self.client.as_ref().ok_or(ClientError::NotInitialized)?;
+        let guard = client.lock().await;
+        let result = guard.call_tool(name, arguments).await?;
+        Ok(result.into_tool_result())
+    }
+
+    /// Execute a tool call with custom timeout.
+    pub async fn call_tool_with_timeout(
+        &self,
+        name: &str,
+        arguments: serde_json::Value,
+        timeout_ms: u64,
+    ) -> Result<McpToolResult, ClientError> {
+        let client = self.client.as_ref().ok_or(ClientError::NotInitialized)?;
+        let guard = client.lock().await;
+        let result = guard
+            .call_tool_with_timeout(name, arguments, timeout_ms)
+            .await?;
+        Ok(result.into_tool_result())
+    }
+
+    /// Shutdown the server connection gracefully.
+    ///
+    /// Takes ownership of the client and shuts it down. After this call,
+    /// the server status changes to Disconnected and `call_tool` will fail.
+    pub async fn shutdown(&mut self) -> Result<(), ClientError> {
+        if let Some(client_arc) = self.client.take() {
+            // Try to unwrap the Arc; if other references exist, we can't shutdown cleanly
+            match Arc::try_unwrap(client_arc) {
+                Ok(mutex) => {
+                    let client = mutex.into_inner();
+                    client.shutdown().await?;
+                }
+                Err(_arc) => {
+                    // Other references exist; just drop our handle
+                    // The process will be killed when all references are dropped
+                }
+            }
+        }
+        self.status = McpServerStatus::Disconnected;
         Ok(())
     }
 
@@ -75,7 +154,7 @@ impl McpServer {
         self.tools.push(tool);
     }
 
-    /// Simulate server startup.
+    /// Simulate server startup (for testing without real process).
     pub fn start(&mut self) {
         self.status = McpServerStatus::Running;
     }
@@ -103,8 +182,8 @@ impl McpServer {
 
 /// MCP server manager.
 ///
-/// Manages multiple simulated MCP servers and their tools.
-#[derive(Clone, Debug, Default)]
+/// Manages multiple MCP servers and their tools.
+#[derive(Debug, Default)]
 pub struct McpManager {
     /// Active servers by name.
     servers: HashMap<String, McpServer>,
@@ -119,18 +198,76 @@ impl McpManager {
         Self::default()
     }
 
-    /// Initialize from config.
+    /// Initialize from config (does not spawn servers).
+    ///
+    /// Call [`initialize()`](Self::initialize) to spawn server processes.
     pub fn from_config(config: &McpConfig) -> Self {
         let mut manager = Self::new();
 
         for (name, def) in &config.mcp_servers {
-            let mut server = McpServer::from_def(name, def.clone());
-            // Auto-start simulated servers
-            server.start();
+            let server = McpServer::from_def(name, def.clone());
+            // Don't auto-start; let caller call initialize()
             manager.servers.insert(name.clone(), server);
         }
 
         manager
+    }
+
+    /// Initialize all servers by spawning their processes.
+    ///
+    /// Returns a list of (server_name, result) pairs. Servers that fail to
+    /// initialize are marked as Failed but remain in the manager.
+    pub async fn initialize(&mut self) -> Vec<(String, Result<(), ClientError>)> {
+        let mut results = Vec::new();
+
+        // Collect server names to avoid borrow issues
+        let names: Vec<String> = self.servers.keys().cloned().collect();
+
+        for name in names {
+            let result = if let Some(server) = self.servers.get_mut(&name) {
+                match server.spawn().await {
+                    Ok(()) => {
+                        // Register discovered tools in the mapping
+                        for tool in &server.tools {
+                            self.tool_server_map.insert(tool.name.clone(), name.clone());
+                        }
+                        Ok(())
+                    }
+                    Err(e) => {
+                        server.status = McpServerStatus::Failed(e.to_string());
+                        Err(e)
+                    }
+                }
+            } else {
+                continue;
+            };
+            results.push((name, result));
+        }
+
+        results
+    }
+
+    /// Execute a tool call, routing to the appropriate server.
+    pub async fn call_tool(
+        &self,
+        tool_name: &str,
+        arguments: serde_json::Value,
+    ) -> Result<McpToolResult, ClientError> {
+        let server_name = self
+            .tool_server_map
+            .get(tool_name)
+            .ok_or_else(|| ClientError::ToolNotFound(tool_name.to_string()))?;
+        let server = self.servers.get(server_name).ok_or_else(|| {
+            ClientError::ToolNotFound(format!("server '{}' not found", server_name))
+        })?;
+        server.call_tool(tool_name, arguments).await
+    }
+
+    /// Shutdown all server connections gracefully.
+    pub async fn shutdown(&mut self) {
+        for server in self.servers.values_mut() {
+            let _ = server.shutdown().await;
+        }
     }
 
     /// Add a server to the manager.

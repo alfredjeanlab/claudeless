@@ -81,6 +81,7 @@ pub enum ClientError {
 /// 3. Discover tools via [`list_tools`](Self::list_tools)
 /// 4. Execute tools via [`call_tool`](Self::call_tool)
 /// 5. Clean shutdown via [`shutdown`](Self::shutdown)
+#[derive(Debug)]
 pub struct McpClient {
     /// Underlying transport for JSON-RPC communication.
     transport: StdioTransport,
