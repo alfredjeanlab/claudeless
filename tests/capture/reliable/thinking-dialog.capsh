@@ -1,0 +1,13 @@
+# Capture extended thinking toggle dialog.
+
+wait "for shortcuts" 10s
+
+# Open thinking dialog (Meta+T / Option+T)
+send <M-t>
+wait "thinking" 3s
+snapshot "thinking_dialog"
+
+# Close dialog
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

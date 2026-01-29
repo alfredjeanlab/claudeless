@@ -10,7 +10,7 @@ use tokio::time::{timeout, Duration};
 use crate::pty::Pty;
 use crate::recording::Recording;
 use crate::screen::Screen;
-use crate::script::Command;
+use crate::script::{Command, SendPart};
 
 pub struct Config {
     pub command: String,
@@ -68,20 +68,39 @@ pub async fn run(config: Config) -> Result<i32> {
         }
 
         match cmd {
-            Command::WaitPattern(regex) => {
+            Command::WaitPattern(regex, negated, timeout_ms) => {
                 let pattern_str = regex.as_str();
-                let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
-                while !screen.matches(&regex) {
+                let wait_timeout = timeout_ms.map_or(Duration::from_secs(30), Duration::from_millis);
+                let deadline = tokio::time::Instant::now() + wait_timeout;
+
+                // For negated waits, we wait until pattern does NOT match
+                let condition_met = |screen: &Screen| {
+                    if negated {
+                        !screen.matches(&regex)
+                    } else {
+                        screen.matches(&regex)
+                    }
+                };
+
+                while !condition_met(&screen) {
                     if tokio::time::Instant::now() > deadline {
-                        return Err(anyhow::anyhow!("timeout waiting for: {}", regex));
+                        if let Some(ref mut rec) = recording {
+                            rec.log_wait_timeout(pattern_str)?;
+                        }
+                        let msg = if negated {
+                            format!("timeout waiting for absence of: {}", regex)
+                        } else {
+                            format!("timeout waiting for: {}", regex)
+                        };
+                        return Err(anyhow::anyhow!("{}", msg));
                     }
                     match timeout(Duration::from_millis(100), pty.read(&mut buf)).await {
                         Ok(Ok(0)) => {
-                            // EOF - child exited. Check if pattern is on screen.
-                            let matched = screen.matches(&regex);
+                            // EOF - child exited. Check if condition is met.
+                            let met = condition_met(&screen);
                             if let Some(ref mut rec) = recording {
-                                if matched {
-                                    rec.log_wait_ok(pattern_str)?;
+                                if met {
+                                    rec.log_wait_match(pattern_str)?;
                                 } else {
                                     rec.log_wait_eof(pattern_str)?;
                                 }
@@ -111,27 +130,42 @@ pub async fn run(config: Config) -> Result<i32> {
                         Err(_) => {} // Timeout, keep waiting
                     }
                 }
-                // Pattern matched normally
+                // Condition met
                 if let Some(ref mut rec) = recording {
-                    rec.log_wait_ok(pattern_str)?;
+                    rec.log_wait_match(pattern_str)?;
                 }
             }
             Command::WaitMs(ms) => {
                 tokio::time::sleep(Duration::from_millis(ms)).await;
             }
-            Command::Send(ref bytes) => {
-                if let Some(ref mut rec) = recording {
-                    rec.log_send(&format_send_for_log(bytes))?;
+            Command::Send(ref parts) => {
+                for part in parts {
+                    match part {
+                        SendPart::Bytes(bytes) => {
+                            if let Some(ref mut rec) = recording {
+                                rec.log_send(&format_send_for_log(bytes))?;
+                            }
+                            pty.write(bytes).await?;
+                        }
+                        SendPart::Delay(ms) => {
+                            tokio::time::sleep(Duration::from_millis(*ms)).await;
+                        }
+                    }
                 }
-                pty.write(bytes).await?;
             }
-            Command::Snapshot => {
+            Command::Snapshot(ref name) => {
                 if let Some(ref dir) = config.frames_dir {
                     let seq = screen.save_frame(dir)?;
                     if let Some(ref mut rec) = recording {
-                        rec.log_frame(seq)?;
+                        rec.log_snapshot(seq, name.as_deref())?;
                     }
                 }
+            }
+            Command::Kill(signal) => {
+                if let Some(ref mut rec) = recording {
+                    rec.log_kill(signal)?;
+                }
+                pty.kill(signal)?;
             }
         }
     }

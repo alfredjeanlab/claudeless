@@ -1,0 +1,9 @@
+# Capture the initial state of Claude CLI after startup.
+# Args: (none)
+
+wait "for shortcuts" 10s
+snapshot "initial_state"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

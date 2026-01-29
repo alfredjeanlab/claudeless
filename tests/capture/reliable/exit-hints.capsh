@@ -1,0 +1,21 @@
+# Capture exit hint states (Ctrl+C, Escape interruption hints).
+
+wait "for shortcuts" 10s
+
+# Type some text first
+send "hello world"
+wait 100
+
+# Press Ctrl+C - should show "Press Ctrl-C again to exit" hint
+send <C-c>
+wait "Ctrl-C again" 3s
+snapshot "ctrl_c_hint"
+
+# Press Escape - should show "Esc to clear" hint
+send <Esc>
+wait "to clear" 3s
+snapshot "escape_hint"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

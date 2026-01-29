@@ -1,0 +1,18 @@
+# Capture help dialog and tab navigation.
+
+wait "for shortcuts" 10s
+
+# Open help with /help command
+send "/help" <Enter>
+wait "Claude Code" 3s
+snapshot "help_dialog"
+
+# Navigate to shortcuts tab if present
+send <Tab>
+wait 100
+snapshot "help_shortcuts_tab"
+
+# Close dialog
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

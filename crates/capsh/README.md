@@ -43,12 +43,18 @@ capsh --frames ./output -- vi < test.capsh
 ## Script DSL
 
 ```
-wait "pattern"     # Wait for regex match in current frame (30s timeout)
-wait 2000          # Wait milliseconds
+wait "pattern"     # Wait for regex match (30s default timeout)
+wait "pattern" 5s  # Wait with custom timeout
+wait !"pattern"    # Wait until pattern does NOT match
+wait 2s            # Wait 2 seconds (also: 2000, 2000ms, 1m)
 send "text"        # Send literal text
 send <Up>          # Send special key
 send <C-d>         # Send Ctrl+key
+send "hi" 100 <Enter>  # Send with inline delay (ms)
 snapshot           # Force save frame even if unchanged
+snapshot "name"    # Named snapshot (recorded in jsonl)
+kill SIGTERM       # Send signal to child process
+kill 9             # Send signal by number
 ```
 
 ### Special Keys
@@ -62,6 +68,8 @@ snapshot           # Force save frame even if unchanged
 | `<Space>` | Space |
 | `<Backspace>` | Backspace |
 | `<C-a>` ... `<C-z>` | Ctrl+letter |
+| `<M-a>` ... `<M-z>` | Meta/Option+letter |
+| `<A-a>` ... `<A-z>` | Alt+letter (same as Meta) |
 
 ### Escape Sequences
 
@@ -96,6 +104,10 @@ When `--frames` is specified:
 {"ms":50,"frame":"000002"}
 {"ms":100,"send":"ihello"}
 {"ms":150,"frame":"000003"}
+{"ms":200,"snapshot":"000003"}
+{"ms":250,"snapshot":"000004","name":"after-input"}
+{"ms":300,"kill":"SIGTERM"}
+{"ms":350,"exit":0}
 ```
 
 ## License

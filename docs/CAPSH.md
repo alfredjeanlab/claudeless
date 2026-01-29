@@ -55,15 +55,20 @@ capsh --frames /tmp/out -- vi < script.capsh
 Wait for a condition before continuing.
 
 ```
-wait "pattern"    # Wait for regex to match screen (30s timeout)
-wait 500          # Wait 500 milliseconds
+wait "pattern"         # Wait for regex to match screen (30s default timeout)
+wait "pattern" 5s      # Wait with custom timeout
+wait !"pattern"        # Wait until pattern does NOT match (negated)
+wait !"Loading" 10s    # Negated with timeout
+wait 500               # Wait 500 milliseconds
+wait 2s                # Wait 2 seconds
+wait 1m                # Wait 1 minute
 ```
 
-Pattern matching uses Rust regex syntax against the plain text screen content.
+Pattern matching uses Rust regex syntax against the plain text screen content. Use `!` prefix for negated waits (wait until pattern disappears). Durations support suffixes: `ms` (milliseconds), `s` (seconds), `m` (minutes). Plain numbers are milliseconds.
 
 ### send
 
-Send text or keys to the terminal.
+Send text or keys to the terminal, with optional inline delays.
 
 ```
 send "hello"              # Send literal text
@@ -72,7 +77,11 @@ send <Enter>              # Send Enter key
 send <Esc>                # Send Escape key
 send "text" <Enter>       # Mixed text and keys
 send <C-c>                # Send Ctrl+C
+send "hello" 150 <Enter>  # Send "hello", wait 150ms, then Enter
+send <Esc> 50 ":wq\n"     # Escape, wait 50ms, then :wq
 ```
+
+Inline delays (numbers in milliseconds) pause between sends without a separate `wait` command.
 
 #### Escape sequences
 
@@ -98,14 +107,33 @@ send <C-c>                # Send Ctrl+C
 | `<Left>` | Arrow left |
 | `<Right>` | Arrow right |
 | `<C-a>` ... `<C-z>` | Ctrl + letter |
+| `<M-a>` ... `<M-z>` | Meta/Option + letter |
+| `<A-a>` ... `<A-z>` | Alt + letter (same as Meta) |
 
 ### snapshot
 
 Force capture a frame, even if screen hasn't changed.
 
 ```
-snapshot
+snapshot              # Unnamed snapshot
+snapshot "name"       # Named snapshot (name recorded in jsonl)
 ```
+
+Named snapshots are useful for identifying specific points in the recording.
+
+### kill
+
+Send a signal to the child process.
+
+```
+kill SIGTERM          # Send SIGTERM
+kill TERM             # Same (SIG prefix optional)
+kill 15               # Same (by number)
+kill SIGKILL          # Force kill
+kill 9                # Same
+```
+
+Supported signals: HUP, INT, QUIT, KILL, TERM, USR1, USR2, STOP, CONT.
 
 ### Comments
 
@@ -142,12 +170,27 @@ JSON Lines file with timing information:
 {"ms":50,"frame":"000002"}
 {"ms":100,"send":"ihello"}
 {"ms":150,"frame":"000003"}
-{"ms":200,"send":"<Esc>"}
+{"ms":200,"snapshot":"000003"}
+{"ms":250,"snapshot":"000004","name":"after-edit"}
+{"ms":300,"wait_match":"pattern"}
+{"ms":350,"kill":"SIGTERM"}
+{"ms":400,"exit":0}
 ```
 
-- `ms`: Milliseconds since session start
-- `frame`: Frame number (find files as `NNNNNN.txt` and `NNNNNN.ansi.txt`)
-- `send`: Input sent to terminal
+#### Event types
+
+| Event | Description |
+|-------|-------------|
+| `frame` | Automatic frame capture (screen content changed) |
+| `snapshot` | Explicit snapshot command; may include `name` |
+| `send` | Input sent to terminal |
+| `wait_match` | Wait pattern matched successfully |
+| `wait_timeout` | Wait timed out without matching |
+| `wait_eof` | Wait ended due to EOF without matching |
+| `kill` | Signal sent to child process |
+| `exit` | Process exit code |
+
+All events include `ms` (milliseconds since session start). Frame and snapshot values reference files as `NNNNNN.txt` and `NNNNNN.ansi.txt`.
 
 ### raw.bin
 
@@ -155,7 +198,7 @@ Complete raw PTY output. Can be replayed through a terminal emulator for full fi
 
 ### Frame deduplication
 
-Frames are deduplicated based on plain text content. A new frame is only saved when the text changes. Use `snapshot` to force a save.
+Frames are deduplicated based on plain text content. A new frame file is only created when the text changes. If a `snapshot` is taken when content is unchanged, it references the existing frame number in the recording rather than creating a duplicate file.
 
 ## Exit Code
 

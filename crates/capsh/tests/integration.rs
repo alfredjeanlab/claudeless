@@ -6,6 +6,7 @@
 
 use std::io::Write;
 use std::process::{Command, Stdio};
+use std::time::Duration;
 use tempfile::TempDir;
 
 /// Helper to run capsh with a script and return (exit_code, frames_dir)
@@ -322,4 +323,69 @@ send ":q!\n"
     let (exit_code, _dir) = run_capsh(script, &["vi"]);
     // vi should handle Ctrl-C in insert mode and exit cleanly
     assert_eq!(exit_code, 0, "vi should handle Ctrl-C gracefully");
+}
+
+// =============================================================================
+// Signal handling tests
+// =============================================================================
+
+#[test]
+fn sigterm_terminates_capsh() {
+    use nix::sys::signal::{kill, Signal};
+    use nix::unistd::Pid;
+
+    // Script that waits forever
+    let script = r#"
+wait "this_will_never_match_so_capsh_blocks_forever"
+"#;
+
+    let mut child = Command::new(env!("CARGO_BIN_EXE_capsh"))
+        .arg("--")
+        .arg("sleep")
+        .arg("60")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn capsh");
+
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(script.as_bytes())
+        .unwrap();
+    drop(child.stdin.take()); // Close stdin
+
+    // Give capsh time to start
+    std::thread::sleep(Duration::from_millis(100));
+
+    // Send SIGTERM
+    let pid = Pid::from_raw(child.id() as i32);
+    kill(pid, Signal::SIGTERM).expect("failed to send SIGTERM");
+
+    // Wait for exit with timeout
+    let output = child.wait_with_output().unwrap();
+
+    // Should terminate - either via exit code 143 or signal 15
+    let terminated = match output.status.code() {
+        Some(143) => true, // Exited with 128 + SIGTERM
+        Some(_) => false,
+        None => {
+            // Killed by signal
+            #[cfg(unix)]
+            {
+                use std::os::unix::process::ExitStatusExt;
+                output.status.signal() == Some(15) // SIGTERM
+            }
+            #[cfg(not(unix))]
+            false
+        }
+    };
+
+    assert!(
+        terminated,
+        "capsh should terminate on SIGTERM, status: {:?}",
+        output.status
+    );
 }

@@ -75,6 +75,61 @@ fn recording_elapsed_ms_increases() {
 }
 
 #[test]
+fn recording_logs_snapshot() {
+    let dir = TempDir::new().unwrap();
+    let mut rec = Recording::new(dir.path()).unwrap();
+
+    rec.log_snapshot(1, None).unwrap();
+    rec.log_snapshot(42, Some("my-snapshot")).unwrap();
+    rec.flush().unwrap();
+
+    let content = std::fs::read_to_string(dir.path().join("recording.jsonl")).unwrap();
+    let lines: Vec<&str> = content.lines().collect();
+
+    assert_eq!(lines.len(), 2);
+    assert!(lines[0].contains(r#""snapshot":"000001""#));
+    assert!(!lines[0].contains(r#""name""#)); // No name field
+    assert!(lines[1].contains(r#""snapshot":"000042""#));
+    assert!(lines[1].contains(r#""name":"my-snapshot""#));
+    assert!(lines[0].contains(r#""ms":"#));
+}
+
+#[test]
+fn recording_logs_wait_match() {
+    let dir = TempDir::new().unwrap();
+    let mut rec = Recording::new(dir.path()).unwrap();
+
+    rec.log_wait_match("Ready>").unwrap();
+
+    let content = std::fs::read_to_string(dir.path().join("recording.jsonl")).unwrap();
+    assert!(content.contains(r#""wait_match":"Ready>""#));
+}
+
+#[test]
+fn recording_logs_wait_timeout() {
+    let dir = TempDir::new().unwrap();
+    let mut rec = Recording::new(dir.path()).unwrap();
+
+    rec.log_wait_timeout("never_found").unwrap();
+
+    let content = std::fs::read_to_string(dir.path().join("recording.jsonl")).unwrap();
+    assert!(content.contains(r#""wait_timeout":"never_found""#));
+}
+
+#[test]
+fn recording_logs_kill() {
+    use nix::sys::signal::Signal;
+
+    let dir = TempDir::new().unwrap();
+    let mut rec = Recording::new(dir.path()).unwrap();
+
+    rec.log_kill(Signal::SIGTERM).unwrap();
+
+    let content = std::fs::read_to_string(dir.path().join("recording.jsonl")).unwrap();
+    assert!(content.contains(r#""kill":"SIGTERM""#));
+}
+
+#[test]
 fn recording_logs_exit() {
     let dir = TempDir::new().unwrap();
     let mut rec = Recording::new(dir.path()).unwrap();

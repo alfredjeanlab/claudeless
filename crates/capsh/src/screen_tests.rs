@@ -111,6 +111,66 @@ fn screen_save_frame_increments_seq() {
 }
 
 #[test]
+fn screen_save_frame_deduplicates_unchanged() {
+    let mut screen = Screen::new(80, 24);
+    let dir = TempDir::new().unwrap();
+
+    screen.feed(b"same content");
+    let seq1 = screen.save_frame(dir.path()).unwrap();
+
+    // Save again without changes - should return same seq, no new file
+    let seq2 = screen.save_frame(dir.path()).unwrap();
+
+    assert_eq!(seq1, 1);
+    assert_eq!(seq2, 1); // Same sequence number
+    assert!(dir.path().join("000001.txt").exists());
+    assert!(!dir.path().join("000002.txt").exists()); // No duplicate file
+
+    // After actual change, should create new file
+    screen.feed(b" more");
+    let seq3 = screen.save_frame(dir.path()).unwrap();
+    assert_eq!(seq3, 2);
+    assert!(dir.path().join("000002.txt").exists());
+}
+
+#[test]
+fn screen_handles_split_utf8() {
+    let mut screen = Screen::new(80, 24);
+
+    // The box-drawing character ─ is U+2500, encoded as E2 94 80 in UTF-8
+    // Split it across two feed() calls
+    screen.feed(&[0xE2, 0x94]); // First two bytes
+    screen.feed(&[0x80]); // Last byte
+
+    let text = screen.render();
+    assert!(
+        text.contains("─"),
+        "should correctly reassemble split UTF-8: {:?}",
+        text
+    );
+    assert!(
+        !text.contains("�"),
+        "should not contain replacement characters"
+    );
+}
+
+#[test]
+fn screen_handles_multiple_split_utf8() {
+    let mut screen = Screen::new(80, 24);
+
+    // Send "Hello ─ World" but split the ─ character
+    screen.feed(b"Hello \xE2"); // 'Hello ' + first byte of ─
+    screen.feed(b"\x94\x80 World"); // rest of ─ + ' World'
+
+    let text = screen.render();
+    assert!(
+        text.contains("Hello ─ World"),
+        "should handle split UTF-8 in context: {:?}",
+        text
+    );
+}
+
+#[test]
 fn pen_to_ansi_empty_for_default() {
     let pen = avt::Pen::default();
     let ansi = pen_to_ansi(&pen);

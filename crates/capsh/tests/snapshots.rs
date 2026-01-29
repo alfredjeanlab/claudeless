@@ -1,5 +1,3 @@
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-
 //! Snapshot tests comparing full screen output against fixtures.
 //!
 //! These tests verify exact terminal rendering by comparing captured frames

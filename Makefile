@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: check install license outdated lint lint-shell lint-policy
+.PHONY: check install license outdated lint lint-shell lint-policy capture capture-experimental
 
 # Run all CI checks
 check: lint
@@ -36,7 +36,7 @@ lint-shell:
 		echo "Error: shellcheck not found. Install with: brew install shellcheck"; \
 		exit 1; \
 	fi
-	@shellcheck -x -S warning scripts/*
+	@shellcheck -x -S warning scripts/* tests/capture/*.sh tests/capture/lib/*.sh
 
 # Check policy enforcement (allow attributes, deny.toml, shellcheck exceptions)
 lint-policy:
@@ -45,3 +45,11 @@ lint-policy:
 # Add/update license headers in source files
 license:
 	@scripts/license
+
+# Capture TUI fixtures from real Claude CLI (reliable scripts only)
+capture:
+	./tests/capture/capture.sh --skip-requires-config
+
+# Capture all TUI fixtures including experimental (may fail)
+capture-experimental:
+	RUN_EXPERIMENTAL=1 ./tests/capture/capture.sh

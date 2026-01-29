@@ -91,6 +91,12 @@ impl Pty {
         Ok(())
     }
 
+    /// Send a signal to the child process.
+    pub fn kill(&self, signal: Signal) -> Result<()> {
+        nix::sys::signal::kill(self.child_pid, signal)?;
+        Ok(())
+    }
+
     /// Wait for the child process to exit and return exit code.
     pub async fn wait(self) -> Result<i32> {
         nix::sys::signal::kill(self.child_pid, Signal::SIGHUP).ok();

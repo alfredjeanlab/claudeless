@@ -13,6 +13,8 @@ pub struct Screen {
     vt: avt::Vt,
     last_frame: Option<String>,
     frame_seq: u64,
+    /// Buffer for incomplete UTF-8 sequences between feed() calls.
+    utf8_buf: Vec<u8>,
 }
 
 impl Screen {
@@ -22,12 +24,35 @@ impl Screen {
             vt: avt::Vt::new(cols as usize, rows as usize),
             last_frame: None,
             frame_seq: 0,
+            utf8_buf: Vec::new(),
         }
     }
 
     /// Feed raw terminal output through the parser.
     pub fn feed(&mut self, data: &[u8]) {
-        self.vt.feed_str(&String::from_utf8_lossy(data));
+        // Prepend any buffered incomplete UTF-8 bytes
+        let bytes = if self.utf8_buf.is_empty() {
+            data.to_vec()
+        } else {
+            let mut combined = std::mem::take(&mut self.utf8_buf);
+            combined.extend_from_slice(data);
+            combined
+        };
+
+        // Find the last valid UTF-8 boundary
+        let valid_len = find_utf8_boundary(&bytes);
+
+        if valid_len < bytes.len() {
+            // Buffer the trailing incomplete bytes
+            self.utf8_buf = bytes[valid_len..].to_vec();
+        }
+
+        // Feed the valid UTF-8 portion
+        if valid_len > 0 {
+            // SAFETY: find_utf8_boundary ensures bytes[..valid_len] is valid UTF-8
+            let s = unsafe { std::str::from_utf8_unchecked(&bytes[..valid_len]) };
+            self.vt.feed_str(s);
+        }
     }
 
     /// Render current screen state as text.
@@ -71,12 +96,22 @@ impl Screen {
     }
 
     /// Save frame (both plain and ANSI), returns frame number.
+    /// If content is unchanged from the last save, returns the previous frame number
+    /// without creating duplicate files.
     pub fn save_frame(&mut self, dir: &Path) -> Result<u64> {
+        let plain = self.render();
+
+        // If content unchanged, return existing frame number
+        if let Some(ref last) = self.last_frame {
+            if &plain == last {
+                return Ok(self.frame_seq);
+            }
+        }
+
         self.frame_seq += 1;
         let seq = self.frame_seq;
 
         // Plain text
-        let plain = self.render();
         std::fs::write(dir.join(format!("{:06}.txt", seq)), &plain)?;
 
         // ANSI
@@ -170,6 +205,28 @@ fn pen_to_ansi(pen: &avt::Pen) -> String {
         String::new()
     } else {
         format!("\x1b[{}m", codes.join(";"))
+    }
+}
+
+/// Find the byte index of the last complete UTF-8 character.
+/// Returns the number of bytes that form valid UTF-8.
+fn find_utf8_boundary(bytes: &[u8]) -> usize {
+    match std::str::from_utf8(bytes) {
+        Ok(_) => bytes.len(), // All valid
+        Err(e) => {
+            // valid_up_to gives us the index of the first invalid byte
+            let valid = e.valid_up_to();
+            // Check if the remaining bytes could be a valid incomplete sequence
+            // If error_len is None, it means the remaining bytes are an incomplete
+            // but potentially valid multi-byte sequence
+            if e.error_len().is_none() {
+                valid
+            } else {
+                // There's an actual invalid byte sequence - this shouldn't happen
+                // with normal terminal output, but handle it gracefully
+                valid
+            }
+        }
     }
 }
 

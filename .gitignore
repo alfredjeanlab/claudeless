@@ -18,6 +18,9 @@ target/
 # Claude output
 conversation_*.txt
 
+# Capture raw output (fixtures go in tests/fixtures/)
+tests/capture/output/
+
 # OS
 .DS_Store
 Thumbs.db

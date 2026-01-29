@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use std::path::PathBuf;
+use tokio::signal::unix::{signal, SignalKind};
 
 mod nbio;
 mod pty;
@@ -41,6 +42,14 @@ async fn main() -> Result<()> {
         script: script::load_stdin()?,
     };
 
-    let exit_code = session::run(config).await?;
+    let mut sigterm = signal(SignalKind::terminate())?;
+    let mut sigint = signal(SignalKind::interrupt())?;
+
+    let exit_code = tokio::select! {
+        result = session::run(config) => result?,
+        _ = sigterm.recv() => 128 + 15, // SIGTERM
+        _ = sigint.recv() => 128 + 2,   // SIGINT
+    };
+
     std::process::exit(exit_code);
 }

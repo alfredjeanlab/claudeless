@@ -10,18 +10,20 @@ INSTALL_DIR="$HOME/.local/bin"
 # Ensure install directory exists
 mkdir -p "$INSTALL_DIR"
 
-# Build claudeless CLI
-echo "Building claudeless..."
+# Build binaries
+echo "Building claudeless and capsh..."
 cd "$ROOT_DIR"
-cargo build --release -p claudeless
+cargo build --release -p claudeless -p capsh
 
 # Install to ~/.local/bin/
-echo "Installing to $INSTALL_DIR/claudeless..."
+echo "Installing to $INSTALL_DIR..."
 /bin/cp "$ROOT_DIR/target/release/claudeless" "$INSTALL_DIR/claudeless"
+/bin/cp "$ROOT_DIR/target/release/capsh" "$INSTALL_DIR/capsh"
 
-# Re-sign the binary after copying (required on macOS for adhoc-signed binaries)
+# Re-sign binaries after copying (required on macOS for adhoc-signed binaries)
 if [[ "$(uname)" == "Darwin" ]]; then
     codesign --force --sign - "$INSTALL_DIR/claudeless"
+    codesign --force --sign - "$INSTALL_DIR/capsh"
 fi
 
 echo "Done."
