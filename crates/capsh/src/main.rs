@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 mod nbio;
 mod pty;
+mod recording;
 mod screen;
 mod script;
 mod session;
