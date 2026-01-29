@@ -57,7 +57,7 @@ snapshot           # Force save frame even if unchanged
 
 Frames are saved as `{seq:06}.txt` in the output directory:
 
-```
+```example
 ./output/
   000001.txt
   000002.txt

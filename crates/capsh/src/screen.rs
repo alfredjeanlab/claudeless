@@ -4,6 +4,7 @@
 //! and detect changes between frames.
 
 use anyhow::Result;
+use regex::Regex;
 use std::path::Path;
 
 /// Terminal screen state with change detection.
@@ -65,4 +66,31 @@ impl Screen {
         self.last_frame = Some(frame);
         Ok(Some(seq))
     }
+
+    /// Check if pattern matches anywhere in current screen.
+    pub fn matches(&self, pattern: &Regex) -> bool {
+        pattern.is_match(&self.render())
+    }
+
+    /// Force save regardless of diff (for snapshot command).
+    pub fn force_save(&mut self, dir: &Path) -> Result<u64> {
+        let frame = self.render();
+        self.frame_seq += 1;
+        let seq = self.frame_seq;
+
+        let path = dir.join(format!("{:06}.txt", seq));
+        std::fs::write(&path, &frame)?;
+
+        let latest = dir.join("latest.txt");
+        let _ = std::fs::remove_file(&latest);
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(format!("{:06}.txt", seq), &latest)?;
+
+        self.last_frame = Some(frame);
+        Ok(seq)
+    }
 }
+
+#[cfg(test)]
+#[path = "screen_tests.rs"]
+mod tests;
