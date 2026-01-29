@@ -1,0 +1,11 @@
+# Capture input state with text typed (no Enter pressed).
+# Args: --model haiku
+
+wait "for shortcuts" 10s
+send "Say hello in exactly 3 words"
+wait 500
+snapshot "with_input"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
