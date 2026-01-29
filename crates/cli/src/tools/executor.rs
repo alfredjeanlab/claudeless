@@ -215,7 +215,6 @@ pub fn create_executor_with_mcp_and_permissions(
     Box::new(PermissionCheckingExecutor::new(inner, checker))
 }
 
-
 #[cfg(test)]
 #[path = "executor_tests.rs"]
 mod tests;

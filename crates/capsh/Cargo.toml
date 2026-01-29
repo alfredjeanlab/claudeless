@@ -1,0 +1,35 @@
+[package]
+name = "capsh"
+version = "0.1.0"
+edition = "2021"
+description = "Headless terminal capture with scripting DSL"
+license = "MIT"
+repository = "https://github.com/anthropics/claudeless"
+keywords = ["terminal", "pty", "capture", "headless"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "capsh"
+path = "src/main.rs"
+
+[dependencies]
+# PTY handling
+nix = { version = "0.28", features = ["term", "process", "fs", "signal"] }
+
+# Terminal emulation
+avt = "0.16"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Async I/O
+tokio = { version = "1", features = ["full"] }
+
+# Error handling
+anyhow = "1"
+
+# Regex for wait patterns
+regex = "1"
+
+[dev-dependencies]
+tempfile = "3"

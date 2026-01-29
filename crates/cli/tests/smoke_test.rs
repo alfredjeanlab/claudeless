@@ -263,6 +263,67 @@ mod json_output {
 mod stream_json_output {
     use super::*;
 
+    /// Behavior observed with: claude --version 2.1.23 (Claude Code)
+    ///
+    /// Real Claude requires --verbose when using --output-format=stream-json with -p:
+    /// ```
+    /// $ claude -p "test" --output-format stream-json
+    /// Error: When using --print, --output-format=stream-json requires --verbose
+    /// ```
+    #[test]
+    #[ignore] // TODO(implement): stream-json with -p should require --verbose
+    fn test_stream_json_print_requires_verbose() {
+        let mut cmd = Command::cargo_bin("claudeless").unwrap();
+        cmd.args(["--output-format", "stream-json", "-p", "test"])
+            .assert()
+            .failure()
+            .code(1)
+            .stderr(predicate::str::contains(
+                "When using --print, --output-format=stream-json requires --verbose",
+            ));
+    }
+
+    /// Behavior observed with: claude --version 2.1.23 (Claude Code)
+    ///
+    /// With --verbose, stream-json output works correctly with -p.
+    #[test]
+    #[ignore] // TODO(implement): stream-json with -p should require --verbose
+    fn test_stream_json_print_with_verbose_succeeds() {
+        let scenario = write_scenario(
+            r#"
+            name = "test"
+            [[responses]]
+            pattern = { type = "any" }
+            response = "ok"
+            "#,
+        );
+
+        let mut cmd = Command::cargo_bin("claudeless").unwrap();
+        let output = cmd
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "--output-format",
+                "stream-json",
+                "--verbose",
+                "-p",
+                "test",
+            ])
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone();
+
+        let stdout = String::from_utf8_lossy(&output);
+        let first_line = stdout.lines().next().unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(first_line).unwrap();
+
+        // With --verbose, stream should start with system init
+        assert_eq!(parsed["type"], "system");
+        assert_eq!(parsed["subtype"], "init");
+    }
+
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
     #[test]
     fn test_stream_json_is_ndjson() {

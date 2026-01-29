@@ -134,3 +134,78 @@ fn format_mcp_content_array() {
     assert!(result.contains("2"));
     assert!(result.contains("3"));
 }
+
+// =============================================================================
+// Qualified Name Handling Tests
+// =============================================================================
+
+#[test]
+fn has_tool_recognizes_qualified_name() {
+    // Register tool with raw name "read_file"
+    let manager = mock_manager_with_tool("read_file");
+    let executor = McpToolExecutor::new(manager);
+
+    // Should find it via raw name
+    assert!(executor.has_tool("read_file"));
+
+    // Should also find it via qualified name
+    assert!(executor.has_tool("mcp__test-server__read_file"));
+}
+
+#[test]
+fn has_tool_handles_different_server_in_qualified_name() {
+    // Register tool with raw name "read_file" on server "test-server"
+    let manager = mock_manager_with_tool("read_file");
+    let executor = McpToolExecutor::new(manager);
+
+    // Qualified name with different server name should still find the tool
+    // (we only match on raw tool name, not server name)
+    assert!(executor.has_tool("mcp__filesystem__read_file"));
+}
+
+#[test]
+fn get_raw_tool_name_extracts_from_qualified() {
+    let raw = McpToolExecutor::get_raw_tool_name("mcp__filesystem__read_file");
+    assert_eq!(raw, "read_file");
+}
+
+#[test]
+fn get_raw_tool_name_passes_through_raw() {
+    let raw = McpToolExecutor::get_raw_tool_name("read_file");
+    assert_eq!(raw, "read_file");
+}
+
+#[test]
+fn get_raw_tool_name_handles_builtin() {
+    let raw = McpToolExecutor::get_raw_tool_name("Read");
+    assert_eq!(raw, "Read");
+}
+
+#[test]
+fn composite_routes_qualified_mcp_tool_to_mcp() {
+    let manager = mock_manager_with_tool("read_file");
+    let mcp = McpToolExecutor::new(manager);
+    let builtin = BuiltinExecutor::new();
+    let composite = CompositeExecutor::new(Some(mcp), builtin);
+
+    // Qualified MCP tool name should be recognized
+    let call = ToolCallSpec {
+        tool: "mcp__filesystem__read_file".to_string(),
+        input: serde_json::json!({"path": "/tmp/test"}),
+        result: None,
+    };
+
+    let result = composite.execute(&call, "test-id", &ExecutionContext::default());
+
+    // Should route to MCP executor (not builtin)
+    // It will fail because we don't have a live MCP connection, but it should
+    // NOT return "Unknown built-in tool" error
+    assert!(
+        !result
+            .text()
+            .unwrap_or_default()
+            .contains("Unknown built-in tool"),
+        "Should route to MCP, not builtin. Got: {:?}",
+        result.text()
+    );
+}

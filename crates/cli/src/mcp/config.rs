@@ -78,6 +78,60 @@ pub struct McpToolDef {
     pub server_name: String,
 }
 
+impl McpToolDef {
+    /// Returns the qualified tool name in real Claude CLI format.
+    ///
+    /// Real Claude CLI uses the format `mcp__<server>__<tool>` for MCP tools.
+    /// For example, a tool "read_file" from server "filesystem" becomes
+    /// "mcp__filesystem__read_file".
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use claudeless::mcp::config::McpToolDef;
+    ///
+    /// let tool = McpToolDef {
+    ///     name: "read_file".into(),
+    ///     description: "Read a file".into(),
+    ///     input_schema: serde_json::json!({}),
+    ///     server_name: "filesystem".into(),
+    /// };
+    /// assert_eq!(tool.qualified_name(), "mcp__filesystem__read_file");
+    /// ```
+    pub fn qualified_name(&self) -> String {
+        format!("mcp__{}__{}", self.server_name, self.name)
+    }
+
+    /// Parse a qualified tool name back into server and tool names.
+    ///
+    /// Returns `Some((server_name, tool_name))` if the name matches the
+    /// `mcp__<server>__<tool>` format, or `None` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use claudeless::mcp::config::McpToolDef;
+    ///
+    /// let parts = McpToolDef::parse_qualified_name("mcp__filesystem__read_file");
+    /// assert_eq!(parts, Some(("filesystem".to_string(), "read_file".to_string())));
+    ///
+    /// let parts = McpToolDef::parse_qualified_name("Read");
+    /// assert_eq!(parts, None);
+    /// ```
+    pub fn parse_qualified_name(qualified: &str) -> Option<(String, String)> {
+        if !qualified.starts_with("mcp__") {
+            return None;
+        }
+        let rest = &qualified[5..]; // Skip "mcp__"
+        let parts: Vec<&str> = rest.splitn(2, "__").collect();
+        if parts.len() == 2 && !parts[0].is_empty() && !parts[1].is_empty() {
+            Some((parts[0].to_string(), parts[1].to_string()))
+        } else {
+            None
+        }
+    }
+}
+
 impl McpConfig {
     /// Load from file path (supports JSON and JSON5).
     pub fn load(path: &Path) -> Result<Self, McpConfigError> {
