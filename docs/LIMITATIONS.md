@@ -110,11 +110,11 @@ Run: `cargo test -- --ignored`
 
 ## CLI Flags
 
-### Partial
+### Partial → Full
 
-| Flag | Issue |
-|------|-------|
-| `--mcp-config` | Config parsing only, no server execution |
+| Flag | Status |
+|------|--------|
+| `--mcp-config` | ✓ Full: config parsing + server execution |
 
 ### Not Implemented
 
@@ -161,6 +161,24 @@ Missing fields:
 
 | Feature | Status |
 |---------|--------|
-| Actual server execution | Not implemented (returns stub) |
-| Dynamic tool discovery | Not implemented (manual registration) |
-| Server health checks | Not implemented (always "running") |
+| Server spawning | ✓ Implemented via `McpClient::connect()` |
+| Protocol initialization | ✓ Implemented (`initialize` + `notifications/initialized`) |
+| Dynamic tool discovery | ✓ Implemented via `tools/list` |
+| Tool execution | ✓ Implemented via `tools/call` |
+| Graceful shutdown | ✓ Implemented with timeout and force-kill |
+| Multi-server management | ✓ Implemented via `McpManager` |
+| Tool routing | ✓ Implemented (tool → server mapping) |
+| Resources protocol | Not implemented (tools only) |
+| Prompts protocol | Not implemented (tools only) |
+| Server health checks | Basic (process exit detection) |
+
+### MCP Configuration
+
+Supported config formats:
+- JSON (`.json`)
+- JSON5 (`.json5`) with comments
+
+Supported flags:
+- `--mcp-config <path>` - Load MCP config file
+- `--strict-mcp-config` - Fail on invalid config
+- `--mcp-debug` - Enable MCP debug output
