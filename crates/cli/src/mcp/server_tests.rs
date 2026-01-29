@@ -239,4 +239,45 @@ mod integration_tests {
         // Should fail with transport error for empty command
         assert!(matches!(result.unwrap_err(), ClientError::Transport(_)));
     }
+
+    #[tokio::test]
+    async fn test_manager_initialize_partial_failure() {
+        // Create config with one valid server (echo) and one invalid (bad command)
+        let script = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("tests/fixtures/echo_mcp_server.py");
+        let config = McpConfig::parse(&format!(
+            r#"{{
+                "mcpServers": {{
+                    "echo": {{"command": "python3", "args": ["{}"]}},
+                    "bad": {{"command": "nonexistent_xyz_123", "args": []}}
+                }}
+            }}"#,
+            script.to_string_lossy()
+        ))
+        .unwrap();
+
+        let mut manager = McpManager::from_config(&config);
+        let results = manager.initialize().await;
+
+        // One should succeed, one should fail
+        assert_eq!(results.len(), 2);
+        let successes: Vec<_> = results.iter().filter(|(_, r)| r.is_ok()).collect();
+        let failures: Vec<_> = results.iter().filter(|(_, r)| r.is_err()).collect();
+
+        assert_eq!(successes.len(), 1);
+        assert_eq!(failures.len(), 1);
+
+        // Echo tools should be available
+        assert!(manager.has_tool("echo"));
+
+        // Failed server should be marked as Failed
+        let bad_server = manager.get_server("bad").unwrap();
+        assert!(matches!(bad_server.status, McpServerStatus::Failed(_)));
+
+        manager.shutdown().await;
+    }
 }
