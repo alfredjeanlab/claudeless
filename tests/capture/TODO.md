@@ -71,10 +71,10 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 
 - `api_usage_billing`
 
-## Skipped (Unable to Capture)
+## Skipped (tmux-based capture available)
 
-- `ctrl_c_exit_hint` - Ctrl-C doesn't work in raw mode
-- `ctrl_d_exit_hint` - Ctrl-D doesn't work in raw mode
+- `ctrl_c_exit_hint` - Ctrl-C doesn't work in capsh, use `tmux/ctrl-c-exit-hint.sh`
+- `ctrl_d_exit_hint` - Ctrl-D doesn't work in capsh, use `tmux/ctrl-d-exit-hint.sh`
 
 ## Finished
 

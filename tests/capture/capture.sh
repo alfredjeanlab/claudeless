@@ -42,7 +42,7 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Options:"
             echo "  --script <name>         Run only the specified script (without .capsh)"
-            echo "  --retry                 Only re-run failed scripts from previous run"
+            echo "  --retry                 Re-run failed scripts or scripts with missing fixtures"
             echo "  --skip-skipped          Skip skipped scripts (default)"
             echo "  --run-skipped           Run skipped scripts (may fail)"
             echo "  -h, --help              Show this help"
@@ -92,8 +92,13 @@ should_run_script() {
         return 0  # Not in retry mode, run everything
     fi
 
-    # In retry mode: run if in failures file
+    # In retry mode: run if in failures file OR if recording doesn't exist
     if [[ -f "$FAILURES_FILE" ]] && grep -q "^${script_name}$" "$FAILURES_FILE"; then
+        return 0
+    fi
+
+    # Also run if recording doesn't exist (script never ran successfully)
+    if [[ ! -f "$RAW_OUTPUT/$script_name/recording.jsonl" ]]; then
         return 0
     fi
 
@@ -117,12 +122,9 @@ clear_failure() {
 
 # Clean or preserve output based on mode
 if [[ "$RETRY_MODE" == "1" ]]; then
-    echo "Retry mode: only re-running failed scripts"
+    echo "Retry mode: re-running failed scripts and scripts with missing fixtures"
     if [[ -f "$FAILURES_FILE" ]]; then
-        echo -e "${DIM}Failures to retry: $(wc -l < "$FAILURES_FILE" | tr -d ' ')${NC}"
-    else
-        echo -e "${YELLOW}No failures file found, nothing to retry${NC}"
-        exit 0
+        echo -e "${DIM}Known failures: $(wc -l < "$FAILURES_FILE" | tr -d ' ')${NC}"
     fi
 elif [[ -n "$SINGLE_SCRIPT" ]]; then
     # Single script mode: only clean that script's output
@@ -170,15 +172,35 @@ run_script() {
     fi
 }
 
-# Run reliable scripts (keyboard interactions only)
+# Run `capsh` scripts
 echo ""
-echo "=== Running reliable scripts ==="
-for script in "$SCRIPT_DIR"/reliable/*.capsh; do
+echo "=== Running capsh scripts ==="
+for script in "$SCRIPT_DIR"/capsh/*.capsh; do
     [[ -f "$script" ]] || continue
     run_script "$script" "$KEYBOARD_TIMEOUT"
 done
 
-# Run skipped scripts (may involve API calls)
+# Run tmux scripts
+echo ""
+echo "=== Running tmux scripts ==="
+for script in "$SCRIPT_DIR"/tmux/*.sh; do
+    [[ -f "$script" ]] || continue
+    script_name=$(basename "$script" .sh)
+
+    # Check if we should run this script
+    if should_run_script "$script_name"; then
+        ((TOTAL++)) || true
+        if "$script"; then
+            ((PASSED++)) || true
+            clear_failure "$script_name"
+        else
+            ((FAILED++)) || true
+            record_failure "$script_name"
+        fi
+    fi
+done
+
+# Run skipped scripts
 if [[ "$RUN_SKIPPED" == "1" ]]; then
     echo ""
     echo -e "${YELLOW}=== Running skipped scripts (may fail) ===${NC}"

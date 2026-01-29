@@ -1,15 +1,11 @@
-
-▗ ▗   ▖ ▖  Claude Code v2.1.23
-           Haiku 4.5 · Claude Max
+ ▐▛███▜▌   Claude Code v2.1.23
+▝▜█████▛▘  Haiku 4.5 · Claude Max
   ▘▘ ▝▝    ~/Developer/claudeless
 
 ────────────────────────────────────────────────────────────────────────────────
-! Try "fix lint errors"
+❯ Try "fix typecheck errors"
 ────────────────────────────────────────────────────────────────────────────────
-  ! for bash mode
-
-
-
+  Press Ctrl-C again to exit
 
 
 

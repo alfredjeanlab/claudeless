@@ -35,5 +35,5 @@ capsh --frames /tmp/skipped -- claude < skipped/permission-dialogs.capsh
 If you find a reliable way to capture these states:
 
 1. Update the script with your approach
-2. Move to `reliable/` if it now works consistently
+2. Move to `capsh/` if it now works consistently
 3. Update this README

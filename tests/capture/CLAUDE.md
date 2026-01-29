@@ -131,3 +131,16 @@ tests/fixtures/v{VERSION}/
 3. Run `./tests/capture/capture.sh --script your-script` to test
 4. Verify fixtures in `tests/fixtures/v{VERSION}/`
 5. Update `TODO.md` to mark as finished
+
+### Special cases: tmux scripts
+
+Some fixtures can't be captured with capsh (Ctrl-C, Ctrl-D) due to raw mode. These use tmux scripts in `tests/capture/tmux/*.sh` which are automatically run by `capture.sh`.
+
+To run tmux scripts individually:
+
+```bash
+./tests/capture/tmux/ctrl-c-exit-hint.sh
+./tests/capture/tmux/ctrl-d-exit-hint.sh
+```
+
+Tmux scripts directly control a tmux session and capture pane output to fixtures.
