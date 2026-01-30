@@ -247,7 +247,7 @@ pub fn append_turn_jsonl(path: &Path, params: &TurnParams) -> std::io::Result<()
             content: vec![ContentBlock::Text {
                 text: params.response.to_string(),
             }],
-            stop_reason: Some("end_turn".to_string()),
+            stop_reason: None,
             stop_sequence: None,
             usage: Usage::new(2, 1),
         },
