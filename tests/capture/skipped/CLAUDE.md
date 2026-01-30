@@ -20,6 +20,27 @@ Captures context compaction states. Challenges:
 - Compaction timing is model-dependent
 - Requires multiple interactions
 
+### setup-*.capsh & slash-logout.capsh
+
+Captures the initial setup flow and logout states. Challenges:
+
+- Require fresh/unconfigured Claude installation (no existing login)
+- Setup flow only appears once per account configuration
+- slash_logout requires an active session to log out from
+- Would need to mock or reset configuration between captures
+- Complex to automate in CI without affecting real user config
+
+These fixtures exist in `crates/cli/tests/fixtures/tui/v2.1.14/`:
+- `setup_01_select_theme_dark.txt`
+- `setup_01_select_theme_light.txt`
+- `setup_01a_syntax_highlighting_disabled.txt`
+- `setup_02_login_method.txt`
+- `setup_03_login_browser.txt`
+- `setup_03_security_notes.txt`
+- `setup_04_login_success.txt`
+- `setup_05_use_terminal_setup.txt`
+- `slash_logout.txt`
+
 ## Simulator Fixture Differences
 
 These fixture tests are ignored because the simulator renders differently than the real CLI:
