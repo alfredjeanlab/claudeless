@@ -5,7 +5,6 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 ## TODO
 
 - `hooks_dialog` - Hooks dialog
-- `ctrl_s_stash_active` - Ctrl-S stash active
 
 ## TODO (Conversation + Slow)
 
@@ -93,3 +92,4 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 | `todos_empty` | `todos_empty` |
 | `thinking_off_status` | `thinking_off_status` |
 | `ctrl_z_suspend` | `ctrl_z_suspend` |
+| `ctrl_s_stash_active` | `ctrl_s_stash_active` |
