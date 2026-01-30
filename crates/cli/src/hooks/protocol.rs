@@ -25,6 +25,8 @@ pub enum HookEvent {
     PromptSubmit,
     /// Before context compaction
     PreCompact,
+    /// Claude finishes responding
+    Stop,
 }
 
 /// Hook message sent to hook script
@@ -135,6 +137,15 @@ impl HookMessage {
             },
         }
     }
+
+    /// Create a stop message
+    pub fn stop(session_id: impl Into<String>, stop_hook_active: bool) -> Self {
+        Self {
+            event: HookEvent::Stop,
+            session_id: session_id.into(),
+            payload: HookPayload::Stop { stop_hook_active },
+        }
+    }
 }
 
 /// Hook payload variants
@@ -177,6 +188,13 @@ pub enum HookPayload {
         trigger: CompactionTrigger,
         #[serde(skip_serializing_if = "Option::is_none")]
         custom_instructions: Option<String>,
+    },
+
+    /// Stop event (Claude finishes responding)
+    Stop {
+        /// True when Claude Code is already continuing as a result of a stop hook.
+        /// Check this value or process the transcript to prevent infinite loops.
+        stop_hook_active: bool,
     },
 }
 

@@ -26,7 +26,7 @@ Built-in tools execute in a sandbox and scenarios control responses.
 
 - **CLI Flags**: See `claude -h` for comparison with real CLI
 - **Output Formats**: text, json, stream-json with result wrapper
-- **Hook Protocol**: All 8 events (pre/post tool execution, notification, permission, session start/end, prompt submit, pre-compaction)
+- **Hook Protocol**: All 9 events (pre/post tool execution, notification, permission, session start/end, prompt submit, pre-compaction, stop)
 - **Permission Modes**: All 6 modes (default, acceptEdits, bypassPermissions, delegate, dontAsk, plan)
 - **MCP Config**: JSON/JSON5 parsing, tool registration, `--mcp-config` / `--strict-mcp-config` / `--mcp-debug`
 - **State Directory**: projects, todos, plans, sessions, settings.json

@@ -325,6 +325,16 @@ fn test_pre_compact_event_serialization() {
 }
 
 #[test]
+fn test_stop_event_serialization() {
+    let event = HookEvent::Stop;
+    let json = serde_json::to_string(&event).unwrap();
+    assert_eq!(json, "\"stop\"");
+
+    let parsed: HookEvent = serde_json::from_str(&json).unwrap();
+    assert_eq!(parsed, event);
+}
+
+#[test]
 fn test_compaction_trigger_serialization() {
     let manual = CompactionTrigger::Manual;
     let json = serde_json::to_value(&manual).unwrap();
@@ -358,6 +368,19 @@ fn test_hook_message_compaction_manual() {
         );
     } else {
         unreachable!("Expected Compaction payload");
+    }
+}
+
+#[test]
+fn test_hook_message_stop() {
+    let msg = HookMessage::stop("test-session", false);
+
+    assert_eq!(msg.event, HookEvent::Stop);
+    assert_eq!(msg.session_id, "test-session");
+    if let HookPayload::Stop { stop_hook_active } = &msg.payload {
+        assert!(!stop_hook_active);
+    } else {
+        unreachable!("Expected Stop payload");
     }
 }
 
@@ -409,4 +432,28 @@ fn test_pre_compact_auto_omits_custom_instructions() {
     assert_eq!(json["payload"]["trigger"], "auto");
     // custom_instructions should not be serialized when None
     assert!(json["payload"].get("custom_instructions").is_none());
+}
+
+#[test]
+fn test_stop_payload_matches_spec() {
+    let msg = HookMessage::stop("test-session", true);
+
+    let json = serde_json::to_value(&msg).unwrap();
+
+    assert_eq!(json["event"], "stop");
+    assert_eq!(json["session_id"], "test-session");
+    assert_eq!(json["payload"]["stop_hook_active"], true);
+}
+
+#[test]
+fn test_stop_hook_active_prevents_loops() {
+    // Test with stop_hook_active = false (initial stop)
+    let msg_initial = HookMessage::stop("session-1", false);
+    let json_initial = serde_json::to_value(&msg_initial).unwrap();
+    assert_eq!(json_initial["payload"]["stop_hook_active"], false);
+
+    // Test with stop_hook_active = true (already continuing from hook)
+    let msg_active = HookMessage::stop("session-1", true);
+    let json_active = serde_json::to_value(&msg_active).unwrap();
+    assert_eq!(json_active["payload"]["stop_hook_active"], true);
 }
