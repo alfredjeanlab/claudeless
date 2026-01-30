@@ -313,3 +313,100 @@ fn test_hook_response_with_data() {
     assert!(response.data.is_some());
     assert_eq!(response.data.unwrap()["custom_field"], "custom_value");
 }
+
+#[test]
+fn test_pre_compact_event_serialization() {
+    let event = HookEvent::PreCompact;
+    let json = serde_json::to_string(&event).unwrap();
+    assert_eq!(json, "\"pre_compact\"");
+
+    let parsed: HookEvent = serde_json::from_str(&json).unwrap();
+    assert_eq!(parsed, event);
+}
+
+#[test]
+fn test_compaction_trigger_serialization() {
+    let manual = CompactionTrigger::Manual;
+    let json = serde_json::to_value(&manual).unwrap();
+    assert_eq!(json, "manual");
+
+    let auto = CompactionTrigger::Auto;
+    let json = serde_json::to_value(&auto).unwrap();
+    assert_eq!(json, "auto");
+}
+
+#[test]
+fn test_hook_message_compaction_manual() {
+    let msg = HookMessage::compaction(
+        "test-session",
+        CompactionTrigger::Manual,
+        Some("Focus on core functionality".to_string()),
+    );
+
+    assert_eq!(msg.event, HookEvent::PreCompact);
+    assert_eq!(msg.session_id, "test-session");
+
+    if let HookPayload::Compaction {
+        trigger,
+        custom_instructions,
+    } = &msg.payload
+    {
+        assert_eq!(*trigger, CompactionTrigger::Manual);
+        assert_eq!(
+            *custom_instructions,
+            Some("Focus on core functionality".to_string())
+        );
+    } else {
+        unreachable!("Expected Compaction payload");
+    }
+}
+
+#[test]
+fn test_hook_message_compaction_auto() {
+    let msg = HookMessage::compaction("test-session", CompactionTrigger::Auto, None);
+
+    assert_eq!(msg.event, HookEvent::PreCompact);
+
+    if let HookPayload::Compaction {
+        trigger,
+        custom_instructions,
+    } = &msg.payload
+    {
+        assert_eq!(*trigger, CompactionTrigger::Auto);
+        assert!(custom_instructions.is_none());
+    } else {
+        unreachable!("Expected Compaction payload");
+    }
+}
+
+#[test]
+fn test_pre_compact_payload_matches_spec() {
+    let msg = HookMessage::compaction(
+        "session-abc123",
+        CompactionTrigger::Manual,
+        Some("Summarize the conversation".to_string()),
+    );
+
+    let json = serde_json::to_value(&msg).unwrap();
+
+    assert_eq!(json["event"], "pre_compact");
+    assert_eq!(json["session_id"], "session-abc123");
+    assert_eq!(json["payload"]["type"], "compaction");
+    assert_eq!(json["payload"]["trigger"], "manual");
+    assert_eq!(
+        json["payload"]["custom_instructions"],
+        "Summarize the conversation"
+    );
+}
+
+#[test]
+fn test_pre_compact_auto_omits_custom_instructions() {
+    let msg = HookMessage::compaction("test-session", CompactionTrigger::Auto, None);
+
+    let json = serde_json::to_value(&msg).unwrap();
+
+    assert_eq!(json["event"], "pre_compact");
+    assert_eq!(json["payload"]["trigger"], "auto");
+    // custom_instructions should not be serialized when None
+    assert!(json["payload"].get("custom_instructions").is_none());
+}
