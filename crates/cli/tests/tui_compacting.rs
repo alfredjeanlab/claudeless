@@ -150,7 +150,7 @@ fn test_compact_collapses_history() {
 
 /// Compare conversation state before /compact against fixture
 #[test]
-#[ignore] // TODO(slash-cleanup): Simulator rendering differs from real Claude CLI fixture
+#[ignore] // BLOCKED: Simulator header/response format differs from real CLI. See tests/capture/skipped/CLAUDE.md
 fn test_compact_before_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -182,7 +182,7 @@ fn test_compact_before_matches_fixture() {
 
 /// Compare conversation state during /compact against fixture
 #[test]
-#[ignore] // TODO(slash-cleanup): Header inclusion differs from tmux capture method
+#[ignore] // BLOCKED: Simulator header format differs from real CLI. See tests/capture/skipped/CLAUDE.md
 fn test_compact_during_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -216,7 +216,7 @@ fn test_compact_during_matches_fixture() {
 
 /// Compare conversation state after /compact against fixture
 #[test]
-#[ignore] // TODO(slash-cleanup): Tool summary requires tool_calls to be recorded in session
+#[ignore] // BLOCKED: Simulator doesn't track tool calls for compaction summary. See tests/capture/skipped/CLAUDE.md
 fn test_compact_after_matches_fixture() {
     let scenario = write_scenario(
         r#"

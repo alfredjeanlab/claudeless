@@ -288,6 +288,21 @@ pub fn assert_tui_matches_fixture(actual: &str, fixture_name: &str, cwd: Option<
     }
 }
 
+/// Extract dialog content from a full TUI capture
+///
+/// Dialogs start with a separator line (─────). This function finds the first
+/// separator line and returns everything from there to the end.
+pub fn extract_dialog_from_capture(capture: &str) -> String {
+    // Find the first line that starts with a separator (─)
+    if let Some(pos) = capture.find('─') {
+        // Find the start of this line
+        let line_start = capture[..pos].rfind('\n').map(|p| p + 1).unwrap_or(0);
+        capture[line_start..].to_string()
+    } else {
+        capture.to_string()
+    }
+}
+
 /// Assert that TUI output matches a versioned fixture
 pub fn assert_tui_matches_versioned_fixture(
     actual: &str,

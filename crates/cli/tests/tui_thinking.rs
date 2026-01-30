@@ -12,7 +12,10 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, capture_key_sequence, start_tui, tmux, write_scenario};
+use common::{
+    assert_tui_matches_fixture, capture_key_sequence, extract_dialog_from_capture, start_tui, tmux,
+    write_scenario,
+};
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
@@ -233,7 +236,6 @@ fn test_thinking_off_status_matches_fixture() {
 }
 
 #[test]
-#[ignore] // DEFERRED: Requires mid-conversation warning implementation in thinking dialog
 fn test_thinking_dialog_mid_conversation_matches_fixture() {
     let scenario = write_scenario(
         r#"
@@ -257,5 +259,11 @@ fn test_thinking_dialog_mid_conversation_matches_fixture() {
 
     tmux::kill_session(&session);
 
-    assert_tui_matches_fixture(&capture, "thinking_dialog_mid_conversation.txt", None);
+    // Extract just the dialog portion (fixture only contains dialog, not full screen)
+    let dialog_capture = extract_dialog_from_capture(&capture);
+    assert_tui_matches_fixture(
+        &dialog_capture,
+        "thinking_dialog_mid_conversation.txt",
+        None,
+    );
 }

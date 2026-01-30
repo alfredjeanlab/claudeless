@@ -24,3 +24,21 @@ fn test_thinking_mode_toggle() {
     dialog.selected = ThinkingMode::Disabled;
     assert_eq!(dialog.selected, ThinkingMode::Disabled);
 }
+
+#[test]
+fn test_thinking_dialog_mid_conversation() {
+    // Default new() is not mid-conversation
+    let dialog = ThinkingDialog::new(true);
+    assert!(!dialog.is_mid_conversation);
+
+    // with_mid_conversation sets the flag
+    let dialog = ThinkingDialog::with_mid_conversation(true, true);
+    assert!(dialog.is_mid_conversation);
+    assert_eq!(dialog.selected, ThinkingMode::Enabled);
+    assert_eq!(dialog.current, ThinkingMode::Enabled);
+
+    // with_mid_conversation false
+    let dialog = ThinkingDialog::with_mid_conversation(false, false);
+    assert!(!dialog.is_mid_conversation);
+    assert_eq!(dialog.selected, ThinkingMode::Disabled);
+}

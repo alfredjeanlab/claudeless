@@ -20,10 +20,16 @@ pub enum ThinkingMode {
 pub struct ThinkingDialog {
     pub selected: ThinkingMode,
     pub current: ThinkingMode,
+    /// Whether dialog was opened mid-conversation (shows warning)
+    pub is_mid_conversation: bool,
 }
 
 impl ThinkingDialog {
     pub fn new(current_enabled: bool) -> Self {
+        Self::with_mid_conversation(current_enabled, false)
+    }
+
+    pub fn with_mid_conversation(current_enabled: bool, is_mid_conversation: bool) -> Self {
         let current = if current_enabled {
             ThinkingMode::Enabled
         } else {
@@ -32,6 +38,7 @@ impl ThinkingDialog {
         Self {
             selected: current.clone(),
             current,
+            is_mid_conversation,
         }
     }
 }
