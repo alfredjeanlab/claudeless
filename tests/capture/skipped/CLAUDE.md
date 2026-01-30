@@ -122,6 +122,14 @@ claude --model haiku
 - Dialog appears before normal TUI is ready
 - Dismissing creates trust entry, preventing re-capture
 
+### api-usage-billing.capsh
+
+Captures the initial TUI state when logged in with API Usage Billing. Challenges:
+
+- Requires being logged in with an Anthropic Console account (API billing)
+- Cannot be automated without switching login state
+- Does not work with Claude subscription accounts (Max, Pro, Team, Enterprise)
+
 ## Simulator Fixture Differences
 
 These fixture tests are ignored because the simulator renders differently than the real CLI:

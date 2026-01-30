@@ -47,12 +47,9 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 - `failed_to_open_socket`
 - `failed_to_open_socket_no_version`
 
-## Billing
+## Skipped (special requirements)
 
-- `api_usage_billing`
-
-## Skipped (tmux-based capture available)
-
+- `api_usage_billing` - Requires Anthropic Console login (see `skipped/api-usage-billing.capsh`)
 - `ctrl_c_exit_hint` - Ctrl-C doesn't work in capsh, use `tmux/ctrl-c-exit-hint.sh`
 - `ctrl_d_exit_hint` - Ctrl-D doesn't work in capsh, use `tmux/ctrl-d-exit-hint.sh`
 - `ctrl_z_suspend` - Ctrl-Z doesn't work in capsh, use `tmux/ctrl-z-suspend.sh`
