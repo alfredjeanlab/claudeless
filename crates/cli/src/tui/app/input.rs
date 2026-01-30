@@ -144,7 +144,12 @@ impl TuiAppState {
             (m, KeyCode::Char('t'))
                 if m.contains(KeyModifiers::META) || m.contains(KeyModifiers::ALT) =>
             {
-                inner.dialog = DialogState::Thinking(ThinkingDialog::new(inner.thinking_enabled));
+                // Check if we're mid-conversation (has at least one turn)
+                let is_mid_conversation = !inner.sessions.current_session().turns.is_empty();
+                inner.dialog = DialogState::Thinking(ThinkingDialog::with_mid_conversation(
+                    inner.thinking_enabled,
+                    is_mid_conversation,
+                ));
                 inner.mode = AppMode::ThinkingToggle;
             }
 

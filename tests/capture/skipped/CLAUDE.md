@@ -20,6 +20,26 @@ Captures context compaction states. Challenges:
 - Compaction timing is model-dependent
 - Requires multiple interactions
 
+## Simulator Fixture Differences
+
+These fixture tests are ignored because the simulator renders differently than the real CLI:
+
+### compact_before.txt / compact_during.txt / compact_after.txt
+
+The simulator has these differences from real Claude CLI:
+
+1. **Header format**: Simulator shows `Claudeless 0.1.0` with logo, real CLI shows `Claude Code v2.1.12`
+2. **Tool output format**: Real CLI shows `⏺ Read(Cargo.toml)` as a distinct block, simulator shows response inline
+3. **Compaction summary**: Real CLI shows `Read Cargo.toml (14 lines)` in summary, simulator doesn't track tool calls
+
+To fix these tests:
+1. Update `normalize_tui()` to strip the simulator header, OR
+2. Match the simulator's conversation display format to real CLI (significant work), OR
+3. Regenerate fixtures from simulator output and accept differences
+
+The `compact_during.txt` test specifically requires capturing the transient "Compacting..." spinner state,
+which is timing-sensitive and may need retries in CI.
+
 ## Running Skipped Scripts
 
 ```bash

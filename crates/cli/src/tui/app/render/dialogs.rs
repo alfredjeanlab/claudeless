@@ -85,6 +85,15 @@ pub(crate) fn render_thinking_dialog(dialog: &ThinkingDialog, width: usize) -> A
         ""
     };
 
+    // Mid-conversation warning text (shown when toggling after conversation started)
+    let warning_text = if dialog.is_mid_conversation {
+        " Changing mid-conversation may reduce quality. For best results, set this at the start of a session."
+    } else {
+        ""
+    };
+
+    let subtitle = " Enable or disable thinking for this session.";
+
     element! {
         View(
             flex_direction: FlexDirection::Column,
@@ -95,7 +104,13 @@ pub(crate) fn render_thinking_dialog(dialog: &ThinkingDialog, width: usize) -> A
             // Title
             Text(content: " Toggle thinking mode")
             // Subtitle
-            Text(content: " Enable or disable thinking for this session.")
+            Text(content: subtitle)
+            // Mid-conversation warning (only if applicable)
+            #(if dialog.is_mid_conversation {
+                Some(element! { Text(content: warning_text) })
+            } else {
+                None
+            })
             Text(content: "")
             // Options with descriptions
             Text(content: format!("{}1. Enabled{}  Claude will think before responding", enabled_indicator, enabled_check))
