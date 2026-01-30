@@ -2,15 +2,43 @@
 
 Scripts in this directory capture states that we are still working on reproducing reliably.
 
-## Challenges
+## API/Response Fixtures
 
-### after-response.capsh
+These fixtures require actual API responses from Claude and cannot be captured with mock/offline scenarios.
 
-Captures UI state after Claude responds. Challenges:
+### after_response
 
-- Need Claude to actually respond (requires API)
+Captures UI state after Claude responds.
+
+- Requires Claude to actually respond (requires API)
 - Response content varies
 - Timing is unpredictable
+
+### clear_before / clear_after
+
+Captures the `/clear` command states before and after clearing conversation.
+
+- Requires active conversation with responses
+- Need to capture state before clear, then after
+- Depends on having API responses to clear
+
+### thinking_dialog_disabled_selected
+
+Captures the thinking dialog with "disabled" option selected.
+
+- Requires mid-conversation state (thinking toggle affects next response)
+- Need to navigate dialog during active session
+- Selection state depends on prior API interactions
+
+### thinking_dialog_enabled_selected
+
+Captures the thinking dialog with "enabled" option selected.
+
+- Requires mid-conversation state (thinking toggle affects next response)
+- Need to navigate dialog during active session
+- Selection state depends on prior API interactions
+
+## Other Challenges
 
 ### compact-states.capsh
 
