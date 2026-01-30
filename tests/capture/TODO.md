@@ -6,7 +6,6 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 
 - `hooks_dialog` - Hooks dialog
 - `ctrl_s_stash_active` - Ctrl-S stash active
-- `ctrl_z_suspend` - Ctrl-Z suspend
 
 ## TODO (Conversation + Slow)
 
@@ -57,6 +56,7 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 
 - `ctrl_c_exit_hint` - Ctrl-C doesn't work in capsh, use `tmux/ctrl-c-exit-hint.sh`
 - `ctrl_d_exit_hint` - Ctrl-D doesn't work in capsh, use `tmux/ctrl-d-exit-hint.sh`
+- `ctrl_z_suspend` - Ctrl-Z doesn't work in capsh, use `tmux/ctrl-z-suspend.sh`
 
 ## Finished
 
@@ -92,3 +92,4 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 | `tasks_empty_dialog` | `tasks_empty_dialog` |
 | `todos_empty` | `todos_empty` |
 | `thinking_off_status` | `thinking_off_status` |
+| `ctrl_z_suspend` | `ctrl_z_suspend` |
