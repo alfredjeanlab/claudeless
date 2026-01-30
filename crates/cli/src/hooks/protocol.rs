@@ -23,6 +23,8 @@ pub enum HookEvent {
     SessionEnd,
     /// Prompt submitted (before processing)
     PromptSubmit,
+    /// Before context compaction
+    PreCompact,
 }
 
 /// Hook message sent to hook script
@@ -117,6 +119,22 @@ impl HookMessage {
             },
         }
     }
+
+    /// Create a pre-compaction message
+    pub fn compaction(
+        session_id: impl Into<String>,
+        trigger: CompactionTrigger,
+        custom_instructions: Option<String>,
+    ) -> Self {
+        Self {
+            event: HookEvent::PreCompact,
+            session_id: session_id.into(),
+            payload: HookPayload::Compaction {
+                trigger,
+                custom_instructions,
+            },
+        }
+    }
 }
 
 /// Hook payload variants
@@ -153,6 +171,23 @@ pub enum HookPayload {
 
     /// Prompt submission
     Prompt { prompt: String },
+
+    /// Context compaction
+    Compaction {
+        trigger: CompactionTrigger,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        custom_instructions: Option<String>,
+    },
+}
+
+/// Compaction trigger type
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CompactionTrigger {
+    /// Manual compaction via /compact command
+    Manual,
+    /// Automatic compaction when context is full
+    Auto,
 }
 
 /// Notification severity levels
