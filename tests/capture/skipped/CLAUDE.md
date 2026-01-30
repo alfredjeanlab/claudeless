@@ -41,6 +41,16 @@ These fixtures exist in `crates/cli/tests/fixtures/tui/v2.1.14/`:
 - `setup_05_use_terminal_setup.txt`
 - `slash_logout.txt`
 
+### failed_to_open_socket / failed_to_open_socket_no_version
+
+Error states when Claude Code cannot connect to the API. Challenges:
+
+- Requires simulating network failure (firewall block, DNS failure, etc.)
+- Error conditions are transient and environment-dependent
+- Can't reliably trigger FailedToOpenSocket errors in CI
+
+Note: Reference fixtures exist in `crates/cli/tests/fixtures/tui/v2.1.14/` but were captured manually, not via capsh scripts.
+
 ## Simulator Fixture Differences
 
 These fixture tests are ignored because the simulator renders differently than the real CLI:
