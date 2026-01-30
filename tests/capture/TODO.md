@@ -50,12 +50,9 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 - `failed_to_open_socket`
 - `failed_to_open_socket_no_version`
 
-## Billing
+## Skipped (special requirements)
 
-- `api_usage_billing`
-
-## Skipped (tmux-based capture available)
-
+- `api_usage_billing` - Requires Anthropic Console login (see `skipped/api-usage-billing.capsh`)
 - `ctrl_c_exit_hint` - Ctrl-C doesn't work in capsh, use `tmux/ctrl-c-exit-hint.sh`
 - `ctrl_d_exit_hint` - Ctrl-D doesn't work in capsh, use `tmux/ctrl-d-exit-hint.sh`
 
@@ -75,17 +72,6 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 | `help_general_tab` | `help_response` |
 | `slash_search_menu` | `slash_menu` |
 | `slash_search_filter` | `slash_menu_filtered` |
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 | `with_input` | `with_input` |
 | `shortcuts_display` | `shortcuts_display` |
 | `slash_search_tab_complete` | `slash_search_tab_complete` |
@@ -100,14 +86,6 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 | `context_autocomplete` | `context_autocomplete` |
 | `context_usage` | `context_usage` |
 | `fork_no_conversation` | `fork_no_conversation` |
-<<<<<<< HEAD
->>>>>>> 75a6f84 (Chore: capture fork_no_conversation fixture)
-=======
 | `status_bar_extended` | `status_bar_extended` |
->>>>>>> 0bb0250 (Chore: capture status_bar_extended fixture)
-=======
 | `tasks_empty_dialog` | `tasks_empty_dialog` |
->>>>>>> 684fdc4 (Chore: capture tasks_empty_dialog fixture)
-=======
 | `todos_empty` | `todos_empty` |
->>>>>>> acd03c7 (Chore: capture todos_empty fixture)

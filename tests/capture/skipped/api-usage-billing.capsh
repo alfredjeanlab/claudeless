@@ -1,0 +1,19 @@
+# Capture the initial state when logged in with API Usage Billing.
+#
+# Requirements:
+# - Must be logged in with an Anthropic Console account (API billing)
+# - NOT a Claude subscription (Max, Pro, Team, Enterprise)
+#
+# To test manually:
+#   1. Run: claude /logout
+#   2. Run: claude (to start fresh login)
+#   3. Select "Anthropic Console account · API usage billing"
+#   4. Complete login
+#   5. Run this script
+
+wait "for shortcuts" 10s
+snapshot "api_usage_billing"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

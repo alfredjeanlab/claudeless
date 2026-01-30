@@ -20,6 +20,14 @@ Captures context compaction states. Challenges:
 - Compaction timing is model-dependent
 - Requires multiple interactions
 
+### api-usage-billing.capsh
+
+Captures the initial TUI state when logged in with API Usage Billing. Challenges:
+
+- Requires being logged in with an Anthropic Console account (API billing)
+- Cannot be automated without switching login state
+- Does not work with Claude subscription accounts (Max, Pro, Team, Enterprise)
+
 ## Running Skipped Scripts
 
 ```bash
