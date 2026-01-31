@@ -357,6 +357,54 @@ fn test_resolve_with_env_var_does_not_require_existing_dir() {
 }
 
 #[test]
+fn test_resolve_respects_claude_local_state_dir() {
+    // When CLAUDE_LOCAL_STATE_DIR is set (and CLAUDELESS_STATE_DIR is not),
+    // resolve() should use it. This provides compatibility with Claude Code's
+    // standard environment variable.
+
+    let test_dir = tempfile::tempdir().unwrap();
+    let test_path = test_dir.path().join("claude-local-state");
+
+    // Ensure CLAUDELESS_STATE_DIR is not set
+    std::env::remove_var("CLAUDELESS_STATE_DIR");
+    std::env::set_var("CLAUDE_LOCAL_STATE_DIR", &test_path);
+
+    let dir = StateDirectory::resolve().unwrap();
+    assert_eq!(
+        dir.root(),
+        test_path.as_path(),
+        "resolve() should use CLAUDE_LOCAL_STATE_DIR when CLAUDELESS_STATE_DIR is not set"
+    );
+
+    // Clean up env var
+    std::env::remove_var("CLAUDE_LOCAL_STATE_DIR");
+}
+
+#[test]
+fn test_resolve_claudeless_state_dir_takes_precedence() {
+    // When both CLAUDELESS_STATE_DIR and CLAUDE_LOCAL_STATE_DIR are set,
+    // CLAUDELESS_STATE_DIR should take precedence.
+
+    let test_dir = tempfile::tempdir().unwrap();
+    let claudeless_path = test_dir.path().join("claudeless-state");
+    let claude_path = test_dir.path().join("claude-local-state");
+
+    std::env::set_var("CLAUDELESS_STATE_DIR", &claudeless_path);
+    std::env::set_var("CLAUDE_LOCAL_STATE_DIR", &claude_path);
+
+    let dir = StateDirectory::resolve().unwrap();
+    assert_eq!(
+        dir.root(),
+        claudeless_path.as_path(),
+        "CLAUDELESS_STATE_DIR should take precedence over CLAUDE_LOCAL_STATE_DIR"
+    );
+
+    // Clean up env vars
+    std::env::remove_var("CLAUDELESS_STATE_DIR");
+    std::env::remove_var("CLAUDE_LOCAL_STATE_DIR");
+}
+
+#[test]
 fn test_temp_creates_unique_directories() {
     // Each call to temp() should create a unique directory to prevent
     // test interference when running parallel tests.

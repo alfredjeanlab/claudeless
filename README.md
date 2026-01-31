@@ -45,7 +45,7 @@ claudeless --scenario scenarios/simple.toml
 
 ## Limitations
 
-Claudeless simulates the Claude CLI by emulating its TUI layout, CLI interface, error messages, and filesystem modifications. Scenario files control responses and failures, built-in tools execute in a sandbox, and costs, tokens, and timing are simulated for deterministic assertions. State is written to a temp directory by default (override with `CLAUDELESS_STATE_DIR`).
+Claudeless simulates the Claude CLI by emulating its TUI layout, CLI interface, error messages, and filesystem modifications. Scenario files control responses and failures, built-in tools execute in a sandbox, and costs, tokens, and timing are simulated for deterministic assertions. State is written to a temp directory by default (override with `CLAUDELESS_STATE_DIR` or `CLAUDE_LOCAL_STATE_DIR`).
 
 The core CLI experience is well-supported, including output formats, permission modes, and the hooks protocol. Ongoing work is focused on improving JSON output fidelity and TUI rendering accuracy.
 

@@ -7,7 +7,7 @@ Claudeless simulates the Claude CLI for testing by simulating:
 - error messages
 - `~/.claude` filesystem modifications
 
-The state directory location is controlled by `CLAUDELESS_STATE_DIR`.
+The state directory location is controlled by `CLAUDELESS_STATE_DIR` (highest priority) or `CLAUDE_LOCAL_STATE_DIR`.
 Simulated failures can be injected via scenarios.
 Any costs, tokens, and timing are simulated and no API calls are made.
 
