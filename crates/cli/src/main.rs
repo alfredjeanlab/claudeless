@@ -35,22 +35,16 @@ use claudeless::tui::{ExitReason, TuiApp, TuiConfig};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
-    // Validate --no-session-persistence usage
-    if let Err(msg) = cli.validate_no_session_persistence() {
-        print_error(msg);
-        std::process::exit(1);
-    }
-
-    // Validate --session-id is a valid UUID
-    if let Err(msg) = cli.validate_session_id() {
+    // Validate all CLI arguments using the unified validate() method
+    if let Err(msg) = cli.validate() {
         print_error(msg);
         std::process::exit(1);
     }
 
     // Validate permission bypass configuration
     let bypass = PermissionBypass::new(
-        cli.allow_dangerously_skip_permissions,
-        cli.dangerously_skip_permissions,
+        cli.permissions.allow_dangerously_skip_permissions,
+        cli.permissions.dangerously_skip_permissions,
     );
     if bypass.is_not_allowed() {
         eprintln!("{}", PermissionBypass::error_message());
@@ -75,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Initialize capture log if requested
-    let capture = if let Some(ref path) = cli.capture {
+    let capture = if let Some(ref path) = cli.simulator.capture {
         Some(CaptureLog::with_file(Path::new(path))?)
     } else {
         None
@@ -88,16 +82,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let captured_args = CapturedArgs {
         prompt: cli.prompt.clone(),
         model: cli.model.clone(),
-        output_format: format!("{:?}", cli.output_format).to_lowercase(),
+        output_format: format!("{:?}", cli.output.output_format).to_lowercase(),
         print_mode: cli.print,
-        continue_conversation: cli.continue_conversation,
-        resume: cli.resume.clone(),
+        continue_conversation: cli.session.continue_conversation,
+        resume: cli.session.resume.clone(),
         allowed_tools: cli.allowed_tools.clone(),
         cwd: cli.cwd.clone(),
     };
 
     // Load scenario if specified (needed for session context)
-    let mut scenario = if let Some(ref path) = cli.scenario {
+    let mut scenario = if let Some(ref path) = cli.simulator.scenario {
         Some(Scenario::load(Path::new(path))?)
     } else {
         None
@@ -108,7 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create state writer early so failures can record to session JSONL
     // Skip if --no-session-persistence is enabled
-    let state_writer = if !cli.no_session_persistence {
+    let state_writer = if !cli.session.no_session_persistence {
         Some(Arc::new(RwLock::new(StateWriter::new(
             runtime_ctx.session_id.to_string(),
             &runtime_ctx.project_path,
@@ -121,7 +115,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Handle failure injection from CLI flag
-    if let Some(ref mode) = cli.failure {
+    if let Some(ref mode) = cli.simulator.failure {
         let spec = FailureExecutor::from_mode(mode);
         let mut stderr = io::stderr();
 
@@ -235,7 +229,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tool_calls = response.tool_calls().to_vec();
 
     // Use real Claude format (result wrapper for JSON, system init + result for stream-JSON)
-    let mut writer = OutputWriter::new(&mut stdout, cli.output_format.clone(), cli.model.clone());
+    let mut writer = OutputWriter::new(
+        &mut stdout,
+        cli.output.output_format.clone(),
+        cli.model.clone(),
+    );
 
     // Combine builtin tools with MCP tools (MCP tools use mcp__<server>__<tool> naming)
     let mut tools: Vec<String> = cli.allowed_tools.clone();
@@ -254,7 +252,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Write queue-operation for print mode (-p) unless persistence is disabled
     // (state_writer already created above)
-    if cli.print && !cli.no_session_persistence {
+    if cli.print && !cli.session.no_session_persistence {
         if let Some(ref writer) = state_writer {
             writer.read().write_queue_operation()?;
         }
@@ -288,6 +286,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Determine execution mode (CLI flag overrides scenario config)
         let execution_mode = cli
+            .simulator
             .tool_mode
             .clone()
             .map(ToolExecutionMode::from)
@@ -441,13 +440,13 @@ fn get_mcp_server_info(mcp_manager: &Option<Arc<RwLock<McpManager>>>) -> Vec<Mcp
 async fn load_mcp_configs(
     cli: &Cli,
 ) -> Result<Option<Arc<RwLock<McpManager>>>, Box<dyn std::error::Error>> {
-    if cli.mcp_config.is_empty() {
+    if cli.mcp.mcp_config.is_empty() {
         return Ok(None);
     }
 
     // Load config files
     let mut configs = Vec::new();
-    for config_input in &cli.mcp_config {
+    for config_input in &cli.mcp.mcp_config {
         match load_mcp_config(config_input) {
             Ok(config) => configs.push(config),
             Err(e) => {
@@ -460,7 +459,7 @@ async fn load_mcp_configs(
     let merged = McpConfig::merge(configs);
     let mut manager = McpManager::from_config(&merged);
 
-    if cli.mcp_debug {
+    if cli.mcp.mcp_debug {
         print_mcp(format_args!(
             "Loading {} server(s): {:?}",
             manager.server_count(),
@@ -469,13 +468,13 @@ async fn load_mcp_configs(
     }
 
     // Initialize servers (spawn processes, discover tools)
-    let results = manager.initialize(cli.mcp_debug).await;
+    let results = manager.initialize(cli.mcp.mcp_debug).await;
 
     // Handle initialization results
     for (name, result) in &results {
         match result {
             Ok(()) => {
-                if cli.mcp_debug {
+                if cli.mcp.mcp_debug {
                     if let Some(server) = manager.get_server(name) {
                         print_mcp(format_args!(
                             "Server '{}' started with {} tool(s): {:?}",
@@ -487,10 +486,10 @@ async fn load_mcp_configs(
                 }
             }
             Err(e) => {
-                if cli.strict_mcp_config {
+                if cli.mcp.strict_mcp_config {
                     print_mcp_error(format_args!("Server '{}' failed to start: {}", name, e));
                     std::process::exit(1);
-                } else if cli.mcp_debug {
+                } else if cli.mcp.mcp_debug {
                     print_mcp_warning(format_args!("Server '{}' failed to start: {}", name, e));
                 }
             }
@@ -498,7 +497,7 @@ async fn load_mcp_configs(
     }
 
     // Check if any servers are running
-    if manager.running_server_count() == 0 && cli.mcp_debug {
+    if manager.running_server_count() == 0 && cli.mcp.mcp_debug {
         print_mcp("No servers running");
     }
 
@@ -559,7 +558,7 @@ async fn run_tui_mode(
     }
 
     // Load scenario if specified
-    let scenario = if let Some(ref path) = cli.scenario {
+    let scenario = if let Some(ref path) = cli.simulator.scenario {
         Scenario::load(Path::new(path))?
     } else {
         // Default scenario
@@ -571,7 +570,7 @@ async fn run_tui_mode(
     let runtime_ctx = RuntimeContext::build(Some(scenario.config()), cli);
 
     // Create state writer for JSONL persistence (unless --no-session-persistence)
-    let state_writer = if !cli.no_session_persistence {
+    let state_writer = if !cli.session.no_session_persistence {
         StateWriter::new(
             runtime_ctx.session_id.to_string(),
             &runtime_ctx.project_path,
@@ -590,9 +589,9 @@ async fn run_tui_mode(
     let mut tui_config = TuiConfig::from_scenario(
         scenario.config(),
         Some(&cli.model),
-        &cli.permission_mode,
+        &cli.permissions.permission_mode,
         allow_bypass_permissions,
-        cli.claude_version.as_deref(),
+        cli.simulator.claude_version.as_deref(),
         is_tty,
     );
     tui_config.state_writer = state_writer;

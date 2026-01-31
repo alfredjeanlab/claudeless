@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 use super::*;
-use crate::cli::OutputFormat;
+use crate::cli::{McpOptions, OutputOptions, PermissionOptions, SessionOptions, SimulatorOptions};
 use chrono::Datelike;
 
 fn default_cli() -> Cli {
@@ -10,35 +12,21 @@ fn default_cli() -> Cli {
         prompt: None,
         print: false,
         model: DEFAULT_MODEL.to_string(),
-        output_format: OutputFormat::Text,
         system_prompt: None,
-        continue_conversation: false,
-        resume: None,
         allowed_tools: vec![],
         disallowed_tools: vec![],
-        permission_mode: PermissionMode::Default,
-        allow_dangerously_skip_permissions: false,
-        dangerously_skip_permissions: false,
         input_file: None,
         cwd: None,
         setting_sources: None,
         input_format: "text".to_string(),
-        session_id: None,
-        verbose: false,
-        debug: None,
-        include_partial_messages: false,
         fallback_model: None,
         max_budget_usd: None,
-        mcp_config: vec![],
-        strict_mcp_config: false,
-        mcp_debug: false,
-        no_session_persistence: false,
         settings: vec![],
-        scenario: None,
-        capture: None,
-        failure: None,
-        tool_mode: None,
-        claude_version: None,
+        output: OutputOptions::default(),
+        session: SessionOptions::default(),
+        permissions: PermissionOptions::default(),
+        mcp: McpOptions::default(),
+        simulator: SimulatorOptions::default(),
     }
 }
 
@@ -95,7 +83,7 @@ fn test_cli_overrides_scenario() {
     let mut cli = default_cli();
     cli.model = "cli-model".to_string();
     cli.cwd = Some("/cli/path".to_string());
-    cli.session_id = Some("12345678-1234-1234-1234-123456789012".to_string());
+    cli.session.session_id = Some("12345678-1234-1234-1234-123456789012".to_string());
 
     let scenario = ScenarioConfig {
         name: "test".to_string(),
