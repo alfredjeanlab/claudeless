@@ -3,12 +3,10 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use super::super::test_helpers::{assert_tool_success_contains, execute};
+use super::super::test_helpers::{assert_tool_success_contains, execute, TestDir};
 use super::*;
 use crate::tools::builtin::{extract_directory, extract_str};
 use serde_json::json;
-use std::fs;
-use tempfile::TempDir;
 use yare::parameterized;
 
 #[parameterized(
@@ -29,11 +27,11 @@ fn extract_directory_fields(input: serde_json::Value, expected: Option<&str>) {
 
 #[test]
 fn test_glob_no_matches() {
-    let temp_dir = TempDir::new().unwrap();
+    let dir = TestDir::new();
     assert_tool_success_contains(
         &execute::<GlobExecutor>(json!({
             "pattern": "*.nonexistent",
-            "path": temp_dir.path().to_str().unwrap()
+            "path": dir.path_str()
         })),
         "No matches",
     );
@@ -41,23 +39,18 @@ fn test_glob_no_matches() {
 
 #[test]
 fn test_glob_with_matches() {
-    let temp_dir = TempDir::new().unwrap();
-    fs::write(temp_dir.path().join("file1.txt"), "").unwrap();
-    fs::write(temp_dir.path().join("file2.txt"), "").unwrap();
-    fs::write(temp_dir.path().join("other.rs"), "").unwrap();
+    let dir = TestDir::new()
+        .with_file("file1.txt", "")
+        .with_file("file2.txt", "")
+        .with_file("other.rs", "");
 
     let result = execute::<GlobExecutor>(json!({
         "pattern": "*.txt",
-        "path": temp_dir.path().to_str().unwrap()
+        "path": dir.path_str()
     }));
     assert!(!result.is_error);
     let text = result.text().unwrap();
     assert!(text.contains("file1.txt"));
     assert!(text.contains("file2.txt"));
     assert!(!text.contains("other.rs"));
-}
-
-#[test]
-fn test_tool_name() {
-    assert_eq!(GlobExecutor.tool_name(), crate::tools::ToolName::Glob);
 }

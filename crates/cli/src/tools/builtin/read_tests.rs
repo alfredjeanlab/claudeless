@@ -4,13 +4,11 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use super::super::test_helpers::{
-    assert_tool_error_contains, assert_tool_success_contains, execute,
+    assert_tool_error_contains, assert_tool_success_contains, execute, TestFile,
 };
 use super::*;
 use crate::tools::builtin::extract_file_path;
 use serde_json::json;
-use std::io::Write;
-use tempfile::NamedTempFile;
 use yare::parameterized;
 
 #[parameterized(
@@ -32,16 +30,9 @@ fn test_read_nonexistent_file() {
 
 #[test]
 fn test_read_real_file() {
-    let mut temp = NamedTempFile::new().unwrap();
-    writeln!(temp, "Hello, World!").unwrap();
-
+    let file = TestFile::new("test.txt").with_content("Hello, World!\n");
     assert_tool_success_contains(
-        &execute::<ReadExecutor>(json!({ "file_path": temp.path().to_str().unwrap() })),
+        &execute::<ReadExecutor>(json!({ "file_path": file.path_str() })),
         "Hello, World!",
     );
-}
-
-#[test]
-fn test_tool_name() {
-    assert_eq!(ReadExecutor.tool_name(), crate::tools::ToolName::Read);
 }

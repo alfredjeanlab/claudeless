@@ -6,6 +6,61 @@
 use super::*;
 use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
+use std::path::PathBuf;
+use tempfile::TempDir;
+
+/// A temporary file with its parent directory for testing.
+pub struct TestFile {
+    // NOTE(lifetime): Held for Drop semantics (cleanup on test completion)
+    #[allow(dead_code)]
+    dir: TempDir,
+    pub path: PathBuf,
+}
+
+impl TestFile {
+    /// Create a new test file (file not yet created on disk).
+    pub fn new(name: &str) -> Self {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join(name);
+        Self { dir, path }
+    }
+
+    /// Write content to the file.
+    pub fn with_content(self, content: &str) -> Self {
+        std::fs::write(&self.path, content).unwrap();
+        self
+    }
+
+    /// Get the path as a string.
+    pub fn path_str(&self) -> &str {
+        self.path.to_str().unwrap()
+    }
+}
+
+/// A temporary directory for testing with multiple files.
+pub struct TestDir {
+    dir: TempDir,
+}
+
+impl TestDir {
+    /// Create a new empty test directory.
+    pub fn new() -> Self {
+        Self {
+            dir: TempDir::new().unwrap(),
+        }
+    }
+
+    /// Add a file with the given content.
+    pub fn with_file(self, name: &str, content: &str) -> Self {
+        std::fs::write(self.dir.path().join(name), content).unwrap();
+        self
+    }
+
+    /// Get the directory path as a string.
+    pub fn path_str(&self) -> &str {
+        self.dir.path().to_str().unwrap()
+    }
+}
 
 /// Create a tool call spec with the given tool name and input.
 pub fn tool_call(tool: &str, input: serde_json::Value) -> ToolCallSpec {

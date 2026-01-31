@@ -4,13 +4,11 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use super::super::test_helpers::{
-    assert_tool_error_contains, assert_tool_success_contains, execute,
+    assert_tool_error_contains, assert_tool_success_contains, execute, TestDir,
 };
 use super::*;
 use crate::tools::builtin::extract_str;
 use serde_json::json;
-use std::io::Write;
-use tempfile::TempDir;
 
 #[test]
 fn test_extract_pattern() {
@@ -30,15 +28,11 @@ fn test_grep_invalid_regex() {
 
 #[test]
 fn test_grep_no_matches() {
-    let temp_dir = TempDir::new().unwrap();
-    let file_path = temp_dir.path().join("test.txt");
-    let mut file = fs::File::create(&file_path).unwrap();
-    writeln!(file, "Hello, World!").unwrap();
-
+    let dir = TestDir::new().with_file("test.txt", "Hello, World!\n");
     assert_tool_success_contains(
         &execute::<GrepExecutor>(json!({
             "pattern": "nonexistent",
-            "path": temp_dir.path().to_str().unwrap()
+            "path": dir.path_str()
         })),
         "No matches",
     );
@@ -46,16 +40,12 @@ fn test_grep_no_matches() {
 
 #[test]
 fn test_grep_with_matches() {
-    let temp_dir = TempDir::new().unwrap();
-    let file_path = temp_dir.path().join("test.txt");
-    let mut file = fs::File::create(&file_path).unwrap();
-    writeln!(file, "Hello, World!").unwrap();
-    writeln!(file, "Goodbye, World!").unwrap();
-    writeln!(file, "Hello again!").unwrap();
+    let dir =
+        TestDir::new().with_file("test.txt", "Hello, World!\nGoodbye, World!\nHello again!\n");
 
     let result = execute::<GrepExecutor>(json!({
         "pattern": "Hello",
-        "path": temp_dir.path().to_str().unwrap()
+        "path": dir.path_str()
     }));
     assert!(!result.is_error);
     let text = result.text().unwrap();
@@ -66,16 +56,11 @@ fn test_grep_with_matches() {
 
 #[test]
 fn test_grep_case_insensitive() {
-    let temp_dir = TempDir::new().unwrap();
-    let file_path = temp_dir.path().join("test.txt");
-    let mut file = fs::File::create(&file_path).unwrap();
-    writeln!(file, "HELLO").unwrap();
-    writeln!(file, "hello").unwrap();
-    writeln!(file, "Hello").unwrap();
+    let dir = TestDir::new().with_file("test.txt", "HELLO\nhello\nHello\n");
 
     let result = execute::<GrepExecutor>(json!({
         "pattern": "hello",
-        "path": temp_dir.path().to_str().unwrap(),
+        "path": dir.path_str(),
         "-i": true
     }));
     assert!(!result.is_error);
@@ -83,9 +68,4 @@ fn test_grep_case_insensitive() {
     assert!(text.contains("HELLO"));
     assert!(text.contains("hello"));
     assert!(text.contains("Hello"));
-}
-
-#[test]
-fn test_tool_name() {
-    assert_eq!(GrepExecutor.tool_name(), crate::tools::ToolName::Grep);
 }

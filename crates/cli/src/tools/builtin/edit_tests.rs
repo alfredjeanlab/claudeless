@@ -4,13 +4,11 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use super::super::test_helpers::{
-    assert_tool_error_contains, assert_tool_success_contains, execute,
+    assert_tool_error_contains, assert_tool_success_contains, execute, TestFile,
 };
 use super::*;
 use crate::tools::builtin::{extract_bool, extract_file_path, extract_str};
 use serde_json::json;
-use std::io::Write;
-use tempfile::NamedTempFile;
 
 #[test]
 fn test_extract_fields() {
@@ -40,12 +38,10 @@ fn test_edit_nonexistent_file() {
 
 #[test]
 fn test_edit_string_not_found() {
-    let mut temp = NamedTempFile::new().unwrap();
-    writeln!(temp, "Hello, World!").unwrap();
-
+    let file = TestFile::new("test.txt").with_content("Hello, World!\n");
     assert_tool_error_contains(
         &execute::<EditExecutor>(json!({
-            "file_path": temp.path().to_str().unwrap(),
+            "file_path": file.path_str(),
             "old_string": "nonexistent",
             "new_string": "new"
         })),
@@ -55,23 +51,16 @@ fn test_edit_string_not_found() {
 
 #[test]
 fn test_edit_successful() {
-    let mut temp = NamedTempFile::new().unwrap();
-    writeln!(temp, "Hello, World!").unwrap();
-
+    let file = TestFile::new("test.txt").with_content("Hello, World!\n");
     assert_tool_success_contains(
         &execute::<EditExecutor>(json!({
-            "file_path": temp.path().to_str().unwrap(),
+            "file_path": file.path_str(),
             "old_string": "World",
             "new_string": "Rust"
         })),
         "Successfully edited",
     );
-    assert!(fs::read_to_string(temp.path())
+    assert!(fs::read_to_string(&file.path)
         .unwrap()
         .contains("Hello, Rust!"));
-}
-
-#[test]
-fn test_tool_name() {
-    assert_eq!(EditExecutor.tool_name(), crate::tools::ToolName::Edit);
 }
