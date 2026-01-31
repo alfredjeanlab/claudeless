@@ -8,6 +8,23 @@ use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::path::Path;
 
+/// Common envelope fields shared by all message line types.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MessageEnvelope {
+    #[serde(rename = "type")]
+    pub line_type: String,
+    pub uuid: String,
+    pub timestamp: String,
+    pub session_id: String,
+    pub cwd: String,
+    pub version: String,
+    pub git_branch: String,
+    pub parent_uuid: Option<String>,
+    pub is_sidechain: bool,
+    pub user_type: String,
+}
+
 /// User message content for JSONL.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserMessage {
@@ -16,21 +33,12 @@ pub struct UserMessage {
 }
 
 /// User message line in JSONL format.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserMessageLine {
-    pub parent_uuid: Option<String>,
-    pub is_sidechain: bool,
-    pub user_type: String,
-    pub cwd: String,
-    pub session_id: String,
-    pub version: String,
-    pub git_branch: String,
-    #[serde(rename = "type")]
-    pub line_type: &'static str,
+    #[serde(flatten)]
+    pub envelope: MessageEnvelope,
     pub message: UserMessage,
-    pub uuid: String,
-    pub timestamp: String,
 }
 
 /// Tool result content block.
@@ -50,21 +58,12 @@ pub struct ToolResultUserMessage {
 }
 
 /// Tool result message line in JSONL format.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolResultMessageLine {
-    pub parent_uuid: String,
-    pub is_sidechain: bool,
-    pub user_type: String,
-    pub cwd: String,
-    pub session_id: String,
-    pub version: String,
-    pub git_branch: String,
-    #[serde(rename = "type")]
-    pub line_type: &'static str,
+    #[serde(flatten)]
+    pub envelope: MessageEnvelope,
     pub message: ToolResultUserMessage,
-    pub uuid: String,
-    pub timestamp: String,
     pub tool_use_result: serde_json::Value,
     #[serde(rename = "sourceToolAssistantUUID")]
     pub source_tool_assistant_uuid: String,
@@ -136,22 +135,13 @@ pub struct AssistantMessage {
 }
 
 /// Assistant message line in JSONL format.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AssistantMessageLine {
-    pub parent_uuid: String,
-    pub is_sidechain: bool,
-    pub user_type: String,
-    pub cwd: String,
-    pub session_id: String,
-    pub version: String,
-    pub git_branch: String,
+    #[serde(flatten)]
+    pub envelope: MessageEnvelope,
     pub message: AssistantMessage,
     pub request_id: String,
-    #[serde(rename = "type")]
-    pub line_type: &'static str,
-    pub uuid: String,
-    pub timestamp: String,
 }
 
 /// Queue operation for -p mode (first line in session).
@@ -253,32 +243,34 @@ pub fn append_turn_jsonl(path: &Path, params: &TurnParams) -> std::io::Result<()
     let mut file = open_append(path)?;
     let timestamp_str = params.timestamp.to_rfc3339();
 
-    let user_line = UserMessageLine {
-        parent_uuid: None,
-        is_sidechain: false,
-        user_type: "external".to_string(),
-        cwd: params.cwd.to_string(),
+    let envelope_base = |line_type: &str, uuid: &str, parent_uuid| MessageEnvelope {
+        line_type: line_type.to_string(),
+        uuid: uuid.to_string(),
+        timestamp: timestamp_str.clone(),
         session_id: params.session_id.to_string(),
+        cwd: params.cwd.to_string(),
         version: params.version.to_string(),
         git_branch: params.git_branch.to_string(),
-        line_type: "user",
+        parent_uuid,
+        is_sidechain: false,
+        user_type: "external".to_string(),
+    };
+
+    let user_line = UserMessageLine {
+        envelope: envelope_base("user", params.user_uuid, None),
         message: UserMessage {
             role: "user",
             content: params.prompt.to_string(),
         },
-        uuid: params.user_uuid.to_string(),
-        timestamp: timestamp_str.clone(),
     };
     write_jsonl_line(&mut file, &user_line)?;
 
     let assistant_line = AssistantMessageLine {
-        parent_uuid: params.user_uuid.to_string(),
-        is_sidechain: false,
-        user_type: "external".to_string(),
-        cwd: params.cwd.to_string(),
-        session_id: params.session_id.to_string(),
-        version: params.version.to_string(),
-        git_branch: params.git_branch.to_string(),
+        envelope: envelope_base(
+            "assistant",
+            params.assistant_uuid,
+            Some(params.user_uuid.to_string()),
+        ),
         message: AssistantMessage {
             model: params.model.to_string(),
             id: params.message_id.to_string(),
@@ -292,9 +284,6 @@ pub fn append_turn_jsonl(path: &Path, params: &TurnParams) -> std::io::Result<()
             usage: Usage::new(2, 1),
         },
         request_id: params.request_id.to_string(),
-        line_type: "assistant",
-        uuid: params.assistant_uuid.to_string(),
-        timestamp: timestamp_str,
     };
     write_jsonl_line(&mut file, &assistant_line)
 }
@@ -332,20 +321,22 @@ pub fn append_user_message_jsonl(path: &Path, params: &UserMessageParams) -> std
     match &params.content {
         UserMessageContent::Text(text) => {
             let user_line = UserMessageLine {
-                parent_uuid: params.parent_uuid.map(String::from),
-                is_sidechain: false,
-                user_type: "external".to_string(),
-                cwd: params.cwd.to_string(),
-                session_id: params.session_id.to_string(),
-                version: params.version.to_string(),
-                git_branch: params.git_branch.to_string(),
-                line_type: "user",
+                envelope: MessageEnvelope {
+                    line_type: "user".to_string(),
+                    uuid: params.user_uuid.to_string(),
+                    timestamp: timestamp_str,
+                    session_id: params.session_id.to_string(),
+                    cwd: params.cwd.to_string(),
+                    version: params.version.to_string(),
+                    git_branch: params.git_branch.to_string(),
+                    parent_uuid: params.parent_uuid.map(String::from),
+                    is_sidechain: false,
+                    user_type: "external".to_string(),
+                },
                 message: UserMessage {
                     role: "user",
                     content: (*text).to_string(),
                 },
-                uuid: params.user_uuid.to_string(),
-                timestamp: timestamp_str,
             };
             write_jsonl_line(&mut file, &user_line)?;
         }
@@ -355,18 +346,23 @@ pub fn append_user_message_jsonl(path: &Path, params: &UserMessageParams) -> std
             tool_use_result,
             source_tool_assistant_uuid,
         } => {
+            let parent = params
+                .parent_uuid
+                .map(String::from)
+                .unwrap_or_else(|| source_tool_assistant_uuid.to_string());
             let tool_result_line = ToolResultMessageLine {
-                parent_uuid: params
-                    .parent_uuid
-                    .map(String::from)
-                    .unwrap_or_else(|| source_tool_assistant_uuid.to_string()),
-                is_sidechain: false,
-                user_type: "external".to_string(),
-                cwd: params.cwd.to_string(),
-                session_id: params.session_id.to_string(),
-                version: params.version.to_string(),
-                git_branch: params.git_branch.to_string(),
-                line_type: "user",
+                envelope: MessageEnvelope {
+                    line_type: "user".to_string(),
+                    uuid: params.user_uuid.to_string(),
+                    timestamp: timestamp_str,
+                    session_id: params.session_id.to_string(),
+                    cwd: params.cwd.to_string(),
+                    version: params.version.to_string(),
+                    git_branch: params.git_branch.to_string(),
+                    parent_uuid: Some(parent),
+                    is_sidechain: false,
+                    user_type: "external".to_string(),
+                },
                 message: ToolResultUserMessage {
                     role: "user",
                     content: vec![ToolResultContent {
@@ -375,8 +371,6 @@ pub fn append_user_message_jsonl(path: &Path, params: &UserMessageParams) -> std
                         content: (*content).to_string(),
                     }],
                 },
-                uuid: params.user_uuid.to_string(),
-                timestamp: timestamp_str,
                 tool_use_result: tool_use_result.clone(),
                 source_tool_assistant_uuid: (*source_tool_assistant_uuid).to_string(),
             };
@@ -434,13 +428,18 @@ pub fn append_assistant_message_jsonl(
     let timestamp_str = params.timestamp.to_rfc3339();
 
     let assistant_line = AssistantMessageLine {
-        parent_uuid: params.parent_uuid.to_string(),
-        is_sidechain: false,
-        user_type: "external".to_string(),
-        cwd: params.cwd.to_string(),
-        session_id: params.session_id.to_string(),
-        version: params.version.to_string(),
-        git_branch: params.git_branch.to_string(),
+        envelope: MessageEnvelope {
+            line_type: "assistant".to_string(),
+            uuid: params.assistant_uuid.to_string(),
+            timestamp: timestamp_str,
+            session_id: params.session_id.to_string(),
+            cwd: params.cwd.to_string(),
+            version: params.version.to_string(),
+            git_branch: params.git_branch.to_string(),
+            parent_uuid: Some(params.parent_uuid.to_string()),
+            is_sidechain: false,
+            user_type: "external".to_string(),
+        },
         message: AssistantMessage {
             model: params.model.to_string(),
             id: params.message_id.to_string(),
@@ -452,9 +451,6 @@ pub fn append_assistant_message_jsonl(
             usage: Usage::new(2, 1),
         },
         request_id: params.request_id.to_string(),
-        line_type: "assistant",
-        uuid: params.assistant_uuid.to_string(),
-        timestamp: timestamp_str,
     };
     write_jsonl_line(&mut file, &assistant_line)
 }
