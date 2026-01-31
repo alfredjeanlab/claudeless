@@ -8,7 +8,7 @@
 //! 2. Project (.claude/settings.json) - medium priority
 //! 3. Local (.claude/settings.local.json) - highest priority
 
-use super::settings::ClaudeSettings;
+use super::settings::{load_settings_input, ClaudeSettings};
 use super::settings_source::SettingSource;
 use std::path::{Path, PathBuf};
 
@@ -78,6 +78,30 @@ impl SettingsLoader {
     /// Create a new settings loader.
     pub fn new(paths: SettingsPaths) -> Self {
         Self { paths }
+    }
+
+    /// Load and merge all settings files, plus CLI-provided settings.
+    ///
+    /// Precedence (later overrides earlier):
+    /// 1. Global (~/.claude/settings.json)
+    /// 2. Project (.claude/settings.json)
+    /// 3. Local (.claude/settings.local.json)
+    /// 4. CLI --settings flags (in order specified)
+    pub fn load_with_overrides(&self, cli_settings: &[String]) -> ClaudeSettings {
+        let mut settings = self.load();
+
+        for input in cli_settings {
+            match load_settings_input(input) {
+                Ok(cli_settings) => {
+                    settings.merge(cli_settings);
+                }
+                Err(e) => {
+                    eprintln!("Warning: Failed to load settings from '{}': {}", input, e);
+                }
+            }
+        }
+
+        settings
     }
 
     /// Load and merge all settings files.

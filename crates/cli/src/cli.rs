@@ -126,6 +126,10 @@ pub struct Cli {
     #[arg(long)]
     pub no_session_persistence: bool,
 
+    /// Load settings from a JSON file or inline JSON string (can be specified multiple times)
+    #[arg(long, value_name = "FILE_OR_JSON")]
+    pub settings: Vec<String>,
+
     // Simulator-specific flags (not in real Claude)
     /// Scenario file or directory for scripted responses
     #[arg(long, env = "CLAUDELESS_SCENARIO")]

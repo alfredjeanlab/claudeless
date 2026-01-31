@@ -297,3 +297,73 @@ fn test_settings_as_claude_settings() {
     assert_eq!(claude_settings.permissions.allow, vec!["Read"]);
     assert_eq!(claude_settings.env.get("KEY"), Some(&"value".to_string()));
 }
+
+// ClaudeSettings::parse() tests
+
+#[test]
+fn test_claude_settings_parse_inline_json() {
+    let json = r#"{"permissions": {"allow": ["Read", "Bash(npm *)"]}}"#;
+    let settings = ClaudeSettings::parse(json).unwrap();
+    assert_eq!(settings.permissions.allow, vec!["Read", "Bash(npm *)"]);
+}
+
+#[test]
+fn test_claude_settings_parse_json5_with_comments() {
+    let json5 = r#"{
+        // This is a comment
+        "permissions": {
+            "allow": ["Read"], // Trailing comma OK in JSON5
+        }
+    }"#;
+    let settings = ClaudeSettings::parse(json5).unwrap();
+    assert_eq!(settings.permissions.allow, vec!["Read"]);
+}
+
+#[test]
+fn test_claude_settings_parse_invalid_json() {
+    let invalid = "not valid json at all";
+    let result = ClaudeSettings::parse(invalid);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_claude_settings_parse_empty_object() {
+    let json = "{}";
+    let settings = ClaudeSettings::parse(json).unwrap();
+    assert!(settings.permissions.allow.is_empty());
+    assert!(settings.permissions.deny.is_empty());
+}
+
+// load_settings_input() tests
+
+#[test]
+fn test_load_settings_input_inline_json() {
+    let input = r#"{"permissions": {"allow": ["Read"]}}"#;
+    let settings = load_settings_input(input).unwrap();
+    assert_eq!(settings.permissions.allow, vec!["Read"]);
+}
+
+#[test]
+fn test_load_settings_input_inline_json_with_whitespace() {
+    let input = r#"
+        {"permissions": {"allow": ["Read"]}}
+    "#;
+    let settings = load_settings_input(input).unwrap();
+    assert_eq!(settings.permissions.allow, vec!["Read"]);
+}
+
+#[test]
+fn test_load_settings_input_file_path() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("settings.json");
+    std::fs::write(&path, r#"{"permissions": {"allow": ["Write"]}}"#).unwrap();
+
+    let settings = load_settings_input(path.to_str().unwrap()).unwrap();
+    assert_eq!(settings.permissions.allow, vec!["Write"]);
+}
+
+#[test]
+fn test_load_settings_input_nonexistent_file() {
+    let result = load_settings_input("/nonexistent/path/settings.json");
+    assert!(result.is_err());
+}
