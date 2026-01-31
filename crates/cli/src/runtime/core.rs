@@ -527,24 +527,13 @@ impl Runtime {
     }
 
     /// Shutdown MCP manager gracefully.
-    ///
-    /// Attempts to take exclusive ownership for clean shutdown. Falls back to
-    /// holding the lock across await if other references exist (safe at exit time).
-    #[allow(clippy::await_holding_lock)]
     pub async fn shutdown_mcp(&self) {
         if let Some(ref mgr) = self.mcp_manager {
-            // Clone the Arc to avoid borrow issues
-            let mgr_clone = Arc::clone(mgr);
-            match Arc::try_unwrap(mgr_clone) {
-                Ok(rwlock) => {
-                    rwlock.into_inner().shutdown().await;
-                }
-                Err(arc) => {
-                    // Other references exist; holding lock across await is safe at exit
-                    #[allow(clippy::await_holding_lock)]
-                    arc.write().shutdown().await;
-                }
-            }
+            // SAFETY(await_holding_lock): Holding write lock across await is acceptable here:
+            // - Runs once at process exit, no concurrent lock acquisition
+            // - parking_lot::RwLock guards are Send
+            #[allow(clippy::await_holding_lock)]
+            mgr.write().shutdown().await;
         }
     }
 }
