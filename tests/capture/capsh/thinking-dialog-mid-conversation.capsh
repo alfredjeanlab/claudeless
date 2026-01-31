@@ -1,0 +1,27 @@
+# Capture extended thinking dialog mid-conversation.
+# Opens thinking dialog after a response to show mid-conversation state.
+# Requires API call - sends a simple question to Haiku.
+# Args: --model haiku
+
+wait "for shortcuts" 10s
+
+# Send a simple prompt that won't trigger tool use
+send "What is 2+2? Just give me the number."
+wait 100
+send <Enter>
+
+# Wait for response to complete
+wait "4" 60s
+
+# Small delay to ensure UI is settled
+wait 500
+
+# Open thinking dialog (Meta+T / Option+T)
+send <M-t>
+wait "thinking" 3s
+snapshot "thinking_dialog_mid_conversation"
+
+# Close dialog and exit
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
