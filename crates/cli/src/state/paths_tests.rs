@@ -22,40 +22,39 @@ fn test_normalize_project_path() {
 }
 
 #[test]
-fn test_state_paths() {
-    let paths = StatePaths::new("/home/user/.claude");
+fn test_path_functions() {
+    let root = Path::new("/home/user/.claude");
 
-    assert_eq!(paths.root(), Path::new("/home/user/.claude"));
-    assert_eq!(paths.todos_dir(), PathBuf::from("/home/user/.claude/todos"));
+    assert_eq!(todos_dir(root), PathBuf::from("/home/user/.claude/todos"));
     assert_eq!(
-        paths.projects_dir(),
+        projects_dir(root),
         PathBuf::from("/home/user/.claude/projects")
     );
-    assert_eq!(paths.plans_dir(), PathBuf::from("/home/user/.claude/plans"));
+    assert_eq!(plans_dir(root), PathBuf::from("/home/user/.claude/plans"));
     assert_eq!(
-        paths.sessions_dir(),
+        sessions_dir(root),
         PathBuf::from("/home/user/.claude/sessions")
     );
     assert_eq!(
-        paths.settings_path(),
+        settings_path(root),
         PathBuf::from("/home/user/.claude/settings.json")
     );
 }
 
 #[test]
-fn test_state_paths_session() {
-    let paths = StatePaths::new("/tmp/state");
+fn test_session_path() {
+    let root = Path::new("/tmp/state");
     assert_eq!(
-        paths.session_path("abc-123"),
+        session_path(root, "abc-123"),
         PathBuf::from("/tmp/state/sessions/abc-123.json")
     );
 }
 
 #[test]
-fn test_state_paths_todo() {
-    let paths = StatePaths::new("/tmp/state");
+fn test_todo_path() {
+    let root = Path::new("/tmp/state");
     assert_eq!(
-        paths.todo_path("context1"),
+        todo_path(root, "context1"),
         PathBuf::from("/tmp/state/todos/context1.json")
     );
 }

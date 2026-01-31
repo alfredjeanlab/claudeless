@@ -2,9 +2,6 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 //! Path computation and normalization utilities for state directories.
-//!
-//! This module provides pure functions for computing paths within the state directory
-//! structure. These functions are deterministic and have no side effects.
 
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
@@ -13,35 +10,13 @@ use std::path::{Path, PathBuf};
 ///
 /// Real Claude CLI converts paths like `/Users/user/Developer/myproject` to
 /// `-Users-user-Developer-myproject` for the projects directory.
-///
-/// The normalization rules are:
-/// 1. Replace all `/` characters with `-`
-/// 2. Replace all `.` characters with `-`
-/// 3. This results in a leading `-` for absolute paths
-///
-/// # Examples
-///
-/// ```
-/// use std::path::Path;
-/// use claudeless::state::paths::normalize_project_path;
-///
-/// assert_eq!(
-///     normalize_project_path(Path::new("/Users/user/Developer/myproject")),
-///     "-Users-user-Developer-myproject"
-/// );
-///
-/// assert_eq!(
-///     normalize_project_path(Path::new("/tmp/test.txt")),
-///     "-tmp-test-txt"
-/// );
-/// ```
 pub fn normalize_project_path(path: &Path) -> String {
     path.to_string_lossy().replace(['/', '.'], "-")
 }
 
 /// Get the canonical project directory name for a path.
 ///
-/// This tries to canonicalize the path first (resolving symlinks, etc.)
+/// Tries to canonicalize the path first (resolving symlinks, etc.)
 /// and falls back to the original path if canonicalization fails.
 pub fn project_dir_name(path: &Path) -> String {
     let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
@@ -55,72 +30,42 @@ pub fn project_hash(path: &Path) -> String {
     let mut hasher = Sha256::new();
     hasher.update(canonical.to_string_lossy().as_bytes());
     let result = hasher.finalize();
-    hex::encode(&result[..8]) // First 8 bytes = 16 hex chars
+    hex::encode(&result[..8])
 }
 
-/// Path computation helper for state directory structure.
-///
-/// This struct provides methods for computing paths within the state directory
-/// without actually performing any I/O operations.
-#[derive(Debug, Clone)]
-pub struct StatePaths {
-    root: PathBuf,
+// Free functions for path computation
+
+pub fn todos_dir(root: &Path) -> PathBuf {
+    root.join("todos")
 }
 
-impl StatePaths {
-    /// Create a new path computer rooted at the given directory.
-    pub fn new(root: impl Into<PathBuf>) -> Self {
-        Self { root: root.into() }
-    }
+pub fn projects_dir(root: &Path) -> PathBuf {
+    root.join("projects")
+}
 
-    /// Get the root directory path.
-    pub fn root(&self) -> &Path {
-        &self.root
-    }
+pub fn plans_dir(root: &Path) -> PathBuf {
+    root.join("plans")
+}
 
-    /// Get the todos directory path.
-    pub fn todos_dir(&self) -> PathBuf {
-        self.root.join("todos")
-    }
+pub fn sessions_dir(root: &Path) -> PathBuf {
+    root.join("sessions")
+}
 
-    /// Get the projects directory path.
-    pub fn projects_dir(&self) -> PathBuf {
-        self.root.join("projects")
-    }
+pub fn settings_path(root: &Path) -> PathBuf {
+    root.join("settings.json")
+}
 
-    /// Get the plans directory path.
-    pub fn plans_dir(&self) -> PathBuf {
-        self.root.join("plans")
-    }
+pub fn project_dir(root: &Path, project_path: &Path) -> PathBuf {
+    let dir_name = project_dir_name(project_path);
+    projects_dir(root).join(&dir_name)
+}
 
-    /// Get the sessions directory path.
-    pub fn sessions_dir(&self) -> PathBuf {
-        self.root.join("sessions")
-    }
+pub fn session_path(root: &Path, session_id: &str) -> PathBuf {
+    sessions_dir(root).join(format!("{}.json", session_id))
+}
 
-    /// Get the settings file path.
-    pub fn settings_path(&self) -> PathBuf {
-        self.root.join("settings.json")
-    }
-
-    /// Get the project directory for a given project path.
-    ///
-    /// Uses the same path normalization as the real Claude CLI:
-    /// `/Users/foo/project` → `~/.claude/projects/-Users-foo-project`
-    pub fn project_dir(&self, project_path: &Path) -> PathBuf {
-        let dir_name = project_dir_name(project_path);
-        self.projects_dir().join(&dir_name)
-    }
-
-    /// Get the session file path for a given session ID.
-    pub fn session_path(&self, session_id: &str) -> PathBuf {
-        self.sessions_dir().join(format!("{}.json", session_id))
-    }
-
-    /// Get the todo file path for a given context.
-    pub fn todo_path(&self, context: &str) -> PathBuf {
-        self.todos_dir().join(format!("{}.json", context))
-    }
+pub fn todo_path(root: &Path, context: &str) -> PathBuf {
+    todos_dir(root).join(format!("{}.json", context))
 }
 
 #[cfg(test)]
