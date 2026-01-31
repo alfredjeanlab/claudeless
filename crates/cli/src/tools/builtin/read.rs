@@ -15,13 +15,6 @@ use crate::tools::ToolName;
 #[derive(Clone, Debug, Default)]
 pub struct ReadExecutor;
 
-impl ReadExecutor {
-    /// Create a new Read executor.
-    pub fn new() -> Self {
-        Self
-    }
-}
-
 impl BuiltinToolExecutor for ReadExecutor {
     fn execute(
         &self,

@@ -43,8 +43,5 @@ fn bash_failed_commands(command: &str, expected: &str) {
 
 #[test]
 fn test_tool_name() {
-    assert_eq!(
-        BashExecutor::new().tool_name(),
-        crate::tools::ToolName::Bash
-    );
+    assert_eq!(BashExecutor.tool_name(), crate::tools::ToolName::Bash);
 }

@@ -18,13 +18,6 @@ use crate::tools::ToolName;
 #[derive(Clone, Debug, Default)]
 pub struct EditExecutor;
 
-impl EditExecutor {
-    /// Create a new Edit executor.
-    pub fn new() -> Self {
-        Self
-    }
-}
-
 impl BuiltinToolExecutor for EditExecutor {
     fn execute(
         &self,

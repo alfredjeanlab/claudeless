@@ -48,6 +48,7 @@ impl HookConfig {
 }
 
 /// Hook executor that runs hook scripts
+#[derive(Default)]
 pub struct HookExecutor {
     /// Registered hooks by event
     hooks: HashMap<HookEvent, Vec<HookConfig>>,
@@ -170,12 +171,6 @@ impl HookExecutor {
     /// Clear hooks for a specific event
     pub fn clear_event(&mut self, event: &HookEvent) {
         self.hooks.remove(event);
-    }
-}
-
-impl Default for HookExecutor {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

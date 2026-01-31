@@ -33,6 +33,7 @@ pub enum SimulatorError {
 }
 
 /// Builder for configuring a simulator instance
+#[derive(Default)]
 pub struct SimulatorBuilder {
     scenario: ScenarioConfig,
     capture: Option<PathBuf>,
@@ -146,12 +147,6 @@ impl SimulatorBuilder {
             scenario_path,
             capture_path,
         })
-    }
-}
-
-impl Default for SimulatorBuilder {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
