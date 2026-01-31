@@ -285,8 +285,6 @@ impl StateDirectory {
 }
 
 // Re-export path utilities for backwards compatibility
-#[allow(deprecated)]
-pub use super::paths::project_hash;
 pub use super::paths::{normalize_project_path, project_dir_name};
 
 #[cfg(test)]
