@@ -8,7 +8,7 @@ use std::fs;
 use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
-use super::{extract_file_path, BuiltinContext, BuiltinToolExecutor};
+use super::{extract_file_path, require_field, BuiltinContext, BuiltinToolExecutor};
 
 /// Executor for file reading.
 #[derive(Clone, Debug, Default)]
@@ -28,15 +28,12 @@ impl BuiltinToolExecutor for ReadExecutor {
         tool_use_id: &str,
         _ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let path = match extract_file_path(&call.input) {
-            Some(p) => p,
-            None => {
-                return ToolExecutionResult::error(
-                    tool_use_id,
-                    "Missing 'file_path' or 'path' field in Read tool input",
-                )
-            }
-        };
+        let path = require_field!(
+            call.input,
+            extract_file_path => "'file_path' or 'path'",
+            tool_use_id,
+            call.tool
+        );
 
         let resolved_path = std::path::PathBuf::from(path);
 

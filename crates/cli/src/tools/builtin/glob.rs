@@ -10,7 +10,7 @@ use glob::glob as glob_match;
 use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
-use super::{extract_directory, extract_str, BuiltinContext, BuiltinToolExecutor};
+use super::{extract_directory, extract_str, require_field, BuiltinContext, BuiltinToolExecutor};
 
 /// Executor for glob pattern matching.
 #[derive(Clone, Debug, Default)]
@@ -30,15 +30,7 @@ impl BuiltinToolExecutor for GlobExecutor {
         tool_use_id: &str,
         ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let pattern = match extract_str(&call.input, "pattern") {
-            Some(p) => p,
-            None => {
-                return ToolExecutionResult::error(
-                    tool_use_id,
-                    "Missing 'pattern' field in Glob tool input",
-                )
-            }
-        };
+        let pattern = require_field!(call.input, "pattern", extract_str, tool_use_id, call.tool);
 
         // Get the base directory
         let base_dir = extract_directory(&call.input)

@@ -8,7 +8,10 @@ use std::fs;
 use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
-use super::{extract_bool, extract_file_path, extract_str, BuiltinContext, BuiltinToolExecutor};
+use super::{
+    extract_bool, extract_file_path, extract_str, require_field, BuiltinContext,
+    BuiltinToolExecutor,
+};
 
 /// Executor for file editing (search and replace).
 #[derive(Clone, Debug, Default)]
@@ -28,35 +31,26 @@ impl BuiltinToolExecutor for EditExecutor {
         tool_use_id: &str,
         _ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let path = match extract_file_path(&call.input) {
-            Some(p) => p,
-            None => {
-                return ToolExecutionResult::error(
-                    tool_use_id,
-                    "Missing 'file_path' or 'path' field in Edit tool input",
-                )
-            }
-        };
-
-        let old_string = match extract_str(&call.input, "old_string") {
-            Some(s) => s,
-            None => {
-                return ToolExecutionResult::error(
-                    tool_use_id,
-                    "Missing 'old_string' field in Edit tool input",
-                )
-            }
-        };
-
-        let new_string = match extract_str(&call.input, "new_string") {
-            Some(s) => s,
-            None => {
-                return ToolExecutionResult::error(
-                    tool_use_id,
-                    "Missing 'new_string' field in Edit tool input",
-                )
-            }
-        };
+        let path = require_field!(
+            call.input,
+            extract_file_path => "'file_path' or 'path'",
+            tool_use_id,
+            call.tool
+        );
+        let old_string = require_field!(
+            call.input,
+            "old_string",
+            extract_str,
+            tool_use_id,
+            call.tool
+        );
+        let new_string = require_field!(
+            call.input,
+            "new_string",
+            extract_str,
+            tool_use_id,
+            call.tool
+        );
 
         let resolved_path = std::path::PathBuf::from(path);
 
