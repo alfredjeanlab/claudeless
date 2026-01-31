@@ -13,6 +13,29 @@ use crate::recording::Recording;
 use crate::screen::Screen;
 use crate::script::{Command, MatchArm, SendPart};
 
+const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
+
+fn resolve_timeout(timeout_ms: Option<u64>) -> Duration {
+    timeout_ms.map_or(DEFAULT_TIMEOUT, Duration::from_millis)
+}
+
+/// Result of a PTY read with timeout.
+enum ReadResult {
+    Eof,
+    Data(usize),
+    Error(anyhow::Error),
+    Timeout,
+}
+
+async fn read_with_timeout(pty: &Pty, buf: &mut [u8], timeout_duration: Duration) -> ReadResult {
+    match timeout(timeout_duration, pty.read(buf)).await {
+        Ok(Ok(0)) => ReadResult::Eof,
+        Ok(Ok(n)) => ReadResult::Data(n),
+        Ok(Err(e)) => ReadResult::Error(e),
+        Err(_) => ReadResult::Timeout,
+    }
+}
+
 pub struct Config {
     pub command: String,
     pub cols: u16,
@@ -73,9 +96,9 @@ pub async fn run(config: Config) -> Result<i32> {
         ExecResult::Continue => {
             // Drain remaining output until EOF
             loop {
-                match timeout(Duration::from_millis(100), pty.read(&mut buf)).await {
-                    Ok(Ok(0)) => break,
-                    Ok(Ok(n)) => {
+                match read_with_timeout(&pty, &mut buf, Duration::from_millis(100)).await {
+                    ReadResult::Eof => break,
+                    ReadResult::Data(n) => {
                         if let Some(ref mut rec) = recording {
                             rec.append_raw(&buf[..n])?;
                         }
@@ -89,8 +112,8 @@ pub async fn run(config: Config) -> Result<i32> {
                             }
                         }
                     }
-                    Ok(Err(e)) => return Err(e),
-                    Err(_) => {}
+                    ReadResult::Error(e) => return Err(e),
+                    ReadResult::Timeout => {}
                 }
             }
         }
@@ -117,8 +140,7 @@ async fn execute_commands(ctx: &mut ExecutionContext<'_>, commands: &[Command]) 
 
         match cmd {
             Command::WaitPattern(regex, negated, timeout_ms) => {
-                let wait_timeout =
-                    timeout_ms.map_or(Duration::from_secs(30), Duration::from_millis);
+                let wait_timeout = resolve_timeout(*timeout_ms);
                 match do_wait(ctx, regex, *negated, wait_timeout).await {
                     Ok(WaitResult::Matched) => {}
                     Ok(WaitResult::Timeout) => {
@@ -186,8 +208,7 @@ async fn execute_commands(ctx: &mut ExecutionContext<'_>, commands: &[Command]) 
                 then_cmds,
                 else_cmds,
             } => {
-                let wait_timeout =
-                    timeout_ms.map_or(Duration::from_secs(30), Duration::from_millis);
+                let wait_timeout = resolve_timeout(*timeout_ms);
                 match do_wait(ctx, pattern, *negated, wait_timeout).await {
                     Ok(WaitResult::Matched) => {
                         match Box::pin(execute_commands(ctx, then_cmds)).await {
@@ -210,8 +231,7 @@ async fn execute_commands(ctx: &mut ExecutionContext<'_>, commands: &[Command]) 
                 arms,
                 else_cmds,
             } => {
-                let wait_timeout =
-                    timeout_ms.map_or(Duration::from_secs(30), Duration::from_millis);
+                let wait_timeout = resolve_timeout(*timeout_ms);
                 match do_match(ctx, arms, wait_timeout).await {
                     Ok(Some(matched_cmds)) => {
                         match Box::pin(execute_commands(ctx, matched_cmds)).await {
@@ -237,9 +257,9 @@ async fn execute_commands(ctx: &mut ExecutionContext<'_>, commands: &[Command]) 
 /// Drain pending PTY output.
 async fn drain_pty(ctx: &mut ExecutionContext<'_>) -> ExecResult {
     loop {
-        match timeout(Duration::from_millis(10), ctx.pty.read(ctx.buf)).await {
-            Ok(Ok(0)) => return ExecResult::Eof,
-            Ok(Ok(n)) => {
+        match read_with_timeout(ctx.pty, ctx.buf, Duration::from_millis(10)).await {
+            ReadResult::Eof => return ExecResult::Eof,
+            ReadResult::Data(n) => {
                 if let Some(ref mut rec) = ctx.recording {
                     if let Err(e) = rec.append_raw(&ctx.buf[..n]) {
                         return ExecResult::Error(e);
@@ -261,8 +281,8 @@ async fn drain_pty(ctx: &mut ExecutionContext<'_>) -> ExecResult {
                     }
                 }
             }
-            Ok(Err(e)) => return ExecResult::Error(e),
-            Err(_) => break,
+            ReadResult::Error(e) => return ExecResult::Error(e),
+            ReadResult::Timeout => break,
         }
     }
     ExecResult::Continue
@@ -293,8 +313,8 @@ async fn do_wait(
             }
             return Ok(WaitResult::Timeout);
         }
-        match timeout(Duration::from_millis(100), ctx.pty.read(ctx.buf)).await {
-            Ok(Ok(0)) => {
+        match read_with_timeout(ctx.pty, ctx.buf, Duration::from_millis(100)).await {
+            ReadResult::Eof => {
                 let met = condition_met(ctx.screen);
                 if let Some(ref mut rec) = ctx.recording {
                     if met {
@@ -305,7 +325,7 @@ async fn do_wait(
                 }
                 return Ok(WaitResult::Eof);
             }
-            Ok(Ok(n)) => {
+            ReadResult::Data(n) => {
                 if let Some(ref mut rec) = ctx.recording {
                     rec.append_raw(&ctx.buf[..n])?;
                 }
@@ -319,8 +339,8 @@ async fn do_wait(
                     }
                 }
             }
-            Ok(Err(e)) => return Err(e),
-            Err(_) => {}
+            ReadResult::Error(e) => return Err(e),
+            ReadResult::Timeout => {}
         }
     }
 
@@ -361,8 +381,8 @@ async fn do_match<'a>(
         }
 
         // Wait for more PTY output
-        match timeout(Duration::from_millis(100), ctx.pty.read(ctx.buf)).await {
-            Ok(Ok(0)) => {
+        match read_with_timeout(ctx.pty, ctx.buf, Duration::from_millis(100)).await {
+            ReadResult::Eof => {
                 // EOF - check one more time then return None
                 for arm in arms {
                     if ctx.screen.matches(&arm.pattern) {
@@ -374,7 +394,7 @@ async fn do_match<'a>(
                 }
                 return Ok(None);
             }
-            Ok(Ok(n)) => {
+            ReadResult::Data(n) => {
                 if let Some(ref mut rec) = ctx.recording {
                     rec.append_raw(&ctx.buf[..n])?;
                 }
@@ -388,8 +408,8 @@ async fn do_match<'a>(
                     }
                 }
             }
-            Ok(Err(e)) => return Err(e),
-            Err(_) => {} // Timeout on read, loop again
+            ReadResult::Error(e) => return Err(e),
+            ReadResult::Timeout => {} // Timeout on read, loop again
         }
     }
 }
