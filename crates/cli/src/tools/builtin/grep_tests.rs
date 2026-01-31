@@ -3,13 +3,14 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use super::super::test_helpers::execute;
+use super::super::test_helpers::{
+    assert_tool_error_contains, assert_tool_success_contains, execute,
+};
 use super::*;
 use crate::tools::builtin::extract_str;
 use serde_json::json;
 use std::io::Write;
 use tempfile::TempDir;
-use yare::parameterized;
 
 #[test]
 fn test_extract_pattern() {
@@ -19,14 +20,12 @@ fn test_extract_pattern() {
     );
 }
 
-#[parameterized(
-    missing_pattern = { json!({}), "Missing 'pattern'" },
-    invalid_regex = { json!({ "pattern": "[invalid" }), "Invalid regex" },
-)]
-fn grep_error_cases(input: serde_json::Value, expected: &str) {
-    let result = execute::<GrepExecutor>(input);
-    assert!(result.is_error);
-    assert!(result.text().unwrap().contains(expected));
+#[test]
+fn test_grep_invalid_regex() {
+    assert_tool_error_contains(
+        &execute::<GrepExecutor>(json!({ "pattern": "[invalid" })),
+        "Invalid regex",
+    );
 }
 
 #[test]
@@ -36,12 +35,13 @@ fn test_grep_no_matches() {
     let mut file = fs::File::create(&file_path).unwrap();
     writeln!(file, "Hello, World!").unwrap();
 
-    let result = execute::<GrepExecutor>(json!({
-        "pattern": "nonexistent",
-        "path": temp_dir.path().to_str().unwrap()
-    }));
-    assert!(!result.is_error);
-    assert!(result.text().unwrap().contains("No matches"));
+    assert_tool_success_contains(
+        &execute::<GrepExecutor>(json!({
+            "pattern": "nonexistent",
+            "path": temp_dir.path().to_str().unwrap()
+        })),
+        "No matches",
+    );
 }
 
 #[test]

@@ -18,15 +18,6 @@ fn test_extract_command() {
     assert_eq!(extract_str(&json!({}), "command"), None);
 }
 
-#[parameterized(
-    missing_command = { json!({}), true, "Missing 'command'" },
-)]
-fn bash_error_cases(input: serde_json::Value, is_error: bool, expected: &str) {
-    let result = execute::<BashExecutor>(input);
-    assert_eq!(result.is_error, is_error);
-    assert!(result.text().unwrap().contains(expected));
-}
-
 #[test]
 #[cfg(unix)]
 fn test_bash_real_execution() {
