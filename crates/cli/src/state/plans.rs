@@ -3,7 +3,7 @@
 
 //! Saved plans management.
 
-use super::io::JsonLoad;
+use super::io::{json_files_in, JsonLoad};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -123,17 +123,9 @@ impl PlansManager {
 
     /// List all plans
     pub fn list(&self) -> std::io::Result<Vec<Plan>> {
-        let mut plans = Vec::new();
-        if self.plans_dir.exists() {
-            for entry in std::fs::read_dir(&self.plans_dir)? {
-                let path = entry?.path();
-                if path.extension().is_some_and(|e| e == "json") {
-                    if let Ok(plan) = Plan::load(&path) {
-                        plans.push(plan);
-                    }
-                }
-            }
-        }
+        let mut plans: Vec<Plan> = json_files_in(&self.plans_dir)
+            .filter_map(|path| Plan::load(&path).ok())
+            .collect();
         // Sort by modified time descending (most recent first)
         plans.sort_by(|a, b| b.modified_at_ms.cmp(&a.modified_at_ms));
         Ok(plans)
@@ -174,14 +166,7 @@ impl PlansManager {
 
     /// Get plan count
     pub fn count(&self) -> std::io::Result<usize> {
-        if !self.plans_dir.exists() {
-            return Ok(0);
-        }
-        let count = std::fs::read_dir(&self.plans_dir)?
-            .filter_map(|e| e.ok())
-            .filter(|e| e.path().extension().is_some_and(|ext| ext == "json"))
-            .count();
-        Ok(count)
+        Ok(json_files_in(&self.plans_dir).count())
     }
 
     /// Create a new plan file with markdown content and generated name.

@@ -3,6 +3,7 @@
 
 //! Simulated `~/.claude` directory structure.
 
+use super::io::files_in;
 use sha2::{Digest, Sha256};
 use std::fs::{self, Permissions};
 use std::path::{Path, PathBuf};
@@ -180,10 +181,8 @@ impl StateDirectory {
     /// Reset state to clean slate
     pub fn reset(&mut self) -> Result<(), StateError> {
         // Remove all contents but keep structure
-        if self.todos_dir().exists() {
-            for entry in fs::read_dir(self.todos_dir())? {
-                fs::remove_file(entry?.path())?;
-            }
+        for path in files_in(&self.todos_dir()) {
+            fs::remove_file(path)?;
         }
 
         if self.projects_dir().exists() {
@@ -191,16 +190,12 @@ impl StateDirectory {
             fs::create_dir_all(self.projects_dir())?;
         }
 
-        if self.plans_dir().exists() {
-            for entry in fs::read_dir(self.plans_dir())? {
-                fs::remove_file(entry?.path())?;
-            }
+        for path in files_in(&self.plans_dir()) {
+            fs::remove_file(path)?;
         }
 
-        if self.sessions_dir().exists() {
-            for entry in fs::read_dir(self.sessions_dir())? {
-                fs::remove_file(entry?.path())?;
-            }
+        for path in files_in(&self.sessions_dir()) {
+            fs::remove_file(path)?;
         }
 
         // Reset settings to defaults

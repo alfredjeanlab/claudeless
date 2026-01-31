@@ -33,7 +33,10 @@ pub use settings_loader::{SettingsLoader, SettingsPaths};
 pub use settings_source::SettingSource;
 pub use todos::{ClaudeTodoItem, TodoItem, TodoState, TodoStatus};
 
-pub use io::{parse_json5_or_json, to_io_error, to_io_json, JsonLoad};
+pub use io::{
+    ensure_parent_exists, files_in, json_files_in, parse_json5_or_json, to_io_error, to_io_json,
+    JsonLoad,
+};
 
 use chrono::{DateTime, Utc};
 use std::path::PathBuf;
