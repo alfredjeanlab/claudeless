@@ -120,19 +120,7 @@ impl Scenario {
 
     /// Create a scenario from a config object
     pub fn from_config(config: ScenarioConfig) -> Result<Self, ScenarioError> {
-        // Validate sub-configs
-        config
-            .identity
-            .validate()
-            .map_err(ScenarioError::Validation)?;
-        config
-            .environment
-            .validate()
-            .map_err(ScenarioError::Validation)?;
-        config
-            .timing
-            .validate()
-            .map_err(ScenarioError::Validation)?;
+        config.validate().map_err(ScenarioError::Validation)?;
 
         // Compile response patterns and turn patterns
         let mut compiled = Vec::new();

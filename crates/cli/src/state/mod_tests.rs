@@ -14,7 +14,7 @@ fn test_state_writer_creation() {
     )
     .unwrap();
 
-    assert_eq!(writer.session_id(), "test-session-id");
+    assert_eq!(writer.session_id, "test-session-id");
     assert!(writer.state_dir().is_initialized());
 }
 
@@ -63,7 +63,7 @@ fn test_state_writer_record_turn() {
     // Verify sessions-index content
     let index = SessionsIndex::load(&index_path).unwrap();
     assert_eq!(index.len(), 1);
-    let entry = index.get(writer.session_id()).unwrap();
+    let entry = index.get(&writer.session_id).unwrap();
     assert_eq!(entry.first_prompt, "Hello");
     assert_eq!(entry.message_count, 2);
 }

@@ -170,6 +170,16 @@ pub struct ScenarioConfig {
     pub timing: TimingConfig,
 }
 
+impl ScenarioConfig {
+    /// Validate all sub-configurations.
+    pub fn validate(&self) -> Result<(), String> {
+        self.identity.validate()?;
+        self.environment.validate()?;
+        self.timing.validate()?;
+        Ok(())
+    }
+}
+
 /// Tool execution configuration
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
