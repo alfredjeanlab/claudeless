@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 use super::*;
 
 #[test]
@@ -20,14 +22,14 @@ fn test_parse_print_mode() {
 #[test]
 fn test_parse_output_format_json() {
     let cli = Cli::try_parse_from(["claude", "--output-format", "json", "-p", "test"]).unwrap();
-    assert!(matches!(cli.output_format, OutputFormat::Json));
+    assert!(matches!(cli.output.output_format, OutputFormat::Json));
 }
 
 #[test]
 fn test_parse_output_format_stream_json() {
     let cli =
         Cli::try_parse_from(["claude", "--output-format", "stream-json", "-p", "test"]).unwrap();
-    assert!(matches!(cli.output_format, OutputFormat::StreamJson));
+    assert!(matches!(cli.output.output_format, OutputFormat::StreamJson));
 }
 
 #[test]
@@ -66,21 +68,30 @@ fn test_parse_simulator_flags() {
         "test",
     ])
     .unwrap();
-    assert_eq!(cli.scenario, Some("/path/to/scenario.toml".to_string()));
-    assert_eq!(cli.capture, Some("/tmp/capture.jsonl".to_string()));
-    assert!(matches!(cli.failure, Some(FailureMode::RateLimit)));
+    assert_eq!(
+        cli.simulator.scenario,
+        Some("/path/to/scenario.toml".to_string())
+    );
+    assert_eq!(
+        cli.simulator.capture,
+        Some("/tmp/capture.jsonl".to_string())
+    );
+    assert!(matches!(
+        cli.simulator.failure,
+        Some(FailureMode::RateLimit)
+    ));
 }
 
 #[test]
 fn test_parse_continue_conversation() {
     let cli = Cli::try_parse_from(["claude", "-c", "-p", "continue"]).unwrap();
-    assert!(cli.continue_conversation);
+    assert!(cli.session.continue_conversation);
 }
 
 #[test]
 fn test_parse_resume() {
     let cli = Cli::try_parse_from(["claude", "-r", "session-123", "-p", "resume"]).unwrap();
-    assert_eq!(cli.resume, Some("session-123".to_string()));
+    assert_eq!(cli.session.resume, Some("session-123".to_string()));
 }
 
 #[test]
@@ -135,7 +146,7 @@ fn test_parse_session_id() {
     ])
     .unwrap();
     assert_eq!(
-        cli.session_id,
+        cli.session.session_id,
         Some("01234567-89ab-cdef-0123-456789abcdef".to_string())
     );
 }
@@ -143,20 +154,20 @@ fn test_parse_session_id() {
 #[test]
 fn test_parse_verbose() {
     let cli = Cli::try_parse_from(["claude", "--verbose", "-p", "test"]).unwrap();
-    assert!(cli.verbose);
+    assert!(cli.output.verbose);
 }
 
 #[test]
 fn test_parse_debug() {
     // Debug flag without value
     let cli = Cli::try_parse_from(["claude", "-d", "-p", "test"]).unwrap();
-    assert!(cli.debug.is_some());
+    assert!(cli.output.debug.is_some());
 }
 
 #[test]
 fn test_parse_include_partial_messages() {
     let cli = Cli::try_parse_from(["claude", "--include-partial-messages", "-p", "test"]).unwrap();
-    assert!(cli.include_partial_messages);
+    assert!(cli.output.include_partial_messages);
 }
 
 #[test]
@@ -175,13 +186,19 @@ fn test_parse_max_budget_usd() {
 #[test]
 fn no_session_persistence_requires_print_mode() {
     let cli = Cli::try_parse_from(["claude", "--no-session-persistence", "prompt"]).unwrap();
-    assert!(cli.validate_no_session_persistence().is_err());
+    assert!(cli
+        .session
+        .validate_no_session_persistence(cli.print)
+        .is_err());
 }
 
 #[test]
 fn no_session_persistence_with_print_mode_succeeds() {
     let cli = Cli::try_parse_from(["claude", "-p", "--no-session-persistence", "prompt"]).unwrap();
-    assert!(cli.validate_no_session_persistence().is_ok());
+    assert!(cli
+        .session
+        .validate_no_session_persistence(cli.print)
+        .is_ok());
 }
 
 #[test]
@@ -194,17 +211,68 @@ fn session_id_valid_uuid_succeeds() {
         "test",
     ])
     .unwrap();
-    assert!(cli.validate_session_id().is_ok());
+    assert!(cli.session.validate_session_id().is_ok());
 }
 
 #[test]
 fn session_id_invalid_uuid_fails() {
     let cli = Cli::try_parse_from(["claude", "-p", "--session-id", "abc", "test"]).unwrap();
-    assert!(cli.validate_session_id().is_err());
+    assert!(cli.session.validate_session_id().is_err());
 }
 
 #[test]
 fn session_id_none_succeeds() {
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
-    assert!(cli.validate_session_id().is_ok());
+    assert!(cli.session.validate_session_id().is_ok());
+}
+
+// Unified Cli::validate() tests
+#[test]
+fn cli_validate_checks_all_options() {
+    // Valid CLI
+    let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
+    assert!(cli.validate().is_ok());
+
+    // Invalid session persistence
+    let cli = Cli::try_parse_from(["claude", "--no-session-persistence", "test"]).unwrap();
+    assert!(cli.validate().is_err());
+}
+
+#[test]
+fn cli_validate_session_id() {
+    let cli = Cli::try_parse_from(["claude", "-p", "--session-id", "not-a-uuid", "test"]).unwrap();
+    assert!(cli.validate().is_err());
+}
+
+// MCP options tests
+#[test]
+fn parse_mcp_options() {
+    let cli = Cli::try_parse_from([
+        "claude",
+        "-p",
+        "--mcp-config",
+        "/path/to/config.json",
+        "--strict-mcp-config",
+        "--mcp-debug",
+        "test",
+    ])
+    .unwrap();
+    assert_eq!(cli.mcp.mcp_config, vec!["/path/to/config.json"]);
+    assert!(cli.mcp.strict_mcp_config);
+    assert!(cli.mcp.mcp_debug);
+}
+
+#[test]
+fn parse_multiple_mcp_configs() {
+    let cli = Cli::try_parse_from([
+        "claude",
+        "-p",
+        "--mcp-config",
+        "/config1.json",
+        "--mcp-config",
+        "/config2.json",
+        "test",
+    ])
+    .unwrap();
+    assert_eq!(cli.mcp.mcp_config, vec!["/config1.json", "/config2.json"]);
 }

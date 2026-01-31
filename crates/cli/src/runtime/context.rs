@@ -123,6 +123,7 @@ impl RuntimeContext {
 
         // Session ID: CLI overrides scenario, then generate random
         let session_id = cli
+            .session
             .session_id
             .as_ref()
             .and_then(|s| Uuid::parse_str(s).ok())
@@ -165,7 +166,7 @@ impl RuntimeContext {
         let permission_mode = scenario
             .and_then(|s| s.environment.permission_mode.as_ref())
             .and_then(|s| parse_permission_mode(s))
-            .unwrap_or_else(|| cli.permission_mode.clone());
+            .unwrap_or_else(|| cli.permissions.permission_mode.clone());
 
         // Compile permission patterns from settings
         let permission_patterns =
