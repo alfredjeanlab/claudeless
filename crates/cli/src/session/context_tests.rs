@@ -22,6 +22,7 @@ fn default_cli() -> Cli {
         dangerously_skip_permissions: false,
         input_file: None,
         cwd: None,
+        setting_sources: None,
         input_format: "text".to_string(),
         session_id: None,
         verbose: false,

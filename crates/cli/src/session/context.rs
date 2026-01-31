@@ -57,7 +57,7 @@ impl SessionContext {
 
     /// Build context with settings loaded from state directory.
     ///
-    /// This loads and merges settings from:
+    /// Loads settings from sources specified in CLI args, or all sources if not specified:
     /// 1. Global: {state_dir}/settings.json
     /// 2. Project: {working_dir}/.claude/settings.json
     /// 3. Local: {working_dir}/.claude/settings.local.json
@@ -78,8 +78,9 @@ impl SessionContext {
             })
             .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
 
-        // Load and merge settings
-        let loader = state_dir.settings_loader(&working_directory);
+        // Load and merge settings with source filtering
+        let sources = cli.setting_sources.as_deref();
+        let loader = state_dir.settings_loader_with_sources(&working_directory, sources);
         let effective_settings = loader.load();
 
         Self::build_internal(scenario, cli, effective_settings)
