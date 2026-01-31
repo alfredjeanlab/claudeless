@@ -16,11 +16,6 @@ use crate::tools::ToolName;
 pub struct BashExecutor;
 
 impl BashExecutor {
-    /// Create a new Bash executor.
-    pub fn new() -> Self {
-        Self
-    }
-
     /// Execute command for real.
     fn execute_real(command: &str, ctx: &BuiltinContext, tool_use_id: &str) -> ToolExecutionResult {
         let mut cmd = Command::new("sh");

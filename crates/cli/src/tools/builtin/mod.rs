@@ -57,12 +57,12 @@ impl BuiltinExecutor {
     /// Create a new builtin executor with default configuration.
     pub fn new() -> Self {
         let all_executors: [Box<dyn BuiltinToolExecutor>; 6] = [
-            Box::new(BashExecutor::new()),
-            Box::new(ReadExecutor::new()),
-            Box::new(WriteExecutor::new()),
-            Box::new(EditExecutor::new()),
-            Box::new(GlobExecutor::new()),
-            Box::new(GrepExecutor::new()),
+            Box::new(BashExecutor),
+            Box::new(ReadExecutor),
+            Box::new(WriteExecutor),
+            Box::new(EditExecutor),
+            Box::new(GlobExecutor),
+            Box::new(GrepExecutor),
         ];
 
         let executors = all_executors

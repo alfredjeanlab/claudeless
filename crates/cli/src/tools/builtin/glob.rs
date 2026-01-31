@@ -17,13 +17,6 @@ use crate::tools::ToolName;
 #[derive(Clone, Debug, Default)]
 pub struct GlobExecutor;
 
-impl GlobExecutor {
-    /// Create a new Glob executor.
-    pub fn new() -> Self {
-        Self
-    }
-}
-
 impl BuiltinToolExecutor for GlobExecutor {
     fn execute(
         &self,

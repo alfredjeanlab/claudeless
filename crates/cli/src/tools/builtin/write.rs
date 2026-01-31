@@ -15,13 +15,6 @@ use crate::tools::ToolName;
 #[derive(Clone, Debug, Default)]
 pub struct WriteExecutor;
 
-impl WriteExecutor {
-    /// Create a new Write executor.
-    pub fn new() -> Self {
-        Self
-    }
-}
-
 impl BuiltinToolExecutor for WriteExecutor {
     fn execute(
         &self,

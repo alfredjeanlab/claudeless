@@ -53,6 +53,7 @@ pub struct ValidationItem {
 }
 
 /// Accuracy report for the simulator
+#[derive(Default)]
 pub struct AccuracyReport {
     items: Vec<ValidationItem>,
     validated_date: Option<String>,
@@ -197,12 +198,6 @@ impl AccuracyReport {
         }
 
         md
-    }
-}
-
-impl Default for AccuracyReport {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

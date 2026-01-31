@@ -19,11 +19,6 @@ use crate::tools::ToolName;
 pub struct GrepExecutor;
 
 impl GrepExecutor {
-    /// Create a new Grep executor.
-    pub fn new() -> Self {
-        Self
-    }
-
     /// Recursively collect files from a directory.
     fn collect_files(path: &PathBuf, glob_pattern: Option<&str>) -> Vec<PathBuf> {
         let mut files = Vec::new();
