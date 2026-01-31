@@ -187,6 +187,13 @@ fn open_append(path: &Path) -> std::io::Result<std::fs::File> {
         .open(path)
 }
 
+/// Helper to write a single JSONL line to a file.
+fn write_jsonl_line<T: Serialize>(file: &mut std::fs::File, value: &T) -> std::io::Result<()> {
+    let json = serde_json::to_string(value)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    writeln!(file, "{}", json)
+}
+
 /// Write queue-operation line for -p mode.
 pub fn write_queue_operation(
     path: &Path,
@@ -201,8 +208,7 @@ pub fn write_queue_operation(
         timestamp: timestamp.to_rfc3339(),
         session_id: session_id.to_string(),
     };
-    writeln!(file, "{}", serde_json::to_string(&line)?)?;
-    Ok(())
+    write_jsonl_line(&mut file, &line)
 }
 
 /// Append a result record to a JSONL file.
@@ -222,8 +228,7 @@ pub fn append_result_jsonl(
         content: content.to_string(),
         timestamp: timestamp.to_rfc3339(),
     };
-    writeln!(file, "{}", serde_json::to_string(&line)?)?;
-    Ok(())
+    write_jsonl_line(&mut file, &line)
 }
 
 /// Parameters for writing JSONL turns.
@@ -264,7 +269,7 @@ pub fn append_turn_jsonl(path: &Path, params: &TurnParams) -> std::io::Result<()
         uuid: params.user_uuid.to_string(),
         timestamp: timestamp_str.clone(),
     };
-    writeln!(file, "{}", serde_json::to_string(&user_line)?)?;
+    write_jsonl_line(&mut file, &user_line)?;
 
     let assistant_line = AssistantMessageLine {
         parent_uuid: params.user_uuid.to_string(),
@@ -291,9 +296,7 @@ pub fn append_turn_jsonl(path: &Path, params: &TurnParams) -> std::io::Result<()
         uuid: params.assistant_uuid.to_string(),
         timestamp: timestamp_str,
     };
-    writeln!(file, "{}", serde_json::to_string(&assistant_line)?)?;
-
-    Ok(())
+    write_jsonl_line(&mut file, &assistant_line)
 }
 
 /// Parameters for writing a user message JSONL line.
@@ -344,7 +347,7 @@ pub fn append_user_message_jsonl(path: &Path, params: &UserMessageParams) -> std
                 uuid: params.user_uuid.to_string(),
                 timestamp: timestamp_str,
             };
-            writeln!(file, "{}", serde_json::to_string(&user_line)?)?;
+            write_jsonl_line(&mut file, &user_line)?;
         }
         UserMessageContent::ToolResult {
             tool_use_id,
@@ -377,7 +380,7 @@ pub fn append_user_message_jsonl(path: &Path, params: &UserMessageParams) -> std
                 tool_use_result: tool_use_result.clone(),
                 source_tool_assistant_uuid: (*source_tool_assistant_uuid).to_string(),
             };
-            writeln!(file, "{}", serde_json::to_string(&tool_result_line)?)?;
+            write_jsonl_line(&mut file, &tool_result_line)?;
         }
     }
 
@@ -453,9 +456,7 @@ pub fn append_assistant_message_jsonl(
         uuid: params.assistant_uuid.to_string(),
         timestamp: timestamp_str,
     };
-    writeln!(file, "{}", serde_json::to_string(&assistant_line)?)?;
-
-    Ok(())
+    write_jsonl_line(&mut file, &assistant_line)
 }
 
 /// Append an error entry to a JSONL file.
@@ -484,8 +485,7 @@ pub fn append_error_jsonl(
         timestamp: timestamp.to_rfc3339(),
     };
 
-    writeln!(file, "{}", serde_json::to_string(&error_line)?)?;
-    Ok(())
+    write_jsonl_line(&mut file, &error_line)
 }
 
 #[cfg(test)]
