@@ -56,15 +56,22 @@ fn test_defaults_applied() {
 
 #[test]
 fn test_scenario_overrides_defaults() {
+    use crate::config::{EnvironmentConfig, IdentityConfig};
+
     let cli = default_cli();
     let scenario = ScenarioConfig {
         name: "test".to_string(),
-        default_model: Some("custom-model".to_string()),
-        claude_version: Some("3.0.0".to_string()),
-        user_name: Some("TestUser".to_string()),
-        session_id: Some("550e8400-e29b-41d4-a716-446655440000".to_string()),
-        trusted: false,
-        permission_mode: Some("plan".to_string()),
+        identity: IdentityConfig {
+            default_model: Some("custom-model".to_string()),
+            claude_version: Some("3.0.0".to_string()),
+            user_name: Some("TestUser".to_string()),
+            session_id: Some("550e8400-e29b-41d4-a716-446655440000".to_string()),
+        },
+        environment: EnvironmentConfig {
+            trusted: false,
+            permission_mode: Some("plan".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     };
 
@@ -83,6 +90,8 @@ fn test_scenario_overrides_defaults() {
 
 #[test]
 fn test_cli_overrides_scenario() {
+    use crate::config::{EnvironmentConfig, IdentityConfig};
+
     let mut cli = default_cli();
     cli.model = "cli-model".to_string();
     cli.cwd = Some("/cli/path".to_string());
@@ -90,9 +99,15 @@ fn test_cli_overrides_scenario() {
 
     let scenario = ScenarioConfig {
         name: "test".to_string(),
-        default_model: Some("scenario-model".to_string()),
-        working_directory: Some("/scenario/path".to_string()),
-        session_id: Some("550e8400-e29b-41d4-a716-446655440000".to_string()),
+        identity: IdentityConfig {
+            default_model: Some("scenario-model".to_string()),
+            session_id: Some("550e8400-e29b-41d4-a716-446655440000".to_string()),
+            ..Default::default()
+        },
+        environment: EnvironmentConfig {
+            working_directory: Some("/scenario/path".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     };
 
@@ -109,10 +124,15 @@ fn test_cli_overrides_scenario() {
 
 #[test]
 fn test_launch_timestamp_parsing() {
+    use crate::config::TimingConfig;
+
     let cli = default_cli();
     let scenario = ScenarioConfig {
         name: "test".to_string(),
-        launch_timestamp: Some("2025-01-15T10:30:00Z".to_string()),
+        timing: TimingConfig {
+            launch_timestamp: Some("2025-01-15T10:30:00Z".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     };
 
@@ -141,11 +161,16 @@ fn test_project_path_defaults_to_working_dir() {
 
 #[test]
 fn test_project_path_override() {
+    use crate::config::EnvironmentConfig;
+
     let cli = default_cli();
     let scenario = ScenarioConfig {
         name: "test".to_string(),
-        project_path: Some("/project/path".to_string()),
-        working_directory: Some("/work/dir".to_string()),
+        environment: EnvironmentConfig {
+            project_path: Some("/project/path".to_string()),
+            working_directory: Some("/work/dir".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     };
 

@@ -273,23 +273,29 @@ permission_mode = "plan"
 
     assert_eq!(config.name, "full-featured");
     assert_eq!(
-        config.default_model,
+        config.identity.default_model,
         Some("claude-opus-4-20250514".to_string())
     );
-    assert_eq!(config.claude_version, Some("3.0.0".to_string()));
-    assert_eq!(config.user_name, Some("TestUser".to_string()));
+    assert_eq!(config.identity.claude_version, Some("3.0.0".to_string()));
+    assert_eq!(config.identity.user_name, Some("TestUser".to_string()));
     assert_eq!(
-        config.session_id,
+        config.identity.session_id,
         Some("550e8400-e29b-41d4-a716-446655440000".to_string())
     );
-    assert_eq!(config.project_path, Some("/test/project".to_string()));
     assert_eq!(
-        config.launch_timestamp,
+        config.environment.project_path,
+        Some("/test/project".to_string())
+    );
+    assert_eq!(
+        config.timing.launch_timestamp,
         Some("2025-01-15T10:30:00Z".to_string())
     );
-    assert_eq!(config.working_directory, Some("/work/dir".to_string()));
-    assert!(!config.trusted);
-    assert_eq!(config.permission_mode, Some("plan".to_string()));
+    assert_eq!(
+        config.environment.working_directory,
+        Some("/work/dir".to_string())
+    );
+    assert!(!config.environment.trusted);
+    assert_eq!(config.environment.permission_mode, Some("plan".to_string()));
 }
 
 #[test]
@@ -333,7 +339,7 @@ error = "Permission denied"
 #[test]
 fn test_default_trusted_value() {
     let config = ScenarioConfig::default();
-    assert!(config.trusted);
+    assert!(config.environment.trusted);
 }
 
 #[test]

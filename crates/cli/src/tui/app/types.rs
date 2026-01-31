@@ -67,6 +67,7 @@ impl TuiConfig {
             cli_permission_mode.clone()
         } else {
             config
+                .environment
                 .permission_mode
                 .as_deref()
                 .and_then(|s| clap::ValueEnum::from_str(s, true).ok())
@@ -76,26 +77,28 @@ impl TuiConfig {
         // CLI claude_version overrides scenario
         let claude_version = cli_claude_version
             .map(|s| s.to_string())
-            .or_else(|| config.claude_version.clone());
+            .or_else(|| config.identity.claude_version.clone());
 
         Self {
-            trusted: config.trusted,
+            trusted: config.environment.trusted,
             user_name: config
+                .identity
                 .user_name
                 .clone()
                 .unwrap_or_else(|| DEFAULT_USER_NAME.to_string()),
             model: cli_model
                 .map(|s| s.to_string())
-                .or_else(|| config.default_model.clone())
+                .or_else(|| config.identity.default_model.clone())
                 .unwrap_or_else(|| DEFAULT_MODEL.to_string()),
             working_directory: config
+                .environment
                 .working_directory
                 .as_ref()
                 .map(PathBuf::from)
                 .unwrap_or_else(|| std::env::current_dir().unwrap_or_default()),
             permission_mode,
             allow_bypass_permissions,
-            timeouts: ResolvedTimeouts::resolve(config.timeouts.as_ref()),
+            timeouts: ResolvedTimeouts::resolve(config.timing.timeouts.as_ref()),
             claude_version,
             is_tty,
             state_writer: None,

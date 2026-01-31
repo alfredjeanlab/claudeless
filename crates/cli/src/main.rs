@@ -148,8 +148,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Apply response delay if configured (scenario already loaded above)
-    let timeouts =
-        ResolvedTimeouts::resolve(scenario.as_ref().and_then(|s| s.config().timeouts.as_ref()));
+    let timeouts = ResolvedTimeouts::resolve(
+        scenario
+            .as_ref()
+            .and_then(|s| s.config().timing.timeouts.as_ref()),
+    );
     if timeouts.response_delay_ms > 0 {
         tokio::time::sleep(Duration::from_millis(timeouts.response_delay_ms)).await;
     }
