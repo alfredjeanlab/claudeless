@@ -3,6 +3,7 @@
 
 //! Event types matching real Claude CLI output format.
 
+use crate::event_types::{content_block, line_type, mcp_status, subtype};
 use serde::{Deserialize, Serialize};
 
 /// Generate a deterministic UUID-like stub for testing.
@@ -29,7 +30,7 @@ impl McpServerInfo {
     pub fn connected(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
-            status: "connected".to_string(),
+            status: mcp_status::CONNECTED.to_string(),
         }
     }
 
@@ -37,7 +38,7 @@ impl McpServerInfo {
     pub fn failed(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
-            status: "failed".to_string(),
+            status: mcp_status::FAILED.to_string(),
         }
     }
 
@@ -45,7 +46,7 @@ impl McpServerInfo {
     pub fn disconnected(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
-            status: "disconnected".to_string(),
+            status: mcp_status::DISCONNECTED.to_string(),
         }
     }
 }
@@ -64,8 +65,8 @@ pub struct SystemInitEvent {
 impl SystemInitEvent {
     pub fn new(session_id: impl Into<String>, tools: Vec<String>) -> Self {
         Self {
-            event_type: "system".to_string(),
-            subtype: "init".to_string(),
+            event_type: line_type::SYSTEM.to_string(),
+            subtype: subtype::INIT.to_string(),
             session_id: session_id.into(),
             tools,
             mcp_servers: vec![],
@@ -79,8 +80,8 @@ impl SystemInitEvent {
         mcp_servers: Vec<McpServerInfo>,
     ) -> Self {
         Self {
-            event_type: "system".to_string(),
-            subtype: "init".to_string(),
+            event_type: line_type::SYSTEM.to_string(),
+            subtype: subtype::INIT.to_string(),
             session_id: session_id.into(),
             tools,
             mcp_servers,
@@ -103,8 +104,8 @@ pub struct AssistantEvent {
 impl AssistantEvent {
     pub fn message_start(message: AssistantMessageContent) -> Self {
         Self {
-            event_type: "assistant".to_string(),
-            subtype: "message_start".to_string(),
+            event_type: line_type::ASSISTANT.to_string(),
+            subtype: subtype::MESSAGE_START.to_string(),
             message: Some(message),
             usage: None,
         }
@@ -112,8 +113,8 @@ impl AssistantEvent {
 
     pub fn message_delta(usage: ExtendedUsage) -> Self {
         Self {
-            event_type: "assistant".to_string(),
-            subtype: "message_delta".to_string(),
+            event_type: line_type::ASSISTANT.to_string(),
+            subtype: subtype::MESSAGE_DELTA.to_string(),
             message: None,
             usage: Some(usage),
         }
@@ -121,8 +122,8 @@ impl AssistantEvent {
 
     pub fn message_stop() -> Self {
         Self {
-            event_type: "assistant".to_string(),
-            subtype: "message_stop".to_string(),
+            event_type: line_type::ASSISTANT.to_string(),
+            subtype: subtype::MESSAGE_STOP.to_string(),
             message: None,
             usage: None,
         }
@@ -153,7 +154,7 @@ pub struct CondensedAssistantEvent {
 impl CondensedAssistantEvent {
     pub fn new(message: CondensedMessage, session_id: impl Into<String>) -> Self {
         Self {
-            event_type: "assistant".to_string(),
+            event_type: line_type::ASSISTANT.to_string(),
             message,
             session_id: session_id.into(),
             uuid: uuid_stub(),
@@ -190,16 +191,16 @@ pub struct ContentBlockStartEvent {
 impl ContentBlockStartEvent {
     pub fn text(index: u32) -> Self {
         Self {
-            event_type: "content_block_start".to_string(),
-            subtype: "text".to_string(),
+            event_type: content_block::START.to_string(),
+            subtype: subtype::TEXT.to_string(),
             index,
         }
     }
 
     pub fn tool_use(index: u32) -> Self {
         Self {
-            event_type: "content_block_start".to_string(),
-            subtype: "tool_use".to_string(),
+            event_type: content_block::START.to_string(),
+            subtype: subtype::TOOL_USE.to_string(),
             index,
         }
     }
@@ -218,8 +219,8 @@ pub struct ContentBlockDeltaEvent {
 impl ContentBlockDeltaEvent {
     pub fn text(index: u32, delta: impl Into<String>) -> Self {
         Self {
-            event_type: "content_block_delta".to_string(),
-            subtype: "text_delta".to_string(),
+            event_type: content_block::DELTA.to_string(),
+            subtype: subtype::TEXT_DELTA.to_string(),
             index,
             delta: delta.into(),
         }
@@ -237,7 +238,7 @@ pub struct ContentBlockStopEvent {
 impl ContentBlockStopEvent {
     pub fn new(index: u32) -> Self {
         Self {
-            event_type: "content_block_stop".to_string(),
+            event_type: content_block::STOP.to_string(),
             index,
         }
     }

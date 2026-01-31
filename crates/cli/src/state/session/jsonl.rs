@@ -3,6 +3,7 @@
 
 //! JSONL format types for session logging (matching Claude CLI v2.1.12).
 
+use crate::event_types::{line_type, message_type, role, subtype, user_type};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
@@ -193,7 +194,7 @@ pub fn write_queue_operation(
 ) -> std::io::Result<()> {
     let mut file = open_append(path)?;
     let line = QueueOperationLine {
-        line_type: "queue-operation",
+        line_type: line_type::QUEUE_OPERATION,
         operation: operation.to_string(),
         timestamp: timestamp.to_rfc3339(),
         session_id: session_id.to_string(),
@@ -213,7 +214,7 @@ pub fn append_result_jsonl(
 ) -> std::io::Result<()> {
     let mut file = open_append(path)?;
     let line = ResultLine {
-        line_type: "result".to_string(),
+        line_type: line_type::RESULT.to_string(),
         tool_use_id: tool_use_id.to_string(),
         content: content.to_string(),
         timestamp: timestamp.to_rfc3339(),
@@ -243,8 +244,8 @@ pub fn append_turn_jsonl(path: &Path, params: &TurnParams) -> std::io::Result<()
     let mut file = open_append(path)?;
     let timestamp_str = params.timestamp.to_rfc3339();
 
-    let envelope_base = |line_type: &str, uuid: &str, parent_uuid| MessageEnvelope {
-        line_type: line_type.to_string(),
+    let envelope_base = |lt: &str, uuid: &str, parent_uuid| MessageEnvelope {
+        line_type: lt.to_string(),
         uuid: uuid.to_string(),
         timestamp: timestamp_str.clone(),
         session_id: params.session_id.to_string(),
@@ -253,13 +254,13 @@ pub fn append_turn_jsonl(path: &Path, params: &TurnParams) -> std::io::Result<()
         git_branch: params.git_branch.to_string(),
         parent_uuid,
         is_sidechain: false,
-        user_type: "external".to_string(),
+        user_type: user_type::EXTERNAL.to_string(),
     };
 
     let user_line = UserMessageLine {
-        envelope: envelope_base("user", params.user_uuid, None),
+        envelope: envelope_base(line_type::USER, params.user_uuid, None),
         message: UserMessage {
-            role: "user",
+            role: role::USER,
             content: params.prompt.to_string(),
         },
     };
@@ -267,15 +268,15 @@ pub fn append_turn_jsonl(path: &Path, params: &TurnParams) -> std::io::Result<()
 
     let assistant_line = AssistantMessageLine {
         envelope: envelope_base(
-            "assistant",
+            line_type::ASSISTANT,
             params.assistant_uuid,
             Some(params.user_uuid.to_string()),
         ),
         message: AssistantMessage {
             model: params.model.to_string(),
             id: params.message_id.to_string(),
-            message_type: "message",
-            role: "assistant",
+            message_type: message_type::MESSAGE,
+            role: role::ASSISTANT,
             content: vec![ContentBlock::Text {
                 text: params.response.to_string(),
             }],
@@ -322,7 +323,7 @@ pub fn append_user_message_jsonl(path: &Path, params: &UserMessageParams) -> std
         UserMessageContent::Text(text) => {
             let user_line = UserMessageLine {
                 envelope: MessageEnvelope {
-                    line_type: "user".to_string(),
+                    line_type: line_type::USER.to_string(),
                     uuid: params.user_uuid.to_string(),
                     timestamp: timestamp_str,
                     session_id: params.session_id.to_string(),
@@ -331,10 +332,10 @@ pub fn append_user_message_jsonl(path: &Path, params: &UserMessageParams) -> std
                     git_branch: params.git_branch.to_string(),
                     parent_uuid: params.parent_uuid.map(String::from),
                     is_sidechain: false,
-                    user_type: "external".to_string(),
+                    user_type: user_type::EXTERNAL.to_string(),
                 },
                 message: UserMessage {
-                    role: "user",
+                    role: role::USER,
                     content: (*text).to_string(),
                 },
             };
@@ -352,7 +353,7 @@ pub fn append_user_message_jsonl(path: &Path, params: &UserMessageParams) -> std
                 .unwrap_or_else(|| source_tool_assistant_uuid.to_string());
             let tool_result_line = ToolResultMessageLine {
                 envelope: MessageEnvelope {
-                    line_type: "user".to_string(),
+                    line_type: line_type::USER.to_string(),
                     uuid: params.user_uuid.to_string(),
                     timestamp: timestamp_str,
                     session_id: params.session_id.to_string(),
@@ -361,13 +362,13 @@ pub fn append_user_message_jsonl(path: &Path, params: &UserMessageParams) -> std
                     git_branch: params.git_branch.to_string(),
                     parent_uuid: Some(parent),
                     is_sidechain: false,
-                    user_type: "external".to_string(),
+                    user_type: user_type::EXTERNAL.to_string(),
                 },
                 message: ToolResultUserMessage {
-                    role: "user",
+                    role: role::USER,
                     content: vec![ToolResultContent {
                         tool_use_id: (*tool_use_id).to_string(),
-                        content_type: "tool_result",
+                        content_type: message_type::TOOL_RESULT,
                         content: (*content).to_string(),
                     }],
                 },
@@ -429,7 +430,7 @@ pub fn append_assistant_message_jsonl(
 
     let assistant_line = AssistantMessageLine {
         envelope: MessageEnvelope {
-            line_type: "assistant".to_string(),
+            line_type: line_type::ASSISTANT.to_string(),
             uuid: params.assistant_uuid.to_string(),
             timestamp: timestamp_str,
             session_id: params.session_id.to_string(),
@@ -438,13 +439,13 @@ pub fn append_assistant_message_jsonl(
             git_branch: params.git_branch.to_string(),
             parent_uuid: Some(params.parent_uuid.to_string()),
             is_sidechain: false,
-            user_type: "external".to_string(),
+            user_type: user_type::EXTERNAL.to_string(),
         },
         message: AssistantMessage {
             model: params.model.to_string(),
             id: params.message_id.to_string(),
-            message_type: "message",
-            role: "assistant",
+            message_type: message_type::MESSAGE,
+            role: role::ASSISTANT,
             content: params.content.clone(),
             stop_reason: params.stop_reason.map(String::from),
             stop_sequence: None,
@@ -470,8 +471,8 @@ pub fn append_error_jsonl(
     let mut file = open_append(path)?;
 
     let error_line = ErrorLine {
-        line_type: "result",
-        subtype: "error".to_string(),
+        line_type: line_type::RESULT,
+        subtype: subtype::ERROR.to_string(),
         is_error: true,
         session_id: session_id.to_string(),
         error: error.to_string(),
