@@ -16,7 +16,7 @@ use crate::tui::widgets::{
     HookType, HooksDialog, HooksView, MemoryDialog, ModelChoice, ModelPickerDialog,
 };
 
-use super::super::types::{PermissionRequest, TrustPromptState};
+use crate::tui::app::types::{PermissionRequest, TrustPromptState};
 
 /// Render trust prompt dialog
 pub(crate) fn render_trust_prompt(prompt: &TrustPromptState, width: usize) -> AnyElement<'static> {

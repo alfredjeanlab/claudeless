@@ -8,7 +8,7 @@ use crate::tui::colors::{
     styled_logo_line1, styled_logo_line2, styled_logo_line3, styled_permission_status,
 };
 
-use super::super::types::{ExitHint, RenderState};
+use crate::tui::app::types::{ExitHint, RenderState};
 
 /// Format header lines with Claude branding (returns 3 lines)
 pub(crate) fn format_header_lines(state: &RenderState) -> (String, String, String) {

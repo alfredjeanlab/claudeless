@@ -10,7 +10,7 @@ use crate::tui::shortcuts::shortcuts_by_column;
 use crate::tui::slash_menu::COMMANDS;
 use crate::tui::spinner;
 
-use super::super::types::{AppMode, RenderState};
+use crate::tui::app::types::{AppMode, RenderState};
 
 /// Render the shortcuts panel with 3 columns
 pub(crate) fn render_shortcuts_panel(_width: usize) -> AnyElement<'static> {

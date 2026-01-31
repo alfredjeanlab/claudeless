@@ -12,7 +12,7 @@ use crate::tui::widgets::tasks::TasksDialog;
 use crate::tui::widgets::thinking::ThinkingDialog;
 use crate::tui::widgets::{HooksDialog, MemoryDialog, ModelPickerDialog};
 
-use super::super::types::{PermissionRequest, TrustPromptState};
+use crate::tui::app::types::{PermissionRequest, TrustPromptState};
 
 /// Active dialog state (only one dialog can be active at a time)
 #[derive(Clone, Debug, Default)]
