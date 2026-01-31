@@ -29,7 +29,10 @@ These flags and environment variables are unique to claudeless (not in the real 
 
 | Variable | Description |
 |----------|-------------|
-| `CLAUDELESS_STATE_DIR` | State directory (default: temp dir) |
+| `CLAUDELESS_STATE_DIR` | State directory override (highest priority) |
+| `CLAUDE_LOCAL_STATE_DIR` | State directory (standard Claude Code variable) |
+
+If neither is set, a temporary directory is used to avoid touching real `~/.claude`.
 
 ### Failure Modes
 

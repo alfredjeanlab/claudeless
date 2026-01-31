@@ -50,13 +50,20 @@ impl StateDirectory {
 
     /// Resolve state directory from environment or default to a temp directory.
     ///
+    /// # Priority
+    ///
+    /// 1. `CLAUDELESS_STATE_DIR` - Claudeless-specific override (highest priority)
+    /// 2. `CLAUDE_LOCAL_STATE_DIR` - Standard Claude Code environment variable
+    /// 3. Temporary directory (default)
+    ///
     /// # Safety
     ///
     /// This method deliberately defaults to a temporary directory rather than `~/.claude`
     /// to prevent the simulator from accidentally modifying real Claude Code state.
-    /// To use a specific directory, set the `CLAUDELESS_STATE_DIR` environment variable.
     pub fn resolve() -> std::io::Result<Self> {
         if let Ok(dir) = std::env::var("CLAUDELESS_STATE_DIR") {
+            Ok(Self::new(PathBuf::from(dir)))
+        } else if let Ok(dir) = std::env::var("CLAUDE_LOCAL_STATE_DIR") {
             Ok(Self::new(PathBuf::from(dir)))
         } else {
             // Default to temp directory to avoid touching real ~/.claude
