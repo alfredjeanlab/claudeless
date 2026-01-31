@@ -177,3 +177,15 @@ fn test_parse_max_budget_usd() {
     let cli = Cli::try_parse_from(["claude", "--max-budget-usd", "10.50", "-p", "test"]).unwrap();
     assert_eq!(cli.max_budget_usd, Some(10.50));
 }
+
+#[test]
+fn no_session_persistence_requires_print_mode() {
+    let cli = Cli::try_parse_from(["claude", "--no-session-persistence", "prompt"]).unwrap();
+    assert!(cli.validate_no_session_persistence().is_err());
+}
+
+#[test]
+fn no_session_persistence_with_print_mode_succeeds() {
+    let cli = Cli::try_parse_from(["claude", "-p", "--no-session-persistence", "prompt"]).unwrap();
+    assert!(cli.validate_no_session_persistence().is_ok());
+}

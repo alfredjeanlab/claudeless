@@ -33,6 +33,12 @@ use claudeless::tui::{ExitReason, TuiApp, TuiConfig};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
+    // Validate --no-session-persistence usage
+    if let Err(msg) = cli.validate_no_session_persistence() {
+        eprintln!("Error: {}", msg);
+        std::process::exit(1);
+    }
+
     // Validate permission bypass configuration
     let bypass = PermissionBypass::new(
         cli.allow_dangerously_skip_permissions,
@@ -198,18 +204,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     // Create state writer for recording turns and handling stateful tools
-    let state_writer = StateWriter::new(
-        session_ctx.session_id.to_string(),
-        &session_ctx.project_path,
-        session_ctx.launch_timestamp,
-        &session_ctx.model,
-        &session_ctx.working_directory,
-    )?;
-    let state_writer = Arc::new(RwLock::new(state_writer));
+    // Skip if --no-session-persistence is enabled
+    let state_writer = if !cli.no_session_persistence {
+        Some(Arc::new(RwLock::new(StateWriter::new(
+            session_ctx.session_id.to_string(),
+            &session_ctx.project_path,
+            session_ctx.launch_timestamp,
+            &session_ctx.model,
+            &session_ctx.working_directory,
+        )?)))
+    } else {
+        None
+    };
 
-    // Write queue-operation for print mode (-p)
-    if cli.print {
-        state_writer.read().write_queue_operation()?;
+    // Write queue-operation for print mode (-p) unless persistence is disabled
+    if cli.print && !cli.no_session_persistence {
+        if let Some(ref writer) = state_writer {
+            writer.read().write_queue_operation()?;
+        }
     }
 
     // Record the turn to state directory
@@ -217,17 +229,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if tool_calls.is_empty() {
         // Simple turn without tool calls
-        state_writer.write().record_turn(&prompt, &response_text)?;
+        if let Some(ref writer) = state_writer {
+            writer.write().record_turn(&prompt, &response_text)?;
+        }
     } else {
-        // Turn with tool calls - use granular recording
-        // 1. Record user message
-        let user_uuid = state_writer.write().record_user_message(&prompt)?;
+        // Turn with tool calls - use granular recording if persistence enabled
+        // 1. Record user message (if persistence enabled)
+        let user_uuid = if let Some(ref writer) = state_writer {
+            Some(writer.write().record_user_message(&prompt)?)
+        } else {
+            None
+        };
 
-        // 2. Record initial assistant text (if any)
+        // 2. Record initial assistant text (if any and persistence enabled)
         if !response_text.is_empty() {
-            state_writer
-                .write()
-                .record_assistant_response(&user_uuid, &response_text)?;
+            if let (Some(ref writer), Some(ref uuid)) = (&state_writer, &user_uuid) {
+                writer
+                    .write()
+                    .record_assistant_response(uuid, &response_text)?;
+            }
         }
 
         // Determine execution mode (CLI flag overrides scenario config)
@@ -254,8 +274,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let executor: Box<dyn ToolExecutor> = match execution_mode {
                 ToolExecutionMode::Live => {
                     // Create composite executor with MCP support
-                    let builtin =
-                        BuiltinExecutor::new().with_state_writer(Arc::clone(&state_writer));
+                    let mut builtin = BuiltinExecutor::new();
+                    if let Some(ref writer) = state_writer {
+                        builtin = builtin.with_state_writer(Arc::clone(writer));
+                    }
                     let mcp = mcp_manager
                         .as_ref()
                         .map(|m| McpToolExecutor::new(Arc::clone(m)));
@@ -268,37 +290,49 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             for (i, call) in tool_calls.iter().enumerate() {
                 let tool_use_id = format!("toolu_{:08x}", i);
 
-                // 3. Record assistant message with tool_use block
-                let tool_use_block = claudeless::state::ContentBlock::ToolUse {
-                    id: tool_use_id.clone(),
-                    name: call.tool.clone(),
-                    input: call.input.clone(),
-                };
-                let assistant_uuid = state_writer
-                    .write()
-                    .record_assistant_tool_use(&user_uuid, vec![tool_use_block])?;
+                // 3. Record assistant message with tool_use block (if persistence enabled)
+                let assistant_uuid =
+                    if let (Some(ref writer), Some(ref uuid)) = (&state_writer, &user_uuid) {
+                        let tool_use_block = claudeless::state::ContentBlock::ToolUse {
+                            id: tool_use_id.clone(),
+                            name: call.tool.clone(),
+                            input: call.input.clone(),
+                        };
+                        Some(
+                            writer
+                                .write()
+                                .record_assistant_tool_use(uuid, vec![tool_use_block])?,
+                        )
+                    } else {
+                        None
+                    };
 
                 // 4. Execute tool
                 let result = executor.execute(call, &tool_use_id, &ctx);
                 writer.write_tool_result(&result)?;
 
-                // 5. Record tool result to JSONL
-                let result_content = result.text().unwrap_or("");
-                let tool_use_result = result.tool_use_result().unwrap_or(serde_json::json!({}));
-                state_writer.write().record_tool_result(
-                    &tool_use_id,
-                    result_content,
-                    &assistant_uuid,
-                    tool_use_result,
-                )?;
+                // 5. Record tool result to JSONL (if persistence enabled)
+                if let (Some(ref writer), Some(ref asst_uuid)) = (&state_writer, &assistant_uuid) {
+                    let result_content = result.text().unwrap_or("");
+                    let tool_use_result = result.tool_use_result().unwrap_or(serde_json::json!({}));
+                    writer.write().record_tool_result(
+                        &tool_use_id,
+                        result_content,
+                        asst_uuid,
+                        tool_use_result,
+                    )?;
+                }
             }
 
-            // 6. Record final assistant response after tool execution
+            // 6. Record final assistant response after tool execution (if persistence enabled)
             // Real Claude writes a final message summarizing the tool results
-            let final_response = "Done! The requested operation has been completed successfully.";
-            state_writer
-                .write()
-                .record_assistant_response(&user_uuid, final_response)?;
+            if let (Some(ref writer), Some(ref uuid)) = (&state_writer, &user_uuid) {
+                let final_response =
+                    "Done! The requested operation has been completed successfully.";
+                writer
+                    .write()
+                    .record_assistant_response(uuid, final_response)?;
+            }
         }
     }
 
