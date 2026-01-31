@@ -19,6 +19,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate::permission::PermissionMode;
+use crate::runtime::Runtime;
 use crate::scenario::Scenario;
 use crate::state::session::SessionManager;
 use crate::state::todos::{TodoState, TodoStatus};
@@ -45,8 +46,10 @@ pub(super) struct TuiAppStateInner {
     pub display: DisplayState,
 
     // Core dependencies
-    /// Scenario for response matching
+    /// Scenario for response matching (used when runtime is None)
     pub scenario: Scenario,
+    /// Runtime for shared execution (optional, used when available)
+    pub runtime: Option<Runtime>,
     /// Session manager for conversation state
     pub sessions: SessionManager,
     /// Clock for timing
@@ -115,6 +118,17 @@ impl TuiAppState {
         clock: ClockHandle,
         config: TuiConfig,
     ) -> Self {
+        Self::new_with_runtime(scenario, sessions, clock, config, None)
+    }
+
+    /// Create a new TUI app state with an optional Runtime for shared execution
+    pub fn new_with_runtime(
+        scenario: Scenario,
+        sessions: SessionManager,
+        clock: ClockHandle,
+        config: TuiConfig,
+        runtime: Option<Runtime>,
+    ) -> Self {
         // Determine initial mode based on trust state
         let initial_mode = if config.trusted {
             AppMode::Input
@@ -143,6 +157,7 @@ impl TuiAppState {
 
                 // Core dependencies
                 scenario,
+                runtime,
                 sessions,
                 clock,
                 state_writer,
@@ -435,6 +450,15 @@ impl TuiAppState {
         let dialog = RichPermissionDialog::new(permission_type.clone());
         let key = dialog.session_key();
         inner.session_grants.contains(&key)
+    }
+
+    /// Take ownership of the runtime (for shutdown).
+    ///
+    /// This removes the runtime from the state, allowing the caller to
+    /// call shutdown methods on it.
+    pub fn take_runtime(&self) -> Option<Runtime> {
+        let mut inner = self.inner.lock();
+        inner.runtime.take()
     }
 }
 

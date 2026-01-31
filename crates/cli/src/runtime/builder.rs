@@ -10,7 +10,7 @@ use parking_lot::RwLock;
 
 use crate::capture::CaptureLog;
 use crate::cli::Cli;
-use crate::config::{ResolvedTimeouts, ToolExecutionMode};
+use crate::config::ResolvedTimeouts;
 use crate::hooks::load_hooks;
 use crate::mcp::{load_mcp_config, McpConfig, McpManager};
 use crate::output::{print_mcp, print_mcp_warning};
@@ -204,19 +204,12 @@ impl RuntimeBuilder {
         // Load hook executor from settings
         let hook_executor = load_hooks(&settings).ok();
 
-        // Determine execution mode
+        // Get execution mode from scenario (defaults to Live)
         let execution_mode = self
-            .cli
-            .simulator
-            .tool_mode
-            .clone()
-            .map(ToolExecutionMode::from)
-            .or_else(|| {
-                self.scenario
-                    .as_ref()
-                    .and_then(|s| s.config().tool_execution.as_ref())
-                    .map(|te| te.mode.clone())
-            })
+            .scenario
+            .as_ref()
+            .and_then(|s| s.config().tool_execution.as_ref())
+            .map(|te| te.mode.clone())
             .unwrap_or_default();
 
         // Create executor with MCP support

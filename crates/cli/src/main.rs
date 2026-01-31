@@ -4,7 +4,6 @@
 //! Claude CLI Simulator binary entry point.
 
 use std::io::IsTerminal;
-use std::path::Path;
 use std::sync::Arc;
 
 use clap::Parser;
@@ -60,6 +59,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn run_tui_mode(
     runtime: claudeless::runtime::Runtime,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    use std::path::Path;
+
     // Ignore SIGINT so Ctrl+C is captured as a key event rather than killing the process.
     #[cfg(unix)]
     {
@@ -81,11 +82,10 @@ async fn run_tui_mode(
         cli.permissions.dangerously_skip_permissions,
     );
 
-    // Load scenario if specified
+    // Load scenario for TUI (separate from Runtime's scenario for fallback)
     let scenario = if let Some(ref path) = cli.simulator.scenario {
         Scenario::load(Path::new(path))?
     } else {
-        // Default scenario
         let config = claudeless::config::ScenarioConfig::default();
         Scenario::from_config(config)?
     };
@@ -111,7 +111,8 @@ async fn run_tui_mode(
     let sessions = SessionManager::new();
     let clock = ClockHandle::system();
 
-    let mut app = TuiApp::new(scenario, sessions, clock, tui_config)?;
+    // Create TUI app with runtime for shared execution
+    let mut app = TuiApp::new_with_runtime(scenario, sessions, clock, tui_config, runtime)?;
     let exit_reason = app.run()?;
 
     // Print exit message if any (e.g., farewell from /exit)
@@ -120,7 +121,9 @@ async fn run_tui_mode(
     }
 
     // Shutdown MCP servers before exiting
-    runtime.shutdown_mcp().await;
+    if let Some(runtime) = app.take_runtime() {
+        runtime.shutdown_mcp().await;
+    }
 
     match exit_reason {
         ExitReason::Interrupted => std::process::exit(130),

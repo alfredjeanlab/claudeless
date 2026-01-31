@@ -10,6 +10,7 @@
 //! - Test permission triggers for fixture tests
 
 use crate::hooks::{HookEvent, HookMessage, StopHookResponse};
+use crate::runtime::TurnResult;
 use crate::tui::spinner;
 use crate::tui::streaming::{StreamingConfig, StreamingResponse};
 use crate::tui::widgets::permission::{DiffKind, DiffLine};
@@ -120,32 +121,127 @@ impl TuiAppState {
         inner.display.spinner_frame = 0;
         inner.display.spinner_verb = spinner::random_verb().to_string();
 
-        // Record user message to JSONL and store UUID for linking
-        inner.display.pending_user_uuid = if let Some(ref writer) = inner.state_writer {
-            // Write errors are logged but don't fail the TUI operation
-            writer.write().record_user_message(&prompt).ok()
-        } else {
-            None
-        };
-
         // Record the turn
         inner
             .sessions
             .current_session()
             .add_turn(prompt.clone(), String::new());
 
-        // Match scenario
-        let response_text = {
-            let text = inner.scenario.response_text_or_default(&prompt);
-            if text.is_empty() {
-                "I'm not sure how to help with that.".to_string()
+        // Check if Runtime is available for shared execution
+        if inner.runtime.is_some() {
+            // Use Runtime::execute() for shared agent loop
+            execute_with_runtime(&mut inner, prompt);
+        } else {
+            // Fallback: Record user message to JSONL and store UUID for linking
+            inner.display.pending_user_uuid = if let Some(ref writer) = inner.state_writer {
+                writer.write().record_user_message(&prompt).ok()
             } else {
-                text
-            }
-        };
+                None
+            };
 
-        // Start streaming
-        start_streaming_inner(&mut inner, response_text);
+            // Match scenario
+            let response_text = {
+                let text = inner.scenario.response_text_or_default(&prompt);
+                if text.is_empty() {
+                    "I'm not sure how to help with that.".to_string()
+                } else {
+                    text
+                }
+            };
+
+            // Start streaming (legacy path)
+            start_streaming_inner(&mut inner, response_text);
+        }
+    }
+}
+
+/// Execute a prompt using the shared Runtime.
+///
+/// This uses Runtime::execute() which handles:
+/// - Scenario matching
+/// - Tool execution
+/// - Hook firing
+/// - State recording (JSONL)
+fn execute_with_runtime(inner: &mut TuiAppStateInner, prompt: String) {
+    // Take the runtime temporarily to call execute()
+    let mut runtime = match inner.runtime.take() {
+        Some(r) => r,
+        None => {
+            // Fallback if runtime was somehow taken
+            let response_text = inner.scenario.response_text_or_default(&prompt);
+            start_streaming_inner(inner, response_text);
+            return;
+        }
+    };
+
+    // Execute using runtime (via block_in_place + block_on since we're in sync context)
+    let result = if let Ok(handle) = tokio::runtime::Handle::try_current() {
+        // Use block_in_place to allow blocking from within an async context
+        tokio::task::block_in_place(|| handle.block_on(async { runtime.execute(&prompt).await }))
+    } else {
+        // No tokio runtime available, fall back to legacy
+        inner.runtime = Some(runtime);
+        let response_text = inner.scenario.response_text_or_default(&prompt);
+        start_streaming_inner(inner, response_text);
+        return;
+    };
+
+    // Put runtime back
+    inner.runtime = Some(runtime);
+
+    // Handle the turn result
+    handle_turn_result(inner, result);
+}
+
+/// Handle the result of a Runtime::execute() call.
+fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) {
+    // Update display with response
+    inner.mode = AppMode::Responding;
+    inner.display.is_streaming = true;
+    inner.display.spinner_frame = 0;
+    inner.display.spinner_verb = spinner::random_verb().to_string();
+
+    // Set response content
+    let response_text = if result.response_text.is_empty() {
+        "I'm not sure how to help with that.".to_string()
+    } else {
+        result.response_text.clone()
+    };
+
+    // Use StreamingResponse for token counting
+    let config = StreamingConfig;
+    let clock = inner.clock.clone();
+    let response = StreamingResponse::new(response_text, config, clock);
+
+    inner.display.response_content = response.full_text().to_string();
+    inner.display.is_streaming = false;
+
+    // Update token counts
+    inner.status.output_tokens += response.tokens_streamed();
+    inner.status.input_tokens += (inner.input.buffer.len() / 4).max(1) as u32;
+
+    // Update session with response
+    if let Some(turn) = inner.sessions.current_session().turns.last_mut() {
+        turn.response = inner.display.response_content.clone();
+    }
+
+    // Handle hook continuation if present
+    if let Some(continuation) = result.hook_continuation {
+        inner.pending_hook_message = Some(continuation);
+        inner.stop_hook_active = true;
+        // Stay in responding mode - the render loop will detect pending_hook_message
+        return;
+    }
+
+    // Reset stop_hook_active on normal completion
+    inner.stop_hook_active = false;
+    inner.mode = AppMode::Input;
+
+    // Auto-restore stashed text after response completes
+    if let Some(stashed) = inner.input.stash.take() {
+        inner.input.buffer = stashed;
+        inner.input.cursor_pos = inner.input.buffer.len();
+        inner.input.show_stash_indicator = false;
     }
 }
 

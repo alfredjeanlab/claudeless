@@ -15,6 +15,7 @@ pub use types::{AppMode, ExitReason, PermissionRequest, StatusInfo, TrustPromptS
 
 use iocraft::prelude::*;
 
+use crate::runtime::Runtime;
 use crate::scenario::Scenario;
 use crate::state::session::SessionManager;
 use crate::time::ClockHandle;
@@ -132,6 +133,18 @@ impl TuiApp {
         config: TuiConfig,
     ) -> std::io::Result<Self> {
         let state = TuiAppState::new(scenario, sessions, clock, config);
+        Ok(Self { state })
+    }
+
+    /// Create a new TUI application with a Runtime for shared execution
+    pub fn new_with_runtime(
+        scenario: Scenario,
+        sessions: SessionManager,
+        clock: ClockHandle,
+        config: TuiConfig,
+        runtime: Runtime,
+    ) -> std::io::Result<Self> {
+        let state = TuiAppState::new_with_runtime(scenario, sessions, clock, config, Some(runtime));
         Ok(Self { state })
     }
 
@@ -256,6 +269,14 @@ impl TuiApp {
 
     pub fn show_write_permission(&mut self, file_path: String, content_lines: Vec<String>) {
         self.state.show_write_permission(file_path, content_lines);
+    }
+
+    /// Take ownership of the runtime (for shutdown).
+    ///
+    /// This removes the runtime from the TUI state, allowing the caller to
+    /// call shutdown methods on it.
+    pub fn take_runtime(&mut self) -> Option<Runtime> {
+        self.state.take_runtime()
     }
 }
 

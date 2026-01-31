@@ -25,4 +25,4 @@ pub(crate) mod result;
 pub(crate) mod tool_name;
 
 pub use executor::{create_executor_with_mcp, ExecutionContext, ToolExecutor};
-pub use result::ToolResultContent;
+pub use result::{ToolExecutionResult, ToolResultContent};
