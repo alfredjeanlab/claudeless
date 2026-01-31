@@ -5,12 +5,14 @@
 
 //! Integration tests for MCP configuration loading.
 
-#![allow(deprecated)] // Command::cargo_bin is deprecated but still functional
-
-use assert_cmd::Command;
-use predicates::prelude::*;
 use std::io::Write;
+use std::path::PathBuf;
+use std::process::Command;
 use tempfile::NamedTempFile;
+
+fn claudeless_bin() -> PathBuf {
+    PathBuf::from(env!("CARGO_BIN_EXE_claudeless"))
+}
 
 fn write_config(content: &str) -> NamedTempFile {
     let mut file = NamedTempFile::new().unwrap();
@@ -34,28 +36,32 @@ mod config_loading {
         "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "-p",
-            "--mcp-config",
-            config.path().to_str().unwrap(),
-            "hello",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "-p",
+                "--mcp-config",
+                config.path().to_str().unwrap(),
+                "hello",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
     fn test_mcp_config_inline_json() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "-p",
-            "--mcp-config",
-            r#"{"mcpServers":{"inline":{"command":"node"}}}"#,
-            "hello",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "-p",
+                "--mcp-config",
+                r#"{"mcpServers":{"inline":{"command":"node"}}}"#,
+                "hello",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -63,17 +69,19 @@ mod config_loading {
         let config1 = write_config(r#"{"mcpServers":{"a":{"command":"a"}}}"#);
         let config2 = write_config(r#"{"mcpServers":{"b":{"command":"b"}}}"#);
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "-p",
-            "--mcp-config",
-            config1.path().to_str().unwrap(),
-            "--mcp-config",
-            config2.path().to_str().unwrap(),
-            "hello",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "-p",
+                "--mcp-config",
+                config1.path().to_str().unwrap(),
+                "--mcp-config",
+                config2.path().to_str().unwrap(),
+                "hello",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -83,23 +91,34 @@ mod config_loading {
         // We use a command that doesn't speak MCP protocol to verify it fails
         let config = write_config(r#"{"mcpServers":{"bad":{"command":"nonexistent_cmd_xyz"}}}"#);
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "-p",
-            "--strict-mcp-config",
-            "--mcp-config",
-            config.path().to_str().unwrap(),
-            "hello",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("failed to start"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "-p",
+                "--strict-mcp-config",
+                "--mcp-config",
+                config.path().to_str().unwrap(),
+                "hello",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("failed to start"),
+            "Expected stderr to contain 'failed to start': {}",
+            stderr
+        );
     }
 
     #[test]
     fn test_mcp_debug_flag() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args(["-p", "--mcp-debug", "hello"]).assert().success();
+        let output = Command::new(claudeless_bin())
+            .args(["-p", "--mcp-debug", "hello"])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 }
 
@@ -108,31 +127,40 @@ mod config_errors {
 
     #[test]
     fn test_nonexistent_config_file_error() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "-p",
-            "--mcp-config",
-            "/nonexistent/path/config.json",
-            "hello",
-        ])
-        .assert()
-        .failure();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "-p",
+                "--mcp-config",
+                "/nonexistent/path/config.json",
+                "hello",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
     }
 
     #[test]
     fn test_invalid_json_config_error() {
         let config = write_config("not valid json at all");
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "-p",
-            "--mcp-config",
-            config.path().to_str().unwrap(),
-            "hello",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("parse").or(predicate::str::contains("Failed")));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "-p",
+                "--mcp-config",
+                config.path().to_str().unwrap(),
+                "hello",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("parse") || stderr.contains("Failed"),
+            "Expected stderr to contain 'parse' or 'Failed': {}",
+            stderr
+        );
     }
 
     #[test]
@@ -140,15 +168,17 @@ mod config_errors {
         // Empty JSON object is valid, just has no servers
         let config = write_config("{}");
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "-p",
-            "--mcp-config",
-            config.path().to_str().unwrap(),
-            "hello",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "-p",
+                "--mcp-config",
+                config.path().to_str().unwrap(),
+                "hello",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 }
 
@@ -171,15 +201,17 @@ mod json5_support {
         "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "-p",
-            "--mcp-config",
-            config.path().to_str().unwrap(),
-            "hello",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "-p",
+                "--mcp-config",
+                config.path().to_str().unwrap(),
+                "hello",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -197,15 +229,17 @@ mod json5_support {
         "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "-p",
-            "--mcp-config",
-            config.path().to_str().unwrap(),
-            "hello",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "-p",
+                "--mcp-config",
+                config.path().to_str().unwrap(),
+                "hello",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 }
 
@@ -216,8 +250,7 @@ mod stream_json_output {
     fn test_mcp_servers_in_stream_json_init() {
         let config = write_config(r#"{"mcpServers":{"test":{"command":"echo"}}}"#);
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "-p",
                 "--output-format",
@@ -226,13 +259,12 @@ mod stream_json_output {
                 config.path().to_str().unwrap(),
                 "hello",
             ])
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stdout = String::from_utf8_lossy(&output);
+        assert!(output.status.success(), "Expected success: {:?}", output);
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
         // The first line should be system init which contains mcp_servers
         // Note: We just check that output is produced, the actual MCP server
         // inclusion in output depends on main.rs wiring which isn't fully done yet

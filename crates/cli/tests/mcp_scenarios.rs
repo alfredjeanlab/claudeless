@@ -8,11 +8,12 @@
 //! Tests the MCP test scenarios in `scenarios/mcp-test-*.toml` to verify
 //! that claudeless correctly handles MCP tool simulations.
 
-#![allow(deprecated)] // Command::cargo_bin is deprecated but still functional
-
-use assert_cmd::Command;
-use predicates::prelude::*;
 use std::path::PathBuf;
+use std::process::Command;
+
+fn claudeless_bin() -> PathBuf {
+    PathBuf::from(env!("CARGO_BIN_EXE_claudeless"))
+}
 
 fn scenario_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -36,33 +37,55 @@ mod mcp_init_scenario {
     /// Real Claude CLI uses `mcp__<server>__<tool>` format for MCP tools.
     #[test]
     fn test_init_scenario_lists_mcp_tools() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario_path("mcp-test-init.toml").to_str().unwrap(),
-            "-p",
-            "list your available tools",
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("mcp__filesystem__read_file"))
-        .stdout(predicate::str::contains("mcp__filesystem__write_file"))
-        .stdout(predicate::str::contains("mcp__filesystem__list_directory"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario_path("mcp-test-init.toml").to_str().unwrap(),
+                "-p",
+                "list your available tools",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("mcp__filesystem__read_file"),
+            "Expected stdout to contain 'mcp__filesystem__read_file': {}",
+            stdout
+        );
+        assert!(
+            stdout.contains("mcp__filesystem__write_file"),
+            "Expected stdout to contain 'mcp__filesystem__write_file': {}",
+            stdout
+        );
+        assert!(
+            stdout.contains("mcp__filesystem__list_directory"),
+            "Expected stdout to contain 'mcp__filesystem__list_directory': {}",
+            stdout
+        );
     }
 
     /// Test: Default response when prompt doesn't match tool listing pattern.
     #[test]
     fn test_init_scenario_default_response() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario_path("mcp-test-init.toml").to_str().unwrap(),
-            "-p",
-            "hello",
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("ready to help"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario_path("mcp-test-init.toml").to_str().unwrap(),
+                "-p",
+                "hello",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("ready to help"),
+            "Expected stdout to contain 'ready to help': {}",
+            stdout
+        );
     }
 }
 
@@ -76,8 +99,7 @@ mod mcp_read_scenario {
     /// Test: mcp-test-read.toml returns canned file content in mock mode.
     #[test]
     fn test_read_scenario_mock_mode() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario_path("mcp-test-read.toml").to_str().unwrap(),
@@ -88,13 +110,11 @@ mod mcp_read_scenario {
                 "-p",
                 "read sample.txt",
             ])
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stdout = String::from_utf8_lossy(&output);
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
 
         // Should contain response text
         assert!(
@@ -118,16 +138,23 @@ mod mcp_read_scenario {
     /// Test: mcp-test-read.toml response text is correct.
     #[test]
     fn test_read_scenario_response_text() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario_path("mcp-test-read.toml").to_str().unwrap(),
-            "-p",
-            "read the file",
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("I'll read the file for you"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario_path("mcp-test-read.toml").to_str().unwrap(),
+                "-p",
+                "read the file",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("I'll read the file for you"),
+            "Expected stdout to contain 'I'll read the file for you': {}",
+            stdout
+        );
     }
 }
 
@@ -141,8 +168,7 @@ mod mcp_write_scenario {
     /// Test: mcp-test-write.toml returns success message in mock mode.
     #[test]
     fn test_write_scenario_mock_mode() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario_path("mcp-test-write.toml").to_str().unwrap(),
@@ -153,13 +179,11 @@ mod mcp_write_scenario {
                 "-p",
                 "create a file",
             ])
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stdout = String::from_utf8_lossy(&output);
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
 
         // Should contain response text
         assert!(
@@ -177,16 +201,23 @@ mod mcp_write_scenario {
     /// Test: mcp-test-write.toml response text is correct.
     #[test]
     fn test_write_scenario_response_text() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario_path("mcp-test-write.toml").to_str().unwrap(),
-            "-p",
-            "create a new file",
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("I'll create that file for you"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario_path("mcp-test-write.toml").to_str().unwrap(),
+                "-p",
+                "create a new file",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("I'll create that file for you"),
+            "Expected stdout to contain 'I'll create that file for you': {}",
+            stdout
+        );
     }
 }
 
@@ -200,8 +231,7 @@ mod mcp_list_scenario {
     /// Test: mcp-test-list.toml returns file listing in mock mode.
     #[test]
     fn test_list_scenario_mock_mode() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario_path("mcp-test-list.toml").to_str().unwrap(),
@@ -212,13 +242,11 @@ mod mcp_list_scenario {
                 "-p",
                 "list the files",
             ])
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stdout = String::from_utf8_lossy(&output);
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
 
         // Should contain response text
         assert!(
@@ -240,16 +268,23 @@ mod mcp_list_scenario {
     /// Test: mcp-test-list.toml response text is correct.
     #[test]
     fn test_list_scenario_response_text() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario_path("mcp-test-list.toml").to_str().unwrap(),
-            "-p",
-            "list all files",
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Here are the files"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario_path("mcp-test-list.toml").to_str().unwrap(),
+                "-p",
+                "list all files",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("Here are the files"),
+            "Expected stdout to contain 'Here are the files': {}",
+            stdout
+        );
     }
 }
 
@@ -280,8 +315,7 @@ mod mcp_live_scenarios {
             .unwrap();
         mcp_config.flush().unwrap();
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario_path("mcp-test-read-live.toml").to_str().unwrap(),
@@ -294,13 +328,12 @@ mod mcp_live_scenarios {
                 "-p",
                 "read the file",
             ])
-            .assert()
-            .success() // Command succeeds but tool call may return error
-            .get_output()
-            .stdout
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stdout = String::from_utf8_lossy(&output);
+        // Command succeeds but tool call may return error
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
 
         // Should NOT contain "Unknown built-in tool" error - that was the old bug
         assert!(
@@ -322,18 +355,25 @@ mod mcp_live_scenarios {
     /// require a running MCP server. It just verifies the scenario loads.
     #[test]
     fn test_read_raw_scenario_loads() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario_path("mcp-test-read-raw.toml").to_str().unwrap(),
-            "--tool-mode",
-            "disabled", // Don't try to execute
-            "-p",
-            "read the file",
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("I'll read the file for you"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario_path("mcp-test-read-raw.toml").to_str().unwrap(),
+                "--tool-mode",
+                "disabled", // Don't try to execute
+                "-p",
+                "read the file",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("I'll read the file for you"),
+            "Expected stdout to contain 'I'll read the file for you': {}",
+            stdout
+        );
     }
 }
 
@@ -347,8 +387,7 @@ mod tool_mode_behavior {
     /// Test: --tool-mode disabled returns response without tool results.
     #[test]
     fn test_disabled_mode_no_tool_results() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario_path("mcp-test-read.toml").to_str().unwrap(),
@@ -359,13 +398,11 @@ mod tool_mode_behavior {
                 "-p",
                 "read file",
             ])
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stdout = String::from_utf8_lossy(&output);
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
 
         // Should contain response text
         assert!(stdout.contains("I'll read the file"));
@@ -380,8 +417,7 @@ mod tool_mode_behavior {
     /// Test: --tool-mode mock returns tool results from scenario.
     #[test]
     fn test_mock_mode_returns_canned_results() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario_path("mcp-test-read.toml").to_str().unwrap(),
@@ -392,13 +428,11 @@ mod tool_mode_behavior {
                 "-p",
                 "read file",
             ])
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stdout = String::from_utf8_lossy(&output);
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
 
         // Should contain tool_result with canned content
         assert!(
@@ -432,15 +466,22 @@ mod scenario_validation {
         ];
 
         for scenario in scenarios {
-            let mut cmd = Command::cargo_bin("claudeless").unwrap();
-            cmd.args([
-                "--scenario",
-                scenario_path(scenario).to_str().unwrap(),
-                "-p",
-                "test",
-            ])
-            .assert()
-            .success();
+            let output = Command::new(claudeless_bin())
+                .args([
+                    "--scenario",
+                    scenario_path(scenario).to_str().unwrap(),
+                    "-p",
+                    "test",
+                ])
+                .output()
+                .expect("Failed to run claudeless");
+
+            assert!(
+                output.status.success(),
+                "Scenario {} should load successfully: {:?}",
+                scenario,
+                output
+            );
         }
     }
 
@@ -455,8 +496,7 @@ mod scenario_validation {
         ];
 
         for (scenario, trigger) in scenarios_with_tools {
-            let mut cmd = Command::cargo_bin("claudeless").unwrap();
-            let output = cmd
+            let output = Command::new(claudeless_bin())
                 .args([
                     "--scenario",
                     scenario_path(scenario).to_str().unwrap(),
@@ -467,13 +507,16 @@ mod scenario_validation {
                     "-p",
                     trigger,
                 ])
-                .assert()
-                .success()
-                .get_output()
-                .stdout
-                .clone();
+                .output()
+                .expect("Failed to run claudeless");
 
-            let stdout = String::from_utf8_lossy(&output);
+            assert!(
+                output.status.success(),
+                "Scenario {} should succeed: {:?}",
+                scenario,
+                output
+            );
+            let stdout = String::from_utf8_lossy(&output.stdout);
             assert!(
                 stdout.contains("tool_result"),
                 "Scenario {} should produce tool_result for trigger '{}'",

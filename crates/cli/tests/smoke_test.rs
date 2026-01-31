@@ -11,13 +11,15 @@
 //!
 //! Behavior observed with: claude --version 2.1.12 (Claude Code)
 
-#![allow(deprecated)] // Command::cargo_bin is deprecated but still functional
-
-use assert_cmd::Command;
-use predicates::prelude::*;
 use std::io::Write;
+use std::path::PathBuf;
+use std::process::Command;
 use std::time::Instant;
 use tempfile::NamedTempFile;
+
+fn claudeless_bin() -> PathBuf {
+    PathBuf::from(env!("CARGO_BIN_EXE_claudeless"))
+}
 
 fn write_scenario(content: &str) -> NamedTempFile {
     let mut file = NamedTempFile::new().unwrap();
@@ -45,16 +47,23 @@ mod text_output {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "hello world",
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Hello! How can I help you today?"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "hello world",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("Hello! How can I help you today?"),
+            "Expected stdout to contain response: {}",
+            stdout
+        );
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -69,21 +78,18 @@ mod text_output {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario.path().to_str().unwrap(),
                 "-p",
                 "test",
             ])
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stdout = String::from_utf8_lossy(&output);
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
         // Text output should NOT be JSON
         assert!(
             !stdout.starts_with('{'),
@@ -105,15 +111,22 @@ mod text_output {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .code(0);
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "Expected exit code 0: {:?}",
+            output
+        );
     }
 }
 
@@ -147,8 +160,7 @@ mod json_output {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario.path().to_str().unwrap(),
@@ -157,13 +169,11 @@ mod json_output {
                 "-p",
                 "test",
             ])
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stdout = String::from_utf8_lossy(&output);
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
         let parsed: serde_json::Value = serde_json::from_str(&stdout).unwrap();
 
         // Real Claude uses result wrapper format
@@ -200,8 +210,7 @@ mod json_output {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario.path().to_str().unwrap(),
@@ -210,13 +219,11 @@ mod json_output {
                 "-p",
                 "test",
             ])
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stdout = String::from_utf8_lossy(&output);
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
         let parsed: serde_json::Value = serde_json::from_str(&stdout).unwrap();
 
         // Real Claude puts response text in "result" field, not content[0].text
@@ -238,17 +245,24 @@ mod json_output {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "--output-format",
-            "json",
-            "-p",
-            "test",
-        ])
-        .assert()
-        .code(0);
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "--output-format",
+                "json",
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "Expected exit code 0: {:?}",
+            output
+        );
     }
 }
 
@@ -273,14 +287,24 @@ mod stream_json_output {
     #[test]
     #[ignore] // TODO(implement): stream-json with -p should require --verbose
     fn test_stream_json_print_requires_verbose() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args(["--output-format", "stream-json", "-p", "test"])
-            .assert()
-            .failure()
-            .code(1)
-            .stderr(predicate::str::contains(
-                "When using --print, --output-format=stream-json requires --verbose",
-            ));
+        let output = Command::new(claudeless_bin())
+            .args(["--output-format", "stream-json", "-p", "test"])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "Expected exit code 1: {:?}",
+            output
+        );
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("When using --print, --output-format=stream-json requires --verbose"),
+            "Expected error message: {}",
+            stderr
+        );
     }
 
     /// Behavior observed with: claude --version 2.1.23 (Claude Code)
@@ -298,8 +322,7 @@ mod stream_json_output {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario.path().to_str().unwrap(),
@@ -309,13 +332,11 @@ mod stream_json_output {
                 "-p",
                 "test",
             ])
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stdout = String::from_utf8_lossy(&output);
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
         let first_line = stdout.lines().next().unwrap();
         let parsed: serde_json::Value = serde_json::from_str(first_line).unwrap();
 
@@ -336,8 +357,7 @@ mod stream_json_output {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario.path().to_str().unwrap(),
@@ -346,13 +366,11 @@ mod stream_json_output {
                 "-p",
                 "test",
             ])
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stdout = String::from_utf8_lossy(&output);
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
 
         // Each line should be valid JSON
         for line in stdout.lines() {
@@ -382,8 +400,7 @@ mod stream_json_output {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario.path().to_str().unwrap(),
@@ -392,13 +409,11 @@ mod stream_json_output {
                 "-p",
                 "test",
             ])
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stdout = String::from_utf8_lossy(&output);
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
         let first_line = stdout.lines().next().unwrap();
         let parsed: serde_json::Value = serde_json::from_str(first_line).unwrap();
 
@@ -435,8 +450,7 @@ mod stream_json_output {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario.path().to_str().unwrap(),
@@ -445,13 +459,11 @@ mod stream_json_output {
                 "-p",
                 "test",
             ])
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stdout = String::from_utf8_lossy(&output);
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
         let last_line = stdout.lines().last().unwrap();
         let parsed: serde_json::Value = serde_json::from_str(last_line).unwrap();
 
@@ -475,17 +487,24 @@ mod stream_json_output {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "--output-format",
-            "stream-json",
-            "-p",
-            "test",
-        ])
-        .assert()
-        .code(0);
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "--output-format",
+                "stream-json",
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "Expected exit code 0: {:?}",
+            output
+        );
     }
 }
 
@@ -511,16 +530,23 @@ mod failure_modes {
 
         let start = Instant::now();
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .code(1);
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "Expected exit code 1: {:?}",
+            output
+        );
 
         let elapsed = start.elapsed();
         assert!(
@@ -532,59 +558,98 @@ mod failure_modes {
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
     #[test]
     fn test_auth_error_exit_code() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args(["--failure", "auth-error", "-p", "test"])
-            .assert()
-            .failure()
-            .code(1);
+        let output = Command::new(claudeless_bin())
+            .args(["--failure", "auth-error", "-p", "test"])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "Expected exit code 1: {:?}",
+            output
+        );
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
     #[test]
     fn test_rate_limit_exit_code() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args(["--failure", "rate-limit", "-p", "test"])
-            .assert()
-            .failure()
-            .code(1);
+        let output = Command::new(claudeless_bin())
+            .args(["--failure", "rate-limit", "-p", "test"])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "Expected exit code 1: {:?}",
+            output
+        );
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
     #[test]
     fn test_network_unreachable_exit_code() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args(["--failure", "network-unreachable", "-p", "test"])
-            .assert()
-            .failure()
-            .code(1);
+        let output = Command::new(claudeless_bin())
+            .args(["--failure", "network-unreachable", "-p", "test"])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "Expected exit code 1: {:?}",
+            output
+        );
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
     #[test]
     fn test_out_of_credits_exit_code() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args(["--failure", "out-of-credits", "-p", "test"])
-            .assert()
-            .failure()
-            .code(1);
+        let output = Command::new(claudeless_bin())
+            .args(["--failure", "out-of-credits", "-p", "test"])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "Expected exit code 1: {:?}",
+            output
+        );
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
     #[test]
     fn test_partial_response_exit_code_2() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args(["--failure", "partial-response", "-p", "test"])
-            .assert()
-            .code(2); // Partial response uses exit code 2
+        let output = Command::new(claudeless_bin())
+            .args(["--failure", "partial-response", "-p", "test"])
+            .output()
+            .expect("Failed to run claudeless");
+
+        // Partial response uses exit code 2
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "Expected exit code 2: {:?}",
+            output
+        );
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
     #[test]
     fn test_malformed_json_exit_code() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args(["--failure", "malformed-json", "-p", "test"])
-            .assert()
-            .success(); // Malformed JSON still exits with 0
+        let output = Command::new(claudeless_bin())
+            .args(["--failure", "malformed-json", "-p", "test"])
+            .output()
+            .expect("Failed to run claudeless");
+
+        // Malformed JSON still exits with 0
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 }
 
@@ -611,16 +676,23 @@ mod delay {
 
         let start = Instant::now();
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("delayed"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("delayed"),
+            "Expected stdout to contain 'delayed': {}",
+            stdout
+        );
 
         let elapsed = start.elapsed();
         assert!(
@@ -644,16 +716,23 @@ mod delay {
 
         let start = Instant::now();
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("delayed via scenario"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("delayed via scenario"),
+            "Expected stdout to contain 'delayed via scenario': {}",
+            stdout
+        );
 
         let elapsed = start.elapsed();
         assert!(
@@ -690,17 +769,20 @@ mod unsupported_flags {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "--add-dir",
-            "/tmp",
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success(); // Should accept the flag, not error
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "--add-dir",
+                "/tmp",
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        // Should accept the flag, not error
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -719,17 +801,19 @@ mod unsupported_flags {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "--json-schema",
-            r#"{"type":"object"}"#,
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "--json-schema",
+                r#"{"type":"object"}"#,
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -748,17 +832,19 @@ mod unsupported_flags {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "--tools",
-            "Bash,Edit",
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "--tools",
+                "Bash,Edit",
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -777,17 +863,19 @@ mod unsupported_flags {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "--agent",
-            "custom-agent",
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "--agent",
+                "custom-agent",
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -806,17 +894,19 @@ mod unsupported_flags {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "--append-system-prompt",
-            "extra instructions",
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "--append-system-prompt",
+                "extra instructions",
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 }
 
@@ -833,13 +923,25 @@ mod exit_codes {
     /// "Error: Input must be provided either through stdin or as a prompt argument when using --print"
     #[test]
     fn test_no_prompt_non_tty_errors() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.assert()
-            .failure()
-            .code(1)
-            .stderr(predicate::str::contains(
-                "Input must be provided either through stdin or as a prompt argument when using --print",
-            ));
+        let output = Command::new(claudeless_bin())
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "Expected exit code 1: {:?}",
+            output
+        );
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains(
+                "Input must be provided either through stdin or as a prompt argument when using --print"
+            ),
+            "Expected error message: {}",
+            stderr
+        );
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -857,11 +959,18 @@ mod exit_codes {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args(["--scenario", scenario.path().to_str().unwrap(), "Say hello"])
-            .assert()
-            .success()
-            .stdout(predicate::str::contains("Hello! How can I help you today?"));
+        let output = Command::new(claudeless_bin())
+            .args(["--scenario", scenario.path().to_str().unwrap(), "Say hello"])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("Hello! How can I help you today?"),
+            "Expected stdout to contain response: {}",
+            stdout
+        );
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -876,33 +985,54 @@ mod exit_codes {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .code(0);
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "Expected exit code 0: {:?}",
+            output
+        );
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
     #[test]
     fn test_error_exit_code_1() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args(["--failure", "auth-error", "-p", "test"])
-            .assert()
-            .code(1);
+        let output = Command::new(claudeless_bin())
+            .args(["--failure", "auth-error", "-p", "test"])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "Expected exit code 1: {:?}",
+            output
+        );
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
     #[test]
     fn test_partial_exit_code_2() {
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args(["--failure", "partial-response", "-p", "test"])
-            .assert()
-            .code(2);
+        let output = Command::new(claudeless_bin())
+            .args(["--failure", "partial-response", "-p", "test"])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "Expected exit code 2: {:?}",
+            output
+        );
     }
 }
 
@@ -926,18 +1056,25 @@ mod model_flag {
         );
 
         // Model flag should be accepted for compatibility
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "--model",
-            "haiku",
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("response regardless of model"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "--model",
+                "haiku",
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("response regardless of model"),
+            "Expected stdout to contain response: {}",
+            stdout
+        );
     }
 
     /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -952,16 +1089,18 @@ mod model_flag {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "--model",
-            "claude-haiku-4-5-20251001",
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "--model",
+                "claude-haiku-4-5-20251001",
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 }

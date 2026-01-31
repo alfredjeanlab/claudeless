@@ -8,14 +8,16 @@
 //! These tests verify that failure modes correctly record error entries
 //! to the session JSONL file, enabling watchers to detect errors.
 
-#![allow(deprecated)] // Command::cargo_bin is deprecated but still functional
-
-use assert_cmd::Command;
 use serde_json::Value;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
+use std::process::Command;
 use tempfile::{NamedTempFile, TempDir};
+
+fn claudeless_bin() -> PathBuf {
+    PathBuf::from(env!("CARGO_BIN_EXE_claudeless"))
+}
 
 /// Create a temporary scenario file with the given content.
 fn write_scenario(content: &str) -> NamedTempFile {
@@ -88,8 +90,8 @@ fn error_jsonl_rate_limit() {
         "#,
     );
 
-    let mut cmd = Command::cargo_bin("claudeless").unwrap();
-    cmd.env("CLAUDELESS_STATE_DIR", state_dir.path())
+    let output = Command::new(claudeless_bin())
+        .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .args([
             "--scenario",
             scenario.path().to_str().unwrap(),
@@ -98,9 +100,16 @@ fn error_jsonl_rate_limit() {
             "-p",
             "test prompt",
         ])
-        .assert()
-        .failure()
-        .code(1);
+        .output()
+        .expect("Failed to run claudeless");
+
+    assert!(!output.status.success(), "Expected failure: {:?}", output);
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "Expected exit code 1: {:?}",
+        output
+    );
 
     // Find and verify the JSONL file
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
@@ -163,8 +172,8 @@ fn error_jsonl_network_unreachable() {
         "#,
     );
 
-    let mut cmd = Command::cargo_bin("claudeless").unwrap();
-    cmd.env("CLAUDELESS_STATE_DIR", state_dir.path())
+    let output = Command::new(claudeless_bin())
+        .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .args([
             "--scenario",
             scenario.path().to_str().unwrap(),
@@ -173,9 +182,16 @@ fn error_jsonl_network_unreachable() {
             "-p",
             "test prompt",
         ])
-        .assert()
-        .failure()
-        .code(1);
+        .output()
+        .expect("Failed to run claudeless");
+
+    assert!(!output.status.success(), "Expected failure: {:?}", output);
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "Expected exit code 1: {:?}",
+        output
+    );
 
     // Find and verify the JSONL file
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
@@ -235,17 +251,24 @@ fn error_jsonl_scenario_failure() {
         "#,
     );
 
-    let mut cmd = Command::cargo_bin("claudeless").unwrap();
-    cmd.env("CLAUDELESS_STATE_DIR", state_dir.path())
+    let output = Command::new(claudeless_bin())
+        .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .args([
             "--scenario",
             scenario.path().to_str().unwrap(),
             "-p",
             "fail this request",
         ])
-        .assert()
-        .failure()
-        .code(1);
+        .output()
+        .expect("Failed to run claudeless");
+
+    assert!(!output.status.success(), "Expected failure: {:?}", output);
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "Expected exit code 1: {:?}",
+        output
+    );
 
     // Find and verify the JSONL file
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
@@ -293,17 +316,24 @@ fn error_jsonl_scenario_network_failure() {
         "#,
     );
 
-    let mut cmd = Command::cargo_bin("claudeless").unwrap();
-    cmd.env("CLAUDELESS_STATE_DIR", state_dir.path())
+    let output = Command::new(claudeless_bin())
+        .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .args([
             "--scenario",
             scenario.path().to_str().unwrap(),
             "-p",
             "test prompt",
         ])
-        .assert()
-        .failure()
-        .code(1);
+        .output()
+        .expect("Failed to run claudeless");
+
+    assert!(!output.status.success(), "Expected failure: {:?}", output);
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "Expected exit code 1: {:?}",
+        output
+    );
 
     // Find and verify the JSONL file
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
@@ -333,8 +363,8 @@ fn error_jsonl_auth_error() {
         "#,
     );
 
-    let mut cmd = Command::cargo_bin("claudeless").unwrap();
-    cmd.env("CLAUDELESS_STATE_DIR", state_dir.path())
+    let output = Command::new(claudeless_bin())
+        .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .args([
             "--scenario",
             scenario.path().to_str().unwrap(),
@@ -343,9 +373,16 @@ fn error_jsonl_auth_error() {
             "-p",
             "test prompt",
         ])
-        .assert()
-        .failure()
-        .code(1);
+        .output()
+        .expect("Failed to run claudeless");
+
+    assert!(!output.status.success(), "Expected failure: {:?}", output);
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "Expected exit code 1: {:?}",
+        output
+    );
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
     let error_line = find_error_line(&jsonl_path).expect("Error line should exist in JSONL");
@@ -370,8 +407,8 @@ fn error_jsonl_out_of_credits() {
         "#,
     );
 
-    let mut cmd = Command::cargo_bin("claudeless").unwrap();
-    cmd.env("CLAUDELESS_STATE_DIR", state_dir.path())
+    let output = Command::new(claudeless_bin())
+        .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .args([
             "--scenario",
             scenario.path().to_str().unwrap(),
@@ -380,9 +417,16 @@ fn error_jsonl_out_of_credits() {
             "-p",
             "test prompt",
         ])
-        .assert()
-        .failure()
-        .code(1);
+        .output()
+        .expect("Failed to run claudeless");
+
+    assert!(!output.status.success(), "Expected failure: {:?}", output);
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "Expected exit code 1: {:?}",
+        output
+    );
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
     let error_line = find_error_line(&jsonl_path).expect("Error line should exist in JSONL");
@@ -410,17 +454,24 @@ fn error_jsonl_connection_timeout() {
         "#,
     );
 
-    let mut cmd = Command::cargo_bin("claudeless").unwrap();
-    cmd.env("CLAUDELESS_STATE_DIR", state_dir.path())
+    let output = Command::new(claudeless_bin())
+        .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .args([
             "--scenario",
             scenario.path().to_str().unwrap(),
             "-p",
             "test prompt",
         ])
-        .assert()
-        .failure()
-        .code(1);
+        .output()
+        .expect("Failed to run claudeless");
+
+    assert!(!output.status.success(), "Expected failure: {:?}", output);
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "Expected exit code 1: {:?}",
+        output
+    );
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
     let error_line = find_error_line(&jsonl_path).expect("Error line should exist in JSONL");
@@ -445,8 +496,8 @@ fn error_jsonl_partial_response() {
         "#,
     );
 
-    let mut cmd = Command::cargo_bin("claudeless").unwrap();
-    cmd.env("CLAUDELESS_STATE_DIR", state_dir.path())
+    let output = Command::new(claudeless_bin())
+        .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .args([
             "--scenario",
             scenario.path().to_str().unwrap(),
@@ -455,8 +506,16 @@ fn error_jsonl_partial_response() {
             "-p",
             "test prompt",
         ])
-        .assert()
-        .code(2); // Partial response uses exit code 2
+        .output()
+        .expect("Failed to run claudeless");
+
+    // Partial response uses exit code 2
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "Expected exit code 2: {:?}",
+        output
+    );
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
     let error_line = find_error_line(&jsonl_path).expect("Error line should exist in JSONL");
@@ -485,8 +544,8 @@ fn error_jsonl_no_session_persistence() {
         "#,
     );
 
-    let mut cmd = Command::cargo_bin("claudeless").unwrap();
-    cmd.env("CLAUDELESS_STATE_DIR", state_dir.path())
+    let output = Command::new(claudeless_bin())
+        .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .args([
             "--scenario",
             scenario.path().to_str().unwrap(),
@@ -496,9 +555,16 @@ fn error_jsonl_no_session_persistence() {
             "-p",
             "test prompt",
         ])
-        .assert()
-        .failure()
-        .code(1);
+        .output()
+        .expect("Failed to run claudeless");
+
+    assert!(!output.status.success(), "Expected failure: {:?}", output);
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "Expected exit code 1: {:?}",
+        output
+    );
 
     // With --no-session-persistence, no JSONL file should be created
     let jsonl_path = find_jsonl_file(&state_dir);
@@ -527,8 +593,8 @@ fn error_jsonl_malformed_json_no_entry() {
         "#,
     );
 
-    let mut cmd = Command::cargo_bin("claudeless").unwrap();
-    cmd.env("CLAUDELESS_STATE_DIR", state_dir.path())
+    let output = Command::new(claudeless_bin())
+        .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .args([
             "--scenario",
             scenario.path().to_str().unwrap(),
@@ -537,8 +603,11 @@ fn error_jsonl_malformed_json_no_entry() {
             "-p",
             "test prompt",
         ])
-        .assert()
-        .success(); // Malformed JSON exits with 0
+        .output()
+        .expect("Failed to run claudeless");
+
+    // Malformed JSON exits with 0
+    assert!(output.status.success(), "Expected success: {:?}", output);
 
     // JSONL file may exist but should not have an error entry
     if let Some(jsonl_path) = find_jsonl_file(&state_dir) {

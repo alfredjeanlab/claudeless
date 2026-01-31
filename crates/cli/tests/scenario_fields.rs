@@ -8,12 +8,14 @@
 //! Tests verify that all configuration fields specified in the scenario format
 //! parse correctly and affect simulator behavior as expected.
 
-#![allow(deprecated)] // Command::cargo_bin is deprecated but still functional
-
-use assert_cmd::Command;
-use predicates::prelude::*;
 use std::io::Write;
+use std::path::PathBuf;
+use std::process::Command;
 use tempfile::NamedTempFile;
+
+fn claudeless_bin() -> PathBuf {
+    PathBuf::from(env!("CARGO_BIN_EXE_claudeless"))
+}
 
 fn write_scenario(content: &str) -> NamedTempFile {
     let mut file = NamedTempFile::new().unwrap();
@@ -41,15 +43,17 @@ mod session_identity {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -64,15 +68,17 @@ mod session_identity {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -87,15 +93,17 @@ mod session_identity {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -110,15 +118,17 @@ mod session_identity {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -133,15 +143,17 @@ mod session_identity {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -163,15 +175,22 @@ mod session_identity {
                 uuid
             ));
 
-            let mut cmd = Command::cargo_bin("claudeless").unwrap();
-            cmd.args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
-            .assert()
-            .success();
+            let output = Command::new(claudeless_bin())
+                .args([
+                    "--scenario",
+                    scenario.path().to_str().unwrap(),
+                    "-p",
+                    "test",
+                ])
+                .output()
+                .expect("Failed to run claudeless");
+
+            assert!(
+                output.status.success(),
+                "UUID {} should be valid: {:?}",
+                uuid,
+                output
+            );
         }
     }
 }
@@ -195,15 +214,17 @@ mod timing {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -218,15 +239,17 @@ mod timing {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 }
 
@@ -249,15 +272,17 @@ mod environment {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -272,15 +297,17 @@ mod environment {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -295,15 +322,17 @@ mod environment {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -318,15 +347,17 @@ mod environment {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -341,15 +372,17 @@ mod environment {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 }
 
@@ -377,15 +410,17 @@ mod tool_config {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -405,15 +440,17 @@ mod tool_config {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -433,15 +470,17 @@ mod tool_config {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -468,15 +507,17 @@ mod tool_config {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 }
 
@@ -527,16 +568,23 @@ mod full_featured {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "hello",
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Hello!"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "hello",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("Hello!"),
+            "Expected stdout to contain 'Hello!': {}",
+            stdout
+        );
     }
 
     #[test]
@@ -557,20 +605,18 @@ mod full_featured {
 
         // Run twice and verify consistent output
         let run = || -> String {
-            let mut cmd = Command::cargo_bin("claudeless").unwrap();
-            let output = cmd
+            let output = Command::new(claudeless_bin())
                 .args([
                     "--scenario",
                     scenario.path().to_str().unwrap(),
                     "-p",
                     "test",
                 ])
-                .assert()
-                .success()
-                .get_output()
-                .stdout
-                .clone();
-            String::from_utf8_lossy(&output).to_string()
+                .output()
+                .expect("Failed to run claudeless");
+
+            assert!(output.status.success(), "Expected success: {:?}", output);
+            String::from_utf8_lossy(&output.stdout).to_string()
         };
 
         let output1 = run();
@@ -594,7 +640,6 @@ mod full_featured {
 
 mod example_scenarios {
     use super::*;
-    use std::path::PathBuf;
 
     fn scenarios_dir() -> PathBuf {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
@@ -614,10 +659,12 @@ mod example_scenarios {
             panic!("Example scenario not found: {}", scenario_path.display());
         }
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args(["--scenario", scenario_path.to_str().unwrap(), "-p", "hello"])
-            .assert()
-            .success();
+        let output = Command::new(claudeless_bin())
+            .args(["--scenario", scenario_path.to_str().unwrap(), "-p", "hello"])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -627,9 +674,11 @@ mod example_scenarios {
             panic!("Example scenario not found: {}", scenario_path.display());
         }
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args(["--scenario", scenario_path.to_str().unwrap(), "-p", "test"])
-            .assert()
-            .success();
+        let output = Command::new(claudeless_bin())
+            .args(["--scenario", scenario_path.to_str().unwrap(), "-p", "test"])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 }

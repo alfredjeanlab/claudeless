@@ -8,12 +8,14 @@
 //! Tests verify that invalid scenarios produce clear, actionable error messages.
 //! Uses `#[serde(deny_unknown_fields)]` to reject typos and unknown fields.
 
-#![allow(deprecated)] // Command::cargo_bin is deprecated but still functional
-
-use assert_cmd::Command;
-use predicates::prelude::*;
 use std::io::Write;
+use std::path::PathBuf;
+use std::process::Command;
 use tempfile::NamedTempFile;
+
+fn claudeless_bin() -> PathBuf {
+    PathBuf::from(env!("CARGO_BIN_EXE_claudeless"))
+}
 
 fn write_scenario(content: &str) -> NamedTempFile {
     let mut file = NamedTempFile::new().unwrap();
@@ -41,17 +43,22 @@ mod unknown_fields {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(
-            predicate::str::contains("unknown_field").or(predicate::str::contains("unknown field")),
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("unknown_field") || stderr.contains("unknown field"),
+            "Expected stderr to mention 'unknown_field' or 'unknown field': {}",
+            stderr
         );
     }
 
@@ -67,17 +74,22 @@ mod unknown_fields {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(
-            predicate::str::contains("defualt_model").or(predicate::str::contains("unknown field")),
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("defualt_model") || stderr.contains("unknown field"),
+            "Expected stderr to mention 'defualt_model' or 'unknown field': {}",
+            stderr
         );
     }
 
@@ -95,16 +107,23 @@ mod unknown_fields {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("moode").or(predicate::str::contains("unknown field")));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("moode") || stderr.contains("unknown field"),
+            "Expected stderr to mention 'moode' or 'unknown field': {}",
+            stderr
+        );
     }
 
     #[test]
@@ -124,17 +143,22 @@ mod unknown_fields {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(
-            predicate::str::contains("auto_aprove").or(predicate::str::contains("unknown field")),
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("auto_aprove") || stderr.contains("unknown field"),
+            "Expected stderr to mention 'auto_aprove' or 'unknown field': {}",
+            stderr
         );
     }
 }
@@ -158,18 +182,23 @@ mod session_id_validation {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(
-            predicate::str::contains("session_id")
-                .and(predicate::str::contains("UUID").or(predicate::str::contains("uuid"))),
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("session_id")
+                && (stderr.contains("UUID") || stderr.contains("uuid")),
+            "Expected stderr to mention 'session_id' and 'UUID' or 'uuid': {}",
+            stderr
         );
     }
 
@@ -185,16 +214,23 @@ mod session_id_validation {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("session_id"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("session_id"),
+            "Expected stderr to mention 'session_id': {}",
+            stderr
+        );
     }
 
     #[test]
@@ -209,16 +245,23 @@ mod session_id_validation {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("session_id"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("session_id"),
+            "Expected stderr to mention 'session_id': {}",
+            stderr
+        );
     }
 }
 
@@ -241,19 +284,23 @@ mod timestamp_validation {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(
-            predicate::str::contains("launch_timestamp").and(
-                predicate::str::contains("ISO 8601").or(predicate::str::contains("timestamp")),
-            ),
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("launch_timestamp")
+                && (stderr.contains("ISO 8601") || stderr.contains("timestamp")),
+            "Expected stderr to mention 'launch_timestamp' and 'ISO 8601' or 'timestamp': {}",
+            stderr
         );
     }
 
@@ -270,16 +317,23 @@ mod timestamp_validation {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("launch_timestamp"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("launch_timestamp"),
+            "Expected stderr to mention 'launch_timestamp': {}",
+            stderr
+        );
     }
 
     #[test]
@@ -295,16 +349,23 @@ mod timestamp_validation {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("launch_timestamp"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("launch_timestamp"),
+            "Expected stderr to mention 'launch_timestamp': {}",
+            stderr
+        );
     }
 }
 
@@ -327,16 +388,23 @@ mod permission_mode_validation {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("permission_mode"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("permission_mode"),
+            "Expected stderr to mention 'permission_mode': {}",
+            stderr
+        );
     }
 
     #[test]
@@ -351,16 +419,23 @@ mod permission_mode_validation {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("permission_mode"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("permission_mode"),
+            "Expected stderr to mention 'permission_mode': {}",
+            stderr
+        );
     }
 }
 
@@ -382,16 +457,23 @@ mod pattern_validation {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("regex").or(predicate::str::contains("pattern")));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("regex") || stderr.contains("pattern"),
+            "Expected stderr to mention 'regex' or 'pattern': {}",
+            stderr
+        );
     }
 
     #[test]
@@ -405,16 +487,23 @@ mod pattern_validation {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("glob").or(predicate::str::contains("pattern")));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("glob") || stderr.contains("pattern"),
+            "Expected stderr to mention 'glob' or 'pattern': {}",
+            stderr
+        );
     }
 }
 
@@ -437,16 +526,23 @@ mod type_validation {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("trusted").or(predicate::str::contains("boolean")));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("trusted") || stderr.contains("boolean"),
+            "Expected stderr to mention 'trusted' or 'boolean': {}",
+            stderr
+        );
     }
 
     #[test]
@@ -460,16 +556,23 @@ mod type_validation {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("delay_ms").or(predicate::str::contains("integer")));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("delay_ms") || stderr.contains("integer"),
+            "Expected stderr to mention 'delay_ms' or 'integer': {}",
+            stderr
+        );
     }
 }
 
@@ -502,15 +605,17 @@ mod json_validation {
             }"#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .success();
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -528,16 +633,23 @@ mod json_validation {
             }"#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("session_id"));
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("session_id"),
+            "Expected stderr to mention 'session_id': {}",
+            stderr
+        );
     }
 
     #[test]
@@ -555,17 +667,22 @@ mod json_validation {
             }"#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        cmd.args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
-        .assert()
-        .failure()
-        .stderr(
-            predicate::str::contains("unknown_field").or(predicate::str::contains("unknown field")),
+        let output = Command::new(claudeless_bin())
+            .args([
+                "--scenario",
+                scenario.path().to_str().unwrap(),
+                "-p",
+                "test",
+            ])
+            .output()
+            .expect("Failed to run claudeless");
+
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("unknown_field") || stderr.contains("unknown field"),
+            "Expected stderr to mention 'unknown_field' or 'unknown field': {}",
+            stderr
         );
     }
 }
@@ -589,21 +706,18 @@ mod error_message_quality {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario.path().to_str().unwrap(),
                 "-p",
                 "test",
             ])
-            .assert()
-            .failure()
-            .get_output()
-            .stderr
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stderr = String::from_utf8_lossy(&output);
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
         assert!(
             stderr.contains("session_id"),
             "Error should mention the field name. Got: {}",
@@ -623,21 +737,18 @@ mod error_message_quality {
             "#,
         );
 
-        let mut cmd = Command::cargo_bin("claudeless").unwrap();
-        let output = cmd
+        let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario.path().to_str().unwrap(),
                 "-p",
                 "test",
             ])
-            .assert()
-            .failure()
-            .get_output()
-            .stderr
-            .clone();
+            .output()
+            .expect("Failed to run claudeless");
 
-        let stderr = String::from_utf8_lossy(&output);
+        assert!(!output.status.success(), "Expected failure: {:?}", output);
+        let stderr = String::from_utf8_lossy(&output.stderr);
         // Error should give guidance on valid values
         assert!(
             stderr.contains("permission_mode"),
