@@ -6,7 +6,7 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 
 - `hooks_dialog` - Hooks dialog
 
-## TODO (Conversation + Slow)
+## TODO
 
 - `compact_before` / `compact_during` / `compact_after` - Compaction states
 - `thinking_dialog_mid_conversation` - Thinking dialog during conversation
