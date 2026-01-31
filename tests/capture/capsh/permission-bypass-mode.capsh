@@ -1,0 +1,10 @@
+# Capture UI state when running with --dangerously-skip-permissions.
+# Shows bypass mode indicator in status bar instead of "? for shortcuts".
+# Args: --model haiku --dangerously-skip-permissions
+
+wait "bypass permissions on" 10s
+snapshot "permission_bypass_mode"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
