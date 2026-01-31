@@ -17,8 +17,128 @@ fn default_trusted() -> bool {
     true
 }
 
-/// Top-level scenario configuration
+/// Session identity configuration
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct IdentityConfig {
+    /// Model to report in output (default: "claude-opus-4-5-20251101")
+    /// Overridden by --model CLI flag
+    #[serde(default)]
+    pub default_model: Option<String>,
+
+    /// Claude version string (default: "2.1.12")
+    #[serde(default)]
+    pub claude_version: Option<String>,
+
+    /// User display name (default: "Alfred")
+    #[serde(default)]
+    pub user_name: Option<String>,
+
+    /// Fixed session UUID for deterministic file paths (default: random)
+    #[serde(default)]
+    pub session_id: Option<String>,
+}
+
+impl IdentityConfig {
+    /// Validate the identity configuration.
+    pub fn validate(&self) -> Result<(), String> {
+        if let Some(ref id) = self.session_id {
+            if uuid::Uuid::parse_str(id).is_err() {
+                return Err(format!("Invalid session_id '{}': must be a valid UUID", id));
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Environment configuration
 #[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct EnvironmentConfig {
+    /// Override project path for state directory naming
+    #[serde(default)]
+    pub project_path: Option<String>,
+
+    /// Simulated working directory (default: actual cwd)
+    #[serde(default)]
+    pub working_directory: Option<String>,
+
+    /// Whether directory is trusted (default: true)
+    /// When false, TUI shows trust prompt before proceeding
+    #[serde(default = "default_trusted")]
+    pub trusted: bool,
+
+    /// Permission mode override
+    /// Values: "default", "plan", "bypass-permissions", "accept-edits", "dont-ask", "delegate"
+    #[serde(default)]
+    pub permission_mode: Option<String>,
+}
+
+impl Default for EnvironmentConfig {
+    fn default() -> Self {
+        Self {
+            project_path: None,
+            working_directory: None,
+            trusted: true,
+            permission_mode: None,
+        }
+    }
+}
+
+impl EnvironmentConfig {
+    /// Valid permission mode values
+    pub const VALID_PERMISSION_MODES: &'static [&'static str] = &[
+        "default",
+        "plan",
+        "bypass-permissions",
+        "accept-edits",
+        "dont-ask",
+        "delegate",
+    ];
+
+    /// Validate the environment configuration.
+    pub fn validate(&self) -> Result<(), String> {
+        if let Some(ref mode) = self.permission_mode {
+            if !Self::VALID_PERMISSION_MODES.contains(&mode.to_lowercase().as_str()) {
+                return Err(format!(
+                    "Invalid permission_mode '{}': must be one of {:?}",
+                    mode,
+                    Self::VALID_PERMISSION_MODES
+                ));
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Timing configuration
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct TimingConfig {
+    /// Session start time as ISO 8601 (default: current time)
+    /// Enables deterministic tests with fixed timestamps
+    #[serde(default)]
+    pub launch_timestamp: Option<String>,
+
+    /// Timeout configuration
+    #[serde(default)]
+    pub timeouts: Option<TimeoutOverrides>,
+}
+
+impl TimingConfig {
+    /// Validate the timing configuration.
+    pub fn validate(&self) -> Result<(), String> {
+        if let Some(ref ts) = self.launch_timestamp {
+            if chrono::DateTime::parse_from_rfc3339(ts).is_err() {
+                return Err(format!(
+                    "Invalid launch_timestamp '{}': must be ISO 8601 format (e.g., 2025-01-15T10:30:00Z)",
+                    ts
+                ));
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Top-level scenario configuration
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ScenarioConfig {
     /// Name for logging/debugging
@@ -37,73 +157,17 @@ pub struct ScenarioConfig {
     #[serde(default)]
     pub tool_execution: Option<ToolExecutionConfig>,
 
-    // Session identity fields
-    /// Model to report in output (default: "claude-opus-4-5-20251101")
-    /// Overridden by --model CLI flag
-    #[serde(default)]
-    pub default_model: Option<String>,
+    /// Session identity configuration
+    #[serde(flatten)]
+    pub identity: IdentityConfig,
 
-    /// Claude version string (default: "2.1.12")
-    #[serde(default)]
-    pub claude_version: Option<String>,
+    /// Environment configuration
+    #[serde(flatten)]
+    pub environment: EnvironmentConfig,
 
-    /// User display name (default: "Alfred")
-    #[serde(default)]
-    pub user_name: Option<String>,
-
-    /// Fixed session UUID for deterministic file paths (default: random)
-    #[serde(default)]
-    pub session_id: Option<String>,
-
-    /// Override project path for state directory naming
-    #[serde(default)]
-    pub project_path: Option<String>,
-
-    // Timing
-    /// Session start time as ISO 8601 (default: current time)
-    /// Enables deterministic tests with fixed timestamps
-    #[serde(default)]
-    pub launch_timestamp: Option<String>,
-
-    // Environment
-    /// Simulated working directory (default: actual cwd)
-    #[serde(default)]
-    pub working_directory: Option<String>,
-
-    /// Whether directory is trusted (default: true)
-    /// When false, TUI shows trust prompt before proceeding
-    #[serde(default = "default_trusted")]
-    pub trusted: bool,
-
-    /// Permission mode override
-    /// Values: "default", "plan", "bypass-permissions", "accept-edits", "dont-ask", "delegate"
-    #[serde(default)]
-    pub permission_mode: Option<String>,
-
-    /// Timeout configuration
-    #[serde(default)]
-    pub timeouts: Option<TimeoutConfig>,
-}
-
-impl Default for ScenarioConfig {
-    fn default() -> Self {
-        Self {
-            name: String::new(),
-            default_response: None,
-            responses: Vec::new(),
-            tool_execution: None,
-            default_model: None,
-            claude_version: None,
-            user_name: None,
-            session_id: None,
-            project_path: None,
-            launch_timestamp: None,
-            working_directory: None,
-            trusted: true, // Default to trusted
-            permission_mode: None,
-            timeouts: None,
-        }
-    }
+    /// Timing configuration
+    #[serde(flatten)]
+    pub timing: TimingConfig,
 }
 
 /// Tool execution configuration
@@ -304,10 +368,10 @@ pub struct ConversationTurn {
     pub failure: Option<FailureSpec>,
 }
 
-/// Timeout configuration (scenario [timeouts] section)
+/// Timeout overrides (scenario [timeouts] section)
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-pub struct TimeoutConfig {
+pub struct TimeoutOverrides {
     pub exit_hint_ms: Option<u64>,
     pub compact_delay_ms: Option<u64>,
     pub hook_timeout_ms: Option<u64>,
@@ -333,7 +397,7 @@ impl ResolvedTimeouts {
     pub const DEFAULT_RESPONSE_DELAY_MS: u64 = 0;
 
     /// Resolve from optional config with precedence: scenario > env > default
-    pub fn resolve(config: Option<&TimeoutConfig>) -> Self {
+    pub fn resolve(config: Option<&TimeoutOverrides>) -> Self {
         let cfg = config.cloned().unwrap_or_default();
         Self {
             exit_hint_ms: cfg

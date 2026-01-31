@@ -120,43 +120,19 @@ impl Scenario {
 
     /// Create a scenario from a config object
     pub fn from_config(config: ScenarioConfig) -> Result<Self, ScenarioError> {
-        // Validate session_id format if provided
-        if let Some(ref id) = config.session_id {
-            if uuid::Uuid::parse_str(id).is_err() {
-                return Err(ScenarioError::Validation(format!(
-                    "Invalid session_id '{}': must be a valid UUID",
-                    id
-                )));
-            }
-        }
-
-        // Validate launch_timestamp format if provided
-        if let Some(ref ts) = config.launch_timestamp {
-            if chrono::DateTime::parse_from_rfc3339(ts).is_err() {
-                return Err(ScenarioError::Validation(format!(
-                    "Invalid launch_timestamp '{}': must be ISO 8601 format (e.g., 2025-01-15T10:30:00Z)",
-                    ts
-                )));
-            }
-        }
-
-        // Validate permission_mode if provided
-        if let Some(ref mode) = config.permission_mode {
-            let valid = [
-                "default",
-                "plan",
-                "bypass-permissions",
-                "accept-edits",
-                "dont-ask",
-                "delegate",
-            ];
-            if !valid.contains(&mode.to_lowercase().as_str()) {
-                return Err(ScenarioError::Validation(format!(
-                    "Invalid permission_mode '{}': must be one of {:?}",
-                    mode, valid
-                )));
-            }
-        }
+        // Validate sub-configs
+        config
+            .identity
+            .validate()
+            .map_err(ScenarioError::Validation)?;
+        config
+            .environment
+            .validate()
+            .map_err(ScenarioError::Validation)?;
+        config
+            .timing
+            .validate()
+            .map_err(ScenarioError::Validation)?;
 
         // Compile response patterns and turn patterns
         let mut compiled = Vec::new();
