@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Tests for commands module, focusing on tool JSONL recording.
+//! Tests for permission module, focusing on tool JSONL recording.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -46,6 +46,8 @@ fn test_build_tool_use_content_bash_no_description() {
 
 #[test]
 fn test_build_tool_use_content_edit() {
+    use crate::tui::widgets::permission::DiffKind;
+
     let (id, content) = build_tool_use_content(&PermissionType::Edit {
         file_path: "src/main.rs".to_string(),
         diff_lines: vec![
