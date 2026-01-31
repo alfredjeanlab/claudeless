@@ -28,7 +28,7 @@ pub use session::{
     UserMessageParams,
 };
 pub use sessions_index::{get_git_branch, SessionIndexEntry, SessionsIndex};
-pub use settings::{ClaudeSettings, McpServerConfig, PermissionSettings, Settings};
+pub use settings::{ClaudeSettings, PermissionSettings, Settings};
 pub use settings_loader::{SettingsLoader, SettingsPaths};
 pub use settings_source::SettingSource;
 pub use todos::{ClaudeTodoItem, TodoItem, TodoState, TodoStatus};

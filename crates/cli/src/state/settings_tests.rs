@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 use super::*;
+use crate::mcp::config::McpServerDef;
 
 #[test]
 fn test_new_settings() {
@@ -134,7 +135,7 @@ fn test_claude_settings_parse_mcp_servers() {
 
     let settings: ClaudeSettings = serde_json::from_str(json).unwrap();
     let server = settings.mcp_servers.get("filesystem").unwrap();
-    assert_eq!(server.command.as_deref(), Some("npx"));
+    assert_eq!(server.command, "npx");
     assert_eq!(
         server.args,
         vec!["-y", "@modelcontextprotocol/server-filesystem"]
@@ -239,8 +240,8 @@ fn test_claude_settings_merge_mcp_servers() {
     let mut base = ClaudeSettings::default();
     base.mcp_servers.insert(
         "server1".to_string(),
-        McpServerConfig {
-            command: Some("cmd1".to_string()),
+        McpServerDef {
+            command: "cmd1".to_string(),
             ..Default::default()
         },
     );
@@ -248,8 +249,8 @@ fn test_claude_settings_merge_mcp_servers() {
     let mut override_settings = ClaudeSettings::default();
     override_settings.mcp_servers.insert(
         "server2".to_string(),
-        McpServerConfig {
-            command: Some("cmd2".to_string()),
+        McpServerDef {
+            command: "cmd2".to_string(),
             ..Default::default()
         },
     );

@@ -21,10 +21,11 @@ pub struct McpConfig {
 }
 
 /// Definition of an MCP server from configuration.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct McpServerDef {
     /// Command to execute.
+    #[serde(default)]
     pub command: String,
 
     /// Command arguments.

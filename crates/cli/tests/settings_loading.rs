@@ -394,7 +394,7 @@ fn test_mcp_server_config_fully_parsed() {
     let settings = loader.load();
 
     let server = settings.mcp_servers.get("test-server").unwrap();
-    assert_eq!(server.command.as_deref(), Some("npx"));
+    assert_eq!(server.command, "npx");
     assert_eq!(server.args, vec!["-y", "@test/server"]);
     assert_eq!(server.cwd.as_deref(), Some("/some/path"));
     assert_eq!(server.env.get("SERVER_KEY"), Some(&"secret".to_string()));

@@ -4,6 +4,7 @@
 //! Global settings management.
 
 use super::io::{parse_json5_or_json, to_io_error, JsonLoad};
+use crate::mcp::config::McpServerDef;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -116,27 +117,6 @@ pub struct PermissionSettings {
     pub additional_directories: Vec<String>,
 }
 
-/// MCP server configuration (parse only, don't spawn).
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct McpServerConfig {
-    /// Command to spawn the server
-    #[serde(default)]
-    pub command: Option<String>,
-
-    /// Arguments for the command
-    #[serde(default)]
-    pub args: Vec<String>,
-
-    /// Environment variables for the server
-    #[serde(default)]
-    pub env: HashMap<String, String>,
-
-    /// Working directory
-    #[serde(default)]
-    pub cwd: Option<String>,
-}
-
 /// Full settings file schema.
 ///
 /// This is permissive - unknown fields are ignored to handle
@@ -150,7 +130,7 @@ pub struct ClaudeSettings {
 
     /// MCP server definitions
     #[serde(default)]
-    pub mcp_servers: HashMap<String, McpServerConfig>,
+    pub mcp_servers: HashMap<String, McpServerDef>,
 
     /// Environment variable overrides
     #[serde(default)]
