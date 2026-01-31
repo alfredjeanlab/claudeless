@@ -100,6 +100,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         cwd: cli.cwd.clone(),
     };
 
+    // Load scenario if specified (needed for session context)
+    let mut scenario = if let Some(ref path) = cli.scenario {
+        Some(Scenario::load(Path::new(path))?)
+    } else {
+        None
+    };
+
+    // Build session context early (needed for state_writer in failure handling)
+    let session_ctx = SessionContext::build(scenario.as_ref().map(|s| s.config()), &cli);
+
+    // Create state writer early so failures can record to session JSONL
+    // Skip if --no-session-persistence is enabled
+    let state_writer = if !cli.no_session_persistence {
+        Some(Arc::new(RwLock::new(StateWriter::new(
+            session_ctx.session_id.to_string(),
+            &session_ctx.project_path,
+            session_ctx.launch_timestamp,
+            &session_ctx.model,
+            &session_ctx.working_directory,
+        )?)))
+    } else {
+        None
+    };
+
     // Handle failure injection from CLI flag
     if let Some(ref mode) = cli.failure {
         let spec = FailureExecutor::from_mode(mode);
@@ -115,18 +139,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
 
-        FailureExecutor::execute(&spec, &mut stderr).await?;
+        // Write queue-operation before recording error
+        if cli.print {
+            if let Some(ref writer) = state_writer {
+                writer.read().write_queue_operation()?;
+            }
+        }
+
+        // Record error to session JSONL before exiting
+        FailureExecutor::execute_with_session(&spec, &mut stderr, state_writer.as_ref()).await?;
         return Ok(());
     }
 
-    // Load scenario if specified
-    let mut scenario = if let Some(ref path) = cli.scenario {
-        Some(Scenario::load(Path::new(path))?)
-    } else {
-        None
-    };
-
-    // Apply response delay if configured
+    // Apply response delay if configured (scenario already loaded above)
     let timeouts =
         ResolvedTimeouts::resolve(scenario.as_ref().and_then(|s| s.config().timeouts.as_ref()));
     if timeouts.response_delay_ms > 0 {
@@ -150,7 +175,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     );
                 }
 
-                FailureExecutor::execute(failure_spec, &mut stderr).await?;
+                // Write queue-operation before recording error
+                if cli.print {
+                    if let Some(ref writer) = state_writer {
+                        writer.read().write_queue_operation()?;
+                    }
+                }
+
+                // Record error to session JSONL before exiting
+                FailureExecutor::execute_with_session(
+                    failure_spec,
+                    &mut stderr,
+                    state_writer.as_ref(),
+                )
+                .await?;
                 return Ok(());
             }
             (
@@ -192,10 +230,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         log.record(captured_args, outcome);
     }
 
-    // Build session context for state directory (needed for session_id in output)
-    let session_ctx = SessionContext::build(scenario.as_ref().map(|s| s.config()), &cli);
-
-    // Write output
+    // Write output (session_ctx already built above)
     let mut stdout = io::stdout();
     let response = response.unwrap_or(ResponseSpec::Simple(String::new()));
     let tool_calls = response.tool_calls().to_vec();
@@ -218,21 +253,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         mcp_servers,
     )?;
 
-    // Create state writer for recording turns and handling stateful tools
-    // Skip if --no-session-persistence is enabled
-    let state_writer = if !cli.no_session_persistence {
-        Some(Arc::new(RwLock::new(StateWriter::new(
-            session_ctx.session_id.to_string(),
-            &session_ctx.project_path,
-            session_ctx.launch_timestamp,
-            &session_ctx.model,
-            &session_ctx.working_directory,
-        )?)))
-    } else {
-        None
-    };
-
     // Write queue-operation for print mode (-p) unless persistence is disabled
+    // (state_writer already created above)
     if cli.print && !cli.no_session_persistence {
         if let Some(ref writer) = state_writer {
             writer.read().write_queue_operation()?;

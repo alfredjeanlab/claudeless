@@ -170,3 +170,121 @@ fn test_turn_tool_calls() {
 
     assert_eq!(session.last_turn().unwrap().tool_calls.len(), 1);
 }
+
+// ============================================================================
+// ErrorLine and append_error_jsonl tests
+// ============================================================================
+
+#[test]
+fn test_error_line_serialization() {
+    use chrono::Utc;
+
+    let error = ErrorLine {
+        line_type: "result",
+        subtype: "error".to_string(),
+        is_error: true,
+        session_id: "test-session-123".to_string(),
+        error: "Rate limited. Retry after 60 seconds.".to_string(),
+        error_type: Some("rate_limit_error".to_string()),
+        retry_after: Some(60),
+        duration_ms: 50,
+        timestamp: Utc::now().to_rfc3339(),
+    };
+
+    let json = serde_json::to_string(&error).unwrap();
+    assert!(json.contains(r#""type":"result""#));
+    assert!(json.contains(r#""subtype":"error""#));
+    assert!(json.contains(r#""isError":true"#));
+    assert!(json.contains(r#""errorType":"rate_limit_error""#));
+    assert!(json.contains(r#""retryAfter":60"#));
+}
+
+#[test]
+fn test_error_line_without_optional_fields() {
+    use chrono::Utc;
+
+    let error = ErrorLine {
+        line_type: "result",
+        subtype: "error".to_string(),
+        is_error: true,
+        session_id: "test-session-123".to_string(),
+        error: "Network error: Connection refused".to_string(),
+        error_type: None,
+        retry_after: None,
+        duration_ms: 5000,
+        timestamp: Utc::now().to_rfc3339(),
+    };
+
+    let json = serde_json::to_string(&error).unwrap();
+    assert!(json.contains(r#""error":"Network error: Connection refused""#));
+    // Optional fields should be skipped when None
+    assert!(!json.contains("errorType"));
+    assert!(!json.contains("retryAfter"));
+}
+
+#[test]
+fn test_append_error_jsonl() {
+    use chrono::Utc;
+
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("session.jsonl");
+
+    // Append an error
+    append_error_jsonl(
+        &path,
+        "session-456",
+        "Rate limited. Retry after 30 seconds.",
+        Some("rate_limit_error"),
+        Some(30),
+        100,
+        Utc::now(),
+    )
+    .unwrap();
+
+    // Read and verify content
+    let content = std::fs::read_to_string(&path).unwrap();
+    let line: serde_json::Value = serde_json::from_str(content.trim()).unwrap();
+
+    assert_eq!(line["type"], "result");
+    assert_eq!(line["subtype"], "error");
+    assert_eq!(line["isError"], true);
+    assert_eq!(line["sessionId"], "session-456");
+    assert_eq!(line["errorType"], "rate_limit_error");
+    assert_eq!(line["retryAfter"], 30);
+    assert_eq!(line["durationMs"], 100);
+}
+
+#[test]
+fn test_append_error_jsonl_appends_to_existing() {
+    use chrono::Utc;
+
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("session.jsonl");
+
+    // Write a queue-operation first
+    write_queue_operation(&path, "session-789", "dequeue", Utc::now()).unwrap();
+
+    // Append an error
+    append_error_jsonl(
+        &path,
+        "session-789",
+        "Network error: Connection refused",
+        Some("network_error"),
+        None,
+        5000,
+        Utc::now(),
+    )
+    .unwrap();
+
+    // Verify both lines exist
+    let content = std::fs::read_to_string(&path).unwrap();
+    let lines: Vec<&str> = content.lines().collect();
+    assert_eq!(lines.len(), 2);
+
+    let first: serde_json::Value = serde_json::from_str(lines[0]).unwrap();
+    assert_eq!(first["type"], "queue-operation");
+
+    let second: serde_json::Value = serde_json::from_str(lines[1]).unwrap();
+    assert_eq!(second["type"], "result");
+    assert_eq!(second["errorType"], "network_error");
+}

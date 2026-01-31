@@ -241,3 +241,73 @@ fn test_state_writer_record_tool_result_writes_dual_records() {
     assert!(lines[3].contains("toolu_123"));
     assert!(lines[3].contains("Exit code: 0"));
 }
+
+#[test]
+fn test_state_writer_record_error() {
+    let writer = StateWriter::new(
+        "error-test-session",
+        "/tmp/error-test",
+        Utc::now(),
+        "claude-sonnet-4-20250514",
+        "/tmp/error-test",
+    )
+    .unwrap();
+
+    // Record an error
+    writer
+        .record_error(
+            "Rate limited. Retry after 60 seconds.",
+            Some("rate_limit_error"),
+            Some(60),
+            50,
+        )
+        .unwrap();
+
+    // Verify JSONL file exists and contains error
+    let jsonl_path = writer.session_jsonl_path();
+    assert!(jsonl_path.exists());
+
+    let content = std::fs::read_to_string(&jsonl_path).unwrap();
+    let line: serde_json::Value = serde_json::from_str(content.trim()).unwrap();
+
+    assert_eq!(line["type"], "result");
+    assert_eq!(line["subtype"], "error");
+    assert_eq!(line["isError"], true);
+    assert_eq!(line["sessionId"], "error-test-session");
+    assert_eq!(line["errorType"], "rate_limit_error");
+    assert_eq!(line["retryAfter"], 60);
+    assert_eq!(line["durationMs"], 50);
+}
+
+#[test]
+fn test_state_writer_record_error_without_optional_fields() {
+    let writer = StateWriter::new(
+        "network-error-session",
+        "/tmp/network-error-test",
+        Utc::now(),
+        "claude-sonnet-4-20250514",
+        "/tmp/network-error-test",
+    )
+    .unwrap();
+
+    // Record a network error without retry_after
+    writer
+        .record_error(
+            "Network error: Connection refused",
+            Some("network_error"),
+            None,
+            5000,
+        )
+        .unwrap();
+
+    // Verify JSONL file content
+    let jsonl_path = writer.session_jsonl_path();
+    let content = std::fs::read_to_string(&jsonl_path).unwrap();
+    let line: serde_json::Value = serde_json::from_str(content.trim()).unwrap();
+
+    assert_eq!(line["type"], "result");
+    assert_eq!(line["errorType"], "network_error");
+    assert_eq!(line["durationMs"], 5000);
+    // retryAfter should not be present
+    assert!(line.get("retryAfter").is_none());
+}

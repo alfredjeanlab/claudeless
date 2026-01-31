@@ -19,11 +19,12 @@ pub mod words;
 pub use directory::{normalize_project_path, project_dir_name, StateDirectory, StateError};
 pub use plans::{Plan, PlansManager};
 pub use session::{
-    append_assistant_message_jsonl, append_result_jsonl, append_turn_jsonl,
+    append_assistant_message_jsonl, append_error_jsonl, append_result_jsonl, append_turn_jsonl,
     append_user_message_jsonl, write_queue_operation, AssistantMessage, AssistantMessageLine,
-    AssistantMessageParams, ContentBlock, QueueOperationLine, ResultLine, Session, SessionManager,
-    ToolResultContent, ToolResultMessageLine, ToolResultUserMessage, Turn, TurnParams,
-    TurnToolCall, Usage, UserMessage, UserMessageContent, UserMessageLine, UserMessageParams,
+    AssistantMessageParams, ContentBlock, ErrorLine, QueueOperationLine, ResultLine, Session,
+    SessionManager, ToolResultContent, ToolResultMessageLine, ToolResultUserMessage, Turn,
+    TurnParams, TurnToolCall, Usage, UserMessage, UserMessageContent, UserMessageLine,
+    UserMessageParams,
 };
 pub use sessions_index::{get_git_branch, SessionIndexEntry, SessionsIndex};
 pub use settings::{ClaudeSettings, McpServerConfig, PermissionSettings, Settings};
@@ -409,6 +410,38 @@ impl StateWriter {
     pub fn create_plan(&self, content: &str) -> std::io::Result<String> {
         let manager = PlansManager::new(self.dir.plans_dir());
         manager.create_markdown(content)
+    }
+
+    /// Record an error to the session JSONL file.
+    ///
+    /// Writes an error entry in the result wrapper format with `subtype: "error"`.
+    /// This is used by failure modes to record errors before exiting.
+    ///
+    /// # Arguments
+    /// * `error` - Error message
+    /// * `error_type` - Optional error type (e.g., "rate_limit_error", "network_error")
+    /// * `retry_after` - Optional retry delay in seconds (for rate limits)
+    /// * `duration_ms` - Time elapsed before error
+    pub fn record_error(
+        &self,
+        error: &str,
+        error_type: Option<&str>,
+        retry_after: Option<u64>,
+        duration_ms: u64,
+    ) -> std::io::Result<()> {
+        let project_dir = self.project_dir();
+        std::fs::create_dir_all(&project_dir)?;
+
+        let jsonl_path = self.session_jsonl_path();
+        append_error_jsonl(
+            &jsonl_path,
+            &self.session_id,
+            error,
+            error_type,
+            retry_after,
+            duration_ms,
+            Utc::now(),
+        )
     }
 }
 

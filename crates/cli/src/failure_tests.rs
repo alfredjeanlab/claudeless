@@ -209,3 +209,63 @@ async fn test_execute_real_format_network_error() {
 
     assert!(parsed["error"].as_str().unwrap().contains("Network error"));
 }
+
+// =========================================================================
+// execute_with_session Tests
+// =========================================================================
+
+// Note: execute_with_session calls execute() which exits the process for most
+// failure types. MalformedJson is the exception - it doesn't exit, so we can
+// test session recording behavior with it.
+
+#[tokio::test]
+async fn test_execute_with_session_malformed_json_skips_recording() {
+    use crate::state::StateWriter;
+    use chrono::Utc;
+
+    // Create a state writer
+    let writer = Arc::new(RwLock::new(
+        StateWriter::new(
+            "malformed-json-session",
+            "/tmp/malformed-json-test",
+            Utc::now(),
+            "claude-sonnet-4-20250514",
+            "/tmp/malformed-json-test",
+        )
+        .unwrap(),
+    ));
+
+    let mut buf = Vec::new();
+    let spec = FailureSpec::MalformedJson {
+        raw: r#"{"incomplete"#.to_string(),
+    };
+
+    // Execute with session - should skip recording for MalformedJson
+    FailureExecutor::execute_with_session(&spec, &mut buf, Some(&writer))
+        .await
+        .unwrap();
+
+    // MalformedJson should write the raw output but NOT record to JSONL
+    let output = String::from_utf8(buf).unwrap();
+    assert!(output.contains(r#"{"incomplete"#));
+
+    // Verify no error was written to JSONL (file shouldn't exist)
+    let jsonl_path = writer.read().session_jsonl_path();
+    assert!(!jsonl_path.exists());
+}
+
+#[tokio::test]
+async fn test_execute_with_session_no_state_writer() {
+    let mut buf = Vec::new();
+    let spec = FailureSpec::MalformedJson {
+        raw: r#"{"incomplete"#.to_string(),
+    };
+
+    // Execute without state writer - should not panic
+    FailureExecutor::execute_with_session(&spec, &mut buf, None)
+        .await
+        .unwrap();
+
+    let output = String::from_utf8(buf).unwrap();
+    assert!(output.contains(r#"{"incomplete"#));
+}

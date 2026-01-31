@@ -401,6 +401,27 @@ pub struct AssistantMessageParams<'a> {
     pub timestamp: DateTime<Utc>,
 }
 
+/// Error entry in JSONL format for failure events.
+///
+/// Uses the result wrapper format with `subtype: "error"` to match
+/// the format expected by watchers that parse JSONL for error fields.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ErrorLine {
+    #[serde(rename = "type")]
+    pub line_type: &'static str,
+    pub subtype: String,
+    pub is_error: bool,
+    pub session_id: String,
+    pub error: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub retry_after: Option<u64>,
+    pub duration_ms: u64,
+    pub timestamp: String,
+}
+
 /// Append an assistant message to a JSONL file.
 pub fn append_assistant_message_jsonl(
     path: &Path,
@@ -434,6 +455,36 @@ pub fn append_assistant_message_jsonl(
     };
     writeln!(file, "{}", serde_json::to_string(&assistant_line)?)?;
 
+    Ok(())
+}
+
+/// Append an error entry to a JSONL file.
+///
+/// Writes an error line in the result wrapper format with `subtype: "error"`.
+pub fn append_error_jsonl(
+    path: &Path,
+    session_id: &str,
+    error: &str,
+    error_type: Option<&str>,
+    retry_after: Option<u64>,
+    duration_ms: u64,
+    timestamp: DateTime<Utc>,
+) -> std::io::Result<()> {
+    let mut file = open_append(path)?;
+
+    let error_line = ErrorLine {
+        line_type: "result",
+        subtype: "error".to_string(),
+        is_error: true,
+        session_id: session_id.to_string(),
+        error: error.to_string(),
+        error_type: error_type.map(String::from),
+        retry_after,
+        duration_ms,
+        timestamp: timestamp.to_rfc3339(),
+    };
+
+    writeln!(file, "{}", serde_json::to_string(&error_line)?)?;
     Ok(())
 }
 
