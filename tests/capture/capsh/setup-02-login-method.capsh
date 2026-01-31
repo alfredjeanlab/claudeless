@@ -1,0 +1,11 @@
+# Capture login method selection dialog.
+# Config: empty
+
+wait "Dark mode" 10s
+send <Enter>
+wait "Select login method" 10s
+snapshot "setup_02_login_method"
+
+send <C-c>
+wait 500
+kill TERM
