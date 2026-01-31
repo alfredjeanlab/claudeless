@@ -115,6 +115,11 @@ pub struct Cli {
     #[arg(long)]
     pub mcp_debug: bool,
 
+    /// Disable session persistence - sessions will not be saved to disk and
+    /// cannot be resumed (only works with --print)
+    #[arg(long)]
+    pub no_session_persistence: bool,
+
     // Simulator-specific flags (not in real Claude)
     /// Scenario file or directory for scripted responses
     #[arg(long, env = "CLAUDELESS_SCENARIO")]
@@ -164,6 +169,14 @@ impl Cli {
     pub fn should_use_tui(&self) -> bool {
         use std::io::IsTerminal;
         !self.print && std::io::stdin().is_terminal()
+    }
+
+    /// Validate that --no-session-persistence is only used with --print
+    pub fn validate_no_session_persistence(&self) -> Result<(), &'static str> {
+        if self.no_session_persistence && !self.print {
+            return Err("--no-session-persistence can only be used with --print mode");
+        }
+        Ok(())
     }
 }
 
