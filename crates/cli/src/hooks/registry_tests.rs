@@ -10,7 +10,7 @@ fn test_registry_new() {
     assert!(!registry.has_hooks(&HookEvent::PreToolExecution));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_register_passthrough() {
     let mut registry = HookRegistry::new();
     registry
@@ -32,7 +32,7 @@ async fn test_register_passthrough() {
     assert!(responses[0].proceed);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_register_blocking() {
     let mut registry = HookRegistry::new();
     registry
@@ -53,7 +53,7 @@ async fn test_register_blocking() {
     assert_eq!(responses[0].error, Some("Not allowed".to_string()));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_register_echo() {
     let mut registry = HookRegistry::new();
     registry.register_echo(HookEvent::PromptSubmit).unwrap();
@@ -66,7 +66,7 @@ async fn test_register_echo() {
     assert!(responses[0].data.is_some());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_register_logger() {
     let temp = tempfile::tempdir().unwrap();
     let log_path = temp.path().join("hook.log");
@@ -87,13 +87,13 @@ async fn test_register_logger() {
     assert!(log_content.contains("session_start"));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_register_inline() {
     let mut registry = HookRegistry::new();
     registry
         .register_inline(
             HookEvent::PreToolExecution,
-            r#"echo '{"proceed": true, "data": {"custom": "value"}}'"#,
+            r#"cat > /dev/null; echo '{"proceed": true, "data": {"custom": "value"}}'"#,
             false,
         )
         .unwrap();
@@ -128,7 +128,7 @@ fn test_clear() {
     assert!(!registry.has_hooks(&HookEvent::PostToolExecution));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_multiple_hooks_same_event() {
     let mut registry = HookRegistry::new();
 
@@ -152,7 +152,7 @@ async fn test_multiple_hooks_same_event() {
     assert_eq!(responses.len(), 2);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_blocking_stops_processing() {
     let mut registry = HookRegistry::new();
 

@@ -40,23 +40,16 @@ impl HookRegistry {
         script_content: &str,
         blocking: bool,
     ) -> std::io::Result<()> {
-        // Create temp script file
+        // Create temp script file (no shebang needed since executor runs via /bin/bash)
         let mut file = tempfile::Builder::new()
             .prefix("hook_")
             .suffix(".sh")
             .tempfile()?;
 
-        writeln!(file, "#!/bin/bash")?;
         write!(file, "{}", script_content)?;
+        file.flush()?;
 
         let path = file.into_temp_path();
-
-        // Make executable
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))?;
-        }
 
         self.executor.register(
             event,

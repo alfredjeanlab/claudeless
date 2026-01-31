@@ -98,7 +98,8 @@ impl HookExecutor {
         let message_json =
             serde_json::to_string(message).map_err(|e| HookError::Serialization(e.to_string()))?;
 
-        let mut child = Command::new(&config.script_path)
+        let mut child = Command::new("/bin/bash")
+            .arg(&config.script_path)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
