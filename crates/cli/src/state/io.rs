@@ -22,3 +22,13 @@ pub fn to_io_json<T: serde::Serialize>(value: &T) -> std::io::Result<String> {
 pub fn to_io_error<E: std::error::Error + Send + Sync + 'static>(e: E) -> std::io::Error {
     std::io::Error::new(std::io::ErrorKind::InvalidData, e)
 }
+
+/// Parse content as JSON5, falling back to strict JSON on parse failure.
+///
+/// JSON5 supports comments and trailing commas, making config files more readable.
+/// Falls back to strict JSON parsing if JSON5 parsing fails, for broad compatibility.
+pub fn parse_json5_or_json<T: serde::de::DeserializeOwned>(
+    content: &str,
+) -> Result<T, serde_json::Error> {
+    json5::from_str(content).or_else(|_| serde_json::from_str(content))
+}

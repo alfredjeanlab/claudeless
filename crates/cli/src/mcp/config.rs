@@ -6,6 +6,7 @@
 //! Supports parsing MCP configuration files in JSON and JSON5 formats,
 //! compatible with Claude's `--mcp-config` flag.
 
+use crate::state::parse_json5_or_json;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -143,10 +144,7 @@ impl McpConfig {
 
     /// Parse from string content.
     pub fn parse(content: &str) -> Result<Self, McpConfigError> {
-        // Try JSON5 first (supports comments), fall back to strict JSON
-        json5::from_str(content)
-            .or_else(|_| serde_json::from_str(content))
-            .map_err(|e| McpConfigError::Parse(e.to_string()))
+        parse_json5_or_json(content).map_err(|e| McpConfigError::Parse(e.to_string()))
     }
 
     /// Load from JSON string (for --mcp-config inline JSON).

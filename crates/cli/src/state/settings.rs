@@ -3,7 +3,7 @@
 
 //! Global settings management.
 
-use super::io::{to_io_error, JsonLoad};
+use super::io::{parse_json5_or_json, to_io_error, JsonLoad};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -170,9 +170,7 @@ impl ClaudeSettings {
 
     /// Parse settings from a JSON/JSON5 string.
     pub fn parse(content: &str) -> std::io::Result<Self> {
-        json5::from_str(content)
-            .or_else(|_| serde_json::from_str(content))
-            .map_err(to_io_error)
+        parse_json5_or_json(content).map_err(to_io_error)
     }
 
     /// Merge another settings file on top of this one.
