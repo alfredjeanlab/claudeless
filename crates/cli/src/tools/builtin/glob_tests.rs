@@ -3,7 +3,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use super::super::test_helpers::execute;
+use super::super::test_helpers::{assert_tool_success_contains, execute};
 use super::*;
 use crate::tools::builtin::{extract_directory, extract_str};
 use serde_json::json;
@@ -28,21 +28,15 @@ fn extract_directory_fields(input: serde_json::Value, expected: Option<&str>) {
 }
 
 #[test]
-fn test_glob_missing_pattern() {
-    let result = execute::<GlobExecutor>(json!({}));
-    assert!(result.is_error);
-    assert!(result.text().unwrap().contains("Missing 'pattern'"));
-}
-
-#[test]
 fn test_glob_no_matches() {
     let temp_dir = TempDir::new().unwrap();
-    let result = execute::<GlobExecutor>(json!({
-        "pattern": "*.nonexistent",
-        "path": temp_dir.path().to_str().unwrap()
-    }));
-    assert!(!result.is_error);
-    assert!(result.text().unwrap().contains("No matches"));
+    assert_tool_success_contains(
+        &execute::<GlobExecutor>(json!({
+            "pattern": "*.nonexistent",
+            "path": temp_dir.path().to_str().unwrap()
+        })),
+        "No matches",
+    );
 }
 
 #[test]

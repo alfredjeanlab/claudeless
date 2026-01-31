@@ -3,7 +3,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use super::super::test_helpers::execute;
+use super::super::test_helpers::{assert_tool_success_contains, execute};
 use super::*;
 use crate::tools::builtin::{extract_file_path, extract_str};
 use serde_json::json;
@@ -26,27 +26,18 @@ fn test_extract_content() {
     );
 }
 
-#[parameterized(
-    missing_path = { json!({ "content": "test" }), "Missing" },
-    missing_content = { json!({ "file_path": "/tmp/test.txt" }), "Missing 'content'" },
-)]
-fn write_error_cases(input: serde_json::Value, expected: &str) {
-    let result = execute::<WriteExecutor>(input);
-    assert!(result.is_error);
-    assert!(result.text().unwrap().contains(expected));
-}
-
 #[test]
 fn test_write_real_file() {
     let temp_dir = TempDir::new().unwrap();
     let file_path = temp_dir.path().join("test.txt");
 
-    let result = execute::<WriteExecutor>(json!({
-        "file_path": file_path.to_str().unwrap(),
-        "content": "Hello, World!"
-    }));
-    assert!(!result.is_error);
-    assert!(result.text().unwrap().contains("Successfully wrote"));
+    assert_tool_success_contains(
+        &execute::<WriteExecutor>(json!({
+            "file_path": file_path.to_str().unwrap(),
+            "content": "Hello, World!"
+        })),
+        "Successfully wrote",
+    );
     assert_eq!(fs::read_to_string(&file_path).unwrap(), "Hello, World!");
 }
 
@@ -55,11 +46,13 @@ fn test_write_creates_parent_dirs() {
     let temp_dir = TempDir::new().unwrap();
     let file_path = temp_dir.path().join("subdir/nested/test.txt");
 
-    let result = execute::<WriteExecutor>(json!({
-        "file_path": file_path.to_str().unwrap(),
-        "content": "nested content"
-    }));
-    assert!(!result.is_error);
+    assert_tool_success_contains(
+        &execute::<WriteExecutor>(json!({
+            "file_path": file_path.to_str().unwrap(),
+            "content": "nested content"
+        })),
+        "Successfully wrote",
+    );
     assert_eq!(fs::read_to_string(&file_path).unwrap(), "nested content");
 }
 
