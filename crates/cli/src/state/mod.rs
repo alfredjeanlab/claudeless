@@ -7,6 +7,7 @@
 //! including todos, projects, plans, settings, and session state.
 
 pub mod directory;
+pub mod io;
 pub mod plans;
 pub mod session;
 pub mod sessions_index;
@@ -31,6 +32,8 @@ pub use settings::{ClaudeSettings, McpServerConfig, PermissionSettings, Settings
 pub use settings_loader::{SettingsLoader, SettingsPaths};
 pub use settings_source::SettingSource;
 pub use todos::{ClaudeTodoItem, TodoItem, TodoState, TodoStatus};
+
+pub use io::{to_io_error, to_io_json, JsonLoad};
 
 use chrono::{DateTime, Utc};
 use std::path::PathBuf;

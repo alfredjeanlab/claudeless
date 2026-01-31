@@ -3,6 +3,7 @@
 
 //! Global settings management.
 
+use super::io::{to_io_error, JsonLoad};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -19,13 +20,6 @@ impl Settings {
     /// Create empty settings
     pub fn new() -> Self {
         Self::default()
-    }
-
-    /// Load settings from file
-    pub fn load(path: &Path) -> std::io::Result<Self> {
-        let content = std::fs::read_to_string(path)?;
-        serde_json::from_str(&content)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
     }
 
     /// Save settings to file
@@ -91,6 +85,8 @@ impl Settings {
         serde_json::from_value(json).ok()
     }
 }
+
+impl JsonLoad for Settings {}
 
 /// Claude Code permission settings schema.
 ///
@@ -176,7 +172,7 @@ impl ClaudeSettings {
     pub fn parse(content: &str) -> std::io::Result<Self> {
         json5::from_str(content)
             .or_else(|_| serde_json::from_str(content))
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+            .map_err(to_io_error)
     }
 
     /// Merge another settings file on top of this one.

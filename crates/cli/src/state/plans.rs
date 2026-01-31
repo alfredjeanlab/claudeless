@@ -3,6 +3,7 @@
 
 //! Saved plans management.
 
+use super::io::JsonLoad;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -93,19 +94,14 @@ impl Plan {
         UNIX_EPOCH + Duration::from_millis(self.modified_at_ms)
     }
 
-    /// Load from file
-    pub fn load(path: &Path) -> std::io::Result<Self> {
-        let content = std::fs::read_to_string(path)?;
-        serde_json::from_str(&content)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
-    }
-
     /// Save to file
     pub fn save(&self, path: &Path) -> std::io::Result<()> {
         let json = serde_json::to_string_pretty(self)?;
         std::fs::write(path, json)
     }
 }
+
+impl JsonLoad for Plan {}
 
 /// Plans manager
 pub struct PlansManager {

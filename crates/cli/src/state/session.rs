@@ -7,6 +7,7 @@ mod jsonl;
 
 pub use jsonl::*;
 
+use super::io::JsonLoad;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -155,17 +156,13 @@ impl Session {
         self.turns.len()
     }
 
-    pub fn load(path: &std::path::Path) -> std::io::Result<Self> {
-        let content = std::fs::read_to_string(path)?;
-        serde_json::from_str(&content)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
-    }
-
     pub fn save(&self, path: &std::path::Path) -> std::io::Result<()> {
         let json = serde_json::to_string_pretty(self)?;
         std::fs::write(path, json)
     }
 }
+
+impl JsonLoad for Session {}
 
 /// Session manager for multiple sessions
 pub struct SessionManager {
