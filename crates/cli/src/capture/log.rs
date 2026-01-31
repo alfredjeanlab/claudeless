@@ -12,6 +12,7 @@ use std::sync::Arc;
 use std::time::{Instant, SystemTime};
 
 /// Capture log for recording interactions
+#[derive(Clone)]
 pub struct CaptureLog {
     start: Instant,
     interactions: Arc<Mutex<Vec<CapturedInteraction>>>,
@@ -128,16 +129,6 @@ impl CaptureLog {
 impl Default for CaptureLog {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl Clone for CaptureLog {
-    fn clone(&self) -> Self {
-        Self {
-            start: self.start,
-            interactions: Arc::clone(&self.interactions),
-            file_writer: self.file_writer.as_ref().map(Arc::clone),
-        }
     }
 }
 
