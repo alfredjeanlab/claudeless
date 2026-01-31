@@ -4,7 +4,7 @@
 //! Claude CLI Simulator binary entry point.
 
 use std::io::{self, IsTerminal, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -21,7 +21,9 @@ use claudeless::permission::PermissionBypass;
 use claudeless::scenario::Scenario;
 use claudeless::session::SessionContext;
 use claudeless::state::session::SessionManager;
-use claudeless::state::StateWriter;
+use claudeless::state::{
+    ClaudeSettings, SettingsLoader, SettingsPaths, StateDirectory, StateWriter,
+};
 use claudeless::time::ClockHandle;
 use claudeless::tools::builtin::BuiltinExecutor;
 use claudeless::tools::{
@@ -48,6 +50,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("{}", PermissionBypass::error_message());
         std::process::exit(1);
     }
+
+    // Load settings from files and CLI overrides
+    let _settings = load_settings(&cli);
 
     // Load and initialize MCP servers
     let mcp_manager = load_mcp_configs(&cli).await?;
@@ -476,6 +481,37 @@ async fn load_mcp_configs(
     }
 
     Ok(Some(Arc::new(RwLock::new(manager))))
+}
+
+/// Load settings from all sources with correct precedence.
+///
+/// Loads settings files and CLI-provided settings:
+/// 1. Global (~/.claude/settings.json) - lowest priority
+/// 2. Project (.claude/settings.json)
+/// 3. Local (.claude/settings.local.json)
+/// 4. CLI --settings flags (in order specified) - highest priority
+fn load_settings(cli: &Cli) -> ClaudeSettings {
+    let working_dir = cli
+        .cwd
+        .as_ref()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+
+    // Resolve state directory (CLAUDELESS_STATE_DIR or CLAUDE_LOCAL_STATE_DIR or temp)
+    let state_dir = StateDirectory::resolve().ok();
+
+    let settings = if let Some(ref dir) = state_dir {
+        let paths = SettingsPaths::resolve(dir.root(), &working_dir);
+        let loader = SettingsLoader::new(paths);
+        loader.load_with_overrides(&cli.settings)
+    } else {
+        // No state directory available, just load from CLI settings
+        let paths = SettingsPaths::project_only(&working_dir);
+        let loader = SettingsLoader::new(paths);
+        loader.load_with_overrides(&cli.settings)
+    };
+
+    settings
 }
 
 /// Run in TUI mode with MCP support

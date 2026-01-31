@@ -169,7 +169,13 @@ impl ClaudeSettings {
     /// Load settings from a JSON file.
     pub fn load(path: &Path) -> std::io::Result<Self> {
         let content = std::fs::read_to_string(path)?;
-        serde_json::from_str(&content)
+        Self::parse(&content)
+    }
+
+    /// Parse settings from a JSON/JSON5 string.
+    pub fn parse(content: &str) -> std::io::Result<Self> {
+        json5::from_str(content)
+            .or_else(|_| serde_json::from_str(content))
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
     }
 
@@ -201,6 +207,20 @@ impl ClaudeSettings {
         for (key, value) in other.extra {
             self.extra.insert(key, value);
         }
+    }
+}
+
+/// Load settings from a file path or inline JSON string.
+///
+/// Determines whether input is a file path or inline JSON based on content:
+/// - Starts with `{` -> parse as inline JSON
+/// - Otherwise -> treat as file path
+pub fn load_settings_input(input: &str) -> std::io::Result<ClaudeSettings> {
+    let trimmed = input.trim();
+    if trimmed.starts_with('{') {
+        ClaudeSettings::parse(trimmed)
+    } else {
+        ClaudeSettings::load(Path::new(input))
     }
 }
 

@@ -215,6 +215,8 @@ fn test_loader_existing_files() {
     assert_eq!(existing.len(), 2);
 }
 
+// resolve_with_sources() tests
+
 #[test]
 fn test_resolve_with_sources_user_only() {
     let state_dir = Path::new("/home/user/.claude");
@@ -352,4 +354,107 @@ fn test_loader_user_only_ignores_project() {
 
     // Should have global settings, not project
     assert_eq!(settings.permissions.allow, vec!["Read"]);
+}
+
+// load_with_overrides() tests
+
+#[test]
+fn test_load_with_overrides_inline_json() {
+    let temp = tempfile::tempdir().unwrap();
+    let paths = SettingsPaths::project_only(temp.path());
+    let loader = SettingsLoader::new(paths);
+
+    let cli_settings = vec![r#"{"permissions": {"allow": ["Read"]}}"#.to_string()];
+    let settings = loader.load_with_overrides(&cli_settings);
+
+    assert_eq!(settings.permissions.allow, vec!["Read"]);
+}
+
+#[test]
+fn test_load_with_overrides_multiple() {
+    let temp = tempfile::tempdir().unwrap();
+    let paths = SettingsPaths::project_only(temp.path());
+    let loader = SettingsLoader::new(paths);
+
+    let cli_settings = vec![
+        r#"{"permissions": {"allow": ["Read"]}}"#.to_string(),
+        r#"{"permissions": {"allow": ["Write"]}}"#.to_string(),
+    ];
+    let settings = loader.load_with_overrides(&cli_settings);
+
+    // Later settings should override earlier ones
+    assert_eq!(settings.permissions.allow, vec!["Write"]);
+}
+
+#[test]
+fn test_load_with_overrides_env_merged() {
+    let temp = tempfile::tempdir().unwrap();
+    let paths = SettingsPaths::project_only(temp.path());
+    let loader = SettingsLoader::new(paths);
+
+    let cli_settings = vec![
+        r#"{"env": {"A": "1"}}"#.to_string(),
+        r#"{"env": {"B": "2"}}"#.to_string(),
+    ];
+    let settings = loader.load_with_overrides(&cli_settings);
+
+    // Env maps should be merged
+    assert_eq!(settings.env.get("A"), Some(&"1".to_string()));
+    assert_eq!(settings.env.get("B"), Some(&"2".to_string()));
+}
+
+#[test]
+fn test_load_with_overrides_cli_overrides_file() {
+    let global_dir = tempfile::tempdir().unwrap();
+    let work_dir = tempfile::tempdir().unwrap();
+
+    // Create global settings file
+    fs::write(
+        global_dir.path().join("settings.json"),
+        r#"{"permissions": {"allow": ["Read"]}}"#,
+    )
+    .unwrap();
+
+    let paths = SettingsPaths::resolve(global_dir.path(), work_dir.path());
+    let loader = SettingsLoader::new(paths);
+
+    // CLI settings should override file settings
+    let cli_settings = vec![r#"{"permissions": {"allow": ["Bash"]}}"#.to_string()];
+    let settings = loader.load_with_overrides(&cli_settings);
+
+    assert_eq!(settings.permissions.allow, vec!["Bash"]);
+}
+
+#[test]
+fn test_load_with_overrides_invalid_skipped() {
+    let temp = tempfile::tempdir().unwrap();
+    let paths = SettingsPaths::project_only(temp.path());
+    let loader = SettingsLoader::new(paths);
+
+    // Mix of valid and invalid settings
+    let cli_settings = vec![
+        r#"{"permissions": {"allow": ["Read"]}}"#.to_string(),
+        "not valid json".to_string(),
+        r#"{"permissions": {"deny": ["Bash(rm *)"]}}"#.to_string(),
+    ];
+    let settings = loader.load_with_overrides(&cli_settings);
+
+    // Valid settings should still be applied
+    assert_eq!(settings.permissions.allow, vec!["Read"]);
+    assert_eq!(settings.permissions.deny, vec!["Bash(rm *)"]);
+}
+
+#[test]
+fn test_load_with_overrides_file_path() {
+    let temp = tempfile::tempdir().unwrap();
+    let settings_file = temp.path().join("custom-settings.json");
+    fs::write(&settings_file, r#"{"permissions": {"allow": ["Write"]}}"#).unwrap();
+
+    let paths = SettingsPaths::project_only(temp.path());
+    let loader = SettingsLoader::new(paths);
+
+    let cli_settings = vec![settings_file.to_str().unwrap().to_string()];
+    let settings = loader.load_with_overrides(&cli_settings);
+
+    assert_eq!(settings.permissions.allow, vec!["Write"]);
 }

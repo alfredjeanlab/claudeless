@@ -34,6 +34,7 @@ fn default_cli() -> Cli {
         strict_mcp_config: false,
         mcp_debug: false,
         no_session_persistence: false,
+        settings: vec![],
         scenario: None,
         capture: None,
         failure: None,
