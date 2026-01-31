@@ -278,7 +278,7 @@ fn test_permissions() {
 // 3. ~/.claude may contain sensitive session data, API keys, or settings
 // 4. Parallel test runs could conflict if sharing the real ~/.claude
 //
-// The only way to use a real path is to explicitly set CLAUDELESS_STATE_DIR.
+// The only way to use a real path is to explicitly set CLAUDELESS_CONFIG_DIR.
 
 #[test]
 fn test_resolve_defaults_to_temp_directory_not_home() {
@@ -316,92 +316,122 @@ fn test_resolve_defaults_to_temp_directory_not_home() {
 
 #[test]
 fn test_resolve_respects_env_var_override() {
-    // When CLAUDELESS_STATE_DIR is explicitly set, resolve() should use it.
+    // When CLAUDELESS_CONFIG_DIR is explicitly set, resolve() should use it.
     // This allows users to intentionally specify a directory for testing.
 
     let test_dir = tempfile::tempdir().unwrap();
     let test_path = test_dir.path().join("custom-claudeless");
 
-    std::env::set_var("CLAUDELESS_STATE_DIR", &test_path);
+    std::env::set_var("CLAUDELESS_CONFIG_DIR", &test_path);
 
     let dir = StateDirectory::resolve().unwrap();
     assert_eq!(
         dir.root(),
         test_path.as_path(),
-        "resolve() should use CLAUDELESS_STATE_DIR when set"
+        "resolve() should use CLAUDELESS_CONFIG_DIR when set"
     );
 
     // Clean up env var
-    std::env::remove_var("CLAUDELESS_STATE_DIR");
+    std::env::remove_var("CLAUDELESS_CONFIG_DIR");
 }
 
 #[test]
 fn test_resolve_with_env_var_does_not_require_existing_dir() {
-    // The directory specified by CLAUDELESS_STATE_DIR doesn't need to exist
+    // The directory specified by CLAUDELESS_CONFIG_DIR doesn't need to exist
     // yet - it will be created when initialize() is called.
     //
     // Use a unique temp dir to avoid race conditions with other tests
-    // that also set CLAUDELESS_STATE_DIR.
+    // that also set CLAUDELESS_CONFIG_DIR.
     let temp = tempfile::tempdir().unwrap();
     let non_existent = temp.path().join("claudeless-test-nonexistent");
     assert!(!non_existent.exists());
 
-    std::env::set_var("CLAUDELESS_STATE_DIR", &non_existent);
+    std::env::set_var("CLAUDELESS_CONFIG_DIR", &non_existent);
 
     let dir = StateDirectory::resolve().unwrap();
     assert_eq!(dir.root(), non_existent.as_path());
     assert!(!dir.is_initialized());
 
     // Clean up
-    std::env::remove_var("CLAUDELESS_STATE_DIR");
+    std::env::remove_var("CLAUDELESS_CONFIG_DIR");
 }
 
 #[test]
-fn test_resolve_respects_claude_local_state_dir() {
-    // When CLAUDE_LOCAL_STATE_DIR is set (and CLAUDELESS_STATE_DIR is not),
+fn test_resolve_respects_claude_config_dir() {
+    // When CLAUDE_CONFIG_DIR is set (and CLAUDELESS_CONFIG_DIR/CLAUDELESS_STATE_DIR are not),
     // resolve() should use it. This provides compatibility with Claude Code's
     // standard environment variable.
 
     let test_dir = tempfile::tempdir().unwrap();
-    let test_path = test_dir.path().join("claude-local-state");
+    let test_path = test_dir.path().join("claude-config");
 
-    // Ensure CLAUDELESS_STATE_DIR is not set
+    // Ensure claudeless-specific vars are not set
+    std::env::remove_var("CLAUDELESS_CONFIG_DIR");
     std::env::remove_var("CLAUDELESS_STATE_DIR");
-    std::env::set_var("CLAUDE_LOCAL_STATE_DIR", &test_path);
+    std::env::set_var("CLAUDE_CONFIG_DIR", &test_path);
 
     let dir = StateDirectory::resolve().unwrap();
     assert_eq!(
         dir.root(),
         test_path.as_path(),
-        "resolve() should use CLAUDE_LOCAL_STATE_DIR when CLAUDELESS_STATE_DIR is not set"
+        "resolve() should use CLAUDE_CONFIG_DIR when claudeless-specific vars are not set"
     );
 
     // Clean up env var
-    std::env::remove_var("CLAUDE_LOCAL_STATE_DIR");
+    std::env::remove_var("CLAUDE_CONFIG_DIR");
 }
 
 #[test]
-fn test_resolve_claudeless_state_dir_takes_precedence() {
-    // When both CLAUDELESS_STATE_DIR and CLAUDE_LOCAL_STATE_DIR are set,
-    // CLAUDELESS_STATE_DIR should take precedence.
+fn test_resolve_claudeless_config_dir_takes_precedence() {
+    // When CLAUDELESS_CONFIG_DIR, CLAUDELESS_STATE_DIR, and CLAUDE_CONFIG_DIR are all set,
+    // CLAUDELESS_CONFIG_DIR should take precedence.
 
     let test_dir = tempfile::tempdir().unwrap();
-    let claudeless_path = test_dir.path().join("claudeless-state");
-    let claude_path = test_dir.path().join("claude-local-state");
+    let config_path = test_dir.path().join("claudeless-config");
+    let state_path = test_dir.path().join("claudeless-state");
+    let claude_path = test_dir.path().join("claude-config");
 
-    std::env::set_var("CLAUDELESS_STATE_DIR", &claudeless_path);
-    std::env::set_var("CLAUDE_LOCAL_STATE_DIR", &claude_path);
+    std::env::set_var("CLAUDELESS_CONFIG_DIR", &config_path);
+    std::env::set_var("CLAUDELESS_STATE_DIR", &state_path);
+    std::env::set_var("CLAUDE_CONFIG_DIR", &claude_path);
 
     let dir = StateDirectory::resolve().unwrap();
     assert_eq!(
         dir.root(),
-        claudeless_path.as_path(),
-        "CLAUDELESS_STATE_DIR should take precedence over CLAUDE_LOCAL_STATE_DIR"
+        config_path.as_path(),
+        "CLAUDELESS_CONFIG_DIR should take precedence over CLAUDELESS_STATE_DIR and CLAUDE_CONFIG_DIR"
+    );
+
+    // Clean up env vars
+    std::env::remove_var("CLAUDELESS_CONFIG_DIR");
+    std::env::remove_var("CLAUDELESS_STATE_DIR");
+    std::env::remove_var("CLAUDE_CONFIG_DIR");
+}
+
+#[test]
+fn test_resolve_claudeless_state_dir_backwards_compat() {
+    // CLAUDELESS_STATE_DIR should still work for backwards compatibility,
+    // taking precedence over CLAUDE_CONFIG_DIR but not CLAUDELESS_CONFIG_DIR.
+
+    let test_dir = tempfile::tempdir().unwrap();
+    let state_path = test_dir.path().join("claudeless-state");
+    let claude_path = test_dir.path().join("claude-config");
+
+    // Ensure CLAUDELESS_CONFIG_DIR is not set
+    std::env::remove_var("CLAUDELESS_CONFIG_DIR");
+    std::env::set_var("CLAUDELESS_STATE_DIR", &state_path);
+    std::env::set_var("CLAUDE_CONFIG_DIR", &claude_path);
+
+    let dir = StateDirectory::resolve().unwrap();
+    assert_eq!(
+        dir.root(),
+        state_path.as_path(),
+        "CLAUDELESS_STATE_DIR should take precedence over CLAUDE_CONFIG_DIR for backwards compatibility"
     );
 
     // Clean up env vars
     std::env::remove_var("CLAUDELESS_STATE_DIR");
-    std::env::remove_var("CLAUDE_LOCAL_STATE_DIR");
+    std::env::remove_var("CLAUDE_CONFIG_DIR");
 }
 
 #[test]
