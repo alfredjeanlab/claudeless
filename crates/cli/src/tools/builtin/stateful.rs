@@ -26,11 +26,7 @@ pub fn execute_todo_write(call: &ToolCallSpec, state_writer: &StateWriter) -> To
         .map(|t| {
             serde_json::json!({
                 "content": t.content,
-                "status": match t.status {
-                    TodoStatus::Pending => "pending",
-                    TodoStatus::InProgress => "in_progress",
-                    TodoStatus::Completed => "completed",
-                },
+                "status": t.status,
                 "activeForm": t.active_form.clone().unwrap_or_else(|| t.content.clone())
             })
         })
@@ -64,12 +60,7 @@ pub fn execute_todo_write(call: &ToolCallSpec, state_writer: &StateWriter) -> To
 /// Parse a single todo item from JSON.
 fn parse_todo_item(value: &serde_json::Value) -> Option<TodoItem> {
     let content = value.get("content")?.as_str()?.to_string();
-    let status = match value.get("status")?.as_str()? {
-        "pending" => TodoStatus::Pending,
-        "in_progress" => TodoStatus::InProgress,
-        "completed" => TodoStatus::Completed,
-        _ => TodoStatus::Pending,
-    };
+    let status: TodoStatus = serde_json::from_value(value.get("status")?.clone()).ok()?;
     let active_form = value
         .get("activeForm")
         .and_then(|v| v.as_str())

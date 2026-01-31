@@ -106,9 +106,9 @@ fn test_state_writer_write_todos() {
     let parsed: Vec<ClaudeTodoItem> = serde_json::from_str(&content).unwrap();
     assert_eq!(parsed.len(), 2);
     assert_eq!(parsed[0].content, "Build project");
-    assert_eq!(parsed[0].status, "pending");
+    assert_eq!(parsed[0].status, TodoStatus::Pending);
     assert_eq!(parsed[0].active_form, "Building project");
-    assert_eq!(parsed[1].status, "in_progress");
+    assert_eq!(parsed[1].status, TodoStatus::InProgress);
 }
 
 #[test]

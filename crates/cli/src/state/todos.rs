@@ -47,7 +47,7 @@ pub struct ClaudeTodoItem {
     /// Todo description.
     pub content: String,
     /// Status: "pending", "in_progress", or "completed".
-    pub status: String,
+    pub status: TodoStatus,
     /// Display form during execution (e.g., "Building the project").
     pub active_form: String,
 }
@@ -57,12 +57,7 @@ impl ClaudeTodoItem {
     pub fn from_todo(item: &TodoItem) -> Self {
         Self {
             content: item.content.clone(),
-            status: match item.status {
-                TodoStatus::Pending => "pending",
-                TodoStatus::InProgress => "in_progress",
-                TodoStatus::Completed => "completed",
-            }
-            .to_string(),
+            status: item.status.clone(),
             active_form: item
                 .active_form
                 .clone()
