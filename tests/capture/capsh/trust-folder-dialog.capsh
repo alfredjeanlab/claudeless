@@ -1,0 +1,30 @@
+# Capture trust folder dialog when accessing external directory.
+# Requires API call - Claude must decide to access an external folder.
+# Note: Requires KEYBOARD_TIMEOUT=120 or longer (API response time varies).
+# Run with: KEYBOARD_TIMEOUT=120 ./tests/capture/capture.sh --script trust-folder-dialog
+# Args: --model haiku
+
+# Handle initial trust dialog if it appears, then wait for ready state
+if wait "trust this folder" 5s
+    send <Enter>
+    wait "for shortcuts" 10s
+else
+    wait "for shortcuts" 10s
+end
+
+# Ask Claude to access an external folder (outside project directory)
+send "list files in ~/Downloads"
+wait 100
+send <Enter>
+
+# Wait for trust folder dialog to appear (asking to trust external folder)
+wait "trust" 120s
+wait "Downloads" 10s
+snapshot "trust_folder_dialog"
+
+# Cancel and exit cleanly
+send <Esc>
+wait 500
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
