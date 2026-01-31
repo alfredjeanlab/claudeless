@@ -275,7 +275,7 @@ Always use `--script` to run only the script being authored (unless otherwise in
 
 ### Output structure
 
-```
+```example
 tests/capture/output/v{VERSION}/
 ├── {script-name}/
 │   ├── state/              # Isolated Claude config/state after capture
