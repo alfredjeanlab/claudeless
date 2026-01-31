@@ -171,6 +171,24 @@ pub struct RenderState {
 #[derive(Clone, Debug)]
 pub struct PermissionRequest {
     pub dialog: RichPermissionDialog,
+    /// Tool use ID for JSONL recording
+    pub tool_use_id: Option<String>,
+}
+
+impl PermissionRequest {
+    pub fn new(dialog: RichPermissionDialog) -> Self {
+        Self {
+            dialog,
+            tool_use_id: None,
+        }
+    }
+
+    pub fn with_tool_use_id(dialog: RichPermissionDialog, tool_use_id: String) -> Self {
+        Self {
+            dialog,
+            tool_use_id: Some(tool_use_id),
+        }
+    }
 }
 
 /// Reason for app exit
