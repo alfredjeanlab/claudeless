@@ -5,6 +5,35 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Generates `success()` and `error()` factory methods for tool result types.
+///
+/// Both `ToolExecutionResult` and `ToolResultBlock` share this pattern.
+/// Use: `impl_tool_result_factories!([ContentType::Text], extra_field: value, ...);`
+#[macro_export]
+macro_rules! impl_tool_result_factories {
+    ([$($content_text_path:tt)+], $($extra_field:ident: $extra_value:expr),*) => {
+        /// Create a successful text result.
+        pub fn success(tool_use_id: impl Into<String>, text: impl Into<String>) -> Self {
+            Self {
+                $($extra_field: $extra_value,)*
+                tool_use_id: tool_use_id.into(),
+                is_error: false,
+                content: vec![$($content_text_path)+ { text: text.into() }],
+            }
+        }
+
+        /// Create an error result.
+        pub fn error(tool_use_id: impl Into<String>, message: impl Into<String>) -> Self {
+            Self {
+                $($extra_field: $extra_value,)*
+                tool_use_id: tool_use_id.into(),
+                is_error: true,
+                content: vec![$($content_text_path)+ { text: message.into() }],
+            }
+        }
+    };
+}
+
 /// Result of a tool execution.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ToolExecutionResult {
@@ -23,15 +52,7 @@ pub struct ToolExecutionResult {
 }
 
 impl ToolExecutionResult {
-    /// Create a successful text result.
-    pub fn success(tool_use_id: impl Into<String>, text: impl Into<String>) -> Self {
-        Self {
-            tool_use_id: tool_use_id.into(),
-            is_error: false,
-            content: vec![ToolResultContent::Text { text: text.into() }],
-            tool_use_result: None,
-        }
-    }
+    impl_tool_result_factories!([ToolResultContent::Text], tool_use_result: None);
 
     /// Create a successful result with tool-specific result data.
     pub fn success_with_result(
@@ -44,18 +65,6 @@ impl ToolExecutionResult {
             is_error: false,
             content: vec![ToolResultContent::Text { text: text.into() }],
             tool_use_result: Some(tool_use_result),
-        }
-    }
-
-    /// Create an error result.
-    pub fn error(tool_use_id: impl Into<String>, message: impl Into<String>) -> Self {
-        Self {
-            tool_use_id: tool_use_id.into(),
-            is_error: true,
-            content: vec![ToolResultContent::Text {
-                text: message.into(),
-            }],
-            tool_use_result: None,
         }
     }
 

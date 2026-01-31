@@ -224,27 +224,7 @@ pub struct ToolResultBlock {
 }
 
 impl ToolResultBlock {
-    /// Create a successful tool result.
-    pub fn success(tool_use_id: impl Into<String>, text: impl Into<String>) -> Self {
-        Self {
-            block_type: "tool_result".to_string(),
-            tool_use_id: tool_use_id.into(),
-            is_error: false,
-            content: vec![ToolResultContentBlock::Text { text: text.into() }],
-        }
-    }
-
-    /// Create an error tool result.
-    pub fn error(tool_use_id: impl Into<String>, message: impl Into<String>) -> Self {
-        Self {
-            block_type: "tool_result".to_string(),
-            tool_use_id: tool_use_id.into(),
-            is_error: true,
-            content: vec![ToolResultContentBlock::Text {
-                text: message.into(),
-            }],
-        }
-    }
+    crate::impl_tool_result_factories!([ToolResultContentBlock::Text], block_type: "tool_result".to_string());
 
     /// Create from a ToolExecutionResult.
     pub fn from_result(result: &crate::tools::ToolExecutionResult) -> Self {
