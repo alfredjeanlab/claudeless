@@ -21,6 +21,9 @@ conversation_*.txt
 # Capture raw output (fixtures go in tests/fixtures/)
 tests/capture/output/
 
+# Capture secrets (OAuth token)
+tests/capture/.env
+
 # OS
 .DS_Store
 Thumbs.db

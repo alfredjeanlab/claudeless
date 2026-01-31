@@ -62,6 +62,9 @@ done
 check_claude
 check_capsh
 
+# Load OAuth token from .env
+load_capture_env || exit 1
+
 # Detect version
 VERSION=$(detect_version)
 if [[ -z "$VERSION" ]]; then

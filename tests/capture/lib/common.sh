@@ -4,6 +4,41 @@
 
 set -euo pipefail
 
+# Get script directory for relative paths
+if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+    COMMON_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    CAPTURE_DIR="$(dirname "$COMMON_SCRIPT_DIR")"
+else
+    # Fallback for direct sourcing
+    CAPTURE_DIR="${CAPTURE_DIR:-$(pwd)}"
+fi
+
+# Load capture environment (OAuth token, etc.)
+load_capture_env() {
+    local env_file="$CAPTURE_DIR/.env"
+
+    if [[ -f "$env_file" ]]; then
+        # shellcheck source=/dev/null
+        source "$env_file"
+    fi
+
+    if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
+        echo -e "${RED}Error: CLAUDE_CODE_OAUTH_TOKEN not set${NC}" >&2
+        echo "" >&2
+        echo "Capture scripts require an OAuth token to authenticate with Claude CLI." >&2
+        echo "" >&2
+        echo "Setup:" >&2
+        echo "  1. Run: claude setup-token" >&2
+        echo "  2. Add to tests/capture/.env:" >&2
+        echo "     CLAUDE_CODE_OAUTH_TOKEN=<your-token>" >&2
+        echo "" >&2
+        echo "See: tests/capture/.env.example" >&2
+        return 1
+    fi
+
+    export CLAUDE_CODE_OAUTH_TOKEN
+}
+
 # Colors for output
 BOLD='\033[1m'
 RED='\033[0;31m'
@@ -95,6 +130,78 @@ parse_claude_args() {
     fi
 }
 
+# Parse workspace from script header comment
+# Usage: parse_workspace script.capsh
+# Looks for: # Workspace: /path/to/dir
+#        or: # Workspace: (temp)
+parse_workspace() {
+    local script="$1"
+    local ws_line
+    ws_line=$(grep -E '^# Workspace:' "$script" | head -1) || true
+
+    if [[ -n "$ws_line" ]]; then
+        local ws="${ws_line#\# Workspace:}"
+        ws="${ws## }"  # trim leading space
+        if [[ "$ws" == "(temp)" || "$ws" == "temp" ]]; then
+            echo ""  # Will use temp dir
+        else
+            echo "$ws"
+        fi
+    else
+        echo ""  # Default to temp dir
+    fi
+}
+
+# Sanitize state files to normalize paths and redact sensitive data
+# Usage: sanitize_state config_dir
+sanitize_state() {
+    local config_dir="$1"
+
+    # Find all text files and sanitize them (including .json.backup.* files)
+    find "$config_dir" -type f \( -name "*.json" -o -name "*.json.backup.*" -o -name "*.jsonl" -o -name "*.txt" -o -name "*.md" \) | while read -r file; do
+        # Replace /Users/{username}/ with /Users/alfred/
+        # Strip common subdirs (Developer, Desktop, Documents)
+        # Replace /private/var/folders/... temp paths with /tmp/workspace/
+        # Replace userID values with <user_id>
+        sed -i.bak \
+            -e 's|/Users/[^/]*/Developer/|/Users/alfred/|g' \
+            -e 's|/Users/[^/]*/Desktop/|/Users/alfred/|g' \
+            -e 's|/Users/[^/]*/Documents/|/Users/alfred/|g' \
+            -e 's|/Users/[^/]*/|/Users/alfred/|g' \
+            -e 's|/private/var/folders/[^"]*|/tmp/workspace|g' \
+            -e 's|"userID": *"[^"]*"|"userID": "<user_id>"|g' \
+            -e 's|"accountUuid": *"[^"]*"|"accountUuid": "<account_uuid>"|g' \
+            -e 's|"organizationUuid": *"[^"]*"|"organizationUuid": "<org_uuid>"|g' \
+            -e 's|"emailAddress": *"[^"]*"|"emailAddress": "user@example.com"|g' \
+            -e 's|"displayName": *"[^"]*"|"displayName": "User"|g' \
+            -e 's|"organizationName": *"[^"]*"|"organizationName": "Organization"|g' \
+            "$file"
+        rm -f "$file.bak"
+    done
+}
+
+# Write a minimal Claude config with pre-trusted workspace
+# Usage: write_claude_config config_dir workspace_path [version]
+write_claude_config() {
+    local config_dir="$1"
+    local workspace_path="$2"
+    local version="${3:-$(detect_version)}"
+
+    mkdir -p "$config_dir"
+    cat > "$config_dir/.claude.json" << EOF
+{
+  "hasCompletedOnboarding": true,
+  "lastOnboardingVersion": "$version",
+  "projects": {
+    "$workspace_path": {
+      "hasTrustDialogAccepted": true,
+      "allowedTools": []
+    }
+  }
+}
+EOF
+}
+
 # Run a capsh script and capture output
 # Usage: run_capture script.capsh raw_output_base fixtures_dir [timeout]
 run_capture() {
@@ -113,13 +220,37 @@ run_capture() {
     local claude_args
     claude_args=$(parse_claude_args "$script")
 
+    # Parse workspace from script header (default: temp dir)
+    local workspace
+    workspace=$(parse_workspace "$script")
+    if [[ -z "$workspace" ]]; then
+        workspace=$(mktemp -d)
+    fi
+    # Resolve to absolute path (macOS /tmp -> /private/tmp)
+    workspace="$(cd "$workspace" && pwd -P)"
+
+    # Create isolated config dir with pre-trusted workspace
+    local config_dir="$raw_dir/state"
+    write_claude_config "$config_dir" "$workspace"
+
+    # Snapshot state before capture (relative paths)
+    (cd "$raw_dir" && find state -type f | sort) > "$raw_dir/state.before.txt"
+
     echo -e "Running: ${CYAN}$script_name${NC}"
     [[ -n "$claude_args" ]] && echo -e "  Args: ${CYAN}$claude_args${NC}"
+    echo -e "  ${DIM}Workspace: $workspace${NC}"
 
-    # Run capsh with timeout
+    # Run capsh with isolated config and OAuth token
+    # Note: We run capsh from the workspace directory so claude detects it correctly
     # shellcheck disable=SC2086  # intentional word splitting for claude_args
     local exit_code=0
-    timeout "$capture_timeout" capsh --frames "$raw_dir" -- claude $claude_args < "$script" || exit_code=$?
+    (
+        cd "$workspace"
+        CLAUDE_CONFIG_DIR="$config_dir" \
+        CLAUDE_CODE_OAUTH_TOKEN="${CLAUDE_CODE_OAUTH_TOKEN:-}" \
+        timeout "$capture_timeout" capsh --frames "$raw_dir" -- \
+            claude $claude_args < "$script"
+    ) || exit_code=$?
 
     # Exit codes: 0=success, 143=killed by SIGTERM (expected from kill TERM), 124=timeout
     if [[ $exit_code -ne 0 && $exit_code -ne 143 ]]; then
@@ -130,6 +261,13 @@ run_capture() {
         fi
         return 1
     fi
+
+    # Sanitize state files (normalize paths, redact PII)
+    sanitize_state "$config_dir"
+
+    # Snapshot state after capture and generate diff (relative paths)
+    (cd "$raw_dir" && find state -type f | sort) > "$raw_dir/state.after.txt"
+    diff "$raw_dir/state.before.txt" "$raw_dir/state.after.txt" > "$raw_dir/state.diff" || true
 
     # Extract named fixtures from recording
     extract_fixtures "$raw_dir" "$fixtures_dir"
