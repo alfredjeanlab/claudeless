@@ -209,3 +209,95 @@ fn composite_routes_qualified_mcp_tool_to_mcp() {
         result.text()
     );
 }
+
+// =============================================================================
+// Path Canonicalization Tests
+// =============================================================================
+
+#[test]
+fn canonicalize_path_arguments_handles_existing_path() {
+    // Use a path that definitely exists
+    let input = serde_json::json!({"path": "/tmp"});
+    let result = canonicalize_path_arguments(input);
+
+    // On macOS, /tmp -> /private/tmp
+    let path = result.get("path").and_then(|v| v.as_str()).unwrap();
+    // Should be canonicalized (either unchanged on Linux or /private/tmp on macOS)
+    assert!(
+        path == "/tmp" || path == "/private/tmp",
+        "Expected /tmp or /private/tmp, got: {}",
+        path
+    );
+}
+
+#[test]
+fn canonicalize_path_arguments_handles_non_existent_file_in_existing_dir() {
+    // File doesn't exist but parent does
+    let input = serde_json::json!({"path": "/tmp/nonexistent-file-12345.txt"});
+    let result = canonicalize_path_arguments(input);
+
+    let path = result.get("path").and_then(|v| v.as_str()).unwrap();
+    // Parent should be canonicalized, filename preserved
+    assert!(
+        path == "/tmp/nonexistent-file-12345.txt"
+            || path == "/private/tmp/nonexistent-file-12345.txt",
+        "Expected path with canonicalized parent, got: {}",
+        path
+    );
+}
+
+#[test]
+fn canonicalize_path_arguments_preserves_non_path_fields() {
+    let input = serde_json::json!({
+        "path": "/tmp",
+        "content": "hello world",
+        "other": 123
+    });
+    let result = canonicalize_path_arguments(input);
+
+    assert_eq!(
+        result.get("content").and_then(|v| v.as_str()),
+        Some("hello world")
+    );
+    assert_eq!(result.get("other").and_then(|v| v.as_i64()), Some(123));
+}
+
+#[test]
+fn canonicalize_path_arguments_handles_multiple_path_fields() {
+    let input = serde_json::json!({
+        "source": "/tmp",
+        "destination": "/tmp"
+    });
+    let result = canonicalize_path_arguments(input);
+
+    // Both should be canonicalized
+    let source = result.get("source").and_then(|v| v.as_str()).unwrap();
+    let dest = result.get("destination").and_then(|v| v.as_str()).unwrap();
+
+    assert!(source == "/tmp" || source == "/private/tmp");
+    assert!(dest == "/tmp" || dest == "/private/tmp");
+}
+
+#[test]
+fn canonicalize_path_arguments_ignores_non_object_input() {
+    let input = serde_json::json!("just a string");
+    let result = canonicalize_path_arguments(input.clone());
+    assert_eq!(result, input);
+
+    let input = serde_json::json!(123);
+    let result = canonicalize_path_arguments(input.clone());
+    assert_eq!(result, input);
+}
+
+#[test]
+fn canonicalize_path_arguments_handles_completely_nonexistent_path() {
+    // Neither file nor parent exists
+    let input = serde_json::json!({"path": "/nonexistent-root-12345/file.txt"});
+    let result = canonicalize_path_arguments(input.clone());
+
+    // Should be unchanged since we can't canonicalize
+    assert_eq!(
+        result.get("path").and_then(|v| v.as_str()),
+        Some("/nonexistent-root-12345/file.txt")
+    );
+}
