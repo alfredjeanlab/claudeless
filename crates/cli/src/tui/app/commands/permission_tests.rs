@@ -3,8 +3,6 @@
 
 //! Tests for permission module, focusing on tool JSONL recording.
 
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-
 use super::*;
 
 #[test]

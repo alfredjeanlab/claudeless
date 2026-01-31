@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+// Allow unwrap/expect/panic ONLY in test code
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
+
 //! Claude CLI Simulator
 //!
 //! A test crate that simulates the `claude` CLI for integration testing.

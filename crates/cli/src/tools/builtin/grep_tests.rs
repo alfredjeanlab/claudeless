@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-
 use super::super::test_helpers::{
     assert_tool_error_contains, assert_tool_success_contains, execute, TestDir,
 };

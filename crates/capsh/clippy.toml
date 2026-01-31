@@ -1,4 +1,0 @@
-# Allow unwrap/expect in test code - they're appropriate for tests
-# that should panic on unexpected conditions
-allow-unwrap-in-tests = true
-allow-expect-in-tests = true

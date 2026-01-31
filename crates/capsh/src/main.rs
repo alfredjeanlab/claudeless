@@ -1,3 +1,6 @@
+// Allow unwrap/expect/panic ONLY in test code
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
+
 use anyhow::Result;
 use clap::Parser;
 use std::path::PathBuf;
