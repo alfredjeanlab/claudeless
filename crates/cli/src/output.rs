@@ -233,7 +233,7 @@ impl ToolResultBlock {
     crate::impl_tool_result_factories!([ToolResultContentBlock::Text], block_type: "tool_result".to_string());
 
     /// Create from a ToolExecutionResult.
-    pub fn from_result(result: &crate::tools::ToolExecutionResult) -> Self {
+    pub fn from_result(result: &crate::tools::result::ToolExecutionResult) -> Self {
         Self {
             block_type: "tool_result".to_string(),
             tool_use_id: result.tool_use_id.clone(),
@@ -541,7 +541,7 @@ impl<W: Write> OutputWriter<W> {
     /// Write a tool result block (for stream-json format).
     pub fn write_tool_result(
         &mut self,
-        result: &crate::tools::ToolExecutionResult,
+        result: &crate::tools::result::ToolExecutionResult,
     ) -> std::io::Result<()> {
         match self.format {
             OutputFormat::Text => {

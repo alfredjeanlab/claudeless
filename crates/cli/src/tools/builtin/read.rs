@@ -9,7 +9,7 @@ use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
 use super::{extract_file_path, require_field, BuiltinContext, BuiltinToolExecutor};
-use crate::tools::ToolName;
+use crate::tools::tool_name::ToolName;
 
 /// Executor for file reading.
 #[derive(Clone, Debug, Default)]

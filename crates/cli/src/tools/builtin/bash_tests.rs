@@ -4,6 +4,7 @@
 use super::super::test_helpers::execute;
 use super::*;
 use crate::tools::builtin::extract_str;
+use crate::tools::tool_name::ToolName;
 use serde_json::json;
 use yare::parameterized;
 
@@ -41,5 +42,5 @@ fn bash_failed_commands(command: &str, expected: &str) {
 
 #[test]
 fn test_tool_name() {
-    assert_eq!(BashExecutor.tool_name(), crate::tools::ToolName::Bash);
+    assert_eq!(BashExecutor.tool_name(), ToolName::Bash);
 }

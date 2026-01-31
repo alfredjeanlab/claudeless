@@ -3,7 +3,7 @@
 
 use super::test_helpers::{assert_tool_error_contains, execute_tool};
 use super::*;
-use crate::tools::ToolName;
+use crate::tools::tool_name::ToolName;
 use serde_json::json;
 use yare::parameterized;
 

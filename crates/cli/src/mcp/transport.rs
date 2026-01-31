@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+// NOTE(compat): Keep full API surface for future use
+#![allow(dead_code)]
+
 //! JSON-RPC stdio transport for MCP server communication.
 //!
 //! This module provides the low-level transport layer for communicating with MCP servers
@@ -9,9 +12,9 @@
 //!
 //! # Example
 //!
-//! ```no_run
-//! use claudeless::mcp::config::McpServerDef;
-//! use claudeless::mcp::transport::StdioTransport;
+//! ```ignore
+//! use crate::mcp::config::McpServerDef;
+//! use crate::mcp::transport::StdioTransport;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! let def = McpServerDef {

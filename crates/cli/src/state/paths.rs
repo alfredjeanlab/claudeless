@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+// NOTE(compat): Keep full API surface for future use
+#![allow(dead_code)]
+
 //! Path computation and normalization utilities for state directories.
 
 use sha2::{Digest, Sha256};

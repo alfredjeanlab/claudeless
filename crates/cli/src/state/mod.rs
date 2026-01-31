@@ -7,11 +7,6 @@
 //! including todos, projects, plans, settings, and session state.
 
 pub mod directory;
-pub mod index;
-pub mod io;
-pub mod paths;
-pub mod persistence;
-pub mod plans;
 pub mod session;
 pub mod settings;
 pub mod settings_loader;
@@ -19,30 +14,33 @@ pub mod settings_source;
 pub mod todos;
 pub mod words;
 
-pub use directory::{normalize_project_path, project_dir_name, StateDirectory, StateError};
-pub use index::{get_git_branch, SessionIndexEntry, SessionsIndex};
-pub use plans::{Plan, PlansManager};
-pub use session::{
-    append_assistant_message_jsonl, append_error_jsonl, append_result_jsonl, append_turn_jsonl,
-    append_user_message_jsonl, write_queue_operation, AssistantMessage, AssistantMessageLine,
-    AssistantMessageParams, ContentBlock, ErrorLine, QueueOperationLine, ResultLine, Session,
-    SessionManager, ToolResultContent, ToolResultMessageLine, ToolResultUserMessage, Turn,
-    TurnParams, TurnToolCall, Usage, UserMessage, UserMessageContent, UserMessageLine,
-    UserMessageParams,
-};
+pub(crate) mod index;
+pub(crate) mod io;
+pub(crate) mod paths;
+pub(crate) mod persistence;
+pub(crate) mod plans;
+
+pub use directory::{StateDirectory, StateError};
+pub use persistence::ContentBlock;
 pub use settings::{
     ClaudeSettings, HookCommand, HookDef, HookMatcher, PermissionSettings, Settings,
 };
 pub use settings_loader::{SettingsLoader, SettingsPaths};
 pub use settings_source::SettingSource;
-pub use todos::{ClaudeTodoItem, TodoItem, TodoState, TodoStatus};
+pub use todos::{TodoItem, TodoStatus};
 
-pub use io::{
-    ensure_parent_exists, files_in, json_files_in, parse_json5_or_json, to_io_error, to_io_json,
-    JsonLoad,
+pub(crate) use index::{get_git_branch, SessionIndexEntry, SessionsIndex};
+pub(crate) use io::to_io_json;
+pub(crate) use persistence::{
+    append_assistant_message_jsonl, append_error_jsonl, append_result_jsonl, append_turn_jsonl,
+    append_user_message_jsonl, write_queue_operation, AssistantMessageParams, TurnParams,
+    UserMessageContent, UserMessageParams,
 };
+pub(crate) use plans::PlansManager;
+pub(crate) use todos::TodoState;
 
 use chrono::{DateTime, Utc};
+use io::JsonLoad;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;

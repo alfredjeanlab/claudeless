@@ -31,23 +31,13 @@
 //! client.shutdown().await?;
 //! ```
 
-pub mod client;
 pub mod config;
-pub mod protocol;
 pub mod server;
-pub mod tools;
-pub mod transport;
 
-pub use client::{ClientError, McpClient};
-pub use config::{load_mcp_config, McpConfig, McpConfigError, McpServerDef, McpToolDef};
-pub use protocol::{
-    ClientCapabilities, ClientInfo, ContentBlock, InitializeParams, InitializeResult,
-    ServerCapabilities, ServerInfo, ToolCallParams, ToolCallResult, ToolInfo, ToolsCapability,
-    ToolsListResult, PROTOCOL_VERSION,
-};
-pub use server::{McpManager, McpServer, McpServerStatus};
-pub use tools::{McpToolCall, McpToolResult, McpToolTemplates};
-pub use transport::{
-    JsonRpcError, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse, StdioTransport,
-    TransportError,
-};
+pub(crate) mod client;
+pub(crate) mod protocol;
+pub(crate) mod tools;
+pub(crate) mod transport;
+
+pub use config::{load_mcp_config, McpConfig};
+pub use server::{McpManager, McpServerStatus};

@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+// NOTE(compat): Keep full API surface for future use
+#![allow(dead_code)]
+
 //! MCP client for communicating with MCP servers.
 //!
 //! This module provides the high-level client interface that combines the transport layer
@@ -8,9 +11,9 @@
 //!
 //! # Example
 //!
-//! ```no_run
-//! use claudeless::mcp::client::McpClient;
-//! use claudeless::mcp::config::McpServerDef;
+//! ```ignore
+//! use crate::mcp::client::McpClient;
+//! use crate::mcp::config::McpServerDef;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! let def = McpServerDef {

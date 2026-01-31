@@ -10,32 +10,19 @@
 //!
 //! # Example
 //!
-//! ```
-//! use claudeless::tools::{ToolExecutor, MockExecutor, ExecutionContext};
-//! use claudeless::config::ToolCallSpec;
+//! ```ignore
+//! use claudeless::tools::{create_executor_with_mcp, ExecutionContext};
 //!
-//! let executor = MockExecutor::new();
-//! let call = ToolCallSpec {
-//!     tool: "Bash".to_string(),
-//!     input: serde_json::json!({ "command": "ls" }),
-//!     result: Some("file1.txt\nfile2.txt".to_string()),
-//! };
+//! let executor = create_executor_with_mcp(mode, mcp_manager);
 //! let ctx = ExecutionContext::default();
 //! let result = executor.execute(&call, "toolu_123", &ctx);
-//! assert!(!result.is_error);
 //! ```
 
-pub mod builtin;
-pub mod executor;
-pub mod mcp_executor;
-pub mod result;
-pub mod tool_name;
+pub(crate) mod builtin;
+pub(crate) mod executor;
+pub(crate) mod mcp_executor;
+pub(crate) mod result;
+pub(crate) mod tool_name;
 
-pub use executor::{
-    create_executor, create_executor_with_mcp, create_executor_with_mcp_and_permissions,
-    create_executor_with_permissions, ExecutionContext, MockExecutor, PermissionCheckingExecutor,
-    ToolExecutor,
-};
-pub use mcp_executor::{CompositeExecutor, McpToolExecutor};
-pub use result::{ToolExecutionResult, ToolResultContent};
-pub use tool_name::ToolName;
+pub use executor::{create_executor_with_mcp, ExecutionContext};
+pub use result::ToolResultContent;

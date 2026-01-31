@@ -21,9 +21,6 @@
 //! | JSONL persistence | `persistence` | Print mode (`-p`) |
 //! | High-level facade | `StateWriter` | Both modes |
 
-// Re-export persistence types for backwards compatibility
-pub use super::persistence::*;
-
 use super::io::{json_files_in, JsonLoad};
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::Entry;

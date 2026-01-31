@@ -32,7 +32,7 @@ use crate::config::ToolCallSpec;
 use crate::state::StateWriter;
 use crate::tools::executor::{ExecutionContext, ToolExecutor};
 use crate::tools::result::ToolExecutionResult;
-use crate::tools::ToolName;
+use crate::tools::tool_name::ToolName;
 
 pub use bash::BashExecutor;
 pub use edit::EditExecutor;

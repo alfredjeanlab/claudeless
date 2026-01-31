@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 use super::*;
+use crate::state::persistence::{append_error_jsonl, write_queue_operation, ErrorLine};
 
 #[test]
 fn test_new_session() {

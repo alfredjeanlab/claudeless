@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+// NOTE(compat): Keep full API surface for future use
+#![allow(dead_code)]
+
 //! Sessions index management for project directories.
 //!
 //! The sessions-index.json file tracks all sessions in a project directory.

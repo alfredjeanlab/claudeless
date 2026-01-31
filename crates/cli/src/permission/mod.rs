@@ -10,12 +10,12 @@
 //! - Permission bypass (`--dangerously-skip-permissions` with `--allow-dangerously-skip-permissions`)
 //! - Tool-specific permission checks
 
-pub mod bypass;
-pub mod check;
-pub mod mode;
-pub mod pattern;
+pub(crate) mod bypass;
+pub(crate) mod check;
+pub(crate) mod mode;
+pub(crate) mod pattern;
 
-pub use bypass::{BypassValidation, PermissionBypass};
+pub use bypass::PermissionBypass;
 pub use check::{PermissionChecker, PermissionResult};
 pub use mode::PermissionMode;
 pub use pattern::{PermissionPatterns, ToolPattern};

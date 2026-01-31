@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+// NOTE(compat): Keep full API surface for future use
+#![allow(dead_code)]
+
 //! Tool execution engine trait and implementations.
 
 use std::path::PathBuf;
@@ -125,7 +128,7 @@ impl PermissionCheckingExecutor {
 
     /// Get the action type for a tool.
     fn get_action(&self, tool_name: &str) -> &'static str {
-        super::ToolName::parse(tool_name)
+        super::tool_name::ToolName::parse(tool_name)
             .map(|t| t.action())
             .unwrap_or("execute") // Default for MCP tools
     }

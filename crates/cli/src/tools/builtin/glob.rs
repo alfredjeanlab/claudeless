@@ -11,7 +11,7 @@ use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
 use super::{extract_directory, extract_str, require_field, BuiltinContext, BuiltinToolExecutor};
-use crate::tools::ToolName;
+use crate::tools::tool_name::ToolName;
 
 /// Executor for glob pattern matching.
 #[derive(Clone, Debug, Default)]

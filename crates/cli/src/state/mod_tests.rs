@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 use super::*;
+use crate::state::todos::ClaudeTodoItem;
 
 #[test]
 fn test_state_writer_creation() {

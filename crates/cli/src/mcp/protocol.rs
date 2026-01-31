@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+// NOTE(compat): Keep full API surface for future use
+#![allow(dead_code)]
+
 //! MCP protocol message types.
 //!
 //! This module defines the wire format for MCP (Model Context Protocol) client-server

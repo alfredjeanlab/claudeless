@@ -12,7 +12,7 @@ use super::{
     extract_bool, extract_file_path, extract_str, require_field, BuiltinContext,
     BuiltinToolExecutor,
 };
-use crate::tools::ToolName;
+use crate::tools::tool_name::ToolName;
 
 /// Executor for file editing (search and replace).
 #[derive(Clone, Debug, Default)]
