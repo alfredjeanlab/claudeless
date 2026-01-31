@@ -22,7 +22,7 @@
 //! let client = McpClient::connect_and_initialize(&def).await?;
 //!
 //! // Or step-by-step for more control
-//! let mut client = McpClient::connect(&def).await?;
+//! let mut client = McpClient::connect(&def, "server-name", false).await?;
 //! let server_info = client.initialize().await?;
 //! let tools = client.list_tools().await?;
 //!
@@ -89,6 +89,11 @@ pub struct McpClient {
     /// Server definition used to create this client.
     definition: McpServerDef,
 
+    /// Server name for identification and debug logging.
+    // NOTE(compat): Stored for future use in error messages and multi-server diagnostics
+    #[allow(dead_code)]
+    server_name: String,
+
     /// Server info received during initialization.
     server_info: Option<ServerInfo>,
 
@@ -107,12 +112,24 @@ impl McpClient {
     ///
     /// This only spawns the process. Call [`initialize`](Self::initialize)
     /// to complete the MCP handshake.
-    pub async fn connect(def: &McpServerDef) -> Result<Self, ClientError> {
-        let transport = StdioTransport::spawn(def).await?;
+    ///
+    /// # Arguments
+    ///
+    /// * `def` - Server definition with command and arguments
+    /// * `server_name` - Server name for identification and debug logging
+    /// * `debug` - Enable JSON-RPC debug logging to stderr
+    pub async fn connect(
+        def: &McpServerDef,
+        server_name: impl Into<String>,
+        debug: bool,
+    ) -> Result<Self, ClientError> {
+        let server_name = server_name.into();
+        let transport = StdioTransport::spawn(def, &server_name, debug).await?;
 
         Ok(Self {
             transport,
             definition: def.clone(),
+            server_name,
             server_info: None,
             tools: Vec::new(),
             initialized: false,
@@ -297,8 +314,18 @@ impl McpClient {
     /// [`initialize`](Self::initialize), and [`list_tools`](Self::list_tools).
     ///
     /// Returns an initialized client with tools already discovered.
-    pub async fn connect_and_initialize(def: &McpServerDef) -> Result<Self, ClientError> {
-        let mut client = Self::connect(def).await?;
+    ///
+    /// # Arguments
+    ///
+    /// * `def` - Server definition with command and arguments
+    /// * `server_name` - Server name for identification and debug logging
+    /// * `debug` - Enable JSON-RPC debug logging to stderr
+    pub async fn connect_and_initialize(
+        def: &McpServerDef,
+        server_name: impl Into<String>,
+        debug: bool,
+    ) -> Result<Self, ClientError> {
+        let mut client = Self::connect(def, server_name, debug).await?;
         client.initialize().await?;
         client.list_tools().await?;
         Ok(client)

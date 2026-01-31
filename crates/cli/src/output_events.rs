@@ -10,6 +10,46 @@ fn uuid_stub() -> String {
     "01234567890abcdef".to_string()
 }
 
+/// MCP server info for init event (matches real Claude CLI format).
+///
+/// Real Claude CLI outputs mcp_servers as an array of objects:
+/// ```json
+/// {"mcp_servers": [{"name": "filesystem", "status": "connected"}]}
+/// ```
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct McpServerInfo {
+    /// Server name.
+    pub name: String,
+    /// Server status: "connected", "failed", or "disconnected".
+    pub status: String,
+}
+
+impl McpServerInfo {
+    /// Create a connected server info.
+    pub fn connected(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            status: "connected".to_string(),
+        }
+    }
+
+    /// Create a failed server info.
+    pub fn failed(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            status: "failed".to_string(),
+        }
+    }
+
+    /// Create a disconnected server info.
+    pub fn disconnected(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            status: "disconnected".to_string(),
+        }
+    }
+}
+
 /// System init event for stream-json
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SystemInitEvent {
@@ -18,7 +58,7 @@ pub struct SystemInitEvent {
     pub subtype: String,
     pub session_id: String,
     pub tools: Vec<String>,
-    pub mcp_servers: Vec<String>,
+    pub mcp_servers: Vec<McpServerInfo>,
 }
 
 impl SystemInitEvent {
@@ -36,7 +76,7 @@ impl SystemInitEvent {
     pub fn with_mcp_servers(
         session_id: impl Into<String>,
         tools: Vec<String>,
-        mcp_servers: Vec<String>,
+        mcp_servers: Vec<McpServerInfo>,
     ) -> Self {
         Self {
             event_type: "system".to_string(),
