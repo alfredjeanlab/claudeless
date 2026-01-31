@@ -1,0 +1,39 @@
+# Capture clear_before and clear_after - state before and after /clear command.
+# Requires API call - Claude must respond to prompts.
+# Args: --model haiku
+
+# Handle trust dialog if it appears, then wait for ready state
+if wait "trust this folder" 5s
+    send <Enter>
+    wait "for shortcuts" 10s
+else
+    wait "for shortcuts" 10s
+end
+
+# Build up conversation with two turns (matches test expectations)
+send "what is 2 + 2?"
+wait 100
+send <Enter>
+wait "4" 60s
+
+send "and 3 + 3?"
+wait 100
+send <Enter>
+wait "6" 60s
+
+# Snapshot before clear (conversation with responses visible)
+snapshot "clear_before"
+
+# Run /clear command
+send "/clear"
+wait "/clear" 3s
+send <Enter>
+
+# Wait for clear to complete (shows "(no content)")
+wait "no content" 10s
+snapshot "clear_after"
+
+# Exit
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
