@@ -42,7 +42,47 @@ fn test_bash_real_execution() {
     let result = executor.execute(&call, "toolu_123", &ctx);
 
     assert!(!result.is_error);
-    assert_eq!(result.text(), Some("hello"));
+    // Output should include exit code for log extraction
+    let text = result.text().unwrap();
+    assert!(text.contains("hello"));
+    assert!(text.contains("Exit code: 0"));
+}
+
+#[test]
+#[cfg(unix)]
+fn test_bash_exit_code_format() {
+    let executor = BashExecutor::new();
+    let call = ToolCallSpec {
+        tool: "Bash".to_string(),
+        input: json!({ "command": "exit 42" }),
+        result: None,
+    };
+    let ctx = BuiltinContext::default();
+    let result = executor.execute(&call, "toolu_123", &ctx);
+
+    assert!(result.is_error);
+    let text = result.text().unwrap();
+    assert!(text.contains("Exit code: 42"));
+}
+
+#[test]
+#[cfg(unix)]
+fn test_bash_failed_command_has_exit_code() {
+    let executor = BashExecutor::new();
+    let call = ToolCallSpec {
+        tool: "Bash".to_string(),
+        input: json!({ "command": "ls /nonexistent_path_abc123" }),
+        result: None,
+    };
+    let ctx = BuiltinContext::default();
+    let result = executor.execute(&call, "toolu_123", &ctx);
+
+    assert!(result.is_error);
+    let text = result.text().unwrap();
+    // Should contain some error message and exit code
+    assert!(text.contains("Exit code:"));
+    // Exit code should be non-zero
+    assert!(!text.contains("Exit code: 0"));
 }
 
 #[test]

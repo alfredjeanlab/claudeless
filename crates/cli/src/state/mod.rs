@@ -19,11 +19,11 @@ pub mod words;
 pub use directory::{normalize_project_path, project_dir_name, StateDirectory, StateError};
 pub use plans::{Plan, PlansManager};
 pub use session::{
-    append_assistant_message_jsonl, append_turn_jsonl, append_user_message_jsonl,
-    write_queue_operation, AssistantMessage, AssistantMessageLine, AssistantMessageParams,
-    ContentBlock, QueueOperationLine, Session, SessionManager, ToolResultContent,
-    ToolResultMessageLine, ToolResultUserMessage, Turn, TurnParams, TurnToolCall, Usage,
-    UserMessage, UserMessageContent, UserMessageLine, UserMessageParams,
+    append_assistant_message_jsonl, append_result_jsonl, append_turn_jsonl,
+    append_user_message_jsonl, write_queue_operation, AssistantMessage, AssistantMessageLine,
+    AssistantMessageParams, ContentBlock, QueueOperationLine, ResultLine, Session, SessionManager,
+    ToolResultContent, ToolResultMessageLine, ToolResultUserMessage, Turn, TurnParams,
+    TurnToolCall, Usage, UserMessage, UserMessageContent, UserMessageLine, UserMessageParams,
 };
 pub use sessions_index::{get_git_branch, SessionIndexEntry, SessionsIndex};
 pub use settings::{ClaudeSettings, McpServerConfig, PermissionSettings, Settings};
@@ -217,12 +217,32 @@ impl StateWriter {
     /// Record an assistant response (text only, no tool calls).
     ///
     /// This is for simple text responses without tool_use blocks.
-    /// Sets `stop_reason: "end_turn"` to indicate the response is complete,
-    /// which is critical for external watchers (like otters integration tests).
+    /// Use `record_assistant_response_final` for the final response in a turn.
     pub fn record_assistant_response(
         &mut self,
         parent_user_uuid: &str,
         response: &str,
+    ) -> std::io::Result<String> {
+        self.record_assistant_response_inner(parent_user_uuid, response, None)
+    }
+
+    /// Record a final assistant response (end of turn).
+    ///
+    /// This sets `stop_reason: "end_turn"` for turn completion detection.
+    pub fn record_assistant_response_final(
+        &mut self,
+        parent_user_uuid: &str,
+        response: &str,
+    ) -> std::io::Result<String> {
+        self.record_assistant_response_inner(parent_user_uuid, response, Some("end_turn"))
+    }
+
+    /// Internal helper for recording assistant responses.
+    fn record_assistant_response_inner(
+        &mut self,
+        parent_user_uuid: &str,
+        response: &str,
+        stop_reason: Option<&str>,
     ) -> std::io::Result<String> {
         let jsonl_path = self.session_jsonl_path();
         let assistant_uuid = Uuid::new_v4().to_string();
@@ -240,7 +260,7 @@ impl StateWriter {
                 text: response.to_string(),
             }],
             model: &self.model,
-            stop_reason: Some("end_turn"),
+            stop_reason,
             cwd: &self.cwd.to_string_lossy(),
             version: env!("CARGO_PKG_VERSION"),
             git_branch: &git_branch,
@@ -257,6 +277,7 @@ impl StateWriter {
     /// Record an assistant message with tool_use blocks.
     ///
     /// Returns the assistant message UUID for linking tool results.
+    /// Sets `stop_reason: "tool_use"` automatically for tool call messages.
     pub fn record_assistant_tool_use(
         &mut self,
         parent_user_uuid: &str,
@@ -276,7 +297,7 @@ impl StateWriter {
             message_id: &message_id,
             content,
             model: &self.model,
-            stop_reason: None,
+            stop_reason: Some("tool_use"),
             cwd: &self.cwd.to_string_lossy(),
             version: env!("CARGO_PKG_VERSION"),
             git_branch: &git_branch,
@@ -291,7 +312,9 @@ impl StateWriter {
 
     /// Record a tool result message.
     ///
-    /// This records the tool result as a user message with tool_result content.
+    /// This records the tool result as:
+    /// 1. A user message with tool_result content (for Claude API compatibility)
+    /// 2. A result record (for log extraction)
     pub fn record_tool_result(
         &mut self,
         tool_use_id: &str,
@@ -302,7 +325,9 @@ impl StateWriter {
         let jsonl_path = self.session_jsonl_path();
         let result_uuid = Uuid::new_v4().to_string();
         let git_branch = get_git_branch();
+        let timestamp = Utc::now();
 
+        // Write user message with tool_result content
         let params = UserMessageParams {
             session_id: &self.session_id,
             user_uuid: &result_uuid,
@@ -316,9 +341,12 @@ impl StateWriter {
             cwd: &self.cwd.to_string_lossy(),
             version: env!("CARGO_PKG_VERSION"),
             git_branch: &git_branch,
-            timestamp: Utc::now(),
+            timestamp,
         };
         append_user_message_jsonl(&jsonl_path, &params)?;
+
+        // Also write result record for log extraction
+        append_result_jsonl(&jsonl_path, tool_use_id, result_content, timestamp)?;
 
         self.message_count += 1;
         self.update_sessions_index()?;

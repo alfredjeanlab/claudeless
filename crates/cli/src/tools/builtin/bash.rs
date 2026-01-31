@@ -34,16 +34,24 @@ impl BashExecutor {
             Ok(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let stderr = String::from_utf8_lossy(&output.stderr);
+                let exit_code = output.status.code().unwrap_or(-1);
+
+                // Always include exit code in output for log extraction
+                let result_text = if output.status.success() {
+                    format!("{}\n\nExit code: {}", stdout.trim(), exit_code)
+                } else {
+                    let error_content = if stderr.is_empty() {
+                        stdout.trim().to_string()
+                    } else {
+                        format!("{}\n{}", stdout.trim(), stderr.trim())
+                    };
+                    format!("{}\n\nExit code: {}", error_content.trim(), exit_code)
+                };
 
                 if output.status.success() {
-                    ToolExecutionResult::success(tool_use_id, stdout.trim())
+                    ToolExecutionResult::success(tool_use_id, result_text)
                 } else {
-                    let error_msg = if stderr.is_empty() {
-                        format!("Command failed with exit code: {:?}", output.status.code())
-                    } else {
-                        stderr.trim().to_string()
-                    };
-                    ToolExecutionResult::error(tool_use_id, error_msg)
+                    ToolExecutionResult::error(tool_use_id, result_text)
                 }
             }
             Err(e) => {

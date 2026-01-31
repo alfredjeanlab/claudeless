@@ -137,3 +137,107 @@ fn test_state_writer_create_plan() {
     let saved_content = std::fs::read_to_string(&plan_path).unwrap();
     assert_eq!(saved_content, content);
 }
+
+#[test]
+fn test_state_writer_record_assistant_response_final_sets_stop_reason() {
+    let mut writer = StateWriter::new(
+        Uuid::new_v4().to_string(),
+        "/tmp/test-project",
+        Utc::now(),
+        "claude-sonnet-4-20250514",
+        "/tmp/test-project",
+    )
+    .unwrap();
+
+    let user_uuid = writer.record_user_message("Hello").unwrap();
+    writer
+        .record_assistant_response_final(&user_uuid, "Done.")
+        .unwrap();
+
+    // Read JSONL and verify stop_reason
+    let content = std::fs::read_to_string(writer.session_jsonl_path()).unwrap();
+    let lines: Vec<&str> = content.lines().collect();
+
+    // Second line should be assistant with stop_reason: end_turn
+    assert!(lines[1].contains("\"stop_reason\":\"end_turn\""));
+}
+
+#[test]
+fn test_state_writer_record_assistant_tool_use_sets_stop_reason() {
+    let mut writer = StateWriter::new(
+        Uuid::new_v4().to_string(),
+        "/tmp/test-project",
+        Utc::now(),
+        "claude-sonnet-4-20250514",
+        "/tmp/test-project",
+    )
+    .unwrap();
+
+    let user_uuid = writer.record_user_message("Run a command").unwrap();
+    writer
+        .record_assistant_tool_use(
+            &user_uuid,
+            vec![ContentBlock::ToolUse {
+                id: "toolu_123".to_string(),
+                name: "Bash".to_string(),
+                input: serde_json::json!({"command": "ls"}),
+            }],
+        )
+        .unwrap();
+
+    // Read JSONL and verify stop_reason
+    let content = std::fs::read_to_string(writer.session_jsonl_path()).unwrap();
+    let lines: Vec<&str> = content.lines().collect();
+
+    // Second line should be assistant with stop_reason: tool_use
+    assert!(lines[1].contains("\"stop_reason\":\"tool_use\""));
+}
+
+#[test]
+fn test_state_writer_record_tool_result_writes_dual_records() {
+    let mut writer = StateWriter::new(
+        Uuid::new_v4().to_string(),
+        "/tmp/test-project",
+        Utc::now(),
+        "claude-sonnet-4-20250514",
+        "/tmp/test-project",
+    )
+    .unwrap();
+
+    let user_uuid = writer.record_user_message("Run a command").unwrap();
+    let assistant_uuid = writer
+        .record_assistant_tool_use(
+            &user_uuid,
+            vec![ContentBlock::ToolUse {
+                id: "toolu_123".to_string(),
+                name: "Bash".to_string(),
+                input: serde_json::json!({"command": "echo hello"}),
+            }],
+        )
+        .unwrap();
+
+    writer
+        .record_tool_result(
+            "toolu_123",
+            "hello\n\nExit code: 0",
+            &assistant_uuid,
+            serde_json::json!({}),
+        )
+        .unwrap();
+
+    // Read JSONL and verify both user and result records
+    let content = std::fs::read_to_string(writer.session_jsonl_path()).unwrap();
+    let lines: Vec<&str> = content.lines().collect();
+
+    // Should have 4 lines: user, assistant, user (tool_result), result
+    assert_eq!(lines.len(), 4);
+
+    // Third line should be user with tool_result content
+    assert!(lines[2].contains("\"type\":\"user\""));
+    assert!(lines[2].contains("tool_result"));
+
+    // Fourth line should be result record
+    assert!(lines[3].contains("\"type\":\"result\""));
+    assert!(lines[3].contains("toolu_123"));
+    assert!(lines[3].contains("Exit code: 0"));
+}

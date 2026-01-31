@@ -19,7 +19,7 @@
 //! };
 //!
 //! // Quick setup with connect_and_initialize
-//! let client = McpClient::connect_and_initialize(&def).await?;
+//! let client = McpClient::connect_and_initialize(&def, "server-name", false).await?;
 //!
 //! // Or step-by-step for more control
 //! let mut client = McpClient::connect(&def, "server-name", false).await?;

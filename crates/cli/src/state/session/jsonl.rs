@@ -165,6 +165,20 @@ pub struct QueueOperationLine {
     pub session_id: String,
 }
 
+/// Tool result record for log extraction.
+///
+/// This is a separate record type (in addition to user messages with tool_result content)
+/// that enables otters log extraction to find tool results easily.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResultLine {
+    #[serde(rename = "type")]
+    pub line_type: String,
+    pub tool_use_id: String,
+    pub content: String,
+    pub timestamp: String,
+}
+
 /// Helper to open a file for appending.
 fn open_append(path: &Path) -> std::io::Result<std::fs::File> {
     std::fs::OpenOptions::new()
@@ -186,6 +200,27 @@ pub fn write_queue_operation(
         operation: operation.to_string(),
         timestamp: timestamp.to_rfc3339(),
         session_id: session_id.to_string(),
+    };
+    writeln!(file, "{}", serde_json::to_string(&line)?)?;
+    Ok(())
+}
+
+/// Append a result record to a JSONL file.
+///
+/// This writes a `type: "result"` record that enables log extraction tools
+/// to easily find tool results and parse exit codes.
+pub fn append_result_jsonl(
+    path: &Path,
+    tool_use_id: &str,
+    content: &str,
+    timestamp: DateTime<Utc>,
+) -> std::io::Result<()> {
+    let mut file = open_append(path)?;
+    let line = ResultLine {
+        line_type: "result".to_string(),
+        tool_use_id: tool_use_id.to_string(),
+        content: content.to_string(),
+        timestamp: timestamp.to_rfc3339(),
     };
     writeln!(file, "{}", serde_json::to_string(&line)?)?;
     Ok(())
@@ -401,3 +436,7 @@ pub fn append_assistant_message_jsonl(
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "jsonl_tests.rs"]
+mod tests;
