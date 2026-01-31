@@ -29,10 +29,6 @@ pub struct Cli {
     #[arg(long, value_enum, default_value = "text")]
     pub output_format: OutputFormat,
 
-    /// Maximum tokens in response
-    #[arg(long)]
-    pub max_tokens: Option<u32>,
-
     /// System prompt
     #[arg(long)]
     pub system_prompt: Option<String>,

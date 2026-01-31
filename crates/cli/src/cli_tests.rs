@@ -90,12 +90,6 @@ fn test_default_model() {
 }
 
 #[test]
-fn test_parse_max_tokens() {
-    let cli = Cli::try_parse_from(["claude", "--max-tokens", "4096", "-p", "test"]).unwrap();
-    assert_eq!(cli.max_tokens, Some(4096));
-}
-
-#[test]
 fn test_parse_system_prompt() {
     let cli = Cli::try_parse_from([
         "claude",

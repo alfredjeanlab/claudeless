@@ -75,17 +75,6 @@ impl CliAudit {
         );
 
         flags.insert(
-            "max-tokens",
-            FlagDef {
-                name: "max-tokens",
-                short: None,
-                takes_value: true,
-                description: "Maximum tokens in response",
-                status: FlagStatus::Implemented,
-            },
-        );
-
-        flags.insert(
             "system-prompt",
             FlagDef {
                 name: "system-prompt",

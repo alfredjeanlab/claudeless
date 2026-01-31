@@ -11,7 +11,6 @@ fn default_cli() -> Cli {
         print: false,
         model: DEFAULT_MODEL.to_string(),
         output_format: OutputFormat::Text,
-        max_tokens: None,
         system_prompt: None,
         continue_conversation: false,
         resume: None,
