@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-#![allow(deprecated)] // Tests use deprecated project_hash function
 
 use super::*;
 
@@ -214,22 +213,6 @@ fn test_todo_path() {
         dir.todo_path("default"),
         PathBuf::from("/home/user/.claude/todos/default.json")
     );
-}
-
-#[test]
-fn test_project_hash_deterministic() {
-    let path = Path::new("/some/project/path");
-    let hash1 = project_hash(path);
-    let hash2 = project_hash(path);
-    assert_eq!(hash1, hash2);
-    assert_eq!(hash1.len(), 16); // 8 bytes = 16 hex chars
-}
-
-#[test]
-fn test_project_hash_different_paths() {
-    let hash1 = project_hash(Path::new("/path/a"));
-    let hash2 = project_hash(Path::new("/path/b"));
-    assert_ne!(hash1, hash2);
 }
 
 #[test]
