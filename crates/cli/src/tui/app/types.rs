@@ -4,9 +4,13 @@
 //! TUI application types and configuration.
 
 use std::path::PathBuf;
+use std::sync::Arc;
+
+use parking_lot::RwLock;
 
 use crate::config::{ResolvedTimeouts, ScenarioConfig, DEFAULT_MODEL, DEFAULT_USER_NAME};
 use crate::permission::PermissionMode;
+use crate::state::StateWriter;
 use crate::tui::widgets::permission::RichPermissionDialog;
 use crate::tui::widgets::trust::TrustChoice;
 
@@ -28,6 +32,8 @@ pub struct TuiConfig {
     pub claude_version: Option<String>,
     /// Whether output is connected to a TTY
     pub is_tty: bool,
+    /// State writer for JSONL persistence
+    pub state_writer: Option<Arc<RwLock<StateWriter>>>,
 }
 
 impl Default for TuiConfig {
@@ -42,6 +48,7 @@ impl Default for TuiConfig {
             timeouts: ResolvedTimeouts::default(),
             claude_version: None,
             is_tty: false,
+            state_writer: None,
         }
     }
 }
@@ -91,6 +98,7 @@ impl TuiConfig {
             timeouts: ResolvedTimeouts::resolve(config.timeouts.as_ref()),
             claude_version,
             is_tty,
+            state_writer: None,
         }
     }
 }

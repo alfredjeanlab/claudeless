@@ -158,6 +158,14 @@ impl TuiAppState {
         inner.display.spinner_frame = 0;
         inner.display.spinner_verb = spinner::random_verb().to_string();
 
+        // Record user message to JSONL and store UUID for linking
+        inner.display.pending_user_uuid = if let Some(ref writer) = inner.state_writer {
+            // Write errors are logged but don't fail the TUI operation
+            writer.write().record_user_message(&prompt).ok()
+        } else {
+            None
+        };
+
         // Record the turn
         inner
             .sessions
@@ -433,6 +441,16 @@ pub(super) fn start_streaming_inner(inner: &mut TuiAppStateInner, text: String) 
     if let Some(turn) = inner.sessions.current_session().turns.last_mut() {
         turn.response = inner.display.response_content.clone();
     }
+
+    // Record assistant response to JSONL (errors are ignored to not disrupt TUI)
+    if let (Some(ref writer), Some(ref user_uuid)) =
+        (&inner.state_writer, &inner.display.pending_user_uuid)
+    {
+        let _ = writer
+            .write()
+            .record_assistant_response(user_uuid, &inner.display.response_content);
+    }
+    inner.display.pending_user_uuid = None;
 
     inner.mode = AppMode::Input;
 

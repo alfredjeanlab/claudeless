@@ -555,9 +555,27 @@ async fn run_tui_mode(
         Scenario::from_config(config)?
     };
 
+    // Build session context for state directory
+    let session_ctx = SessionContext::build(Some(scenario.config()), cli);
+
+    // Create state writer for JSONL persistence (unless --no-session-persistence)
+    let state_writer = if !cli.no_session_persistence {
+        StateWriter::new(
+            session_ctx.session_id.to_string(),
+            &session_ctx.project_path,
+            session_ctx.launch_timestamp,
+            &session_ctx.model,
+            &session_ctx.working_directory,
+        )
+        .ok()
+        .map(|w| Arc::new(RwLock::new(w)))
+    } else {
+        None
+    };
+
     // Create TUI config from scenario
     let is_tty = std::io::stdout().is_terminal();
-    let tui_config = TuiConfig::from_scenario(
+    let mut tui_config = TuiConfig::from_scenario(
         scenario.config(),
         Some(&cli.model),
         &cli.permission_mode,
@@ -565,6 +583,7 @@ async fn run_tui_mode(
         cli.claude_version.as_deref(),
         is_tty,
     );
+    tui_config.state_writer = state_writer;
 
     let sessions = SessionManager::new();
     let clock = ClockHandle::system();

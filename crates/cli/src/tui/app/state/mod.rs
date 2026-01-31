@@ -11,7 +11,7 @@ pub use dialog::DialogState;
 pub use display::DisplayState;
 pub use input::InputState;
 
-use parking_lot::Mutex;
+use parking_lot::{Mutex, RwLock};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -19,6 +19,7 @@ use crate::permission::PermissionMode;
 use crate::scenario::Scenario;
 use crate::state::session::SessionManager;
 use crate::state::todos::{TodoState, TodoStatus};
+use crate::state::StateWriter;
 use crate::time::{Clock, ClockHandle};
 use crate::tui::widgets::context::ContextUsage;
 use crate::tui::widgets::permission::{RichPermissionDialog, SessionPermissionKey};
@@ -49,6 +50,8 @@ pub(super) struct TuiAppStateInner {
     pub clock: ClockHandle,
     /// Configuration from scenario
     pub config: TuiConfig,
+    /// State writer for JSONL persistence
+    pub state_writer: Option<Arc<RwLock<StateWriter>>>,
 
     // Session state
     /// Current application mode
@@ -119,6 +122,9 @@ impl TuiAppState {
             DialogState::None
         };
 
+        // Extract state writer before moving config
+        let state_writer = config.state_writer.clone();
+
         Self {
             inner: Arc::new(Mutex::new(TuiAppStateInner {
                 // Focused state groups
@@ -130,6 +136,7 @@ impl TuiAppState {
                 scenario,
                 sessions,
                 clock,
+                state_writer,
 
                 // Session state
                 mode: initial_mode,
