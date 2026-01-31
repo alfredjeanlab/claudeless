@@ -5,7 +5,7 @@
 
 use crate::cli::OutputFormat;
 use crate::config::{ResponseSpec, ToolCallSpec, UsageSpec};
-use crate::state::to_io_json;
+use crate::state::{to_io_json, ContentBlock};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 
@@ -159,20 +159,6 @@ pub struct JsonResponse {
     pub content: Vec<ContentBlock>,
     pub stop_reason: String,
     pub usage: Usage,
-}
-
-/// Content block in a response
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum ContentBlock {
-    Text {
-        text: String,
-    },
-    ToolUse {
-        id: String,
-        name: String,
-        input: serde_json::Value,
-    },
 }
 
 /// Token usage statistics
