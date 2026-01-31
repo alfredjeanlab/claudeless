@@ -44,9 +44,9 @@ pub mod output;
 #[doc(hidden)]
 pub mod permission;
 #[doc(hidden)]
-pub mod scenario;
+pub mod runtime;
 #[doc(hidden)]
-pub mod session;
+pub mod scenario;
 #[doc(hidden)]
 pub mod state;
 #[doc(hidden)]

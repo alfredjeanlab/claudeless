@@ -5,11 +5,14 @@
 //!
 //! This module contains all rendering logic extracted from app.rs:
 //! - `content.rs` - Conversation, shortcuts, slash menu, hints
-//! - `dialogs.rs` - Dialog render functions (trust, thinking, tasks, etc.)
+//! - `render_dialogs.rs` - Dialog render functions (trust, thinking, tasks, etc.)
 //! - `format.rs` - Header, status bar, model name formatting
 
+#[path = "content.rs"]
 mod content;
+#[path = "render_dialogs.rs"]
 mod dialogs;
+#[path = "format.rs"]
 mod format;
 
 pub(crate) use content::{

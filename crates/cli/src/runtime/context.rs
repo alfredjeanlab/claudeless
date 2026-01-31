@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Session context merging scenario config with CLI args.
+//! Runtime context merging scenario config with CLI args.
 
 use crate::cli::Cli;
 use crate::config::{
@@ -20,7 +20,7 @@ use uuid::Uuid;
 /// - CLI args override scenario config
 /// - Scenario config overrides defaults
 #[derive(Clone, Debug)]
-pub struct SessionContext {
+pub struct RuntimeContext {
     /// Model to use for this session.
     pub model: String,
     /// Claude version string.
@@ -45,7 +45,7 @@ pub struct SessionContext {
     permission_patterns: PermissionPatterns,
 }
 
-impl SessionContext {
+impl RuntimeContext {
     /// Build context from scenario and CLI, applying precedence rules:
     /// CLI args > scenario config > defaults
     ///
@@ -73,7 +73,7 @@ impl SessionContext {
             .map(PathBuf::from)
             .or_else(|| {
                 scenario
-                    .and_then(|s| s.working_directory.as_ref())
+                    .and_then(|s| s.environment.working_directory.as_ref())
                     .map(PathBuf::from)
             })
             .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
@@ -107,18 +107,18 @@ impl SessionContext {
             cli.model.clone()
         } else {
             scenario
-                .and_then(|s| s.default_model.clone())
+                .and_then(|s| s.identity.default_model.clone())
                 .unwrap_or_else(|| cli.model.clone())
         };
 
         // Claude version: scenario config or default
         let claude_version = scenario
-            .and_then(|s| s.claude_version.clone())
+            .and_then(|s| s.identity.claude_version.clone())
             .unwrap_or_else(|| DEFAULT_CLAUDE_VERSION.to_string());
 
         // User name: scenario config or default
         let user_name = scenario
-            .and_then(|s| s.user_name.clone())
+            .and_then(|s| s.identity.user_name.clone())
             .unwrap_or_else(|| DEFAULT_USER_NAME.to_string());
 
         // Session ID: CLI overrides scenario, then generate random
@@ -128,7 +128,7 @@ impl SessionContext {
             .and_then(|s| Uuid::parse_str(s).ok())
             .or_else(|| {
                 scenario
-                    .and_then(|s| s.session_id.as_ref())
+                    .and_then(|s| s.identity.session_id.as_ref())
                     .and_then(|s| Uuid::parse_str(s).ok())
             })
             .unwrap_or_else(Uuid::new_v4);
@@ -140,30 +140,30 @@ impl SessionContext {
             .map(PathBuf::from)
             .or_else(|| {
                 scenario
-                    .and_then(|s| s.working_directory.as_ref())
+                    .and_then(|s| s.environment.working_directory.as_ref())
                     .map(PathBuf::from)
             })
             .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
 
         // Project path: scenario config or working directory
         let project_path = scenario
-            .and_then(|s| s.project_path.as_ref())
+            .and_then(|s| s.environment.project_path.as_ref())
             .map(PathBuf::from)
             .unwrap_or_else(|| working_directory.clone());
 
         // Launch timestamp: scenario config or current time
         let launch_timestamp = scenario
-            .and_then(|s| s.launch_timestamp.as_ref())
+            .and_then(|s| s.timing.launch_timestamp.as_ref())
             .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
             .map(|dt: DateTime<chrono::FixedOffset>| dt.with_timezone(&Utc))
             .unwrap_or_else(Utc::now);
 
         // Trusted: scenario config (default true)
-        let trusted = scenario.map(|s| s.trusted).unwrap_or(true);
+        let trusted = scenario.map(|s| s.environment.trusted).unwrap_or(true);
 
         // Permission mode: scenario config or CLI default
         let permission_mode = scenario
-            .and_then(|s| s.permission_mode.as_ref())
+            .and_then(|s| s.environment.permission_mode.as_ref())
             .and_then(|s| parse_permission_mode(s))
             .unwrap_or_else(|| cli.permission_mode.clone());
 

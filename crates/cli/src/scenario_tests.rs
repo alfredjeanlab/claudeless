@@ -260,9 +260,14 @@ fn test_invalid_glob() {
 
 #[test]
 fn test_invalid_session_id() {
+    use crate::config::IdentityConfig;
+
     let config = ScenarioConfig {
         name: "test".to_string(),
-        session_id: Some("not-a-uuid".to_string()),
+        identity: IdentityConfig {
+            session_id: Some("not-a-uuid".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     };
 
@@ -276,9 +281,14 @@ fn test_invalid_session_id() {
 
 #[test]
 fn test_valid_session_id() {
+    use crate::config::IdentityConfig;
+
     let config = ScenarioConfig {
         name: "test".to_string(),
-        session_id: Some("550e8400-e29b-41d4-a716-446655440000".to_string()),
+        identity: IdentityConfig {
+            session_id: Some("550e8400-e29b-41d4-a716-446655440000".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     };
 
@@ -288,9 +298,14 @@ fn test_valid_session_id() {
 
 #[test]
 fn test_invalid_launch_timestamp() {
+    use crate::config::TimingConfig;
+
     let config = ScenarioConfig {
         name: "test".to_string(),
-        launch_timestamp: Some("not-a-timestamp".to_string()),
+        timing: TimingConfig {
+            launch_timestamp: Some("not-a-timestamp".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     };
 
@@ -304,9 +319,14 @@ fn test_invalid_launch_timestamp() {
 
 #[test]
 fn test_valid_launch_timestamp() {
+    use crate::config::TimingConfig;
+
     let config = ScenarioConfig {
         name: "test".to_string(),
-        launch_timestamp: Some("2025-01-15T10:30:00Z".to_string()),
+        timing: TimingConfig {
+            launch_timestamp: Some("2025-01-15T10:30:00Z".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     };
 
@@ -316,9 +336,14 @@ fn test_valid_launch_timestamp() {
 
 #[test]
 fn test_launch_timestamp_with_timezone() {
+    use crate::config::TimingConfig;
+
     let config = ScenarioConfig {
         name: "test".to_string(),
-        launch_timestamp: Some("2025-01-15T10:30:00-08:00".to_string()),
+        timing: TimingConfig {
+            launch_timestamp: Some("2025-01-15T10:30:00-08:00".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     };
 
@@ -328,9 +353,14 @@ fn test_launch_timestamp_with_timezone() {
 
 #[test]
 fn test_invalid_permission_mode() {
+    use crate::config::EnvironmentConfig;
+
     let config = ScenarioConfig {
         name: "test".to_string(),
-        permission_mode: Some("invalid-mode".to_string()),
+        environment: EnvironmentConfig {
+            permission_mode: Some("invalid-mode".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     };
 
@@ -344,6 +374,8 @@ fn test_invalid_permission_mode() {
 
 #[test]
 fn test_valid_permission_modes() {
+    use crate::config::EnvironmentConfig;
+
     for mode in [
         "default",
         "plan",
@@ -354,7 +386,10 @@ fn test_valid_permission_modes() {
     ] {
         let config = ScenarioConfig {
             name: "test".to_string(),
-            permission_mode: Some(mode.to_string()),
+            environment: EnvironmentConfig {
+                permission_mode: Some(mode.to_string()),
+                ..Default::default()
+            },
             ..Default::default()
         };
 

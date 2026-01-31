@@ -7,10 +7,12 @@
 //! including todos, projects, plans, settings, and session state.
 
 pub mod directory;
+pub mod index;
 pub mod io;
+pub mod paths;
+pub mod persistence;
 pub mod plans;
 pub mod session;
-pub mod sessions_index;
 pub mod settings;
 pub mod settings_loader;
 pub mod settings_source;
@@ -18,6 +20,8 @@ pub mod todos;
 pub mod words;
 
 pub use directory::{normalize_project_path, project_dir_name, StateDirectory, StateError};
+pub use index::{get_git_branch, SessionIndexEntry, SessionsIndex};
+pub use paths::StatePaths;
 pub use plans::{Plan, PlansManager};
 pub use session::{
     append_assistant_message_jsonl, append_error_jsonl, append_result_jsonl, append_turn_jsonl,
@@ -27,7 +31,6 @@ pub use session::{
     TurnParams, TurnToolCall, Usage, UserMessage, UserMessageContent, UserMessageLine,
     UserMessageParams,
 };
-pub use sessions_index::{get_git_branch, SessionIndexEntry, SessionsIndex};
 pub use settings::{ClaudeSettings, PermissionSettings, Settings};
 pub use settings_loader::{SettingsLoader, SettingsPaths};
 pub use settings_source::SettingSource;
@@ -43,10 +46,18 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
-/// Facade for writing Claude state during execution.
+/// Facade for writing Claude state to JSONL files during execution.
 ///
-/// `StateWriter` wraps `StateDirectory` and provides high-level methods
-/// for the operations main.rs needs during session execution.
+/// `StateWriter` provides high-level methods for JSONL persistence used by
+/// external watchers (e.g., otters integration tests) that monitor session state.
+///
+/// # Session vs StateWriter
+///
+/// - [`Session`] / [`SessionManager`]: In-memory state for TUI response matching
+/// - `StateWriter`: JSONL file persistence for external consumers
+///
+/// Both can be used simultaneously - TUI uses SessionManager for internal state
+/// while StateWriter handles JSONL output for external monitoring.
 #[derive(Debug)]
 pub struct StateWriter {
     /// The underlying state directory.

@@ -45,7 +45,7 @@ fn default_cli() -> Cli {
 #[test]
 fn test_defaults_applied() {
     let cli = default_cli();
-    let ctx = SessionContext::build(None, &cli);
+    let ctx = RuntimeContext::build(None, &cli);
 
     assert_eq!(ctx.model, DEFAULT_MODEL);
     assert_eq!(ctx.claude_version, DEFAULT_CLAUDE_VERSION);
@@ -56,19 +56,26 @@ fn test_defaults_applied() {
 
 #[test]
 fn test_scenario_overrides_defaults() {
+    use crate::config::{EnvironmentConfig, IdentityConfig};
+
     let cli = default_cli();
     let scenario = ScenarioConfig {
         name: "test".to_string(),
-        default_model: Some("custom-model".to_string()),
-        claude_version: Some("3.0.0".to_string()),
-        user_name: Some("TestUser".to_string()),
-        session_id: Some("550e8400-e29b-41d4-a716-446655440000".to_string()),
-        trusted: false,
-        permission_mode: Some("plan".to_string()),
+        identity: IdentityConfig {
+            default_model: Some("custom-model".to_string()),
+            claude_version: Some("3.0.0".to_string()),
+            user_name: Some("TestUser".to_string()),
+            session_id: Some("550e8400-e29b-41d4-a716-446655440000".to_string()),
+        },
+        environment: EnvironmentConfig {
+            trusted: false,
+            permission_mode: Some("plan".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     };
 
-    let ctx = SessionContext::build(Some(&scenario), &cli);
+    let ctx = RuntimeContext::build(Some(&scenario), &cli);
 
     assert_eq!(ctx.model, "custom-model");
     assert_eq!(ctx.claude_version, "3.0.0");
@@ -83,6 +90,8 @@ fn test_scenario_overrides_defaults() {
 
 #[test]
 fn test_cli_overrides_scenario() {
+    use crate::config::{EnvironmentConfig, IdentityConfig};
+
     let mut cli = default_cli();
     cli.model = "cli-model".to_string();
     cli.cwd = Some("/cli/path".to_string());
@@ -90,13 +99,19 @@ fn test_cli_overrides_scenario() {
 
     let scenario = ScenarioConfig {
         name: "test".to_string(),
-        default_model: Some("scenario-model".to_string()),
-        working_directory: Some("/scenario/path".to_string()),
-        session_id: Some("550e8400-e29b-41d4-a716-446655440000".to_string()),
+        identity: IdentityConfig {
+            default_model: Some("scenario-model".to_string()),
+            session_id: Some("550e8400-e29b-41d4-a716-446655440000".to_string()),
+            ..Default::default()
+        },
+        environment: EnvironmentConfig {
+            working_directory: Some("/scenario/path".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     };
 
-    let ctx = SessionContext::build(Some(&scenario), &cli);
+    let ctx = RuntimeContext::build(Some(&scenario), &cli);
 
     // CLI should win
     assert_eq!(ctx.model, "cli-model");
@@ -109,14 +124,19 @@ fn test_cli_overrides_scenario() {
 
 #[test]
 fn test_launch_timestamp_parsing() {
+    use crate::config::TimingConfig;
+
     let cli = default_cli();
     let scenario = ScenarioConfig {
         name: "test".to_string(),
-        launch_timestamp: Some("2025-01-15T10:30:00Z".to_string()),
+        timing: TimingConfig {
+            launch_timestamp: Some("2025-01-15T10:30:00Z".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     };
 
-    let ctx = SessionContext::build(Some(&scenario), &cli);
+    let ctx = RuntimeContext::build(Some(&scenario), &cli);
 
     assert_eq!(ctx.launch_timestamp.year(), 2025);
     assert_eq!(ctx.launch_timestamp.month(), 1);
@@ -133,7 +153,7 @@ fn test_project_path_defaults_to_working_dir() {
         ..Default::default()
     };
 
-    let ctx = SessionContext::build(Some(&scenario), &cli);
+    let ctx = RuntimeContext::build(Some(&scenario), &cli);
 
     assert_eq!(ctx.working_directory, PathBuf::from("/work/dir"));
     assert_eq!(ctx.project_path, PathBuf::from("/work/dir"));
@@ -141,15 +161,20 @@ fn test_project_path_defaults_to_working_dir() {
 
 #[test]
 fn test_project_path_override() {
+    use crate::config::EnvironmentConfig;
+
     let cli = default_cli();
     let scenario = ScenarioConfig {
         name: "test".to_string(),
-        project_path: Some("/project/path".to_string()),
-        working_directory: Some("/work/dir".to_string()),
+        environment: EnvironmentConfig {
+            project_path: Some("/project/path".to_string()),
+            working_directory: Some("/work/dir".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     };
 
-    let ctx = SessionContext::build(Some(&scenario), &cli);
+    let ctx = RuntimeContext::build(Some(&scenario), &cli);
 
     assert_eq!(ctx.working_directory, PathBuf::from("/work/dir"));
     assert_eq!(ctx.project_path, PathBuf::from("/project/path"));
@@ -188,7 +213,7 @@ fn test_permission_mode_parsing() {
 #[test]
 fn test_build_has_empty_settings() {
     let cli = default_cli();
-    let ctx = SessionContext::build(None, &cli);
+    let ctx = RuntimeContext::build(None, &cli);
 
     assert!(ctx.settings().permissions.allow.is_empty());
     assert!(ctx.settings().permissions.deny.is_empty());
@@ -215,7 +240,7 @@ fn test_build_with_settings() {
         ..Default::default()
     };
 
-    let ctx = SessionContext::build_with_settings(None, &cli, settings);
+    let ctx = RuntimeContext::build_with_settings(None, &cli, settings);
 
     assert_eq!(ctx.settings().permissions.allow, vec!["Read"]);
     assert_eq!(ctx.settings().permissions.deny, vec!["Bash(rm *)"]);
@@ -237,7 +262,7 @@ fn test_permission_patterns_from_settings() {
         ..Default::default()
     };
 
-    let ctx = SessionContext::build_with_settings(None, &cli, settings);
+    let ctx = RuntimeContext::build_with_settings(None, &cli, settings);
 
     // Patterns should be compiled from settings
     assert!(ctx.permission_patterns().is_allowed("Read", None));
@@ -263,7 +288,7 @@ fn test_permission_checker_uses_settings() {
         ..Default::default()
     };
 
-    let ctx = SessionContext::build_with_settings(None, &cli, settings);
+    let ctx = RuntimeContext::build_with_settings(None, &cli, settings);
     let checker = ctx.permission_checker(PermissionBypass::default());
 
     // Read auto-approved by settings
@@ -297,7 +322,7 @@ fn test_permission_checker_with_overrides() {
         ..Default::default()
     };
 
-    let ctx = SessionContext::build_with_settings(None, &cli, settings);
+    let ctx = RuntimeContext::build_with_settings(None, &cli, settings);
 
     // Create scenario overrides that allow Bash
     let mut overrides = HashMap::new();
@@ -335,7 +360,7 @@ fn test_build_with_state_loads_settings() {
     let mut cli = default_cli();
     cli.cwd = Some(work_dir.path().to_string_lossy().to_string());
 
-    let ctx = SessionContext::build_with_state(None, &cli, &state_dir);
+    let ctx = RuntimeContext::build_with_state(None, &cli, &state_dir);
 
     // Settings should be loaded from project
     assert_eq!(ctx.settings().permissions.allow, vec!["TestTool"]);

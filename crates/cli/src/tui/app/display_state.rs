@@ -5,7 +5,7 @@
 
 use crate::tui::slash_menu::SlashMenuState;
 
-use super::super::types::{ExitHint, DEFAULT_TERMINAL_WIDTH};
+use crate::tui::app::types::{ExitHint, DEFAULT_TERMINAL_WIDTH};
 
 /// Display/rendering state
 #[derive(Clone, Debug, Default)]

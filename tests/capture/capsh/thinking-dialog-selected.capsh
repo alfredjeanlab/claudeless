@@ -1,0 +1,31 @@
+# Capture thinking dialog with each option selected.
+# Opens dialog mid-conversation and navigates to capture both states.
+# Requires API call - Claude must respond to prompt.
+# Args: --model haiku
+
+wait "for shortcuts" 10s
+
+# Build up conversation to make it mid-conversation
+send "What is 2+2? Just give me the number."
+wait 100
+send <Enter>
+wait "4" 60s
+
+# Open thinking dialog (Meta+T / Option+T)
+send <M-t>
+wait "thinking" 3s
+
+# Capture first option (default selected)
+# Then navigate to capture each option
+send <Down>
+wait 100
+snapshot "thinking_dialog_disabled_selected"
+
+send <Up>
+wait 100
+snapshot "thinking_dialog_enabled_selected"
+
+# Close dialog and exit
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

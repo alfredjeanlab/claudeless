@@ -3,13 +3,16 @@
 
 //! TUI application state management.
 
-mod dialog;
-mod display;
-mod input;
+#[path = "dialog_state.rs"]
+mod dialog_state;
+#[path = "display_state.rs"]
+mod display_state;
+#[path = "input_state.rs"]
+mod input_state;
 
-pub use dialog::DialogState;
-pub use display::DisplayState;
-pub use input::InputState;
+pub use dialog_state::DialogState;
+pub use display_state::DisplayState;
+pub use input_state::InputState;
 
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashSet;
