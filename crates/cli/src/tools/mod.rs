@@ -24,5 +24,5 @@ pub(crate) mod mcp_executor;
 pub(crate) mod result;
 pub(crate) mod tool_name;
 
-pub use executor::{create_executor_with_mcp, ExecutionContext};
+pub use executor::{create_executor_with_mcp, ExecutionContext, ToolExecutor};
 pub use result::ToolResultContent;
