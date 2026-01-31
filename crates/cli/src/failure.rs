@@ -6,7 +6,7 @@
 use crate::cli::FailureMode;
 use crate::config::FailureSpec;
 use crate::output::ResultOutput;
-use crate::state::StateWriter;
+use crate::state::{to_io_json, StateWriter};
 use parking_lot::RwLock;
 use std::io::Write;
 use std::sync::Arc;
@@ -270,9 +270,7 @@ impl FailureExecutor {
         duration_ms: u64,
     ) -> Result<(), std::io::Error> {
         let result = ResultOutput::error(message.to_string(), session_id.to_string(), duration_ms);
-        let json = serde_json::to_string(&result)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        writeln!(writer, "{}", json)
+        writeln!(writer, "{}", to_io_json(&result)?)
     }
 
     /// Write a rate limit error in real Claude's result wrapper format
@@ -282,9 +280,7 @@ impl FailureExecutor {
         session_id: &str,
     ) -> Result<(), std::io::Error> {
         let result = ResultOutput::rate_limit(retry_after, session_id.to_string());
-        let json = serde_json::to_string(&result)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        writeln!(writer, "{}", json)
+        writeln!(writer, "{}", to_io_json(&result)?)
     }
 }
 

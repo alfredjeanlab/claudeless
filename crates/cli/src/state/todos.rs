@@ -3,6 +3,7 @@
 
 //! Todo list state management.
 
+use super::io::JsonLoad;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -81,13 +82,6 @@ impl TodoState {
     /// Create empty todo state
     pub fn new() -> Self {
         Self::default()
-    }
-
-    /// Load from file
-    pub fn load(path: &Path) -> std::io::Result<Self> {
-        let content = std::fs::read_to_string(path)?;
-        serde_json::from_str(&content)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
     }
 
     /// Save to file
@@ -205,6 +199,8 @@ impl TodoState {
         self.items.len()
     }
 }
+
+impl JsonLoad for TodoState {}
 
 #[cfg(test)]
 #[path = "todos_tests.rs"]

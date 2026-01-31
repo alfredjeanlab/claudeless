@@ -5,6 +5,7 @@
 
 use crate::cli::OutputFormat;
 use crate::config::{ResponseSpec, ToolCallSpec, UsageSpec};
+use crate::state::to_io_json;
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 
@@ -345,7 +346,7 @@ impl<W: Write> OutputWriter<W> {
             },
         };
 
-        let json = to_json(&json_response)?;
+        let json = to_io_json(&json_response)?;
         writeln!(self.writer, "{}", json)
     }
 
@@ -411,7 +412,7 @@ impl<W: Write> OutputWriter<W> {
             self.write_event(&tool_start)?;
 
             // Stream the input JSON
-            let input_json = to_json(&tc.input)?;
+            let input_json = to_io_json(&tc.input)?;
             let input_delta = StreamEvent::ContentBlockDelta {
                 index: idx,
                 delta: Delta::InputJsonDelta {
@@ -446,7 +447,7 @@ impl<W: Write> OutputWriter<W> {
     }
 
     fn write_event(&mut self, event: &StreamEvent) -> std::io::Result<()> {
-        let json = to_json(event)?;
+        let json = to_io_json(event)?;
         writeln!(self.writer, "{}", json)
     }
 
@@ -456,7 +457,7 @@ impl<W: Write> OutputWriter<W> {
 
     /// Write a result in Claude's result wrapper format (--output-format json)
     pub fn write_result(&mut self, result: &ResultOutput) -> std::io::Result<()> {
-        let json = to_json(result)?;
+        let json = to_io_json(result)?;
         writeln!(self.writer, "{}", json)
     }
 
@@ -610,14 +611,8 @@ impl<W: Write> OutputWriter<W> {
 
     /// Write a JSON-serializable object as a line
     fn write_json_line<T: serde::Serialize>(&mut self, value: &T) -> std::io::Result<()> {
-        writeln!(self.writer, "{}", to_json(value)?)
+        writeln!(self.writer, "{}", to_io_json(value)?)
     }
-}
-
-/// Serialize to JSON with IO error mapping.
-fn to_json<T: serde::Serialize>(value: &T) -> std::io::Result<String> {
-    serde_json::to_string(value)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
 }
 
 /// Generate a deterministic UUID-like stub for testing

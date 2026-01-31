@@ -6,6 +6,7 @@
 //! The sessions-index.json file tracks all sessions in a project directory.
 //! Format matches real Claude CLI (v2.1.12).
 
+use super::io::JsonLoad;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -59,13 +60,6 @@ impl SessionsIndex {
         }
     }
 
-    /// Load sessions index from file.
-    pub fn load(path: &Path) -> std::io::Result<Self> {
-        let content = std::fs::read_to_string(path)?;
-        serde_json::from_str(&content)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
-    }
-
     /// Save sessions index to file.
     pub fn save(&self, path: &Path) -> std::io::Result<()> {
         let json = serde_json::to_string_pretty(self)?;
@@ -104,6 +98,8 @@ impl SessionsIndex {
         self.entries.is_empty()
     }
 }
+
+impl JsonLoad for SessionsIndex {}
 
 /// Get the current git branch name, or empty string if not in a git repo.
 pub fn get_git_branch() -> String {
