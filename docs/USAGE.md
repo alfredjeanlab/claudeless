@@ -23,7 +23,6 @@ These flags and environment variables are unique to claudeless (not in the real 
 | `--scenario <FILE>` | `CLAUDELESS_SCENARIO` | Scenario file (TOML/JSON) |
 | `--capture <FILE>` | `CLAUDELESS_CAPTURE` | Log all interactions to file |
 | `--failure <MODE>` | `CLAUDELESS_FAILURE` | Inject failure (see below) |
-| `--tool-mode <MODE>` | `CLAUDELESS_TOOL_MODE` | Tool execution mode |
 
 ### Environment Variables
 
@@ -45,14 +44,6 @@ claudeless --failure out-of-credits -p "test"
 claudeless --failure partial-response -p "test"
 claudeless --failure malformed-json -p "test"
 ```
-
-### Tool Execution Modes
-
-| Mode | Description |
-|------|-------------|
-| `disabled` | No tool execution (default) |
-| `mock` | Return pre-configured results from scenario |
-| `live` | Execute built-in tools directly |
 
 ## Scenario Files
 
@@ -129,9 +120,17 @@ user_name = "TestUser"
 
 ### Tool Execution Config
 
+Tool execution mode is configured in the scenario file's `[tool_execution]` section.
+The default mode is `live` (execute tools directly).
+
+| Mode | Description |
+|------|-------------|
+| `mock` | Return pre-configured results from scenario |
+| `live` | Execute built-in tools directly (default) |
+
 ```toml
 [tool_execution]
-mode = "live"
+mode = "mock"  # or "live" (default)
 
 [tool_execution.tools.Bash]
 auto_approve = true
@@ -182,8 +181,8 @@ claudeless --scenario test.toml --capture /tmp/log.jsonl -p "hello"
 
 **Live tool execution:**
 ```bash
+# Tools execute by default (live mode)
 claudeless --scenario tools.toml \
-           --tool-mode live \
            -p "edit the file"
 ```
 

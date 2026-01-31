@@ -223,7 +223,7 @@ mode = "live"
 #[test]
 fn test_tool_execution_mode_default() {
     let mode = ToolExecutionMode::default();
-    assert_eq!(mode, ToolExecutionMode::Disabled);
+    assert_eq!(mode, ToolExecutionMode::Live);
 }
 
 #[test]

@@ -3,6 +3,9 @@
 
 name = "mcp-list-test"
 
+[tool_execution]
+mode = "mock"
+
 [[responses]]
 pattern = { type = "contains", text = "list" }
 

@@ -3,6 +3,9 @@
 
 name = "mcp-read-test"
 
+[tool_execution]
+mode = "mock"
+
 [[responses]]
 pattern = { type = "contains", text = "read" }
 

@@ -214,12 +214,10 @@ pub struct ToolConfig {
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ToolExecutionMode {
-    /// No tool execution (backward compatibility)
-    #[default]
-    Disabled,
     /// Return pre-configured results from scenario config
     Mock,
     /// Execute built-in tools directly
+    #[default]
     Live,
 }
 

@@ -3,6 +3,9 @@
 
 name = "mcp-read-raw-test"
 
+[tool_execution]
+mode = "mock"
+
 [[responses]]
 pattern = { type = "contains", text = "read" }
 
@@ -12,4 +15,4 @@ text = "I'll read the file for you."
 [[responses.response.tool_calls]]
 tool = "read_file"  # Raw MCP tool name (not qualified)
 input = { path = "/tmp/mcp-test/sample.txt" }
-# No result - will execute via MCP server
+result = "file contents from mock"

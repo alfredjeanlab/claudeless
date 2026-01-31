@@ -103,8 +103,6 @@ mod mcp_read_scenario {
             .args([
                 "--scenario",
                 scenario_path("mcp-test-read.toml").to_str().unwrap(),
-                "--tool-mode",
-                "mock",
                 "--output-format",
                 "stream-json",
                 "-p",
@@ -172,8 +170,6 @@ mod mcp_write_scenario {
             .args([
                 "--scenario",
                 scenario_path("mcp-test-write.toml").to_str().unwrap(),
-                "--tool-mode",
-                "mock",
                 "--output-format",
                 "stream-json",
                 "-p",
@@ -235,8 +231,6 @@ mod mcp_list_scenario {
             .args([
                 "--scenario",
                 scenario_path("mcp-test-list.toml").to_str().unwrap(),
-                "--tool-mode",
-                "mock",
                 "--output-format",
                 "stream-json",
                 "-p",
@@ -321,8 +315,6 @@ mod mcp_live_scenarios {
                 scenario_path("mcp-test-read-live.toml").to_str().unwrap(),
                 "--mcp-config",
                 mcp_config.path().to_str().unwrap(),
-                "--tool-mode",
-                "live",
                 "--output-format",
                 "stream-json",
                 "-p",
@@ -351,16 +343,14 @@ mod mcp_live_scenarios {
 
     /// Test: mcp-test-read-raw.toml (raw tool name) loads correctly.
     ///
-    /// Note: This test doesn't verify actual MCP execution because that would
-    /// require a running MCP server. It just verifies the scenario loads.
+    /// Note: This test uses mock mode to verify the scenario loads and
+    /// executes tool calls correctly.
     #[test]
     fn test_read_raw_scenario_loads() {
         let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario_path("mcp-test-read-raw.toml").to_str().unwrap(),
-                "--tool-mode",
-                "disabled", // Don't try to execute
                 "-p",
                 "read the file",
             ])
@@ -384,45 +374,13 @@ mod mcp_live_scenarios {
 mod tool_mode_behavior {
     use super::*;
 
-    /// Test: --tool-mode disabled returns response without tool results.
-    #[test]
-    fn test_disabled_mode_no_tool_results() {
-        let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario_path("mcp-test-read.toml").to_str().unwrap(),
-                "--tool-mode",
-                "disabled",
-                "--output-format",
-                "stream-json",
-                "-p",
-                "read file",
-            ])
-            .output()
-            .expect("Failed to run claudeless");
-
-        assert!(output.status.success(), "Expected success: {:?}", output);
-        let stdout = String::from_utf8_lossy(&output.stdout);
-
-        // Should contain response text
-        assert!(stdout.contains("I'll read the file"));
-
-        // Should NOT contain tool_result (disabled mode)
-        assert!(
-            !stdout.contains("tool_result"),
-            "Disabled mode should not produce tool_result events"
-        );
-    }
-
-    /// Test: --tool-mode mock returns tool results from scenario.
+    /// Test: mock mode returns tool results from scenario.
     #[test]
     fn test_mock_mode_returns_canned_results() {
         let output = Command::new(claudeless_bin())
             .args([
                 "--scenario",
                 scenario_path("mcp-test-read.toml").to_str().unwrap(),
-                "--tool-mode",
-                "mock",
                 "--output-format",
                 "stream-json",
                 "-p",
@@ -488,7 +446,7 @@ mod scenario_validation {
     /// Test: MCP scenarios contain valid tool call definitions.
     #[test]
     fn test_mcp_scenarios_have_tool_calls() {
-        // Scenarios with tool_calls should work with mock mode
+        // Scenarios with tool_calls should work with mock mode (configured in fixture)
         let scenarios_with_tools = [
             ("mcp-test-read.toml", "read"),
             ("mcp-test-write.toml", "create"),
@@ -500,8 +458,6 @@ mod scenario_validation {
                 .args([
                     "--scenario",
                     scenario_path(scenario).to_str().unwrap(),
-                    "--tool-mode",
-                    "mock",
                     "--output-format",
                     "stream-json",
                     "-p",

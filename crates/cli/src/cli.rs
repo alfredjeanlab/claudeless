@@ -5,7 +5,6 @@
 
 use clap::{Args, Parser, ValueEnum};
 
-use crate::config::ToolExecutionMode;
 use crate::permission::PermissionMode;
 use crate::state::SettingSource;
 
@@ -203,35 +202,10 @@ pub struct SimulatorOptions {
     #[arg(long, env = "CLAUDELESS_FAILURE")]
     pub failure: Option<FailureMode>,
 
-    /// Tool execution mode (overrides scenario config)
-    #[arg(long, value_enum, env = "CLAUDELESS_TOOL_MODE")]
-    pub tool_mode: Option<CliToolExecutionMode>,
-
     /// Claude version to simulate (e.g., "2.1.12")
     /// When not set, displays "Claudeless" branding instead of "Claude Code"
     #[arg(long, env = "CLAUDELESS_CLAUDE_VERSION")]
     pub claude_version: Option<String>,
-}
-
-/// CLI-friendly tool execution mode enum
-#[derive(Clone, Debug, ValueEnum)]
-pub enum CliToolExecutionMode {
-    /// No tool execution (default)
-    Disabled,
-    /// Return pre-configured results from scenario
-    Mock,
-    /// Execute built-in tools directly
-    Live,
-}
-
-impl From<CliToolExecutionMode> for ToolExecutionMode {
-    fn from(mode: CliToolExecutionMode) -> Self {
-        match mode {
-            CliToolExecutionMode::Disabled => ToolExecutionMode::Disabled,
-            CliToolExecutionMode::Mock => ToolExecutionMode::Mock,
-            CliToolExecutionMode::Live => ToolExecutionMode::Live,
-        }
-    }
 }
 
 impl Cli {

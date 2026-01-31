@@ -37,21 +37,6 @@ fn test_mock_executor_without_result() {
 }
 
 #[test]
-fn test_disabled_executor() {
-    let executor = DisabledExecutor::new();
-    let call = ToolCallSpec {
-        tool: "Bash".to_string(),
-        input: json!({ "command": "ls" }),
-        result: Some("output".to_string()),
-    };
-    let ctx = ExecutionContext::default();
-    let result = executor.execute(&call, "toolu_789", &ctx);
-
-    assert!(result.is_error);
-    assert!(result.text().unwrap().contains("disabled"));
-}
-
-#[test]
 fn test_execution_context_builder() {
     let ctx = ExecutionContext::default()
         .with_cwd("/home/user")
@@ -59,12 +44,6 @@ fn test_execution_context_builder() {
 
     assert_eq!(ctx.cwd, Some(PathBuf::from("/home/user")));
     assert_eq!(ctx.session_id, Some("session-123".to_string()));
-}
-
-#[test]
-fn test_create_executor_disabled() {
-    let executor = create_executor(ToolExecutionMode::Disabled);
-    assert_eq!(executor.name(), "disabled");
 }
 
 #[test]
@@ -76,7 +55,6 @@ fn test_create_executor_mock() {
 #[test]
 fn test_executor_name() {
     assert_eq!(MockExecutor::new().name(), "mock");
-    assert_eq!(DisabledExecutor::new().name(), "disabled");
 }
 
 #[test]

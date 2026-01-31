@@ -3,6 +3,9 @@
 
 name = "mcp-read-live-test"
 
+[tool_execution]
+mode = "live"
+
 [[responses]]
 pattern = { type = "contains", text = "read" }
 

@@ -86,32 +86,6 @@ impl ToolExecutor for MockExecutor {
     }
 }
 
-/// Disabled executor that always returns an error.
-#[derive(Clone, Debug, Default)]
-pub struct DisabledExecutor;
-
-impl DisabledExecutor {
-    /// Create a new disabled executor.
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl ToolExecutor for DisabledExecutor {
-    fn execute(
-        &self,
-        _call: &ToolCallSpec,
-        tool_use_id: &str,
-        _ctx: &ExecutionContext,
-    ) -> ToolExecutionResult {
-        ToolExecutionResult::disabled(tool_use_id)
-    }
-
-    fn name(&self) -> &'static str {
-        "disabled"
-    }
-}
-
 /// Executor that checks permissions before delegating to an inner executor.
 pub struct PermissionCheckingExecutor {
     /// Inner executor to delegate to.
@@ -169,7 +143,6 @@ impl ToolExecutor for PermissionCheckingExecutor {
 /// Create an executor based on the execution mode.
 pub fn create_executor(mode: ToolExecutionMode) -> Box<dyn ToolExecutor> {
     match mode {
-        ToolExecutionMode::Disabled => Box::new(DisabledExecutor::new()),
         ToolExecutionMode::Mock => Box::new(MockExecutor::new()),
         ToolExecutionMode::Live => Box::new(super::builtin::BuiltinExecutor::new()),
     }
@@ -197,7 +170,6 @@ pub fn create_executor_with_mcp(
     state_writer: Option<Arc<RwLock<StateWriter>>>,
 ) -> Box<dyn ToolExecutor> {
     match mode {
-        ToolExecutionMode::Disabled => Box::new(DisabledExecutor::new()),
         ToolExecutionMode::Mock => Box::new(MockExecutor::new()),
         ToolExecutionMode::Live => {
             let mut builtin = super::builtin::BuiltinExecutor::new();

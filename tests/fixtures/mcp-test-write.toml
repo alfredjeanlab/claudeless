@@ -3,6 +3,9 @@
 
 name = "mcp-write-test"
 
+[tool_execution]
+mode = "mock"
+
 [[responses]]
 pattern = { type = "contains", text = "create" }
 

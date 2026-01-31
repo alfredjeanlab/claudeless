@@ -13,7 +13,7 @@ use parking_lot::RwLock;
 
 use claudeless::capture::{CaptureLog, CapturedArgs, CapturedOutcome};
 use claudeless::cli::Cli;
-use claudeless::config::{ResolvedTimeouts, ResponseSpec, ToolExecutionMode};
+use claudeless::config::{ResolvedTimeouts, ResponseSpec};
 use claudeless::failure::FailureExecutor;
 use claudeless::hooks::{load_hooks, HookEvent, HookMessage, StopHookResponse};
 use claudeless::mcp::{load_mcp_config, McpConfig, McpManager, McpServerStatus};
@@ -295,21 +295,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
-            // Determine execution mode (CLI flag overrides scenario config)
-            let execution_mode = cli
-                .simulator
-                .tool_mode
-                .clone()
-                .map(ToolExecutionMode::from)
-                .or_else(|| {
-                    scenario
-                        .as_ref()
-                        .and_then(|s| s.config().tool_execution.as_ref())
-                        .map(|te| te.mode.clone())
-                })
+            // Determine execution mode from scenario config (defaults to Live)
+            let execution_mode = scenario
+                .as_ref()
+                .and_then(|s| s.config().tool_execution.as_ref())
+                .map(|te| te.mode.clone())
                 .unwrap_or_default();
 
-            if execution_mode != ToolExecutionMode::Disabled {
+            {
                 // Create execution context
                 let mut ctx = ExecutionContext::default();
                 if let Some(ref cwd) = cli.cwd {
