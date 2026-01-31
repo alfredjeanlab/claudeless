@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "updated": "2026-01-31T22:20:12.138550Z",
+  "commit": "1dd7015",
+  "metrics": {
+    "escapes": {
+      "source": {
+        "unsafe": 0,
+        "transmute": 0
+      },
+      "test": {
+        "transmute": 0,
+        "unsafe": 0
+      }
+    }
+  }
+}
