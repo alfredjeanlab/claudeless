@@ -15,8 +15,8 @@ use claudeless::capture::{CaptureLog, CapturedArgs, CapturedOutcome};
 use claudeless::cli::Cli;
 use claudeless::config::{ResolvedTimeouts, ResponseSpec, ToolExecutionMode};
 use claudeless::failure::FailureExecutor;
-use claudeless::mcp::{load_mcp_config, McpConfig, McpManager};
-use claudeless::output::OutputWriter;
+use claudeless::mcp::{load_mcp_config, McpConfig, McpManager, McpServerStatus};
+use claudeless::output::{McpServerInfo, OutputWriter};
 use claudeless::permission::PermissionBypass;
 use claudeless::scenario::Scenario;
 use claudeless::session::SessionContext;
@@ -181,8 +181,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Use real Claude format (result wrapper for JSON, system init + result for stream-JSON)
     let mut writer = OutputWriter::new(&mut stdout, cli.output_format.clone(), cli.model.clone());
-    let tools: Vec<String> = cli.allowed_tools.clone();
-    writer.write_real_response(&response, &session_ctx.session_id.to_string(), tools)?;
+
+    // Combine builtin tools with MCP tools (MCP tools use mcp__<server>__<tool> naming)
+    let mut tools: Vec<String> = cli.allowed_tools.clone();
+    let mcp_tools = get_mcp_tool_names(&mcp_manager);
+    tools.extend(mcp_tools);
+
+    // Get MCP server info for init event
+    let mcp_servers = get_mcp_server_info(&mcp_manager);
+
+    writer.write_real_response_with_mcp(
+        &response,
+        &session_ctx.session_id.to_string(),
+        tools,
+        mcp_servers,
+    )?;
 
     // Create state writer for recording turns and handling stateful tools
     let state_writer = StateWriter::new(
@@ -316,6 +329,53 @@ async fn shutdown_mcp_manager(mgr: Arc<RwLock<McpManager>>) {
     }
 }
 
+/// Extract qualified tool names from MCP manager.
+///
+/// Returns MCP tools in the `mcp__<server>__<tool>` format used by real Claude CLI.
+fn get_mcp_tool_names(mcp_manager: &Option<Arc<RwLock<McpManager>>>) -> Vec<String> {
+    match mcp_manager {
+        Some(manager) => {
+            let guard = manager.read();
+            guard
+                .tools()
+                .iter()
+                .map(|tool| tool.qualified_name())
+                .collect()
+        }
+        None => vec![],
+    }
+}
+
+/// Extract MCP server info for init event output.
+///
+/// Maps server status to the format expected by real Claude CLI:
+/// - Running -> "connected"
+/// - Failed -> "failed"
+/// - Disconnected -> "disconnected"
+/// - Uninitialized servers are excluded
+fn get_mcp_server_info(mcp_manager: &Option<Arc<RwLock<McpManager>>>) -> Vec<McpServerInfo> {
+    match mcp_manager {
+        Some(manager) => {
+            let guard = manager.read();
+            guard
+                .servers()
+                .iter()
+                .filter_map(|server| {
+                    match &server.status {
+                        McpServerStatus::Running => Some(McpServerInfo::connected(&server.name)),
+                        McpServerStatus::Failed(_) => Some(McpServerInfo::failed(&server.name)),
+                        McpServerStatus::Disconnected => {
+                            Some(McpServerInfo::disconnected(&server.name))
+                        }
+                        McpServerStatus::Uninitialized => None, // Not included in output
+                    }
+                })
+                .collect()
+        }
+        None => vec![],
+    }
+}
+
 /// Load and initialize MCP servers from CLI flags.
 async fn load_mcp_configs(
     cli: &Cli,
@@ -348,7 +408,7 @@ async fn load_mcp_configs(
     }
 
     // Initialize servers (spawn processes, discover tools)
-    let results = manager.initialize().await;
+    let results = manager.initialize(cli.mcp_debug).await;
 
     // Handle initialization results
     for (name, result) in &results {

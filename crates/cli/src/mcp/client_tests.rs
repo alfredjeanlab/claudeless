@@ -56,7 +56,9 @@ mod connect {
 
     #[tokio::test]
     async fn connects_to_echo_server() {
-        let client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
         assert!(!client.is_initialized());
         assert!(client.is_running().await);
         client.shutdown().await.unwrap();
@@ -68,7 +70,7 @@ mod connect {
             command: "nonexistent_command_xyz".into(),
             ..Default::default()
         };
-        let result = McpClient::connect(&def).await;
+        let result = McpClient::connect(&def, "test", false).await;
         assert!(matches!(result, Err(ClientError::Transport(_))));
     }
 }
@@ -78,7 +80,9 @@ mod initialize {
 
     #[tokio::test]
     async fn initializes_successfully() {
-        let mut client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let mut client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
 
         let server_info = client.initialize().await.unwrap();
         assert_eq!(server_info.name, "echo-test");
@@ -89,7 +93,9 @@ mod initialize {
 
     #[tokio::test]
     async fn fails_double_initialization() {
-        let mut client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let mut client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
         client.initialize().await.unwrap();
 
         let result = client.initialize().await;
@@ -100,7 +106,9 @@ mod initialize {
 
     #[tokio::test]
     async fn server_info_available_after_init() {
-        let mut client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let mut client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
         assert!(client.server_info().is_none());
 
         client.initialize().await.unwrap();
@@ -118,7 +126,9 @@ mod list_tools {
 
     #[tokio::test]
     async fn lists_tools_after_init() {
-        let mut client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let mut client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
         client.initialize().await.unwrap();
 
         let tools = client.list_tools().await.unwrap();
@@ -130,7 +140,9 @@ mod list_tools {
 
     #[tokio::test]
     async fn fails_before_initialization() {
-        let mut client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let mut client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
 
         let result = client.list_tools().await;
         assert!(matches!(result, Err(ClientError::NotInitialized)));
@@ -140,7 +152,9 @@ mod list_tools {
 
     #[tokio::test]
     async fn has_tool_checks_cached_list() {
-        let mut client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let mut client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
         client.initialize().await.unwrap();
         client.list_tools().await.unwrap();
 
@@ -153,7 +167,9 @@ mod list_tools {
 
     #[tokio::test]
     async fn tools_accessor_returns_cached() {
-        let mut client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let mut client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
         assert!(client.tools().is_empty());
 
         client.initialize().await.unwrap();
@@ -166,7 +182,9 @@ mod list_tools {
 
     #[tokio::test]
     async fn get_tool_returns_tool_info() {
-        let mut client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let mut client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
         client.initialize().await.unwrap();
         client.list_tools().await.unwrap();
 
@@ -185,7 +203,9 @@ mod call_tool {
 
     #[tokio::test]
     async fn calls_echo_tool() {
-        let mut client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let mut client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
         client.initialize().await.unwrap();
 
         let result = client
@@ -210,7 +230,9 @@ mod call_tool {
 
     #[tokio::test]
     async fn handles_tool_error() {
-        let mut client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let mut client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
         client.initialize().await.unwrap();
 
         let result = client.call_tool("fail", json!({})).await.unwrap();
@@ -221,7 +243,9 @@ mod call_tool {
 
     #[tokio::test]
     async fn fails_before_initialization() {
-        let client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
 
         let result = client.call_tool("echo", json!({})).await;
         assert!(matches!(result, Err(ClientError::NotInitialized)));
@@ -231,7 +255,9 @@ mod call_tool {
 
     #[tokio::test]
     async fn call_with_empty_arguments() {
-        let mut client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let mut client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
         client.initialize().await.unwrap();
 
         let result = client.call_tool("echo", json!({})).await.unwrap();
@@ -242,7 +268,9 @@ mod call_tool {
 
     #[tokio::test]
     async fn call_with_custom_timeout() {
-        let mut client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let mut client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
         client.initialize().await.unwrap();
 
         let result = client
@@ -261,7 +289,7 @@ mod connect_and_initialize {
 
     #[tokio::test]
     async fn convenience_method_works() {
-        let client = McpClient::connect_and_initialize(&echo_server_def())
+        let client = McpClient::connect_and_initialize(&echo_server_def(), "echo", false)
             .await
             .unwrap();
 
@@ -278,7 +306,9 @@ mod shutdown {
 
     #[tokio::test]
     async fn shutdown_terminates_process() {
-        let client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
         assert!(client.is_running().await);
 
         client.shutdown().await.unwrap();
@@ -292,7 +322,9 @@ mod protocol_flow {
     #[tokio::test]
     async fn full_lifecycle() {
         // Complete protocol flow test
-        let mut client = McpClient::connect(&echo_server_def()).await.unwrap();
+        let mut client = McpClient::connect(&echo_server_def(), "echo", false)
+            .await
+            .unwrap();
 
         // Step 1: Initialize
         let server_info = client.initialize().await.unwrap();
@@ -330,7 +362,7 @@ mod error_recovery {
             ..Default::default()
         };
 
-        let mut client = McpClient::connect(&def).await.unwrap();
+        let mut client = McpClient::connect(&def, "test", false).await.unwrap();
 
         // Give process time to exit
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -347,7 +379,7 @@ mod accessors {
     #[tokio::test]
     async fn definition_returns_server_def() {
         let def = echo_server_def();
-        let client = McpClient::connect(&def).await.unwrap();
+        let client = McpClient::connect(&def, "test", false).await.unwrap();
 
         assert_eq!(client.definition().command, "python3");
         assert!(!client.definition().args.is_empty());

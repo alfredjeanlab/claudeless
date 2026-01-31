@@ -104,7 +104,7 @@ mod spawn {
             command: "cat".to_string(),
             ..Default::default()
         };
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
         assert!(transport.is_running().await);
         transport.shutdown().await.unwrap();
     }
@@ -115,7 +115,7 @@ mod spawn {
             command: "nonexistent_command_12345".to_string(),
             ..Default::default()
         };
-        let result = StdioTransport::spawn(&def).await;
+        let result = StdioTransport::spawn(&def, "test", false).await;
         assert!(matches!(result, Err(TransportError::Spawn(_))));
     }
 
@@ -126,7 +126,7 @@ mod spawn {
             args: vec!["hello".to_string()],
             ..Default::default()
         };
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
         // Process will exit immediately after echo, that's OK
         transport.shutdown().await.unwrap();
     }
@@ -140,7 +140,7 @@ mod spawn {
         };
         def.env.insert("TEST_VAR".to_string(), "hello".to_string());
 
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
         transport.shutdown().await.unwrap();
     }
 }
@@ -167,7 +167,7 @@ for line in sys.stdin:
             ..Default::default()
         };
 
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
 
         let result = transport
             .request("echo", Some(serde_json::json!({"test": "value"})), 5000)
@@ -197,7 +197,7 @@ for line in sys.stdin:
             ..Default::default()
         };
 
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
 
         let result1 = transport.request("method1", None, 5000).await.unwrap();
         assert_eq!(result1["method"], "method1");
@@ -218,7 +218,7 @@ for line in sys.stdin:
             ..Default::default()
         };
 
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
 
         // Give process time to exit
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -245,7 +245,7 @@ for line in sys.stdin:
             ..Default::default()
         };
 
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
 
         let result = transport.request("unknown", None, 5000).await;
         match result {
@@ -272,7 +272,7 @@ mod timeout_tests {
             ..Default::default()
         };
 
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
 
         let result = transport.request("test", None, 100).await;
         assert!(matches!(result, Err(TransportError::Timeout(100))));
@@ -290,7 +290,7 @@ mod shutdown_tests {
             command: "cat".to_string(),
             ..Default::default()
         };
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
 
         transport.shutdown().await.unwrap();
 
@@ -304,7 +304,7 @@ mod shutdown_tests {
             command: "cat".to_string(),
             ..Default::default()
         };
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
         transport.shutdown().await.unwrap();
 
         let result = transport.request("test", None, 1000).await;
@@ -317,7 +317,7 @@ mod shutdown_tests {
             command: "cat".to_string(),
             ..Default::default()
         };
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
         transport.shutdown().await.unwrap();
 
         let req = JsonRpcRequest::new(1, "test", None);
@@ -331,7 +331,7 @@ mod shutdown_tests {
             command: "cat".to_string(),
             ..Default::default()
         };
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
         transport.shutdown().await.unwrap();
 
         let result = transport.receive().await;
@@ -347,7 +347,7 @@ mod shutdown_tests {
             ..Default::default()
         };
 
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
 
         // Shutdown should still succeed (will force kill after timeout)
         let start = std::time::Instant::now();
@@ -365,7 +365,7 @@ mod shutdown_tests {
             command: "cat".to_string(),
             ..Default::default()
         };
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
         transport.shutdown().await.unwrap();
 
         let notif = JsonRpcNotification::new("test", None);
@@ -395,7 +395,7 @@ for line in sys.stdin:
             ..Default::default()
         };
 
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
 
         let result1 = transport.request("test", None, 5000).await.unwrap();
         let result2 = transport.request("test", None, 5000).await.unwrap();
@@ -532,7 +532,7 @@ for line in sys.stdin:
             ..Default::default()
         };
 
-        let transport = StdioTransport::spawn(&def).await.unwrap();
+        let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
 
         for expected_id in 1..=5 {
             let result = transport.request("test", None, 5000).await.unwrap();

@@ -63,7 +63,11 @@ impl McpServer {
     ///
     /// This spawns the actual MCP server process, initializes the MCP protocol,
     /// and discovers available tools via `tools/list`.
-    pub async fn spawn(&mut self) -> Result<(), ClientError> {
+    ///
+    /// # Arguments
+    ///
+    /// * `debug` - Enable JSON-RPC debug logging to stderr
+    pub async fn spawn(&mut self, debug: bool) -> Result<(), ClientError> {
         // Validate definition
         if self.definition.command.is_empty() {
             return Err(ClientError::Transport(TransportError::Spawn(
@@ -72,7 +76,7 @@ impl McpServer {
         }
 
         // Connect, initialize, and discover tools
-        let client = McpClient::connect_and_initialize(&self.definition).await?;
+        let client = McpClient::connect_and_initialize(&self.definition, &self.name, debug).await?;
 
         // Convert discovered tools to McpToolDef
         self.tools = client
@@ -217,7 +221,11 @@ impl McpManager {
     ///
     /// Returns a list of (server_name, result) pairs. Servers that fail to
     /// initialize are marked as Failed but remain in the manager.
-    pub async fn initialize(&mut self) -> Vec<(String, Result<(), ClientError>)> {
+    ///
+    /// # Arguments
+    ///
+    /// * `debug` - Enable JSON-RPC debug logging to stderr
+    pub async fn initialize(&mut self, debug: bool) -> Vec<(String, Result<(), ClientError>)> {
         let mut results = Vec::new();
 
         // Collect server names to avoid borrow issues
@@ -225,7 +233,7 @@ impl McpManager {
 
         for name in names {
             let result = if let Some(server) = self.servers.get_mut(&name) {
-                match server.spawn().await {
+                match server.spawn(debug).await {
                     Ok(()) => {
                         // Register discovered tools in the mapping
                         for tool in &server.tools {
@@ -301,6 +309,11 @@ impl McpManager {
             .filter(|s| s.is_running())
             .flat_map(|s| &s.tools)
             .collect()
+    }
+
+    /// Get all servers.
+    pub fn servers(&self) -> Vec<&McpServer> {
+        self.servers.values().collect()
     }
 
     /// Get tool names for output.

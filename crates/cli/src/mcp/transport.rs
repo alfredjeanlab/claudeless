@@ -19,7 +19,7 @@
 //!     ..Default::default()
 //! };
 //!
-//! let transport = StdioTransport::spawn(&def).await?;
+//! let transport = StdioTransport::spawn(&def, "server", false).await?;
 //!
 //! // Send a request and wait for response
 //! let result = transport.request(
@@ -224,13 +224,21 @@ pub struct StdioTransport {
 
     /// Whether the transport has been shut down.
     shutdown: AtomicBool,
+
+    /// Enable debug logging of JSON-RPC messages.
+    debug: bool,
+
+    /// Server name for debug logging context.
+    server_name: String,
 }
 
 impl std::fmt::Debug for StdioTransport {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StdioTransport")
+            .field("server_name", &self.server_name)
             .field("next_id", &self.next_id.load(Ordering::Relaxed))
             .field("shutdown", &self.shutdown.load(Ordering::Relaxed))
+            .field("debug", &self.debug)
             .finish_non_exhaustive()
     }
 }
@@ -240,7 +248,17 @@ impl StdioTransport {
     ///
     /// The process is spawned with stdin/stdout piped for JSON-RPC communication.
     /// Stderr is inherited from the parent (for debugging).
-    pub async fn spawn(def: &McpServerDef) -> Result<Self, TransportError> {
+    ///
+    /// # Arguments
+    ///
+    /// * `def` - Server definition with command and arguments
+    /// * `server_name` - Server name for debug logging context
+    /// * `debug` - Enable JSON-RPC debug logging to stderr
+    pub async fn spawn(
+        def: &McpServerDef,
+        server_name: impl Into<String>,
+        debug: bool,
+    ) -> Result<Self, TransportError> {
         let mut cmd = Command::new(&def.command);
 
         // Add arguments
@@ -282,6 +300,8 @@ impl StdioTransport {
             stdout: Mutex::new(Some(BufReader::new(stdout))),
             next_id: AtomicU64::new(1),
             shutdown: AtomicBool::new(false),
+            debug,
+            server_name: server_name.into(),
         })
     }
 
@@ -324,6 +344,14 @@ impl StdioTransport {
 
     /// Send a JSON-RPC request to the child process.
     pub async fn send(&self, request: &JsonRpcRequest) -> Result<(), TransportError> {
+        if self.debug {
+            eprintln!(
+                "MCP JSON-RPC [{}] -> {}: {}",
+                self.server_name,
+                request.method,
+                serde_json::to_string(request).unwrap_or_default()
+            );
+        }
         self.write_message(request).await
     }
 
@@ -332,6 +360,14 @@ impl StdioTransport {
         &self,
         notification: &JsonRpcNotification,
     ) -> Result<(), TransportError> {
+        if self.debug {
+            eprintln!(
+                "MCP JSON-RPC [{}] -> {} (notification): {}",
+                self.server_name,
+                notification.method,
+                serde_json::to_string(notification).unwrap_or_default()
+            );
+        }
         self.write_message(notification).await
     }
 
@@ -349,6 +385,10 @@ impl StdioTransport {
 
         if bytes_read == 0 {
             return Err(TransportError::ProcessExited);
+        }
+
+        if self.debug {
+            eprintln!("MCP JSON-RPC [{}] <- {}", self.server_name, line.trim());
         }
 
         serde_json::from_str(&line).map_err(|e| TransportError::Parse(e.to_string()))

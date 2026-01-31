@@ -146,7 +146,7 @@ mod integration_tests {
         let mut server = McpServer::from_def("echo", echo_server_def());
         assert_eq!(server.status, McpServerStatus::Uninitialized);
 
-        server.spawn().await.expect("spawn failed");
+        server.spawn(false).await.expect("spawn failed");
 
         assert_eq!(server.status, McpServerStatus::Running);
         assert!(server.is_connected());
@@ -160,7 +160,7 @@ mod integration_tests {
     #[tokio::test]
     async fn test_server_call_tool() {
         let mut server = McpServer::from_def("echo", echo_server_def());
-        server.spawn().await.expect("spawn failed");
+        server.spawn(false).await.expect("spawn failed");
 
         let result = server
             .call_tool("echo", serde_json::json!({"message": "hello"}))
@@ -174,7 +174,7 @@ mod integration_tests {
     #[tokio::test]
     async fn test_server_call_tool_error() {
         let mut server = McpServer::from_def("echo", echo_server_def());
-        server.spawn().await.expect("spawn failed");
+        server.spawn(false).await.expect("spawn failed");
 
         // The "fail" tool always returns an error
         let result = server
@@ -204,7 +204,7 @@ mod integration_tests {
         let mut manager = McpManager::from_config(&config);
         assert_eq!(manager.running_server_count(), 0);
 
-        let results = manager.initialize().await;
+        let results = manager.initialize(false).await;
         assert!(results.iter().all(|(_, r)| r.is_ok()));
         assert_eq!(manager.running_server_count(), 1);
         assert!(manager.has_tool("echo"));
@@ -234,7 +234,7 @@ mod integration_tests {
         let def = McpServerDef::default();
         let mut server = McpServer::from_def("test", def);
 
-        let result = server.spawn().await;
+        let result = server.spawn(false).await;
         assert!(result.is_err());
         // Should fail with transport error for empty command
         assert!(matches!(result.unwrap_err(), ClientError::Transport(_)));
@@ -261,7 +261,7 @@ mod integration_tests {
         .unwrap();
 
         let mut manager = McpManager::from_config(&config);
-        let results = manager.initialize().await;
+        let results = manager.initialize(false).await;
 
         // One should succeed, one should fail
         assert_eq!(results.len(), 2);

@@ -13,7 +13,7 @@ mod output_events;
 pub use output_events::{
     AssistantEvent, AssistantMessageContent, CondensedAssistantEvent, CondensedMessage,
     ContentBlockDeltaEvent, ContentBlockStartEvent, ContentBlockStopEvent, ExtendedUsage,
-    SystemInitEvent,
+    McpServerInfo, SystemInitEvent,
 };
 
 /// Detailed usage statistics for result output
@@ -476,7 +476,7 @@ impl<W: Write> OutputWriter<W> {
         response: &ResponseSpec,
         session_id: &str,
         tools: Vec<String>,
-        mcp_servers: Vec<String>,
+        mcp_servers: Vec<McpServerInfo>,
     ) -> std::io::Result<()> {
         match self.format {
             OutputFormat::Text => self.write_text(response),
@@ -522,7 +522,7 @@ impl<W: Write> OutputWriter<W> {
         response: &ResponseSpec,
         session_id: &str,
         tools: Vec<String>,
-        mcp_servers: Vec<String>,
+        mcp_servers: Vec<McpServerInfo>,
     ) -> std::io::Result<()> {
         let (text, usage) = response.text_and_usage();
 

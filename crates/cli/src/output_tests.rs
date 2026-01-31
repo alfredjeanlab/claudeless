@@ -262,10 +262,14 @@ fn test_system_init_event() {
 
 #[test]
 fn test_system_init_event_with_mcp_servers() {
+    let mcp_servers = vec![
+        McpServerInfo::connected("filesystem"),
+        McpServerInfo::connected("github"),
+    ];
     let init = SystemInitEvent::with_mcp_servers(
         "session-123",
         vec!["Bash".to_string(), "Read".to_string()],
-        vec!["filesystem".to_string(), "github".to_string()],
+        mcp_servers,
     );
 
     let json = serde_json::to_string(&init).unwrap();
@@ -277,7 +281,10 @@ fn test_system_init_event_with_mcp_servers() {
     assert_eq!(parsed["tools"], serde_json::json!(["Bash", "Read"]));
     assert_eq!(
         parsed["mcp_servers"],
-        serde_json::json!(["filesystem", "github"])
+        serde_json::json!([
+            {"name": "filesystem", "status": "connected"},
+            {"name": "github", "status": "connected"}
+        ])
     );
 }
 
@@ -564,27 +571,18 @@ fn test_mcp_tool_naming_convention() {
 /// ```json
 /// {"mcp_servers": [{"name": "filesystem", "status": "connected"}]}
 /// ```
-///
-/// Current claudeless format (incorrect):
-/// ```json
-/// {"mcp_servers": ["filesystem"]}
-/// ```
 #[test]
-#[ignore = "claudeless currently outputs mcp_servers as string array, not object array"]
 fn test_mcp_servers_format_matches_real_claude() {
-    // This test documents the expected format from real Claude CLI
     let expected_format = serde_json::json!([
         {"name": "filesystem", "status": "connected"}
     ]);
 
-    // When claudeless is updated, it should produce this format
-    let init =
-        SystemInitEvent::with_mcp_servers("session-123", vec![], vec!["filesystem".to_string()]);
+    let mcp_servers = vec![McpServerInfo::connected("filesystem")];
+    let init = SystemInitEvent::with_mcp_servers("session-123", vec![], mcp_servers);
 
     let json = serde_json::to_string(&init).unwrap();
     let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-    // Currently fails: claudeless outputs ["filesystem"] instead of [{"name":"filesystem","status":"connected"}]
     assert_eq!(parsed["mcp_servers"], expected_format);
 }
 
