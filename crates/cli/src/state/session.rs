@@ -7,7 +7,7 @@ mod jsonl;
 
 pub use jsonl::*;
 
-use super::io::JsonLoad;
+use super::io::{json_files_in, JsonLoad};
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -292,24 +292,9 @@ impl SessionManager {
             return None;
         }
 
-        let mut most_recent: Option<Session> = None;
-
-        if let Ok(entries) = std::fs::read_dir(dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.extension().is_some_and(|e| e == "json") {
-                    if let Ok(session) = Session::load(&path) {
-                        if most_recent
-                            .as_ref()
-                            .map(|s| session.last_active_ms > s.last_active_ms)
-                            .unwrap_or(true)
-                        {
-                            most_recent = Some(session);
-                        }
-                    }
-                }
-            }
-        }
+        let most_recent = json_files_in(dir)
+            .filter_map(|path| Session::load(&path).ok())
+            .max_by_key(|s| s.last_active_ms);
 
         if let Some(session) = most_recent {
             let id = session.id.clone();
