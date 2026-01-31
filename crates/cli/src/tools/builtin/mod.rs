@@ -20,7 +20,9 @@ mod read;
 pub mod stateful;
 mod write;
 
-pub use input::*;
+pub(crate) use input::{
+    extract_bool, extract_directory, extract_file_path, extract_str, require_field,
+};
 
 use std::collections::HashMap;
 use std::path::PathBuf;

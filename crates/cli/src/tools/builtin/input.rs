@@ -50,7 +50,7 @@ pub use require_field;
 
 /// Extract a file path from tool input.
 /// Checks "file_path" first, then "path" as fallback.
-pub fn extract_file_path(input: &Value) -> Option<&str> {
+pub(crate) fn extract_file_path(input: &Value) -> Option<&str> {
     input
         .get("file_path")
         .or_else(|| input.get("path"))
@@ -59,7 +59,7 @@ pub fn extract_file_path(input: &Value) -> Option<&str> {
 
 /// Extract a directory/path from tool input.
 /// Checks "path" first, then "directory" as fallback.
-pub fn extract_directory(input: &Value) -> Option<&str> {
+pub(crate) fn extract_directory(input: &Value) -> Option<&str> {
     input
         .get("path")
         .or_else(|| input.get("directory"))
@@ -67,12 +67,12 @@ pub fn extract_directory(input: &Value) -> Option<&str> {
 }
 
 /// Extract a string field by name.
-pub fn extract_str<'a>(input: &'a Value, key: &str) -> Option<&'a str> {
+pub(crate) fn extract_str<'a>(input: &'a Value, key: &str) -> Option<&'a str> {
     input.get(key).and_then(|v| v.as_str())
 }
 
 /// Extract a boolean field with default.
-pub fn extract_bool(input: &Value, key: &str, default: bool) -> bool {
+pub(crate) fn extract_bool(input: &Value, key: &str, default: bool) -> bool {
     input.get(key).and_then(|v| v.as_bool()).unwrap_or(default)
 }
 
