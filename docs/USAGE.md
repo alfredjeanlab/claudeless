@@ -29,8 +29,8 @@ These flags and environment variables are unique to claudeless (not in the real 
 
 | Variable | Description |
 |----------|-------------|
-| `CLAUDELESS_STATE_DIR` | State directory override (highest priority) |
-| `CLAUDE_LOCAL_STATE_DIR` | State directory (standard Claude Code variable) |
+| `CLAUDELESS_CONFIG_DIR` | State directory override (highest priority) |
+| `CLAUDE_CONFIG_DIR` | State directory (standard Claude Code variable) |
 
 If neither is set, a temporary directory is used to avoid touching real `~/.claude`.
 
@@ -164,7 +164,7 @@ Claudeless accepts all standard Claude CLI flags for compatibility:
 
 **CI pipeline test:**
 ```bash
-CLAUDELESS_STATE_DIR=/tmp/test-state \
+CLAUDELESS_CONFIG_DIR=/tmp/test-state \
 claudeless --scenario ci-review.toml \
            --output-format json \
            -p "review this PR"
