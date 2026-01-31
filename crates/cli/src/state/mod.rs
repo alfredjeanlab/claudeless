@@ -46,6 +46,65 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
+/// Message identifiers for JSONL records.
+///
+/// Consolidates UUID generation for message lines. User messages only need `uuid`,
+/// while assistant messages need all three identifiers.
+#[derive(Clone, Debug)]
+pub struct MessageIds {
+    /// Primary message UUID (used as envelope uuid field).
+    pub uuid: String,
+    /// API request ID (format: `req_{uuid}`).
+    pub request_id: String,
+    /// Message ID (format: `msg_{uuid}`).
+    pub message_id: String,
+}
+
+impl MessageIds {
+    /// Generate full identifiers for assistant messages.
+    pub fn new() -> Self {
+        Self {
+            uuid: Uuid::new_v4().to_string(),
+            request_id: format!("req_{}", Uuid::new_v4().simple()),
+            message_id: format!("msg_{}", Uuid::new_v4().simple()),
+        }
+    }
+
+    /// Generate identifiers for user messages (only uuid needed).
+    pub fn user() -> Self {
+        Self {
+            uuid: Uuid::new_v4().to_string(),
+            request_id: String::new(),
+            message_id: String::new(),
+        }
+    }
+}
+
+impl Default for MessageIds {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Common context for writing JSONL records.
+///
+/// Captures per-write state that's reused across message types.
+#[derive(Clone, Debug)]
+pub struct WriteContext {
+    /// Path to the session JSONL file.
+    pub jsonl_path: PathBuf,
+    /// Current git branch (from cwd).
+    pub git_branch: String,
+    /// Write timestamp.
+    pub timestamp: DateTime<Utc>,
+    /// Session ID.
+    pub session_id: String,
+    /// Working directory.
+    pub cwd: String,
+    /// Package version.
+    pub version: &'static str,
+}
+
 /// Facade for writing Claude state to JSONL files during execution.
 ///
 /// `StateWriter` provides high-level methods for JSONL persistence used by
@@ -140,16 +199,39 @@ impl StateWriter {
         ))
     }
 
+    /// Create write context for JSONL operations.
+    ///
+    /// Ensures the project directory exists and returns common state for writing.
+    fn write_context(&self) -> std::io::Result<WriteContext> {
+        let project_dir = self.project_dir();
+        std::fs::create_dir_all(&project_dir)?;
+
+        Ok(WriteContext {
+            jsonl_path: self.session_jsonl_path(),
+            git_branch: get_git_branch(),
+            timestamp: Utc::now(),
+            session_id: self.session_id.clone(),
+            cwd: self.cwd.to_string_lossy().into_owned(),
+            version: env!("CARGO_PKG_VERSION"),
+        })
+    }
+
+    /// Track message and update index after a write.
+    fn on_message_written(&mut self, prompt: Option<&str>) {
+        if let Some(p) = prompt {
+            if self.first_prompt.is_none() {
+                self.first_prompt = Some(p.to_string());
+            }
+        }
+        self.message_count += 1;
+    }
+
     /// Write queue-operation line for `-p` (print) mode.
     ///
     /// This should be called once at the start of a session in print mode.
     pub fn write_queue_operation(&self) -> std::io::Result<()> {
-        // Ensure project directory exists
-        let project_dir = self.project_dir();
-        std::fs::create_dir_all(&project_dir)?;
-
-        let jsonl_path = self.session_jsonl_path();
-        write_queue_operation(&jsonl_path, &self.session_id, "dequeue", Utc::now())
+        let ctx = self.write_context()?;
+        write_queue_operation(&ctx.jsonl_path, &ctx.session_id, "dequeue", ctx.timestamp)
     }
 
     /// Record a conversation turn.
@@ -157,43 +239,28 @@ impl StateWriter {
     /// Writes to the JSONL session file and updates sessions-index.json.
     /// This is a convenience method for simple turns without tool calls.
     pub fn record_turn(&mut self, prompt: &str, response: &str) -> std::io::Result<()> {
-        // Ensure project directory exists
-        let project_dir = self.project_dir();
-        std::fs::create_dir_all(&project_dir)?;
+        let ctx = self.write_context()?;
+        let user_ids = MessageIds::user();
+        let assistant_ids = MessageIds::new();
 
-        let jsonl_path = self.session_jsonl_path();
-
-        // Generate UUIDs for this turn
-        let user_uuid = Uuid::new_v4().to_string();
-        let assistant_uuid = Uuid::new_v4().to_string();
-        let request_id = format!("req_{}", Uuid::new_v4().simple());
-
-        // Append to JSONL file
-        let git_branch = get_git_branch();
-        let message_id = format!("msg_{}", Uuid::new_v4().simple());
         let params = TurnParams {
-            session_id: &self.session_id,
-            user_uuid: &user_uuid,
-            assistant_uuid: &assistant_uuid,
-            request_id: &request_id,
+            session_id: &ctx.session_id,
+            user_uuid: &user_ids.uuid,
+            assistant_uuid: &assistant_ids.uuid,
+            request_id: &assistant_ids.request_id,
             prompt,
             response,
             model: &self.model,
-            cwd: &self.cwd.to_string_lossy(),
-            version: env!("CARGO_PKG_VERSION"),
-            git_branch: &git_branch,
-            message_id: &message_id,
-            timestamp: Utc::now(),
+            cwd: &ctx.cwd,
+            version: ctx.version,
+            git_branch: &ctx.git_branch,
+            message_id: &assistant_ids.message_id,
+            timestamp: ctx.timestamp,
         };
-        append_turn_jsonl(&jsonl_path, &params)?;
+        append_turn_jsonl(&ctx.jsonl_path, &params)?;
 
-        // Track first prompt and message count
-        if self.first_prompt.is_none() {
-            self.first_prompt = Some(prompt.to_string());
-        }
-        self.message_count += 2; // user + assistant
-
-        // Update sessions-index.json
+        self.on_message_written(Some(prompt));
+        self.message_count += 1; // on_message_written added 1, add 1 more for assistant
         self.update_sessions_index()?;
 
         Ok(())
@@ -203,33 +270,23 @@ impl StateWriter {
     ///
     /// Returns the user message UUID for linking to assistant responses.
     pub fn record_user_message(&mut self, prompt: &str) -> std::io::Result<String> {
-        // Ensure project directory exists
-        let project_dir = self.project_dir();
-        std::fs::create_dir_all(&project_dir)?;
-
-        let jsonl_path = self.session_jsonl_path();
-        let user_uuid = Uuid::new_v4().to_string();
-        let git_branch = get_git_branch();
+        let ctx = self.write_context()?;
+        let ids = MessageIds::user();
 
         let params = UserMessageParams {
-            session_id: &self.session_id,
-            user_uuid: &user_uuid,
+            session_id: &ctx.session_id,
+            user_uuid: &ids.uuid,
             parent_uuid: None,
             content: UserMessageContent::Text(prompt),
-            cwd: &self.cwd.to_string_lossy(),
-            version: env!("CARGO_PKG_VERSION"),
-            git_branch: &git_branch,
-            timestamp: Utc::now(),
+            cwd: &ctx.cwd,
+            version: ctx.version,
+            git_branch: &ctx.git_branch,
+            timestamp: ctx.timestamp,
         };
-        append_user_message_jsonl(&jsonl_path, &params)?;
+        append_user_message_jsonl(&ctx.jsonl_path, &params)?;
 
-        // Track first prompt and message count
-        if self.first_prompt.is_none() {
-            self.first_prompt = Some(prompt.to_string());
-        }
-        self.message_count += 1;
-
-        Ok(user_uuid)
+        self.on_message_written(Some(prompt));
+        Ok(ids.uuid)
     }
 
     /// Record an assistant response (text only, no tool calls).
@@ -262,34 +319,31 @@ impl StateWriter {
         response: &str,
         stop_reason: Option<&str>,
     ) -> std::io::Result<String> {
-        let jsonl_path = self.session_jsonl_path();
-        let assistant_uuid = Uuid::new_v4().to_string();
-        let request_id = format!("req_{}", Uuid::new_v4().simple());
-        let message_id = format!("msg_{}", Uuid::new_v4().simple());
-        let git_branch = get_git_branch();
+        let ctx = self.write_context()?;
+        let ids = MessageIds::new();
 
         let params = AssistantMessageParams {
-            session_id: &self.session_id,
-            assistant_uuid: &assistant_uuid,
+            session_id: &ctx.session_id,
+            assistant_uuid: &ids.uuid,
             parent_uuid: parent_user_uuid,
-            request_id: &request_id,
-            message_id: &message_id,
+            request_id: &ids.request_id,
+            message_id: &ids.message_id,
             content: vec![ContentBlock::Text {
                 text: response.to_string(),
             }],
             model: &self.model,
             stop_reason,
-            cwd: &self.cwd.to_string_lossy(),
-            version: env!("CARGO_PKG_VERSION"),
-            git_branch: &git_branch,
-            timestamp: Utc::now(),
+            cwd: &ctx.cwd,
+            version: ctx.version,
+            git_branch: &ctx.git_branch,
+            timestamp: ctx.timestamp,
         };
-        append_assistant_message_jsonl(&jsonl_path, &params)?;
+        append_assistant_message_jsonl(&ctx.jsonl_path, &params)?;
 
-        self.message_count += 1;
+        self.on_message_written(None);
         self.update_sessions_index()?;
 
-        Ok(assistant_uuid)
+        Ok(ids.uuid)
     }
 
     /// Record an assistant message with tool_use blocks.
@@ -301,31 +355,27 @@ impl StateWriter {
         parent_user_uuid: &str,
         content: Vec<ContentBlock>,
     ) -> std::io::Result<String> {
-        let jsonl_path = self.session_jsonl_path();
-        let assistant_uuid = Uuid::new_v4().to_string();
-        let request_id = format!("req_{}", Uuid::new_v4().simple());
-        let message_id = format!("msg_{}", Uuid::new_v4().simple());
-        let git_branch = get_git_branch();
+        let ctx = self.write_context()?;
+        let ids = MessageIds::new();
 
         let params = AssistantMessageParams {
-            session_id: &self.session_id,
-            assistant_uuid: &assistant_uuid,
+            session_id: &ctx.session_id,
+            assistant_uuid: &ids.uuid,
             parent_uuid: parent_user_uuid,
-            request_id: &request_id,
-            message_id: &message_id,
+            request_id: &ids.request_id,
+            message_id: &ids.message_id,
             content,
             model: &self.model,
             stop_reason: Some("tool_use"),
-            cwd: &self.cwd.to_string_lossy(),
-            version: env!("CARGO_PKG_VERSION"),
-            git_branch: &git_branch,
-            timestamp: Utc::now(),
+            cwd: &ctx.cwd,
+            version: ctx.version,
+            git_branch: &ctx.git_branch,
+            timestamp: ctx.timestamp,
         };
-        append_assistant_message_jsonl(&jsonl_path, &params)?;
+        append_assistant_message_jsonl(&ctx.jsonl_path, &params)?;
 
-        self.message_count += 1;
-
-        Ok(assistant_uuid)
+        self.on_message_written(None);
+        Ok(ids.uuid)
     }
 
     /// Record a tool result message.
@@ -340,15 +390,12 @@ impl StateWriter {
         assistant_uuid: &str,
         tool_use_result: serde_json::Value,
     ) -> std::io::Result<String> {
-        let jsonl_path = self.session_jsonl_path();
-        let result_uuid = Uuid::new_v4().to_string();
-        let git_branch = get_git_branch();
-        let timestamp = Utc::now();
+        let ctx = self.write_context()?;
+        let ids = MessageIds::user();
 
-        // Write user message with tool_result content
         let params = UserMessageParams {
-            session_id: &self.session_id,
-            user_uuid: &result_uuid,
+            session_id: &ctx.session_id,
+            user_uuid: &ids.uuid,
             parent_uuid: Some(assistant_uuid),
             content: UserMessageContent::ToolResult {
                 tool_use_id,
@@ -356,20 +403,18 @@ impl StateWriter {
                 tool_use_result,
                 source_tool_assistant_uuid: assistant_uuid,
             },
-            cwd: &self.cwd.to_string_lossy(),
-            version: env!("CARGO_PKG_VERSION"),
-            git_branch: &git_branch,
-            timestamp,
+            cwd: &ctx.cwd,
+            version: ctx.version,
+            git_branch: &ctx.git_branch,
+            timestamp: ctx.timestamp,
         };
-        append_user_message_jsonl(&jsonl_path, &params)?;
+        append_user_message_jsonl(&ctx.jsonl_path, &params)?;
+        append_result_jsonl(&ctx.jsonl_path, tool_use_id, result_content, ctx.timestamp)?;
 
-        // Also write result record for log extraction
-        append_result_jsonl(&jsonl_path, tool_use_id, result_content, timestamp)?;
-
-        self.message_count += 1;
+        self.on_message_written(None);
         self.update_sessions_index()?;
 
-        Ok(result_uuid)
+        Ok(ids.uuid)
     }
 
     /// Update the sessions-index.json file.
@@ -446,18 +491,15 @@ impl StateWriter {
         retry_after: Option<u64>,
         duration_ms: u64,
     ) -> std::io::Result<()> {
-        let project_dir = self.project_dir();
-        std::fs::create_dir_all(&project_dir)?;
-
-        let jsonl_path = self.session_jsonl_path();
+        let ctx = self.write_context()?;
         append_error_jsonl(
-            &jsonl_path,
-            &self.session_id,
+            &ctx.jsonl_path,
+            &ctx.session_id,
             error,
             error_type,
             retry_after,
             duration_ms,
-            Utc::now(),
+            ctx.timestamp,
         )
     }
 }
