@@ -1,38 +1,35 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+use super::super::test_helpers::execute;
 use super::*;
 use crate::tools::builtin::{extract_directory, extract_str};
 use serde_json::json;
 use std::fs;
 use tempfile::TempDir;
+use yare::parameterized;
 
-#[test]
-fn test_extract_pattern() {
-    let input = json!({ "pattern": "*.txt" });
-    assert_eq!(extract_str(&input, "pattern"), Some("*.txt"));
+#[parameterized(
+    pattern = { json!({ "pattern": "*.txt" }), "pattern", Some("*.txt") },
+    path = { json!({ "path": "/tmp" }), "path", Some("/tmp") },
+)]
+fn extract_str_fields(input: serde_json::Value, field: &str, expected: Option<&str>) {
+    assert_eq!(extract_str(&input, field), expected);
 }
 
-#[test]
-fn test_extract_path() {
-    let input1 = json!({ "path": "/tmp" });
-    assert_eq!(extract_directory(&input1), Some("/tmp"));
-
-    let input2 = json!({ "directory": "/var" });
-    assert_eq!(extract_directory(&input2), Some("/var"));
+#[parameterized(
+    path = { json!({ "path": "/tmp" }), Some("/tmp") },
+    directory = { json!({ "directory": "/var" }), Some("/var") },
+)]
+fn extract_directory_fields(input: serde_json::Value, expected: Option<&str>) {
+    assert_eq!(extract_directory(&input), expected);
 }
 
 #[test]
 fn test_glob_missing_pattern() {
-    let executor = GlobExecutor::new();
-    let call = ToolCallSpec {
-        tool: "Glob".to_string(),
-        input: json!({}),
-        result: None,
-    };
-    let ctx = BuiltinContext::default();
-    let result = executor.execute(&call, "toolu_123", &ctx);
-
+    let result = execute::<GlobExecutor>(json!({}));
     assert!(result.is_error);
     assert!(result.text().unwrap().contains("Missing 'pattern'"));
 }
@@ -40,19 +37,10 @@ fn test_glob_missing_pattern() {
 #[test]
 fn test_glob_no_matches() {
     let temp_dir = TempDir::new().unwrap();
-
-    let executor = GlobExecutor::new();
-    let call = ToolCallSpec {
-        tool: "Glob".to_string(),
-        input: json!({
-            "pattern": "*.nonexistent",
-            "path": temp_dir.path().to_str().unwrap()
-        }),
-        result: None,
-    };
-    let ctx = BuiltinContext::default();
-    let result = executor.execute(&call, "toolu_123", &ctx);
-
+    let result = execute::<GlobExecutor>(json!({
+        "pattern": "*.nonexistent",
+        "path": temp_dir.path().to_str().unwrap()
+    }));
     assert!(!result.is_error);
     assert!(result.text().unwrap().contains("No matches"));
 }
@@ -60,24 +48,14 @@ fn test_glob_no_matches() {
 #[test]
 fn test_glob_with_matches() {
     let temp_dir = TempDir::new().unwrap();
-
-    // Create some test files
     fs::write(temp_dir.path().join("file1.txt"), "").unwrap();
     fs::write(temp_dir.path().join("file2.txt"), "").unwrap();
     fs::write(temp_dir.path().join("other.rs"), "").unwrap();
 
-    let executor = GlobExecutor::new();
-    let call = ToolCallSpec {
-        tool: "Glob".to_string(),
-        input: json!({
-            "pattern": "*.txt",
-            "path": temp_dir.path().to_str().unwrap()
-        }),
-        result: None,
-    };
-    let ctx = BuiltinContext::default();
-    let result = executor.execute(&call, "toolu_123", &ctx);
-
+    let result = execute::<GlobExecutor>(json!({
+        "pattern": "*.txt",
+        "path": temp_dir.path().to_str().unwrap()
+    }));
     assert!(!result.is_error);
     let text = result.text().unwrap();
     assert!(text.contains("file1.txt"));

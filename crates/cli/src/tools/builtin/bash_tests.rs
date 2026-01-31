@@ -1,87 +1,52 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+use super::super::test_helpers::execute;
 use super::*;
 use crate::tools::builtin::extract_str;
 use serde_json::json;
+use yare::parameterized;
 
 #[test]
 fn test_extract_command() {
-    let input = json!({ "command": "ls -la" });
-    assert_eq!(extract_str(&input, "command"), Some("ls -la"));
-
-    let empty = json!({});
-    assert_eq!(extract_str(&empty, "command"), None);
+    assert_eq!(
+        extract_str(&json!({ "command": "ls -la" }), "command"),
+        Some("ls -la")
+    );
+    assert_eq!(extract_str(&json!({}), "command"), None);
 }
 
-#[test]
-fn test_bash_missing_command() {
-    let executor = BashExecutor::new();
-    let call = ToolCallSpec {
-        tool: "Bash".to_string(),
-        input: json!({}),
-        result: None,
-    };
-    let ctx = BuiltinContext::default();
-    let result = executor.execute(&call, "toolu_123", &ctx);
-
-    assert!(result.is_error);
-    assert!(result.text().unwrap().contains("Missing 'command'"));
+#[parameterized(
+    missing_command = { json!({}), true, "Missing 'command'" },
+)]
+fn bash_error_cases(input: serde_json::Value, is_error: bool, expected: &str) {
+    let result = execute::<BashExecutor>(input);
+    assert_eq!(result.is_error, is_error);
+    assert!(result.text().unwrap().contains(expected));
 }
 
 #[test]
 #[cfg(unix)]
 fn test_bash_real_execution() {
-    let executor = BashExecutor::new();
-    let call = ToolCallSpec {
-        tool: "Bash".to_string(),
-        input: json!({ "command": "echo hello" }),
-        result: None,
-    };
-    let ctx = BuiltinContext::default();
-    let result = executor.execute(&call, "toolu_123", &ctx);
-
+    let result = execute::<BashExecutor>(json!({ "command": "echo hello" }));
     assert!(!result.is_error);
-    // Output should include exit code for log extraction
     let text = result.text().unwrap();
     assert!(text.contains("hello"));
     assert!(text.contains("Exit code: 0"));
 }
 
-#[test]
+#[parameterized(
+    exit_42 = { "exit 42", "Exit code: 42" },
+    nonexistent_path = { "ls /nonexistent_path_abc123", "Exit code:" },
+)]
 #[cfg(unix)]
-fn test_bash_exit_code_format() {
-    let executor = BashExecutor::new();
-    let call = ToolCallSpec {
-        tool: "Bash".to_string(),
-        input: json!({ "command": "exit 42" }),
-        result: None,
-    };
-    let ctx = BuiltinContext::default();
-    let result = executor.execute(&call, "toolu_123", &ctx);
-
+fn bash_failed_commands(command: &str, expected: &str) {
+    let result = execute::<BashExecutor>(json!({ "command": command }));
     assert!(result.is_error);
     let text = result.text().unwrap();
-    assert!(text.contains("Exit code: 42"));
-}
-
-#[test]
-#[cfg(unix)]
-fn test_bash_failed_command_has_exit_code() {
-    let executor = BashExecutor::new();
-    let call = ToolCallSpec {
-        tool: "Bash".to_string(),
-        input: json!({ "command": "ls /nonexistent_path_abc123" }),
-        result: None,
-    };
-    let ctx = BuiltinContext::default();
-    let result = executor.execute(&call, "toolu_123", &ctx);
-
-    assert!(result.is_error);
-    let text = result.text().unwrap();
-    // Should contain some error message and exit code
-    assert!(text.contains("Exit code:"));
-    // Exit code should be non-zero
+    assert!(text.contains(expected));
     assert!(!text.contains("Exit code: 0"));
 }
 

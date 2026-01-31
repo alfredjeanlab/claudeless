@@ -170,5 +170,8 @@ pub trait BuiltinToolExecutor: Send + Sync {
 }
 
 #[cfg(test)]
+mod test_helpers;
+
+#[cfg(test)]
 #[path = "mod_tests.rs"]
 mod tests;
