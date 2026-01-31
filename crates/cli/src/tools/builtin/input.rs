@@ -5,6 +5,49 @@
 
 use serde_json::Value;
 
+/// Extract a required field from tool input, returning early with an error if missing.
+///
+/// # Variants
+///
+/// For extraction functions that take `(input, field_name)`:
+/// ```ignore
+/// let cmd = require_field!(call.input, "command", extract_str, tool_use_id, call.tool);
+/// ```
+///
+/// For extraction functions that take just `(input)`, use `=>` with field description:
+/// ```ignore
+/// let path = require_field!(call.input, extract_file_path => "'file_path' or 'path'", tool_use_id, call.tool);
+/// ```
+#[macro_export]
+macro_rules! require_field {
+    // For extraction functions that take (input, field_name)
+    ($input:expr, $field:literal, $extract_fn:ident, $tool_use_id:expr, $tool_name:expr) => {
+        match $extract_fn(&$input, $field) {
+            Some(v) => v,
+            None => {
+                return $crate::tools::result::ToolExecutionResult::error(
+                    $tool_use_id,
+                    format!("Missing '{}' field in {} tool input", $field, $tool_name),
+                )
+            }
+        }
+    };
+    // For extraction functions that take just (input), with custom field description
+    ($input:expr, $extract_fn:ident => $field_desc:literal, $tool_use_id:expr, $tool_name:expr) => {
+        match $extract_fn(&$input) {
+            Some(v) => v,
+            None => {
+                return $crate::tools::result::ToolExecutionResult::error(
+                    $tool_use_id,
+                    format!("Missing {} field in {} tool input", $field_desc, $tool_name),
+                )
+            }
+        }
+    };
+}
+
+pub use require_field;
+
 /// Extract a file path from tool input.
 /// Checks "file_path" first, then "path" as fallback.
 pub fn extract_file_path(input: &Value) -> Option<&str> {

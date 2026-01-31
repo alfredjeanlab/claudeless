@@ -8,7 +8,7 @@ use std::process::Command;
 use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
-use super::{extract_str, BuiltinContext, BuiltinToolExecutor};
+use super::{extract_str, require_field, BuiltinContext, BuiltinToolExecutor};
 
 /// Executor for Bash commands.
 #[derive(Clone, Debug, Default)]
@@ -68,15 +68,7 @@ impl BuiltinToolExecutor for BashExecutor {
         tool_use_id: &str,
         ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let command = match extract_str(&call.input, "command") {
-            Some(cmd) => cmd,
-            None => {
-                return ToolExecutionResult::error(
-                    tool_use_id,
-                    "Missing 'command' field in Bash tool input",
-                )
-            }
-        };
+        let command = require_field!(call.input, "command", extract_str, tool_use_id, call.tool);
 
         Self::execute_real(command, ctx, tool_use_id)
     }

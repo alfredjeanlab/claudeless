@@ -8,7 +8,7 @@ use std::fs;
 use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
-use super::{extract_file_path, extract_str, BuiltinContext, BuiltinToolExecutor};
+use super::{extract_file_path, extract_str, require_field, BuiltinContext, BuiltinToolExecutor};
 
 /// Executor for file writing.
 #[derive(Clone, Debug, Default)]
@@ -28,25 +28,13 @@ impl BuiltinToolExecutor for WriteExecutor {
         tool_use_id: &str,
         _ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let path = match extract_file_path(&call.input) {
-            Some(p) => p,
-            None => {
-                return ToolExecutionResult::error(
-                    tool_use_id,
-                    "Missing 'file_path' or 'path' field in Write tool input",
-                )
-            }
-        };
-
-        let content = match extract_str(&call.input, "content") {
-            Some(c) => c,
-            None => {
-                return ToolExecutionResult::error(
-                    tool_use_id,
-                    "Missing 'content' field in Write tool input",
-                )
-            }
-        };
+        let path = require_field!(
+            call.input,
+            extract_file_path => "'file_path' or 'path'",
+            tool_use_id,
+            call.tool
+        );
+        let content = require_field!(call.input, "content", extract_str, tool_use_id, call.tool);
 
         let resolved_path = std::path::PathBuf::from(path);
 
