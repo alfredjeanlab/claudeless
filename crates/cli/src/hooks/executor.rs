@@ -12,7 +12,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
 /// Configuration for a single hook
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct HookConfig {
     /// Path to hook script
     pub script_path: PathBuf,
@@ -48,7 +48,7 @@ impl HookConfig {
 }
 
 /// Hook executor that runs hook scripts
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct HookExecutor {
     /// Registered hooks by event
     hooks: HashMap<HookEvent, Vec<HookConfig>>,

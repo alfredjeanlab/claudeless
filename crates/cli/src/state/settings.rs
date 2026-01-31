@@ -117,6 +117,45 @@ pub struct PermissionSettings {
     pub additional_directories: Vec<String>,
 }
 
+/// Hook matcher configuration
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct HookMatcher {
+    /// Event type to match (e.g., "Stop", "PreToolUse", etc.)
+    pub event: String,
+}
+
+/// Hook command definition
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct HookCommand {
+    /// Command type (e.g., "bash")
+    #[serde(rename = "type")]
+    pub command_type: String,
+
+    /// Command to run
+    pub command: String,
+
+    /// Timeout in milliseconds (default: 60000)
+    #[serde(default = "default_hook_timeout")]
+    pub timeout: u64,
+}
+
+fn default_hook_timeout() -> u64 {
+    60000
+}
+
+/// Hook definition
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct HookDef {
+    /// Matcher for when to trigger the hook
+    pub matcher: HookMatcher,
+
+    /// Commands to execute when triggered
+    pub hooks: Vec<HookCommand>,
+}
+
 /// Full settings file schema.
 ///
 /// This is permissive - unknown fields are ignored to handle
@@ -135,6 +174,10 @@ pub struct ClaudeSettings {
     /// Environment variable overrides
     #[serde(default)]
     pub env: HashMap<String, String>,
+
+    /// Hook configurations
+    #[serde(default)]
+    pub hooks: Vec<HookDef>,
 
     /// Capture unknown fields for forward compatibility
     #[serde(flatten)]
@@ -175,6 +218,11 @@ impl ClaudeSettings {
         // Env: merge maps (later overrides)
         for (key, value) in other.env {
             self.env.insert(key, value);
+        }
+
+        // Hooks: replace if non-empty in other
+        if !other.hooks.is_empty() {
+            self.hooks = other.hooks;
         }
 
         // Extra fields: merge maps

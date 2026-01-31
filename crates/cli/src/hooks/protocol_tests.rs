@@ -457,3 +457,64 @@ fn test_stop_hook_active_prevents_loops() {
     let json_active = serde_json::to_value(&msg_active).unwrap();
     assert_eq!(json_active["payload"]["stop_hook_active"], true);
 }
+
+// =========================================================================
+// StopHookResponse Tests
+// =========================================================================
+
+#[test]
+fn test_stop_hook_response_allow() {
+    let resp = StopHookResponse::allow();
+    assert_eq!(resp.decision, "allow");
+    assert!(resp.reason.is_none());
+    assert!(!resp.is_blocked());
+}
+
+#[test]
+fn test_stop_hook_response_block() {
+    let resp = StopHookResponse::block("Please verify");
+    assert_eq!(resp.decision, "block");
+    assert_eq!(resp.reason, Some("Please verify".to_string()));
+    assert!(resp.is_blocked());
+}
+
+#[test]
+fn test_stop_hook_response_parse_allow() {
+    let json = r#"{"decision": "allow"}"#;
+    let resp: StopHookResponse = serde_json::from_str(json).unwrap();
+    assert!(!resp.is_blocked());
+    assert!(resp.reason.is_none());
+}
+
+#[test]
+fn test_stop_hook_response_parse_block() {
+    let json = r#"{"decision": "block", "reason": "continue with verification"}"#;
+    let resp: StopHookResponse = serde_json::from_str(json).unwrap();
+    assert!(resp.is_blocked());
+    assert_eq!(resp.reason, Some("continue with verification".to_string()));
+}
+
+#[test]
+fn test_stop_hook_response_default_decision() {
+    // Empty object should default to "allow"
+    let json = r#"{}"#;
+    let resp: StopHookResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.decision, "allow");
+    assert!(!resp.is_blocked());
+}
+
+#[test]
+fn test_stop_hook_response_block_without_reason() {
+    let json = r#"{"decision": "block"}"#;
+    let resp: StopHookResponse = serde_json::from_str(json).unwrap();
+    assert!(resp.is_blocked());
+    assert!(resp.reason.is_none());
+}
+
+#[test]
+fn test_stop_hook_response_serialization() {
+    let resp = StopHookResponse::block("test reason");
+    let json = serde_json::to_value(&resp).unwrap();
+    assert_eq!(json["decision"], "block");
+    assert_eq!(json["reason"], "test reason");
+}

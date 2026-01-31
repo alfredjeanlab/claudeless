@@ -30,7 +30,9 @@ pub use session::{
     TurnParams, TurnToolCall, Usage, UserMessage, UserMessageContent, UserMessageLine,
     UserMessageParams,
 };
-pub use settings::{ClaudeSettings, PermissionSettings, Settings};
+pub use settings::{
+    ClaudeSettings, HookCommand, HookDef, HookMatcher, PermissionSettings, Settings,
+};
 pub use settings_loader::{SettingsLoader, SettingsPaths};
 pub use settings_source::SettingSource;
 pub use todos::{ClaudeTodoItem, TodoItem, TodoState, TodoStatus};

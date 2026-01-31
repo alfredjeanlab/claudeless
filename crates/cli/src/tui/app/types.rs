@@ -9,6 +9,7 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 
 use crate::config::{ResolvedTimeouts, ScenarioConfig, DEFAULT_MODEL, DEFAULT_USER_NAME};
+use crate::hooks::HookExecutor;
 use crate::permission::PermissionMode;
 use crate::state::StateWriter;
 use crate::tui::widgets::permission::RichPermissionDialog;
@@ -34,6 +35,8 @@ pub struct TuiConfig {
     pub is_tty: bool,
     /// State writer for JSONL persistence
     pub state_writer: Option<Arc<RwLock<StateWriter>>>,
+    /// Hook executor for Stop hooks
+    pub hook_executor: Option<HookExecutor>,
 }
 
 impl Default for TuiConfig {
@@ -49,6 +52,7 @@ impl Default for TuiConfig {
             claude_version: None,
             is_tty: false,
             state_writer: None,
+            hook_executor: None,
         }
     }
 }
@@ -102,6 +106,7 @@ impl TuiConfig {
             claude_version,
             is_tty,
             state_writer: None,
+            hook_executor: None,
         }
     }
 }

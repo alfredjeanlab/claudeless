@@ -89,6 +89,12 @@ pub(super) struct TuiAppStateInner {
     // Data
     /// Todo list state
     pub todos: TodoState,
+
+    // Stop hook state
+    /// Whether Claude Code is continuing as a result of a stop hook
+    pub stop_hook_active: bool,
+    /// Pending message from stop hook to inject as next prompt
+    pub pending_hook_message: Option<String>,
 }
 
 impl TuiAppStateInner {
@@ -164,6 +170,10 @@ impl TuiAppState {
 
                 // Data
                 todos: TodoState::new(),
+
+                // Stop hook state
+                stop_hook_active: false,
+                pending_hook_message: None,
 
                 // Config (must be last as it's moved)
                 config,
@@ -396,6 +406,24 @@ impl TuiAppState {
         }
 
         lines.join("\n")
+    }
+
+    /// Check for pending stop hook message and process it.
+    ///
+    /// Returns true if a hook message was processed.
+    pub fn check_pending_hook_message(&self) -> bool {
+        let pending = {
+            let mut inner = self.inner.lock();
+            inner.pending_hook_message.take()
+        };
+
+        if let Some(hook_msg) = pending {
+            // Process the hook message as a new prompt
+            self.process_prompt(hook_msg);
+            true
+        } else {
+            false
+        }
     }
 
     /// Check if a permission is already granted for this session

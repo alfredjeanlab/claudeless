@@ -15,6 +15,7 @@ use claudeless::capture::{CaptureLog, CapturedArgs, CapturedOutcome};
 use claudeless::cli::Cli;
 use claudeless::config::{ResolvedTimeouts, ResponseSpec, ToolExecutionMode};
 use claudeless::failure::FailureExecutor;
+use claudeless::hooks::{load_hooks, HookEvent, HookMessage, StopHookResponse};
 use claudeless::mcp::{load_mcp_config, McpConfig, McpManager, McpServerStatus};
 use claudeless::output::{
     print_error, print_mcp, print_mcp_error, print_mcp_warning, print_warning, McpServerInfo,
@@ -52,14 +53,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Load settings from files and CLI overrides
-    let _settings = load_settings(&cli);
+    let settings = load_settings(&cli);
 
     // Load and initialize MCP servers
     let mcp_manager = load_mcp_configs(&cli).await?;
 
     // Check for TUI mode first
     if cli.should_use_tui() {
-        return run_tui_mode(&cli, bypass.is_active(), mcp_manager).await;
+        return run_tui_mode(&cli, bypass.is_active(), mcp_manager, &settings).await;
     }
 
     // In non-TUI mode (print mode), require a prompt
@@ -76,9 +77,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Get the prompt (from positional arg or would need to read stdin in real impl)
-    let prompt = cli.prompt.clone().unwrap_or_default();
+    let mut current_prompt = cli.prompt.clone().unwrap_or_default();
+    let mut stop_hook_active = false;
 
-    // Record captured args
+    // Record captured args (uses original prompt, not hook-continued prompts)
     let captured_args = CapturedArgs {
         prompt: cli.prompt.clone(),
         model: cli.model.clone(),
@@ -89,6 +91,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         allowed_tools: cli.allowed_tools.clone(),
         cwd: cli.cwd.clone(),
     };
+
+    // Load Stop hook executor from settings
+    let hook_executor = load_hooks(&settings).ok();
 
     // Load scenario if specified (needed for session context)
     let mut scenario = if let Some(ref path) = cli.simulator.scenario {
@@ -151,218 +156,256 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tokio::time::sleep(Duration::from_millis(timeouts.response_delay_ms)).await;
     }
 
-    // Match prompt to get response
-    let (response, matched_rule) = if let Some(ref mut s) = scenario {
-        if let Some(result) = s.match_prompt(&prompt) {
-            // Check for failure in rule
-            if let Some(failure_spec) = s.get_failure(&result) {
-                let mut stderr = io::stderr();
+    // Response loop - may iterate if Stop hook blocks and continues conversation
+    'response_loop: loop {
+        // Match prompt to get response
+        let (response, matched_rule) = if let Some(ref mut s) = scenario {
+            if let Some(result) = s.match_prompt(&current_prompt) {
+                // Check for failure in rule
+                if let Some(failure_spec) = s.get_failure(&result) {
+                    let mut stderr = io::stderr();
 
-                if let Some(ref log) = capture {
-                    log.record(
-                        captured_args,
-                        CapturedOutcome::Failure {
-                            failure_type: format!("{:?}", failure_spec),
-                            message: "Scenario failure".to_string(),
-                        },
-                    );
+                    if let Some(ref log) = capture {
+                        log.record(
+                            captured_args.clone(),
+                            CapturedOutcome::Failure {
+                                failure_type: format!("{:?}", failure_spec),
+                                message: "Scenario failure".to_string(),
+                            },
+                        );
+                    }
+
+                    // Write queue-operation before recording error
+                    if cli.print {
+                        if let Some(ref writer) = state_writer {
+                            writer.read().write_queue_operation()?;
+                        }
+                    }
+
+                    // Record error to session JSONL before exiting
+                    FailureExecutor::execute_with_session(
+                        failure_spec,
+                        &mut stderr,
+                        state_writer.as_ref(),
+                    )
+                    .await?;
+                    return Ok(());
+                }
+                (
+                    s.get_response(&result).cloned(),
+                    Some("matched".to_string()),
+                )
+            } else if let Some(default) = s.default_response() {
+                (Some(default.clone()), Some("default".to_string()))
+            } else {
+                (None, None)
+            }
+        } else {
+            // No scenario - use a default response
+            (
+                Some(ResponseSpec::Simple("Hello! I'm Claudeless!".to_string())),
+                None,
+            )
+        };
+
+        // Get response delay from spec if detailed
+        let response_delay = response.as_ref().and_then(|r| r.delay_ms());
+
+        if let Some(delay) = response_delay {
+            tokio::time::sleep(Duration::from_millis(delay)).await;
+        }
+
+        // Record outcome (only on first iteration, using original prompt)
+        if !stop_hook_active {
+            if let Some(ref log) = capture {
+                let outcome = match &response {
+                    Some(spec) => CapturedOutcome::Response {
+                        text: spec.text().to_string(),
+                        matched_rule,
+                        delay_ms: response_delay.unwrap_or(0),
+                    },
+                    None => CapturedOutcome::NoMatch {
+                        used_default: false,
+                    },
+                };
+                log.record(captured_args.clone(), outcome);
+            }
+        }
+
+        // Write output (session_ctx already built above)
+        let mut stdout = io::stdout();
+        let response = response.unwrap_or(ResponseSpec::Simple(String::new()));
+        let tool_calls = response.tool_calls().to_vec();
+
+        // Use real Claude format (result wrapper for JSON, system init + result for stream-JSON)
+        let mut writer = OutputWriter::new(
+            &mut stdout,
+            cli.output.output_format.clone(),
+            cli.model.clone(),
+        );
+
+        // Combine builtin tools with MCP tools (MCP tools use mcp__<server>__<tool> naming)
+        let mut tools: Vec<String> = cli.allowed_tools.clone();
+        let mcp_tools = get_mcp_tool_names(&mcp_manager);
+        tools.extend(mcp_tools);
+
+        // Get MCP server info for init event
+        let mcp_servers = get_mcp_server_info(&mcp_manager);
+
+        writer.write_real_response_with_mcp(
+            &response,
+            &runtime_ctx.session_id.to_string(),
+            tools,
+            mcp_servers,
+        )?;
+
+        // Write queue-operation for print mode (-p) unless persistence is disabled
+        // (state_writer already created above)
+        if cli.print && !cli.session.no_session_persistence {
+            if let Some(ref writer) = state_writer {
+                writer.read().write_queue_operation()?;
+            }
+        }
+
+        // Record the turn to state directory
+        let response_text = response.text().to_string();
+
+        if tool_calls.is_empty() {
+            // Simple turn without tool calls
+            if let Some(ref writer) = state_writer {
+                writer
+                    .write()
+                    .record_turn(&current_prompt, &response_text)?;
+            }
+        } else {
+            // Turn with tool calls - use granular recording if persistence enabled
+            // 1. Record user message (if persistence enabled)
+            let user_uuid = if let Some(ref writer) = state_writer {
+                Some(writer.write().record_user_message(&current_prompt)?)
+            } else {
+                None
+            };
+
+            // 2. Record initial assistant text (if any and persistence enabled)
+            if !response_text.is_empty() {
+                if let (Some(ref writer), Some(ref uuid)) = (&state_writer, &user_uuid) {
+                    writer
+                        .write()
+                        .record_assistant_response(uuid, &response_text)?;
+                }
+            }
+
+            // Determine execution mode (CLI flag overrides scenario config)
+            let execution_mode = cli
+                .simulator
+                .tool_mode
+                .clone()
+                .map(ToolExecutionMode::from)
+                .or_else(|| {
+                    scenario
+                        .as_ref()
+                        .and_then(|s| s.config().tool_execution.as_ref())
+                        .map(|te| te.mode.clone())
+                })
+                .unwrap_or_default();
+
+            if execution_mode != ToolExecutionMode::Disabled {
+                // Create execution context
+                let mut ctx = ExecutionContext::default();
+                if let Some(ref cwd) = cli.cwd {
+                    ctx = ctx.with_cwd(cwd);
                 }
 
-                // Write queue-operation before recording error
-                if cli.print {
-                    if let Some(ref writer) = state_writer {
-                        writer.read().write_queue_operation()?;
+                // Create executor with state writer for stateful tools and MCP support
+                let executor = create_executor_with_mcp(
+                    execution_mode,
+                    mcp_manager.as_ref().map(Arc::clone),
+                    state_writer.as_ref().map(Arc::clone),
+                );
+
+                // Execute each tool call and write results
+                for (i, call) in tool_calls.iter().enumerate() {
+                    let tool_use_id = format!("toolu_{:08x}", i);
+
+                    // 3. Record assistant message with tool_use block (if persistence enabled)
+                    let assistant_uuid =
+                        if let (Some(ref writer), Some(ref uuid)) = (&state_writer, &user_uuid) {
+                            let tool_use_block = claudeless::state::ContentBlock::ToolUse {
+                                id: tool_use_id.clone(),
+                                name: call.tool.clone(),
+                                input: call.input.clone(),
+                            };
+                            Some(
+                                writer
+                                    .write()
+                                    .record_assistant_tool_use(uuid, vec![tool_use_block])?,
+                            )
+                        } else {
+                            None
+                        };
+
+                    // 4. Execute tool
+                    let result = executor.execute(call, &tool_use_id, &ctx);
+                    writer.write_tool_result(&result)?;
+
+                    // 5. Record tool result to JSONL (if persistence enabled)
+                    if let (Some(ref writer), Some(ref asst_uuid)) =
+                        (&state_writer, &assistant_uuid)
+                    {
+                        let result_content = result.text().unwrap_or("");
+                        let tool_use_result =
+                            result.tool_use_result().unwrap_or(serde_json::json!({}));
+                        writer.write().record_tool_result(
+                            &tool_use_id,
+                            result_content,
+                            asst_uuid,
+                            tool_use_result,
+                        )?;
                     }
                 }
 
-                // Record error to session JSONL before exiting
-                FailureExecutor::execute_with_session(
-                    failure_spec,
-                    &mut stderr,
-                    state_writer.as_ref(),
-                )
-                .await?;
-                return Ok(());
-            }
-            (
-                s.get_response(&result).cloned(),
-                Some("matched".to_string()),
-            )
-        } else if let Some(default) = s.default_response() {
-            (Some(default.clone()), Some("default".to_string()))
-        } else {
-            (None, None)
-        }
-    } else {
-        // No scenario - use a default response
-        (
-            Some(ResponseSpec::Simple("Hello! I'm Claudeless!".to_string())),
-            None,
-        )
-    };
-
-    // Get response delay from spec if detailed
-    let response_delay = response.as_ref().and_then(|r| r.delay_ms());
-
-    if let Some(delay) = response_delay {
-        tokio::time::sleep(Duration::from_millis(delay)).await;
-    }
-
-    // Record outcome
-    if let Some(ref log) = capture {
-        let outcome = match &response {
-            Some(spec) => CapturedOutcome::Response {
-                text: spec.text().to_string(),
-                matched_rule,
-                delay_ms: response_delay.unwrap_or(0),
-            },
-            None => CapturedOutcome::NoMatch {
-                used_default: false,
-            },
-        };
-        log.record(captured_args, outcome);
-    }
-
-    // Write output (session_ctx already built above)
-    let mut stdout = io::stdout();
-    let response = response.unwrap_or(ResponseSpec::Simple(String::new()));
-    let tool_calls = response.tool_calls().to_vec();
-
-    // Use real Claude format (result wrapper for JSON, system init + result for stream-JSON)
-    let mut writer = OutputWriter::new(
-        &mut stdout,
-        cli.output.output_format.clone(),
-        cli.model.clone(),
-    );
-
-    // Combine builtin tools with MCP tools (MCP tools use mcp__<server>__<tool> naming)
-    let mut tools: Vec<String> = cli.allowed_tools.clone();
-    let mcp_tools = get_mcp_tool_names(&mcp_manager);
-    tools.extend(mcp_tools);
-
-    // Get MCP server info for init event
-    let mcp_servers = get_mcp_server_info(&mcp_manager);
-
-    writer.write_real_response_with_mcp(
-        &response,
-        &runtime_ctx.session_id.to_string(),
-        tools,
-        mcp_servers,
-    )?;
-
-    // Write queue-operation for print mode (-p) unless persistence is disabled
-    // (state_writer already created above)
-    if cli.print && !cli.session.no_session_persistence {
-        if let Some(ref writer) = state_writer {
-            writer.read().write_queue_operation()?;
-        }
-    }
-
-    // Record the turn to state directory
-    let response_text = response.text().to_string();
-
-    if tool_calls.is_empty() {
-        // Simple turn without tool calls
-        if let Some(ref writer) = state_writer {
-            writer.write().record_turn(&prompt, &response_text)?;
-        }
-    } else {
-        // Turn with tool calls - use granular recording if persistence enabled
-        // 1. Record user message (if persistence enabled)
-        let user_uuid = if let Some(ref writer) = state_writer {
-            Some(writer.write().record_user_message(&prompt)?)
-        } else {
-            None
-        };
-
-        // 2. Record initial assistant text (if any and persistence enabled)
-        if !response_text.is_empty() {
-            if let (Some(ref writer), Some(ref uuid)) = (&state_writer, &user_uuid) {
-                writer
-                    .write()
-                    .record_assistant_response(uuid, &response_text)?;
-            }
-        }
-
-        // Determine execution mode (CLI flag overrides scenario config)
-        let execution_mode = cli
-            .simulator
-            .tool_mode
-            .clone()
-            .map(ToolExecutionMode::from)
-            .or_else(|| {
-                scenario
-                    .as_ref()
-                    .and_then(|s| s.config().tool_execution.as_ref())
-                    .map(|te| te.mode.clone())
-            })
-            .unwrap_or_default();
-
-        if execution_mode != ToolExecutionMode::Disabled {
-            // Create execution context
-            let mut ctx = ExecutionContext::default();
-            if let Some(ref cwd) = cli.cwd {
-                ctx = ctx.with_cwd(cwd);
-            }
-
-            // Create executor with state writer for stateful tools and MCP support
-            let executor = create_executor_with_mcp(
-                execution_mode,
-                mcp_manager.as_ref().map(Arc::clone),
-                state_writer.as_ref().map(Arc::clone),
-            );
-
-            // Execute each tool call and write results
-            for (i, call) in tool_calls.iter().enumerate() {
-                let tool_use_id = format!("toolu_{:08x}", i);
-
-                // 3. Record assistant message with tool_use block (if persistence enabled)
-                let assistant_uuid =
-                    if let (Some(ref writer), Some(ref uuid)) = (&state_writer, &user_uuid) {
-                        let tool_use_block = claudeless::state::ContentBlock::ToolUse {
-                            id: tool_use_id.clone(),
-                            name: call.tool.clone(),
-                            input: call.input.clone(),
-                        };
-                        Some(
-                            writer
-                                .write()
-                                .record_assistant_tool_use(uuid, vec![tool_use_block])?,
-                        )
-                    } else {
-                        None
-                    };
-
-                // 4. Execute tool
-                let result = executor.execute(call, &tool_use_id, &ctx);
-                writer.write_tool_result(&result)?;
-
-                // 5. Record tool result to JSONL (if persistence enabled)
-                if let (Some(ref writer), Some(ref asst_uuid)) = (&state_writer, &assistant_uuid) {
-                    let result_content = result.text().unwrap_or("");
-                    let tool_use_result = result.tool_use_result().unwrap_or(serde_json::json!({}));
-                    writer.write().record_tool_result(
-                        &tool_use_id,
-                        result_content,
-                        asst_uuid,
-                        tool_use_result,
-                    )?;
+                // 6. Record final assistant response after tool execution (if persistence enabled)
+                // Real Claude writes a final message summarizing the tool results
+                if let (Some(ref writer), Some(ref uuid)) = (&state_writer, &user_uuid) {
+                    let final_response =
+                        "Done! The requested operation has been completed successfully.";
+                    writer
+                        .write()
+                        .record_assistant_response(uuid, final_response)?;
                 }
             }
+        }
 
-            // 6. Record final assistant response after tool execution (if persistence enabled)
-            // Real Claude writes a final message summarizing the tool results
-            if let (Some(ref writer), Some(ref uuid)) = (&state_writer, &user_uuid) {
-                let final_response =
-                    "Done! The requested operation has been completed successfully.";
-                writer
-                    .write()
-                    .record_assistant_response(uuid, final_response)?;
+        stdout.flush()?;
+
+        // Fire Stop hook after response completes
+        if let Some(ref executor) = hook_executor {
+            if executor.has_hooks(&HookEvent::Stop) {
+                let stop_msg =
+                    HookMessage::stop(runtime_ctx.session_id.to_string(), stop_hook_active);
+                if let Ok(responses) = executor.execute(&stop_msg).await {
+                    for resp in responses {
+                        if let Some(data) = resp.data {
+                            // Parse as StopHookResponse
+                            if let Ok(stop_resp) = serde_json::from_value::<StopHookResponse>(data)
+                            {
+                                if stop_resp.is_blocked() {
+                                    // Continue conversation with reason as next prompt
+                                    current_prompt =
+                                        stop_resp.reason.unwrap_or_else(|| "continue".to_string());
+                                    stop_hook_active = true;
+                                    continue 'response_loop;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
-    }
 
-    stdout.flush()?;
+        // Exit loop - no Stop hook blocked
+        break;
+    }
 
     // Shutdown MCP servers gracefully
     if let Some(mgr) = mcp_manager {
@@ -540,6 +583,7 @@ async fn run_tui_mode(
     cli: &Cli,
     allow_bypass_permissions: bool,
     mcp_manager: Option<Arc<RwLock<McpManager>>>,
+    settings: &ClaudeSettings,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Ignore SIGINT so Ctrl+C is captured as a key event rather than killing the process.
     // This is required because raw mode alone doesn't prevent SIGINT generation on macOS/tmux.
@@ -595,6 +639,7 @@ async fn run_tui_mode(
         is_tty,
     );
     tui_config.state_writer = state_writer;
+    tui_config.hook_executor = load_hooks(settings).ok();
 
     let sessions = SessionManager::new();
     let clock = ClockHandle::system();

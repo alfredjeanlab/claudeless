@@ -7,9 +7,13 @@
 //! including pre/post tool execution, notifications, and permission requests.
 
 pub mod executor;
+pub mod loader;
 pub mod protocol;
 pub mod registry;
 
 pub use executor::{HookConfig, HookError, HookExecutor};
-pub use protocol::{HookEvent, HookMessage, HookPayload, HookResponse, NotificationLevel};
+pub use loader::load_hooks;
+pub use protocol::{
+    HookEvent, HookMessage, HookPayload, HookResponse, NotificationLevel, StopHookResponse,
+};
 pub use registry::HookRegistry;

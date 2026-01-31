@@ -85,6 +85,9 @@ pub fn App(mut hooks: Hooks, props: &AppProps) -> impl Into<AnyElement<'static>>
     state_clone.check_compacting();
     state_clone.check_exit_hint_timeout();
 
+    // Check for pending stop hook messages
+    state_clone.check_pending_hook_message();
+
     // Advance spinner animation when in Responding or Thinking mode
     {
         let mode = state_clone.mode();

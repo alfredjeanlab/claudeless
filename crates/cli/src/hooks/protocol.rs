@@ -281,6 +281,50 @@ impl Default for HookResponse {
     }
 }
 
+/// Stop hook response with decision field.
+///
+/// Stop hooks can return this format to continue the conversation:
+/// ```json
+/// {"decision": "block", "reason": "Please verify the changes"}
+/// ```
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct StopHookResponse {
+    /// Decision: "block" to continue conversation, "allow" to proceed with exit
+    #[serde(default = "default_decision")]
+    pub decision: String,
+
+    /// Reason for blocking (used as next user message when blocked)
+    #[serde(default)]
+    pub reason: Option<String>,
+}
+
+fn default_decision() -> String {
+    "allow".to_string()
+}
+
+impl StopHookResponse {
+    /// Check if the hook response blocks (continues conversation)
+    pub fn is_blocked(&self) -> bool {
+        self.decision == "block"
+    }
+
+    /// Create an allow response
+    pub fn allow() -> Self {
+        Self {
+            decision: "allow".to_string(),
+            reason: None,
+        }
+    }
+
+    /// Create a block response with reason
+    pub fn block(reason: impl Into<String>) -> Self {
+        Self {
+            decision: "block".to_string(),
+            reason: Some(reason.into()),
+        }
+    }
+}
+
 #[cfg(test)]
 #[path = "protocol_tests.rs"]
 mod tests;

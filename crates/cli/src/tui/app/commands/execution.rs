@@ -9,6 +9,7 @@
 //! - `start_streaming_inner` - Streaming response handling
 //! - Test permission triggers for fixture tests
 
+use crate::hooks::{HookEvent, HookMessage, StopHookResponse};
 use crate::tui::spinner;
 use crate::tui::streaming::{StreamingConfig, StreamingResponse};
 use crate::tui::widgets::permission::{DiffKind, DiffLine};
@@ -184,6 +185,46 @@ pub(super) fn start_streaming_inner(inner: &mut TuiAppStateInner, text: String) 
     }
     inner.display.pending_user_uuid = None;
 
+    // Fire Stop hook if configured (synchronously using block_on for TUI)
+    // Note: This is a simplified implementation for the simulator
+    if let Some(ref executor) = inner.config.hook_executor {
+        if executor.has_hooks(&HookEvent::Stop) {
+            // Generate a session ID for the hook message
+            let session_id = inner
+                .status
+                .session_id
+                .clone()
+                .unwrap_or_else(|| "tui-session".to_string());
+            let stop_msg = HookMessage::stop(&session_id, inner.stop_hook_active);
+
+            // Execute hook synchronously using tokio block_on
+            if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                let responses = handle.block_on(async { executor.execute(&stop_msg).await });
+                if let Ok(responses) = responses {
+                    for resp in responses {
+                        if let Some(data) = resp.data {
+                            if let Ok(stop_resp) = serde_json::from_value::<StopHookResponse>(data)
+                            {
+                                if stop_resp.is_blocked() {
+                                    // Queue the reason as next user message
+                                    inner.pending_hook_message = Some(
+                                        stop_resp.reason.unwrap_or_else(|| "continue".to_string()),
+                                    );
+                                    inner.stop_hook_active = true;
+                                    // Stay in responding mode briefly to trigger re-process
+                                    // The input handler will detect pending_hook_message
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Reset stop_hook_active on normal completion
+    inner.stop_hook_active = false;
     inner.mode = AppMode::Input;
 
     // Auto-restore stashed text after response completes

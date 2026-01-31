@@ -3,6 +3,7 @@
 
 use super::*;
 use crate::mcp::config::McpServerDef;
+use crate::state::settings::{HookCommand, HookDef, HookMatcher};
 
 #[test]
 fn test_new_settings() {
@@ -367,4 +368,137 @@ fn test_load_settings_input_file_path() {
 fn test_load_settings_input_nonexistent_file() {
     let result = load_settings_input("/nonexistent/path/settings.json");
     assert!(result.is_err());
+}
+
+// Hook configuration tests
+
+#[test]
+fn test_hook_matcher_parse() {
+    let json = r#"{"event": "Stop"}"#;
+    let matcher: HookMatcher = serde_json::from_str(json).unwrap();
+    assert_eq!(matcher.event, "Stop");
+}
+
+#[test]
+fn test_hook_command_parse() {
+    let json = r#"{
+        "type": "bash",
+        "command": "echo test",
+        "timeout": 5000
+    }"#;
+    let cmd: HookCommand = serde_json::from_str(json).unwrap();
+    assert_eq!(cmd.command_type, "bash");
+    assert_eq!(cmd.command, "echo test");
+    assert_eq!(cmd.timeout, 5000);
+}
+
+#[test]
+fn test_hook_command_default_timeout() {
+    let json = r#"{"type": "bash", "command": "echo test"}"#;
+    let cmd: HookCommand = serde_json::from_str(json).unwrap();
+    assert_eq!(cmd.timeout, 60000); // Default timeout
+}
+
+#[test]
+fn test_hook_def_parse() {
+    let json = r#"{
+        "matcher": {"event": "Stop"},
+        "hooks": [
+            {"type": "bash", "command": "echo hello"}
+        ]
+    }"#;
+    let def: HookDef = serde_json::from_str(json).unwrap();
+    assert_eq!(def.matcher.event, "Stop");
+    assert_eq!(def.hooks.len(), 1);
+    assert_eq!(def.hooks[0].command, "echo hello");
+}
+
+#[test]
+fn test_claude_settings_parse_hooks() {
+    let json = r#"{
+        "hooks": [
+            {
+                "matcher": {"event": "Stop"},
+                "hooks": [
+                    {"type": "bash", "command": "echo blocked", "timeout": 10000}
+                ]
+            }
+        ]
+    }"#;
+    let settings: ClaudeSettings = serde_json::from_str(json).unwrap();
+    assert_eq!(settings.hooks.len(), 1);
+    assert_eq!(settings.hooks[0].matcher.event, "Stop");
+    assert_eq!(settings.hooks[0].hooks[0].command, "echo blocked");
+    assert_eq!(settings.hooks[0].hooks[0].timeout, 10000);
+}
+
+#[test]
+fn test_claude_settings_default_has_empty_hooks() {
+    let settings = ClaudeSettings::default();
+    assert!(settings.hooks.is_empty());
+}
+
+#[test]
+fn test_claude_settings_merge_hooks() {
+    let mut base = ClaudeSettings {
+        hooks: vec![HookDef {
+            matcher: HookMatcher {
+                event: "Stop".to_string(),
+            },
+            hooks: vec![HookCommand {
+                command_type: "bash".to_string(),
+                command: "echo base".to_string(),
+                timeout: 60000,
+            }],
+        }],
+        ..Default::default()
+    };
+
+    let override_settings = ClaudeSettings {
+        hooks: vec![HookDef {
+            matcher: HookMatcher {
+                event: "Stop".to_string(),
+            },
+            hooks: vec![HookCommand {
+                command_type: "bash".to_string(),
+                command: "echo override".to_string(),
+                timeout: 60000,
+            }],
+        }],
+        ..Default::default()
+    };
+
+    base.merge(override_settings);
+
+    // Hooks are replaced, not merged
+    assert_eq!(base.hooks.len(), 1);
+    assert_eq!(base.hooks[0].hooks[0].command, "echo override");
+}
+
+#[test]
+fn test_claude_settings_merge_empty_hooks_doesnt_override() {
+    let mut base = ClaudeSettings {
+        hooks: vec![HookDef {
+            matcher: HookMatcher {
+                event: "Stop".to_string(),
+            },
+            hooks: vec![HookCommand {
+                command_type: "bash".to_string(),
+                command: "echo keep".to_string(),
+                timeout: 60000,
+            }],
+        }],
+        ..Default::default()
+    };
+
+    let override_settings = ClaudeSettings {
+        hooks: vec![], // Empty - should not override
+        ..Default::default()
+    };
+
+    base.merge(override_settings);
+
+    // Hooks should be preserved
+    assert_eq!(base.hooks.len(), 1);
+    assert_eq!(base.hooks[0].hooks[0].command, "echo keep");
 }
