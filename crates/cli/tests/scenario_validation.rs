@@ -195,8 +195,7 @@ mod session_id_validation {
         assert!(!output.status.success(), "Expected failure: {:?}", output);
         let stderr = String::from_utf8_lossy(&output.stderr);
         assert!(
-            stderr.contains("session_id")
-                && (stderr.contains("UUID") || stderr.contains("uuid")),
+            stderr.contains("session_id") && (stderr.contains("UUID") || stderr.contains("uuid")),
             "Expected stderr to mention 'session_id' and 'UUID' or 'uuid': {}",
             stderr
         );
