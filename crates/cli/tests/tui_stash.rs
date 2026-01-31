@@ -18,14 +18,11 @@
 
 mod common;
 
-use common::TuiTestSession;
+use common::{simple_scenario_toml, TuiTestSession};
 
-const SCENARIO: &str = r#"
-    name = "test"
-    [[responses]]
-    pattern = { type = "any" }
-    response = "Hello!"
-"#;
+fn scenario() -> String {
+    simple_scenario_toml("Hello!")
+}
 
 // =============================================================================
 // Stash Behavior Tests
@@ -37,7 +34,7 @@ const SCENARIO: &str = r#"
 /// and a message is displayed.
 #[test]
 fn test_tui_ctrl_s_stashes_prompt_with_message() {
-    let tui = TuiTestSession::new("stash-message", SCENARIO);
+    let tui = TuiTestSession::new("stash-message", &scenario());
     let previous = tui.capture();
 
     // Type some text
@@ -69,7 +66,7 @@ fn test_tui_ctrl_s_stashes_prompt_with_message() {
 /// is restored to the input field.
 #[test]
 fn test_tui_ctrl_s_restores_stashed_prompt() {
-    let tui = TuiTestSession::new("stash-restore", SCENARIO);
+    let tui = TuiTestSession::new("stash-restore", &scenario());
     let previous = tui.capture();
 
     // Type some text
@@ -111,7 +108,7 @@ fn test_tui_ctrl_s_restores_stashed_prompt() {
 /// Ctrl+S on empty input does nothing - there's nothing to stash.
 #[test]
 fn test_tui_ctrl_s_empty_input_does_nothing() {
-    let tui = TuiTestSession::new("stash-empty", SCENARIO);
+    let tui = TuiTestSession::new("stash-empty", &scenario());
     let previous = tui.capture();
 
     // Press Ctrl+S on empty input
@@ -134,7 +131,7 @@ fn test_tui_ctrl_s_empty_input_does_nothing() {
 /// until the user restores the stash or submits a prompt.
 #[test]
 fn test_tui_stash_message_persists() {
-    let tui = TuiTestSession::new("stash-persist", SCENARIO);
+    let tui = TuiTestSession::new("stash-persist", &scenario());
     let previous = tui.capture();
 
     // Type and stash

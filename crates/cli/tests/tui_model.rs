@@ -27,14 +27,11 @@
 
 mod common;
 
-use common::{capture_tui_initial, TuiTestSession};
+use common::{capture_tui_initial, simple_scenario_toml, TuiTestSession};
 
-const SCENARIO: &str = r#"
-    name = "test"
-    [[responses]]
-    pattern = { type = "any" }
-    response = "ok"
-"#;
+fn scenario() -> String {
+    simple_scenario_toml("ok")
+}
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
@@ -102,7 +99,7 @@ fn test_tui_model_display_format() {
 /// Meta+P (Option+P on macOS) opens a model picker dialog showing available models.
 #[test]
 fn test_tui_meta_p_opens_model_picker() {
-    let tui = TuiTestSession::new("meta-p-picker", SCENARIO);
+    let tui = TuiTestSession::new("meta-p-picker", &scenario());
     let previous = tui.capture();
 
     // Press Meta+P to open model picker
@@ -122,7 +119,7 @@ fn test_tui_meta_p_opens_model_picker() {
 #[test]
 #[ignore] // TODO(flaky): wait_for_change sometimes captures state before picker renders on CI
 fn test_tui_model_picker_shows_available_models() {
-    let tui = TuiTestSession::new("picker-models", SCENARIO);
+    let tui = TuiTestSession::new("picker-models", &scenario());
     let previous = tui.capture();
 
     tui.send_keys("M-p");
@@ -140,7 +137,7 @@ fn test_tui_model_picker_shows_available_models() {
 /// Model picker shows checkmark (✔) next to currently active model.
 #[test]
 fn test_tui_model_picker_shows_active_model_checkmark() {
-    let tui = TuiTestSession::new("picker-checkmark", SCENARIO);
+    let tui = TuiTestSession::new("picker-checkmark", &scenario());
     let previous = tui.capture();
 
     tui.send_keys("M-p");
@@ -158,7 +155,7 @@ fn test_tui_model_picker_shows_active_model_checkmark() {
 /// Model picker can be navigated with Up/Down arrow keys.
 #[test]
 fn test_tui_model_picker_arrow_navigation() {
-    let tui = TuiTestSession::new("picker-nav", SCENARIO);
+    let tui = TuiTestSession::new("picker-nav", &scenario());
     let previous = tui.capture();
 
     // Open model picker
@@ -183,7 +180,7 @@ fn test_tui_model_picker_arrow_navigation() {
 /// Pressing Escape closes the model picker without changing the model.
 #[test]
 fn test_tui_model_picker_escape_closes() {
-    let tui = TuiTestSession::new("picker-escape", SCENARIO);
+    let tui = TuiTestSession::new("picker-escape", &scenario());
     let previous = tui.capture();
 
     // Open model picker
@@ -206,7 +203,7 @@ fn test_tui_model_picker_escape_closes() {
 /// Model picker footer shows "Enter to confirm · esc to exit".
 #[test]
 fn test_tui_model_picker_shows_footer_hints() {
-    let tui = TuiTestSession::new("picker-footer", SCENARIO);
+    let tui = TuiTestSession::new("picker-footer", &scenario());
     let previous = tui.capture();
 
     tui.send_keys("M-p");

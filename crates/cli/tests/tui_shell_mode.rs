@@ -18,14 +18,11 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, TuiTestSession};
+use common::{assert_tui_matches_fixture, simple_scenario_toml, TuiTestSession};
 
-const SCENARIO: &str = r#"
-    name = "test"
-    [[responses]]
-    pattern = { type = "any" }
-    response = "Hello!"
-"#;
+fn scenario() -> String {
+    simple_scenario_toml("Hello!")
+}
 
 const JSON_SCENARIO: &str = r#"
     {
@@ -65,7 +62,7 @@ const BYPASS_MODE_PATTERN: &str = "bypass permissions on";
 /// Typing '!' on empty input shows '!' prefix for shell mode with suggestion hint
 #[test]
 fn test_tui_exclamation_shows_shell_prefix() {
-    let tui = TuiTestSession::new("shell-prefix", SCENARIO);
+    let tui = TuiTestSession::new("shell-prefix", &scenario());
     let previous = tui.capture();
 
     // Press '!' to enter shell mode
@@ -104,7 +101,7 @@ fn test_tui_shell_prefix_matches_fixture() {
 /// Typing a command after '!' shows '! command' in the input
 #[test]
 fn test_tui_shell_mode_shows_command() {
-    let tui = TuiTestSession::new("shell-command", SCENARIO);
+    let tui = TuiTestSession::new("shell-command", &scenario());
     let previous = tui.capture();
 
     // Enter shell mode and type a command
@@ -215,7 +212,7 @@ fn test_tui_shell_mode_shows_prefixed_prompt_in_history() {
 /// Backspace on shell mode prefix '!' exits shell mode and shows placeholder again
 #[test]
 fn test_tui_shell_mode_backspace_exits_shell_mode() {
-    let tui = TuiTestSession::new("shell-backspace", SCENARIO);
+    let tui = TuiTestSession::new("shell-backspace", &scenario());
     let previous = tui.capture();
 
     // Enter shell mode
@@ -255,7 +252,7 @@ fn test_tui_shell_mode_backspace_exits_shell_mode() {
 /// Shell mode handles commands with special characters (pipes, redirects)
 #[test]
 fn test_tui_shell_mode_with_pipe_command() {
-    let tui = TuiTestSession::new("shell-pipe", SCENARIO);
+    let tui = TuiTestSession::new("shell-pipe", &scenario());
     let previous = tui.capture();
 
     // Enter shell mode and type a command with pipe
@@ -277,7 +274,7 @@ fn test_tui_shell_mode_with_pipe_command() {
 /// Shell mode handles commands with quoted strings
 #[test]
 fn test_tui_shell_mode_with_quoted_string() {
-    let tui = TuiTestSession::new("shell-quotes", SCENARIO);
+    let tui = TuiTestSession::new("shell-quotes", &scenario());
     let previous = tui.capture();
 
     // Enter shell mode and type a command with quotes
@@ -300,7 +297,7 @@ fn test_tui_shell_mode_with_quoted_string() {
 /// Shell mode handles commands with environment variables
 #[test]
 fn test_tui_shell_mode_with_env_variable() {
-    let tui = TuiTestSession::new("shell-env", SCENARIO);
+    let tui = TuiTestSession::new("shell-env", &scenario());
     let previous = tui.capture();
 
     // Enter shell mode and type a command with env variable

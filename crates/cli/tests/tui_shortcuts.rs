@@ -30,14 +30,11 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, TuiTestSession};
+use common::{assert_tui_matches_fixture, simple_scenario_toml, TuiTestSession};
 
-const SCENARIO: &str = r#"
-    name = "test"
-    [[responses]]
-    pattern = { type = "any" }
-    response = "Hello!"
-"#;
+fn scenario() -> String {
+    simple_scenario_toml("Hello!")
+}
 
 const JSON_SCENARIO: &str = r#"
     {
@@ -56,7 +53,7 @@ const JSON_SCENARIO: &str = r#"
 /// Pressing '?' on empty input shows the shortcuts panel with all available shortcuts
 #[test]
 fn test_tui_question_mark_shows_shortcuts_on_empty_input() {
-    let tui = TuiTestSession::new("shortcuts-empty", SCENARIO);
+    let tui = TuiTestSession::new("shortcuts-empty", &scenario());
     let previous = tui.capture();
 
     // Press '?' to show shortcuts
@@ -101,7 +98,7 @@ fn test_tui_shortcuts_display_matches_fixture() {
 /// Pressing Escape dismisses the shortcuts panel
 #[test]
 fn test_tui_escape_dismisses_shortcuts_panel() {
-    let tui = TuiTestSession::new("shortcuts-dismiss", SCENARIO);
+    let tui = TuiTestSession::new("shortcuts-dismiss", &scenario());
     let previous = tui.capture();
 
     // Press '?' to show shortcuts
@@ -141,7 +138,7 @@ fn test_tui_escape_dismisses_shortcuts_panel() {
 /// When input is not empty, '?' types a literal '?' instead of showing shortcuts
 #[test]
 fn test_tui_question_mark_types_literal_when_input_present() {
-    let tui = TuiTestSession::new("shortcuts-literal", SCENARIO);
+    let tui = TuiTestSession::new("shortcuts-literal", &scenario());
 
     // Type some text first
     tui.send_keys("Hello");

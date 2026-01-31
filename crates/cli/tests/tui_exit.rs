@@ -23,14 +23,11 @@ mod common;
 
 use std::time::Duration;
 
-use common::TuiTestSession;
+use common::{simple_scenario_toml, TuiTestSession};
 
-const SCENARIO: &str = r#"
-    name = "test"
-    [[responses]]
-    pattern = { type = "any" }
-    response = "Hello!"
-"#;
+fn scenario() -> String {
+    simple_scenario_toml("Hello!")
+}
 
 // =============================================================================
 // Ctrl+C Exit Hint Rendering Tests
@@ -41,7 +38,7 @@ const SCENARIO: &str = r#"
 /// First Ctrl+C on empty input shows "Press Ctrl-C again to exit" in status bar
 #[test]
 fn test_tui_ctrl_c_shows_exit_hint_on_empty_input() {
-    let tui = TuiTestSession::new("ctrl-c-hint-empty", SCENARIO);
+    let tui = TuiTestSession::new("ctrl-c-hint-empty", &scenario());
     let previous = tui.capture();
 
     // Press Ctrl+C on empty input
@@ -60,7 +57,7 @@ fn test_tui_ctrl_c_shows_exit_hint_on_empty_input() {
 /// First Ctrl+C with text in input clears input AND shows exit hint
 #[test]
 fn test_tui_ctrl_c_clears_input_and_shows_exit_hint() {
-    let tui = TuiTestSession::new("ctrl-c-hint-text", SCENARIO);
+    let tui = TuiTestSession::new("ctrl-c-hint-text", &scenario());
     let previous = tui.capture();
 
     // Type some text
@@ -93,7 +90,7 @@ fn test_tui_ctrl_c_clears_input_and_shows_exit_hint() {
 /// Exit hint times out and returns to normal status bar
 #[test]
 fn test_tui_ctrl_c_exit_hint_times_out() {
-    let tui = TuiTestSession::new("ctrl-c-timeout", SCENARIO);
+    let tui = TuiTestSession::new("ctrl-c-timeout", &scenario());
     let previous = tui.capture();
 
     // Press Ctrl+C to show exit hint
@@ -130,7 +127,7 @@ fn test_tui_ctrl_c_exit_hint_times_out() {
 /// Double Ctrl+C (quick succession) exits the TUI
 #[test]
 fn test_tui_ctrl_c_double_press_exits() {
-    let tui = TuiTestSession::new("ctrl-c-exit", SCENARIO);
+    let tui = TuiTestSession::new("ctrl-c-exit", &scenario());
     let previous = tui.capture();
 
     // First Ctrl+C shows exit hint
@@ -161,7 +158,7 @@ fn test_tui_ctrl_c_double_press_exits() {
 /// Ctrl+D on empty input shows "Press Ctrl-D again to exit" in status bar
 #[test]
 fn test_tui_ctrl_d_shows_exit_hint_on_empty_input() {
-    let tui = TuiTestSession::new("ctrl-d-hint", SCENARIO);
+    let tui = TuiTestSession::new("ctrl-d-hint", &scenario());
     let previous = tui.capture();
 
     // Press Ctrl+D on empty input
@@ -180,7 +177,7 @@ fn test_tui_ctrl_d_shows_exit_hint_on_empty_input() {
 /// Ctrl+D exit hint times out and returns to normal status bar
 #[test]
 fn test_tui_ctrl_d_exit_hint_times_out() {
-    let tui = TuiTestSession::new("ctrl-d-timeout", SCENARIO);
+    let tui = TuiTestSession::new("ctrl-d-timeout", &scenario());
     let previous = tui.capture();
 
     // Press Ctrl+D to show exit hint
@@ -217,7 +214,7 @@ fn test_tui_ctrl_d_exit_hint_times_out() {
 /// Ctrl+D with text in input is ignored (does nothing)
 #[test]
 fn test_tui_ctrl_d_ignored_with_text_in_input() {
-    let tui = TuiTestSession::new("ctrl-d-with-text", SCENARIO);
+    let tui = TuiTestSession::new("ctrl-d-with-text", &scenario());
     let previous = tui.capture();
 
     // Type some text
@@ -254,7 +251,7 @@ fn test_tui_ctrl_d_ignored_with_text_in_input() {
 /// Double Ctrl+D (quick succession) on empty input exits the TUI
 #[test]
 fn test_tui_ctrl_d_double_press_exits() {
-    let tui = TuiTestSession::new("ctrl-d-exit", SCENARIO);
+    let tui = TuiTestSession::new("ctrl-d-exit", &scenario());
     let previous = tui.capture();
 
     // First Ctrl+D shows exit hint
@@ -283,7 +280,7 @@ fn test_tui_ctrl_d_double_press_exits() {
 /// Typing /exit shows autocomplete dropdown with "Exit the REPL" description
 #[test]
 fn test_tui_exit_command_shows_autocomplete() {
-    let tui = TuiTestSession::new("exit-autocomplete", SCENARIO);
+    let tui = TuiTestSession::new("exit-autocomplete", &scenario());
     let previous = tui.capture();
 
     // Type /exit
@@ -302,7 +299,7 @@ fn test_tui_exit_command_shows_autocomplete() {
 /// /exit command exits the TUI and shows a farewell message
 #[test]
 fn test_tui_exit_command_exits_with_farewell() {
-    let tui = TuiTestSession::new("exit-command", SCENARIO);
+    let tui = TuiTestSession::new("exit-command", &scenario());
     let previous = tui.capture();
 
     // Type /exit and press Enter

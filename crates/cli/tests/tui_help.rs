@@ -20,14 +20,11 @@
 
 mod common;
 
-use common::TuiTestSession;
+use common::{simple_scenario_toml, TuiTestSession};
 
-const SCENARIO: &str = r#"
-    name = "test"
-    [[responses]]
-    pattern = { type = "any" }
-    response = "Hello!"
-"#;
+fn scenario() -> String {
+    simple_scenario_toml("Hello!")
+}
 
 // =============================================================================
 // /help Autocomplete Tests
@@ -39,7 +36,7 @@ const SCENARIO: &str = r#"
 // TODO(implement): requires slash command autocomplete
 #[test]
 fn test_tui_help_command_shows_autocomplete() {
-    let tui = TuiTestSession::new("help-autocomplete", SCENARIO);
+    let tui = TuiTestSession::new("help-autocomplete", &scenario());
     let previous = tui.capture();
 
     // Type /help
@@ -63,7 +60,7 @@ fn test_tui_help_command_shows_autocomplete() {
 // TODO(implement): requires /help dialog
 #[test]
 fn test_tui_help_shows_dialog_with_general_tab() {
-    let tui = TuiTestSession::new("help-general-tab", SCENARIO);
+    let tui = TuiTestSession::new("help-general-tab", &scenario());
     let previous = tui.capture();
 
     // Type /help and press Enter
@@ -101,7 +98,7 @@ fn test_tui_help_shows_dialog_with_general_tab() {
 // TODO(implement): requires /help dialog tab navigation
 #[test]
 fn test_tui_help_tab_shows_commands_tab() {
-    let tui = TuiTestSession::new("help-commands-tab", SCENARIO);
+    let tui = TuiTestSession::new("help-commands-tab", &scenario());
     let previous = tui.capture();
 
     // Type /help, press Enter, then Tab to go to commands tab
@@ -130,7 +127,7 @@ fn test_tui_help_tab_shows_commands_tab() {
 // TODO(implement): requires /help dialog tab cycling
 #[test]
 fn test_tui_help_tab_cycles_through_all_tabs() {
-    let tui = TuiTestSession::new("help-tab-cycle", SCENARIO);
+    let tui = TuiTestSession::new("help-tab-cycle", &scenario());
     let previous = tui.capture();
 
     // Type /help and press Enter
@@ -163,7 +160,7 @@ fn test_tui_help_tab_cycles_through_all_tabs() {
 /// Left/Right arrow keys navigate between tabs (alternative to Tab key)
 #[test]
 fn test_tui_help_arrow_keys_navigate_tabs() {
-    let tui = TuiTestSession::new("help-arrow-tabs", SCENARIO);
+    let tui = TuiTestSession::new("help-arrow-tabs", &scenario());
     let previous = tui.capture();
 
     // Open help dialog
@@ -202,7 +199,7 @@ fn test_tui_help_arrow_keys_navigate_tabs() {
 // TODO(implement): requires /help command list navigation
 #[test]
 fn test_tui_help_commands_arrow_navigation() {
-    let tui = TuiTestSession::new("help-commands-nav", SCENARIO);
+    let tui = TuiTestSession::new("help-commands-nav", &scenario());
     let previous = tui.capture();
 
     // Navigate to commands tab
@@ -242,7 +239,7 @@ fn test_tui_help_commands_arrow_navigation() {
 // TODO(implement): requires /help dialog dismiss
 #[test]
 fn test_tui_help_escape_dismisses_dialog() {
-    let tui = TuiTestSession::new("help-dismiss", SCENARIO);
+    let tui = TuiTestSession::new("help-dismiss", &scenario());
     let previous = tui.capture();
 
     // Open help dialog
@@ -268,7 +265,7 @@ fn test_tui_help_escape_dismisses_dialog() {
 // TODO(implement): requires /help dialog dismiss
 #[test]
 fn test_tui_help_dismiss_returns_to_clean_input() {
-    let tui = TuiTestSession::new("help-dismiss-clean", SCENARIO);
+    let tui = TuiTestSession::new("help-dismiss-clean", &scenario());
     let previous = tui.capture();
 
     // Open and dismiss help dialog

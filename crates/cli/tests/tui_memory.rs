@@ -21,14 +21,11 @@
 
 mod common;
 
-use common::TuiTestSession;
+use common::{simple_scenario_toml, TuiTestSession};
 
-const SCENARIO: &str = r#"
-    name = "test"
-    [[responses]]
-    pattern = { type = "any" }
-    response = "Hello!"
-"#;
+fn scenario() -> String {
+    simple_scenario_toml("Hello!")
+}
 
 // =============================================================================
 // /memory Autocomplete Tests
@@ -39,7 +36,7 @@ const SCENARIO: &str = r#"
 /// Typing /memory shows autocomplete dropdown with memory description
 #[test]
 fn test_tui_memory_command_shows_autocomplete() {
-    let tui = TuiTestSession::new("memory-autocomplete", SCENARIO);
+    let tui = TuiTestSession::new("memory-autocomplete", &scenario());
     let previous = tui.capture();
 
     // Type /memory
@@ -62,7 +59,7 @@ fn test_tui_memory_command_shows_autocomplete() {
 /// /memory command shows a dialog with memory sources
 #[test]
 fn test_tui_memory_shows_dialog_with_sources() {
-    let tui = TuiTestSession::new("memory-dialog", SCENARIO);
+    let tui = TuiTestSession::new("memory-dialog", &scenario());
     let previous = tui.capture();
 
     // Type /memory and press Enter
@@ -90,7 +87,7 @@ fn test_tui_memory_shows_dialog_with_sources() {
 /// /memory dialog shows count of active memory files
 #[test]
 fn test_tui_memory_shows_active_files_count() {
-    let tui = TuiTestSession::new("memory-count", SCENARIO);
+    let tui = TuiTestSession::new("memory-count", &scenario());
     let previous = tui.capture();
 
     // Type /memory and press Enter
@@ -116,7 +113,7 @@ fn test_tui_memory_shows_active_files_count() {
 /// Down arrow navigates through memory entries
 #[test]
 fn test_tui_memory_arrow_navigation() {
-    let tui = TuiTestSession::new("memory-nav", SCENARIO);
+    let tui = TuiTestSession::new("memory-nav", &scenario());
     let previous = tui.capture();
 
     // Open memory dialog
@@ -146,7 +143,7 @@ fn test_tui_memory_arrow_navigation() {
 /// Pressing Escape dismisses the memory dialog
 #[test]
 fn test_tui_memory_escape_dismisses_dialog() {
-    let tui = TuiTestSession::new("memory-dismiss", SCENARIO);
+    let tui = TuiTestSession::new("memory-dismiss", &scenario());
     let previous = tui.capture();
 
     // Open memory dialog
@@ -175,7 +172,7 @@ fn test_tui_memory_escape_dismisses_dialog() {
 /// Pressing Enter on a memory entry shows its details
 #[test]
 fn test_tui_memory_enter_shows_selected() {
-    let tui = TuiTestSession::new("memory-select", SCENARIO);
+    let tui = TuiTestSession::new("memory-select", &scenario());
     let previous = tui.capture();
 
     // Open memory dialog
@@ -205,7 +202,7 @@ fn test_tui_memory_enter_shows_selected() {
 /// /memory dialog handles case where no CLAUDE.md files exist
 #[test]
 fn test_tui_memory_shows_no_files_gracefully() {
-    let tui = TuiTestSession::new("memory-no-files", SCENARIO);
+    let tui = TuiTestSession::new("memory-no-files", &scenario());
     let previous = tui.capture();
 
     // Type /memory and press Enter

@@ -16,14 +16,11 @@
 
 mod common;
 
-use common::TuiTestSession;
+use common::{simple_scenario_toml, TuiTestSession};
 
-const SCENARIO: &str = r#"
-    name = "test"
-    [[responses]]
-    pattern = { type = "any" }
-    response = "Hello!"
-"#;
+fn scenario() -> String {
+    simple_scenario_toml("Hello!")
+}
 
 // =============================================================================
 // Ctrl+T Shortcut Tests
@@ -36,7 +33,7 @@ const SCENARIO: &str = r#"
 // TODO(implement): requires Ctrl+T shortcut handling
 #[test]
 fn test_tui_ctrl_t_no_change_when_no_todos() {
-    let tui = TuiTestSession::new("ctrl-t-no-todos", SCENARIO);
+    let tui = TuiTestSession::new("ctrl-t-no-todos", &scenario());
     let previous = tui.capture();
 
     // Press Ctrl+T to show todos (when there are none)
@@ -58,7 +55,7 @@ fn test_tui_ctrl_t_no_change_when_no_todos() {
 // TODO(implement): requires shortcuts panel display
 #[test]
 fn test_tui_shortcuts_shows_ctrl_t_for_todos() {
-    let tui = TuiTestSession::new("shortcuts-ctrl-t", SCENARIO);
+    let tui = TuiTestSession::new("shortcuts-ctrl-t", &scenario());
     let previous = tui.capture();
 
     // Press '?' to show shortcuts panel
@@ -83,7 +80,7 @@ fn test_tui_shortcuts_shows_ctrl_t_for_todos() {
 // TODO(implement): requires /todos slash command
 #[test]
 fn test_tui_todos_command_shows_empty_message() {
-    let tui = TuiTestSession::new("todos-empty", SCENARIO);
+    let tui = TuiTestSession::new("todos-empty", &scenario());
     let previous = tui.capture();
 
     // Type and execute /todos command
@@ -108,7 +105,7 @@ fn test_tui_todos_command_shows_empty_message() {
 // TODO(implement): requires TodoWrite tool support and Ctrl+T display
 #[test]
 fn test_tui_ctrl_t_shows_active_todos() {
-    let _tui = TuiTestSession::new("ctrl-t-active", SCENARIO);
+    let _tui = TuiTestSession::new("ctrl-t-active", &scenario());
 
     // Would need to trigger todo creation first, then press Ctrl+T
     // This test documents expected behavior when todos exist
@@ -123,7 +120,7 @@ fn test_tui_ctrl_t_shows_active_todos() {
 // TODO(implement): requires /todos slash command with active todos
 #[test]
 fn test_tui_todos_command_shows_active_items() {
-    let _tui = TuiTestSession::new("todos-active", SCENARIO);
+    let _tui = TuiTestSession::new("todos-active", &scenario());
 
     // Would need to trigger todo creation first, then run /todos
     // This test documents expected behavior when todos exist

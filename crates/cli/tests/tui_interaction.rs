@@ -10,22 +10,14 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, TuiTestSession};
+use common::{assert_tui_matches_fixture, simple_scenario_toml, TuiTestSession};
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Typing in the input area should show the typed text
 #[test]
 fn test_tui_shows_typed_input() {
-    let tui = TuiTestSession::new(
-        "input-test",
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
+    let tui = TuiTestSession::new("input-test", &simple_scenario_toml("Hello!"));
 
     tui.send_keys("Hello Claude");
 
@@ -45,12 +37,7 @@ fn test_tui_shows_typed_input() {
 fn test_tui_shows_response_with_indicator() {
     let tui = TuiTestSession::new(
         "response-test",
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Test response from simulator"
-        "#,
+        &simple_scenario_toml("Test response from simulator"),
     );
 
     tui.send_line("test prompt");

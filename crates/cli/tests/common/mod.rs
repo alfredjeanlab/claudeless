@@ -39,6 +39,158 @@ pub fn write_scenario(content: &str) -> NamedTempFile {
     file
 }
 
+// =============================================================================
+// Scenario Builder
+// =============================================================================
+
+/// Response pattern type for scenario builder.
+#[derive(Clone)]
+pub enum Pattern {
+    /// Matches any input.
+    Any,
+    /// Matches input containing the given text.
+    Contains(String),
+    /// Matches input matching the given regex pattern.
+    Regex(String),
+}
+
+/// Builder for creating scenario TOML files with a fluent API.
+///
+/// # Example
+/// ```ignore
+/// let scenario = ScenarioBuilder::new("test")
+///     .any_response("Hello!")
+///     .build();
+///
+/// // Or use the convenience function:
+/// let scenario = simple_scenario("Hello!");
+/// ```
+pub struct ScenarioBuilder {
+    name: String,
+    responses: Vec<(Pattern, String, Option<u64>)>, // (pattern, response, delay_ms)
+    response_delay_ms: Option<u64>,
+}
+
+impl ScenarioBuilder {
+    /// Create a new scenario builder with the given name.
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            responses: vec![],
+            response_delay_ms: None,
+        }
+    }
+
+    /// Add a response that matches any input.
+    pub fn any_response(mut self, response: &str) -> Self {
+        self.responses
+            .push((Pattern::Any, response.to_string(), None));
+        self
+    }
+
+    /// Add a response that matches any input with a delay.
+    pub fn any_response_delayed(mut self, response: &str, delay_ms: u64) -> Self {
+        self.responses
+            .push((Pattern::Any, response.to_string(), Some(delay_ms)));
+        self
+    }
+
+    /// Add a response that matches input containing the given text.
+    pub fn contains_response(mut self, pattern: &str, response: &str) -> Self {
+        self.responses.push((
+            Pattern::Contains(pattern.to_string()),
+            response.to_string(),
+            None,
+        ));
+        self
+    }
+
+    /// Add a response that matches input matching the given regex.
+    pub fn regex_response(mut self, pattern: &str, response: &str) -> Self {
+        self.responses.push((
+            Pattern::Regex(pattern.to_string()),
+            response.to_string(),
+            None,
+        ));
+        self
+    }
+
+    /// Set a global response delay for all responses.
+    pub fn response_delay_ms(mut self, delay_ms: u64) -> Self {
+        self.response_delay_ms = Some(delay_ms);
+        self
+    }
+
+    /// Build the scenario and write it to a temp file.
+    pub fn build(self) -> NamedTempFile {
+        let mut toml = format!("name = \"{}\"\n", self.name);
+
+        if let Some(delay) = self.response_delay_ms {
+            toml.push_str(&format!("[timeouts]\nresponse_delay_ms = {}\n", delay));
+        }
+
+        for (pattern, response, delay_ms) in &self.responses {
+            toml.push_str("[[responses]]\n");
+
+            match pattern {
+                Pattern::Any => {
+                    toml.push_str("pattern = { type = \"any\" }\n");
+                }
+                Pattern::Contains(text) => {
+                    toml.push_str(&format!(
+                        "pattern = {{ type = \"contains\", text = \"{}\" }}\n",
+                        text.replace('\\', "\\\\").replace('"', "\\\"")
+                    ));
+                }
+                Pattern::Regex(pat) => {
+                    toml.push_str(&format!(
+                        "pattern = {{ type = \"regex\", pattern = \"{}\" }}\n",
+                        pat.replace('\\', "\\\\").replace('"', "\\\"")
+                    ));
+                }
+            }
+
+            if let Some(delay) = delay_ms {
+                toml.push_str(&format!(
+                    "response = {{ text = \"{}\", delay_ms = {} }}\n",
+                    response.replace('\\', "\\\\").replace('"', "\\\""),
+                    delay
+                ));
+            } else {
+                toml.push_str(&format!(
+                    "response = \"{}\"\n",
+                    response.replace('\\', "\\\\").replace('"', "\\\"")
+                ));
+            }
+        }
+
+        write_scenario(&toml)
+    }
+}
+
+/// Create a simple scenario that matches any input and returns the given response.
+///
+/// This is a convenience function equivalent to:
+/// ```ignore
+/// ScenarioBuilder::new("test").any_response(response).build()
+/// ```
+pub fn simple_scenario(response: &str) -> NamedTempFile {
+    ScenarioBuilder::new("test").any_response(response).build()
+}
+
+/// Create a simple scenario TOML string that matches any input and returns the given response.
+///
+/// This is useful for `TuiTestSession::new()` which takes a string directly.
+pub fn simple_scenario_toml(response: &str) -> String {
+    format!(
+        r#"name = "test"
+[[responses]]
+pattern = {{ type = "any" }}
+response = "{}""#,
+        response.replace('\\', "\\\\").replace('"', "\\\"")
+    )
+}
+
 /// Get path to claudeless binary
 pub fn claudeless_bin() -> String {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
@@ -208,14 +360,7 @@ impl Drop for TuiTestSession {
 pub fn capture_tui_initial(session: impl AsRef<str>, extra_args: &str) -> String {
     let session = session.as_ref();
     tmux::require_tmux();
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
-        "#,
-    );
+    let scenario = simple_scenario("ok");
 
     tmux::kill_session(session);
     tmux::new_session(session, 120, 20);
@@ -485,14 +630,7 @@ fn diff_strings(expected: &str, actual: &str) -> String {
 pub fn capture_key_sequence(session: impl AsRef<str>, keys: &[&str]) -> Vec<String> {
     let session = session.as_ref();
     tmux::require_tmux();
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
-        "#,
-    );
+    let scenario = simple_scenario("ok");
 
     tmux::kill_session(session);
     tmux::new_session(session, 120, 25);

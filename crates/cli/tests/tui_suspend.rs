@@ -24,14 +24,11 @@
 
 mod common;
 
-use common::TuiTestSession;
+use common::{simple_scenario_toml, TuiTestSession};
 
-const SCENARIO: &str = r#"
-    name = "test"
-    [[responses]]
-    pattern = { type = "any" }
-    response = "Hello!"
-"#;
+fn scenario() -> String {
+    simple_scenario_toml("Hello!")
+}
 
 // =============================================================================
 // Suspend Behavior Tests
@@ -43,7 +40,7 @@ const SCENARIO: &str = r#"
 /// telling the user how to resume.
 #[test]
 fn test_tui_ctrl_z_suspends_with_message() {
-    let tui = TuiTestSession::new("suspend-message", SCENARIO);
+    let tui = TuiTestSession::new("suspend-message", &scenario());
 
     // Send Ctrl+Z to suspend
     tui.send_keys("C-z");
@@ -71,7 +68,7 @@ fn test_tui_ctrl_z_suspends_with_message() {
 #[test]
 #[ignore] // TODO(flaky): Timing-sensitive tmux test that fails intermittently on CI
 fn test_tui_ctrl_z_shows_keybinding_note() {
-    let tui = TuiTestSession::new("suspend-note", SCENARIO);
+    let tui = TuiTestSession::new("suspend-note", &scenario());
 
     // Send Ctrl+Z to suspend
     tui.send_keys("C-z");
@@ -92,7 +89,7 @@ fn test_tui_ctrl_z_shows_keybinding_note() {
 /// After Ctrl+Z, the shell prompt appears (process is suspended).
 #[test]
 fn test_tui_ctrl_z_returns_to_shell() {
-    let tui = TuiTestSession::new("suspend-shell", SCENARIO);
+    let tui = TuiTestSession::new("suspend-shell", &scenario());
 
     // Send Ctrl+Z to suspend
     tui.send_keys("C-z");
@@ -119,7 +116,7 @@ fn test_tui_ctrl_z_returns_to_shell() {
 /// Claude Code redraws its TUI interface.
 #[test]
 fn test_tui_ctrl_z_resume_redraws_tui() {
-    let tui = TuiTestSession::new("suspend-resume", SCENARIO);
+    let tui = TuiTestSession::new("suspend-resume", &scenario());
 
     // Send Ctrl+Z to suspend
     tui.send_keys("C-z");
@@ -146,7 +143,7 @@ fn test_tui_ctrl_z_resume_redraws_tui() {
 /// After resume, any input text that was in the prompt is preserved.
 #[test]
 fn test_tui_ctrl_z_resume_preserves_input_state() {
-    let tui = TuiTestSession::new("suspend-preserve", SCENARIO);
+    let tui = TuiTestSession::new("suspend-preserve", &scenario());
 
     // Type some text
     tui.send_keys("hello world");

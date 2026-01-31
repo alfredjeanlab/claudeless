@@ -18,14 +18,11 @@
 
 mod common;
 
-use common::TuiTestSession;
+use common::{simple_scenario_toml, TuiTestSession};
 
-const SCENARIO: &str = r#"
-    name = "test"
-    [[responses]]
-    pattern = { type = "any" }
-    response = "Hello!"
-"#;
+fn scenario() -> String {
+    simple_scenario_toml("Hello!")
+}
 
 // =============================================================================
 // /export Autocomplete Tests
@@ -37,7 +34,7 @@ const SCENARIO: &str = r#"
 #[test]
 #[ignore] // DEFERRED: Requires slash command autocomplete implementation
 fn test_tui_export_command_shows_autocomplete() {
-    let tui = TuiTestSession::new("export-autocomplete", SCENARIO);
+    let tui = TuiTestSession::new("export-autocomplete", &scenario());
     let previous = tui.capture();
 
     // Type /export
@@ -61,7 +58,7 @@ fn test_tui_export_command_shows_autocomplete() {
 /// /export command shows a dialog with export method options
 #[test]
 fn test_tui_export_shows_method_dialog() {
-    let tui = TuiTestSession::new("export-method-dialog", SCENARIO);
+    let tui = TuiTestSession::new("export-method-dialog", &scenario());
     let previous = tui.capture();
 
     // First, create a conversation by sending a message
@@ -105,7 +102,7 @@ fn test_tui_export_shows_method_dialog() {
 #[test]
 #[ignore] // TODO(flaky): Timing-sensitive tmux test that fails intermittently on CI
 fn test_tui_export_clipboard_shows_confirmation() {
-    let tui = TuiTestSession::new("export-clipboard", SCENARIO);
+    let tui = TuiTestSession::new("export-clipboard", &scenario());
     let previous = tui.capture();
 
     // First, create a conversation by sending a message
@@ -137,7 +134,7 @@ fn test_tui_export_clipboard_shows_confirmation() {
 #[test]
 #[ignore] // TODO(flaky): Timing-sensitive tmux test that fails intermittently on CI
 fn test_tui_export_file_shows_filename_dialog() {
-    let tui = TuiTestSession::new("export-filename-dialog", SCENARIO);
+    let tui = TuiTestSession::new("export-filename-dialog", &scenario());
     let previous = tui.capture();
 
     // First, create a conversation by sending a message
@@ -183,7 +180,7 @@ fn test_tui_export_file_shows_filename_dialog() {
 /// Saving to file shows confirmation with filename
 #[test]
 fn test_tui_export_file_shows_save_confirmation() {
-    let tui = TuiTestSession::new("export-file-save", SCENARIO);
+    let tui = TuiTestSession::new("export-file-save", &scenario());
     let previous = tui.capture();
 
     // First, create a conversation by sending a message
@@ -220,7 +217,7 @@ fn test_tui_export_file_shows_save_confirmation() {
 /// Pressing Escape in method selection cancels export
 #[test]
 fn test_tui_export_escape_cancels() {
-    let tui = TuiTestSession::new("export-cancel", SCENARIO);
+    let tui = TuiTestSession::new("export-cancel", &scenario());
     let previous = tui.capture();
 
     // First, create a conversation by sending a message
@@ -250,7 +247,7 @@ fn test_tui_export_escape_cancels() {
 #[test]
 #[ignore] // TODO(flaky): Timing-sensitive tmux test that fails intermittently on CI
 fn test_tui_export_filename_escape_returns_to_method() {
-    let tui = TuiTestSession::new("export-filename-back", SCENARIO);
+    let tui = TuiTestSession::new("export-filename-back", &scenario());
     let previous = tui.capture();
 
     // First, create a conversation by sending a message
@@ -294,7 +291,7 @@ fn test_tui_export_filename_escape_returns_to_method() {
 #[test]
 #[ignore] // TODO(flaky): Timing-sensitive tmux test that fails intermittently on CI
 fn test_tui_export_arrow_navigation() {
-    let tui = TuiTestSession::new("export-navigation", SCENARIO);
+    let tui = TuiTestSession::new("export-navigation", &scenario());
     let previous = tui.capture();
 
     // First, create a conversation by sending a message

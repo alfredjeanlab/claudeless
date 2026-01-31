@@ -23,14 +23,11 @@
 
 mod common;
 
-use common::TuiTestSession;
+use common::{simple_scenario_toml, TuiTestSession};
 
-const SCENARIO: &str = r#"
-    name = "test"
-    [[responses]]
-    pattern = { type = "any" }
-    response = "Hello!"
-"#;
+fn scenario() -> String {
+    simple_scenario_toml("Hello!")
+}
 
 // =============================================================================
 // Slash Command Menu Tests
@@ -41,7 +38,7 @@ const SCENARIO: &str = r#"
 /// Typing / opens the slash command autocomplete menu
 #[test]
 fn test_tui_slash_opens_command_menu() {
-    let tui = TuiTestSession::new("slash-menu", SCENARIO);
+    let tui = TuiTestSession::new("slash-menu", &scenario());
 
     // Type /
     tui.send_keys("/");
@@ -65,7 +62,7 @@ fn test_tui_slash_opens_command_menu() {
 /// Menu shows multiple commands with descriptions
 #[test]
 fn test_tui_slash_menu_shows_descriptions() {
-    let tui = TuiTestSession::new("slash-descriptions", SCENARIO);
+    let tui = TuiTestSession::new("slash-descriptions", &scenario());
 
     // Type /
     tui.send_keys("/");
@@ -94,7 +91,7 @@ fn test_tui_slash_menu_shows_descriptions() {
 /// Typing characters after / filters commands using fuzzy matching
 #[test]
 fn test_tui_slash_filters_commands() {
-    let tui = TuiTestSession::new("slash-filter", SCENARIO);
+    let tui = TuiTestSession::new("slash-filter", &scenario());
     let previous = tui.capture();
 
     // Type /co
@@ -124,7 +121,7 @@ fn test_tui_slash_filters_commands() {
 /// Filtering narrows down results as more characters are typed
 #[test]
 fn test_tui_slash_filters_progressively() {
-    let tui = TuiTestSession::new("slash-progressive", SCENARIO);
+    let tui = TuiTestSession::new("slash-progressive", &scenario());
 
     // Type /hel
     tui.send_keys("/hel");
@@ -144,7 +141,7 @@ fn test_tui_slash_filters_progressively() {
 /// Fuzzy matching finds commands with characters in sequence, not just prefix
 #[test]
 fn test_tui_slash_fuzzy_matches() {
-    let tui = TuiTestSession::new("slash-fuzzy", SCENARIO);
+    let tui = TuiTestSession::new("slash-fuzzy", &scenario());
     let previous = tui.capture();
 
     // Type /h - should match help, hooks, theme, chrome, etc. (all containing 'h')
@@ -173,7 +170,7 @@ fn test_tui_slash_fuzzy_matches() {
 /// Down arrow moves selection to the next command
 #[test]
 fn test_tui_slash_down_arrow_navigation() {
-    let tui = TuiTestSession::new("slash-down", SCENARIO);
+    let tui = TuiTestSession::new("slash-down", &scenario());
 
     // Type /
     tui.send_keys("/");
@@ -202,7 +199,7 @@ fn test_tui_slash_down_arrow_navigation() {
 /// Up arrow moves selection to the previous command
 #[test]
 fn test_tui_slash_up_arrow_navigation() {
-    let tui = TuiTestSession::new("slash-up", SCENARIO);
+    let tui = TuiTestSession::new("slash-up", &scenario());
 
     // Type /
     tui.send_keys("/");
@@ -238,7 +235,7 @@ fn test_tui_slash_up_arrow_navigation() {
 /// Tab completes to the selected command
 #[test]
 fn test_tui_slash_tab_completes_first_command() {
-    let tui = TuiTestSession::new("slash-tab", SCENARIO);
+    let tui = TuiTestSession::new("slash-tab", &scenario());
 
     // Type /
     tui.send_keys("/");
@@ -262,7 +259,7 @@ fn test_tui_slash_tab_completes_first_command() {
 /// Tab shows argument hint for commands that take arguments
 #[test]
 fn test_tui_slash_tab_shows_argument_hint() {
-    let tui = TuiTestSession::new("slash-arg-hint", SCENARIO);
+    let tui = TuiTestSession::new("slash-arg-hint", &scenario());
 
     // Type / and Tab (complete to /add-dir which takes <path>)
     tui.send_keys("/");
@@ -285,7 +282,7 @@ fn test_tui_slash_tab_shows_argument_hint() {
 #[test]
 #[ignore] // TODO(flaky): Timing-sensitive tmux test that fails intermittently on CI
 fn test_tui_slash_tab_closes_menu() {
-    let tui = TuiTestSession::new("slash-tab-close", SCENARIO);
+    let tui = TuiTestSession::new("slash-tab-close", &scenario());
 
     // Type /
     tui.send_keys("/");
@@ -322,7 +319,7 @@ fn test_tui_slash_tab_closes_menu() {
 /// Escape closes autocomplete menu but keeps typed text
 #[test]
 fn test_tui_slash_escape_closes_menu_keeps_text() {
-    let tui = TuiTestSession::new("slash-escape", SCENARIO);
+    let tui = TuiTestSession::new("slash-escape", &scenario());
 
     // Type /
     tui.send_keys("/");
@@ -350,7 +347,7 @@ fn test_tui_slash_escape_closes_menu_keeps_text() {
 /// Escape from filtered search closes menu but keeps filter text
 #[test]
 fn test_tui_slash_escape_from_filtered_keeps_text() {
-    let tui = TuiTestSession::new("slash-escape-filter", SCENARIO);
+    let tui = TuiTestSession::new("slash-escape-filter", &scenario());
 
     // Type /he
     tui.send_keys("/he");
