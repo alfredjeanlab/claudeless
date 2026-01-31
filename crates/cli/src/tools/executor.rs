@@ -124,15 +124,9 @@ impl PermissionCheckingExecutor {
 
     /// Get the action type for a tool.
     fn get_action(&self, tool_name: &str) -> &'static str {
-        match tool_name {
-            "Bash" => "execute",
-            "Read" => "read",
-            "Write" | "Edit" | "NotebookEdit" => "write",
-            "Glob" | "Grep" => "read",
-            "WebFetch" | "WebSearch" => "network",
-            "Task" => "delegate",
-            _ => "execute", // Default for MCP tools
-        }
+        super::ToolName::parse(tool_name)
+            .map(|t| t.action())
+            .unwrap_or("execute") // Default for MCP tools
     }
 }
 

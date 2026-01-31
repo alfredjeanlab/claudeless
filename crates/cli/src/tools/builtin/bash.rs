@@ -9,6 +9,7 @@ use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
 use super::{extract_str, require_field, BuiltinContext, BuiltinToolExecutor};
+use crate::tools::ToolName;
 
 /// Executor for Bash commands.
 #[derive(Clone, Debug, Default)]
@@ -73,8 +74,8 @@ impl BuiltinToolExecutor for BashExecutor {
         Self::execute_real(command, ctx, tool_use_id)
     }
 
-    fn tool_name(&self) -> &'static str {
-        "Bash"
+    fn tool_name(&self) -> ToolName {
+        ToolName::Bash
     }
 }
 

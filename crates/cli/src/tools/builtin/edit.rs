@@ -12,6 +12,7 @@ use super::{
     extract_bool, extract_file_path, extract_str, require_field, BuiltinContext,
     BuiltinToolExecutor,
 };
+use crate::tools::ToolName;
 
 /// Executor for file editing (search and replace).
 #[derive(Clone, Debug, Default)]
@@ -117,8 +118,8 @@ impl BuiltinToolExecutor for EditExecutor {
         }
     }
 
-    fn tool_name(&self) -> &'static str {
-        "Edit"
+    fn tool_name(&self) -> ToolName {
+        ToolName::Edit
     }
 }
 

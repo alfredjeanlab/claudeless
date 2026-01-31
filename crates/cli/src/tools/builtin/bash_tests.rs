@@ -87,5 +87,8 @@ fn test_bash_failed_command_has_exit_code() {
 
 #[test]
 fn test_tool_name() {
-    assert_eq!(BashExecutor::new().tool_name(), "Bash");
+    assert_eq!(
+        BashExecutor::new().tool_name(),
+        crate::tools::ToolName::Bash
+    );
 }

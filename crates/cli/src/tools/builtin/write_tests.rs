@@ -102,5 +102,8 @@ fn test_write_creates_parent_dirs() {
 
 #[test]
 fn test_tool_name() {
-    assert_eq!(WriteExecutor::new().tool_name(), "Write");
+    assert_eq!(
+        WriteExecutor::new().tool_name(),
+        crate::tools::ToolName::Write
+    );
 }
