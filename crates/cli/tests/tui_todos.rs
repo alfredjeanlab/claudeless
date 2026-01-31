@@ -16,7 +16,14 @@
 
 mod common;
 
-use common::{start_tui, tmux, write_scenario};
+use common::TuiTestSession;
+
+const SCENARIO: &str = r#"
+    name = "test"
+    [[responses]]
+    pattern = { type = "any" }
+    response = "Hello!"
+"#;
 
 // =============================================================================
 // Ctrl+T Shortcut Tests
@@ -29,24 +36,13 @@ use common::{start_tui, tmux, write_scenario};
 // TODO(implement): requires Ctrl+T shortcut handling
 #[test]
 fn test_tui_ctrl_t_no_change_when_no_todos() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("ctrl-t-no-todos");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("ctrl-t-no-todos", SCENARIO);
+    let previous = tui.capture();
 
     // Press Ctrl+T to show todos (when there are none)
-    tmux::send_keys(&session, "C-t");
+    tui.send_keys("C-t");
     // Should not change when there are no todos
-    let capture = tmux::assert_unchanged_ms(&session, &previous, 300);
-
-    tmux::kill_session(&session);
+    let capture = tui.assert_unchanged_ms(&previous, 300);
 
     // Display should remain the same - no visible change when no todos exist
     assert!(
@@ -62,23 +58,12 @@ fn test_tui_ctrl_t_no_change_when_no_todos() {
 // TODO(implement): requires shortcuts panel display
 #[test]
 fn test_tui_shortcuts_shows_ctrl_t_for_todos() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("shortcuts-ctrl-t");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("shortcuts-ctrl-t", SCENARIO);
+    let previous = tui.capture();
 
     // Press '?' to show shortcuts panel
-    tmux::send_keys(&session, "?");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("?");
+    let capture = tui.wait_for_change(&previous);
 
     // Should show Ctrl+T shortcut for todos
     assert!(
@@ -98,23 +83,12 @@ fn test_tui_shortcuts_shows_ctrl_t_for_todos() {
 // TODO(implement): requires /todos slash command
 #[test]
 fn test_tui_todos_command_shows_empty_message() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("todos-empty");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("todos-empty", SCENARIO);
+    let previous = tui.capture();
 
     // Type and execute /todos command
-    tmux::send_line(&session, "/todos");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_line("/todos");
+    let capture = tui.wait_for_change(&previous);
 
     // Should show empty todos message
     assert!(
@@ -134,22 +108,10 @@ fn test_tui_todos_command_shows_empty_message() {
 // TODO(implement): requires TodoWrite tool support and Ctrl+T display
 #[test]
 fn test_tui_ctrl_t_shows_active_todos() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("ctrl-t-active");
-    let _previous = start_tui(&session, &scenario);
+    let _tui = TuiTestSession::new("ctrl-t-active", SCENARIO);
 
     // Would need to trigger todo creation first, then press Ctrl+T
     // This test documents expected behavior when todos exist
-
-    tmux::kill_session(&session);
 
     // Placeholder - actual implementation would verify todo items are displayed
     // when Ctrl+T is pressed after TodoWrite creates items
@@ -161,22 +123,10 @@ fn test_tui_ctrl_t_shows_active_todos() {
 // TODO(implement): requires /todos slash command with active todos
 #[test]
 fn test_tui_todos_command_shows_active_items() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("todos-active");
-    let _previous = start_tui(&session, &scenario);
+    let _tui = TuiTestSession::new("todos-active", SCENARIO);
 
     // Would need to trigger todo creation first, then run /todos
     // This test documents expected behavior when todos exist
-
-    tmux::kill_session(&session);
 
     // Placeholder - actual implementation would verify todo items are listed
     // with their status indicators (pending, in_progress, completed)

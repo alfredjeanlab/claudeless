@@ -18,7 +18,40 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, start_tui, start_tui_ext, tmux, write_scenario};
+use common::{assert_tui_matches_fixture, TuiTestSession};
+
+const SCENARIO: &str = r#"
+    name = "test"
+    [[responses]]
+    pattern = { type = "any" }
+    response = "Hello!"
+"#;
+
+const JSON_SCENARIO: &str = r#"
+    {
+        "default_response": "Hello!",
+        "trusted": true,
+        "claude_version": "2.1.12"
+    }
+"#;
+
+const BYPASS_SCENARIO: &str = r#"
+    name = "test"
+    trusted = true
+    permission_mode = "bypass-permissions"
+    [[responses]]
+    pattern = { type = "any" }
+    response = "Command executed"
+"#;
+
+const BYPASS_DONE_SCENARIO: &str = r#"
+    name = "test"
+    trusted = true
+    permission_mode = "bypass-permissions"
+    [[responses]]
+    pattern = { type = "any" }
+    response = "Done"
+"#;
 
 /// Pattern for bypass mode status bar
 const BYPASS_MODE_PATTERN: &str = "bypass permissions on";
@@ -32,23 +65,12 @@ const BYPASS_MODE_PATTERN: &str = "bypass permissions on";
 /// Typing '!' on empty input shows '!' prefix for shell mode with suggestion hint
 #[test]
 fn test_tui_exclamation_shows_shell_prefix() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("shell-prefix");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("shell-prefix", SCENARIO);
+    let previous = tui.capture();
 
     // Press '!' to enter shell mode
-    tmux::send_keys(&session, "!");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("!");
+    let capture = tui.wait_for_change(&previous);
 
     // Should show '! Try "..."' or '! for bash mode' in the UI
     assert!(
@@ -63,24 +85,12 @@ fn test_tui_exclamation_shows_shell_prefix() {
 /// Shell mode prefix display matches the captured fixture
 #[test]
 fn test_tui_shell_prefix_matches_fixture() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "default_response": "Hello!",
-            "trusted": true,
-            "claude_version": "2.1.12"
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("shell-prefix-fixture");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("shell-prefix-fixture", JSON_SCENARIO);
+    let previous = tui.capture();
 
     // Press '!' to enter shell mode
-    tmux::send_keys(&session, "!");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("!");
+    let capture = tui.wait_for_change(&previous);
 
     assert_tui_matches_fixture(&capture, "shell_mode_prefix.txt", None);
 }
@@ -94,25 +104,14 @@ fn test_tui_shell_prefix_matches_fixture() {
 /// Typing a command after '!' shows '! command' in the input
 #[test]
 fn test_tui_shell_mode_shows_command() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("shell-command");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("shell-command", SCENARIO);
+    let previous = tui.capture();
 
     // Enter shell mode and type a command
-    tmux::send_keys(&session, "!");
-    tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "ls -la");
-    let capture = tmux::wait_for_content(&session, "ls -la");
-
-    tmux::kill_session(&session);
+    tui.send_keys("!");
+    tui.wait_for_change(&previous);
+    tui.send_keys("ls -la");
+    let capture = tui.wait_for("ls -la");
 
     // Should show '! ls -la' in input (with space after !)
     assert!(
@@ -127,26 +126,14 @@ fn test_tui_shell_mode_shows_command() {
 /// Shell mode with command matches the captured fixture
 #[test]
 fn test_tui_shell_command_matches_fixture() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "default_response": "Hello!",
-            "trusted": true,
-            "claude_version": "2.1.12"
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("shell-command-fixture");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("shell-command-fixture", JSON_SCENARIO);
+    let previous = tui.capture();
 
     // Enter shell mode and type a command
-    tmux::send_keys(&session, "!");
-    tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "ls -la");
-    let capture = tmux::wait_for_content(&session, "ls -la");
-
-    tmux::kill_session(&session);
+    tui.send_keys("!");
+    tui.wait_for_change(&previous);
+    tui.send_keys("ls -la");
+    let capture = tui.wait_for("ls -la");
 
     assert_tui_matches_fixture(&capture, "shell_mode_command.txt", None);
 }
@@ -160,31 +147,24 @@ fn test_tui_shell_command_matches_fixture() {
 /// Submitting a shell command executes it via Bash
 #[test]
 fn test_tui_shell_mode_executes_command() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        trusted = true
-        permission_mode = "bypass-permissions"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Command executed"
-        "#,
+    let tui = TuiTestSession::with_custom_wait(
+        "shell-execute",
+        BYPASS_SCENARIO,
+        120,
+        40,
+        BYPASS_MODE_PATTERN,
     );
-
-    let session = tmux::unique_session("shell-execute");
-    let previous = start_tui_ext(&session, &scenario, 120, 40, BYPASS_MODE_PATTERN);
+    let previous = tui.capture();
 
     // Enter shell mode, type command, and submit
-    tmux::send_keys(&session, "!");
-    tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "echo hello");
-    tmux::wait_for_content(&session, "echo hello");
-    tmux::send_keys(&session, "Enter");
+    tui.send_keys("!");
+    tui.wait_for_change(&previous);
+    tui.send_keys("echo hello");
+    tui.wait_for("echo hello");
+    tui.send_keys("Enter");
 
     // Wait for command execution (Bash output)
-    let capture = tmux::wait_for_content(&session, "Bash");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Bash");
 
     // Should show the command was executed as Bash
     assert!(
@@ -199,31 +179,24 @@ fn test_tui_shell_mode_executes_command() {
 /// Shell command shows as '! command' in conversation history
 #[test]
 fn test_tui_shell_mode_shows_prefixed_prompt_in_history() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        trusted = true
-        permission_mode = "bypass-permissions"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Done"
-        "#,
+    let tui = TuiTestSession::with_custom_wait(
+        "shell-history",
+        BYPASS_DONE_SCENARIO,
+        120,
+        40,
+        BYPASS_MODE_PATTERN,
     );
-
-    let session = tmux::unique_session("shell-history");
-    let previous = start_tui_ext(&session, &scenario, 120, 40, BYPASS_MODE_PATTERN);
+    let previous = tui.capture();
 
     // Enter shell mode, type command, and submit
-    tmux::send_keys(&session, "!");
-    tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "pwd");
-    tmux::wait_for_content(&session, "pwd");
-    tmux::send_keys(&session, "Enter");
+    tui.send_keys("!");
+    tui.wait_for_change(&previous);
+    tui.send_keys("pwd");
+    tui.wait_for("pwd");
+    tui.send_keys("Enter");
 
     // Wait for response
-    let capture = tmux::wait_for_content(&session, "Done");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Done");
 
     // Should show the prompt with shell prefix in history
     assert!(
@@ -242,21 +215,12 @@ fn test_tui_shell_mode_shows_prefixed_prompt_in_history() {
 /// Backspace on shell mode prefix '!' exits shell mode and shows placeholder again
 #[test]
 fn test_tui_shell_mode_backspace_exits_shell_mode() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("shell-backspace");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("shell-backspace", SCENARIO);
+    let previous = tui.capture();
 
     // Enter shell mode
-    tmux::send_keys(&session, "!");
-    let with_prefix = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("!");
+    let with_prefix = tui.wait_for_change(&previous);
 
     // Verify we're in shell mode (shows '! for bash mode' in status)
     assert!(
@@ -266,10 +230,8 @@ fn test_tui_shell_mode_backspace_exits_shell_mode() {
     );
 
     // Backspace to exit shell mode
-    tmux::send_keys(&session, "BSpace");
-    let capture = tmux::wait_for_change(&session, &with_prefix);
-
-    tmux::kill_session(&session);
+    tui.send_keys("BSpace");
+    let capture = tui.wait_for_change(&with_prefix);
 
     // Should no longer show bash mode indicator and should show normal placeholder
     assert!(
@@ -293,25 +255,14 @@ fn test_tui_shell_mode_backspace_exits_shell_mode() {
 /// Shell mode handles commands with special characters (pipes, redirects)
 #[test]
 fn test_tui_shell_mode_with_pipe_command() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("shell-pipe");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("shell-pipe", SCENARIO);
+    let previous = tui.capture();
 
     // Enter shell mode and type a command with pipe
-    tmux::send_keys(&session, "!");
-    tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "ls | head");
-    let capture = tmux::wait_for_content(&session, "ls | head");
-
-    tmux::kill_session(&session);
+    tui.send_keys("!");
+    tui.wait_for_change(&previous);
+    tui.send_keys("ls | head");
+    let capture = tui.wait_for("ls | head");
 
     // Should show the full command with pipe
     assert!(
@@ -326,26 +277,15 @@ fn test_tui_shell_mode_with_pipe_command() {
 /// Shell mode handles commands with quoted strings
 #[test]
 fn test_tui_shell_mode_with_quoted_string() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("shell-quotes");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("shell-quotes", SCENARIO);
+    let previous = tui.capture();
 
     // Enter shell mode and type a command with quotes
-    tmux::send_keys(&session, "!");
-    tmux::wait_for_change(&session, &previous);
+    tui.send_keys("!");
+    tui.wait_for_change(&previous);
     // Note: We use single quotes to avoid tmux key interpretation issues
-    tmux::send_keys(&session, "echo 'hello world'");
-    let capture = tmux::wait_for_content(&session, "echo");
-
-    tmux::kill_session(&session);
+    tui.send_keys("echo 'hello world'");
+    let capture = tui.wait_for("echo");
 
     // Should show the command with quotes
     assert!(
@@ -360,25 +300,14 @@ fn test_tui_shell_mode_with_quoted_string() {
 /// Shell mode handles commands with environment variables
 #[test]
 fn test_tui_shell_mode_with_env_variable() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("shell-env");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("shell-env", SCENARIO);
+    let previous = tui.capture();
 
     // Enter shell mode and type a command with env variable
-    tmux::send_keys(&session, "!");
-    tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "echo $HOME");
-    let capture = tmux::wait_for_content(&session, "$HOME");
-
-    tmux::kill_session(&session);
+    tui.send_keys("!");
+    tui.wait_for_change(&previous);
+    tui.send_keys("echo $HOME");
+    let capture = tui.wait_for("$HOME");
 
     // Should show the command with env variable
     assert!(
@@ -404,8 +333,10 @@ fn test_tui_shell_mode_with_env_variable() {
 #[ignore] // TODO(implement): Requires bash mode pink styling and `!` prefix
 fn test_tui_shell_prefix_ansi_matches_fixture_v2117() {
     use common::ansi::assert_versioned_ansi_matches_fixture;
+    use common::tmux;
 
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "shell-prefix-ansi",
         r#"
         {
             "default_response": "Hello!",
@@ -414,15 +345,11 @@ fn test_tui_shell_prefix_ansi_matches_fixture_v2117() {
         }
         "#,
     );
-
-    let session = tmux::unique_session("shell-prefix-ansi");
-    let previous = start_tui(&session, &scenario);
+    let previous = tui.capture();
 
     // Press '!' to enter shell mode
-    tmux::send_keys(&session, "!");
-    let capture = tmux::wait_for_change_ansi(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("!");
+    let capture = tmux::wait_for_change_ansi(tui.name(), &previous);
 
     assert_versioned_ansi_matches_fixture(&capture, "v2.1.17", "shell_mode_prefix_ansi.txt", None);
 }

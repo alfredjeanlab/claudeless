@@ -30,7 +30,22 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, start_tui, tmux, write_scenario};
+use common::{assert_tui_matches_fixture, TuiTestSession};
+
+const SCENARIO: &str = r#"
+    name = "test"
+    [[responses]]
+    pattern = { type = "any" }
+    response = "Hello!"
+"#;
+
+const JSON_SCENARIO: &str = r#"
+    {
+        "default_response": "Hello!",
+        "trusted": true,
+        "claude_version": "2.1.12"
+    }
+"#;
 
 // =============================================================================
 // Shortcuts Display Tests
@@ -41,23 +56,12 @@ use common::{assert_tui_matches_fixture, start_tui, tmux, write_scenario};
 /// Pressing '?' on empty input shows the shortcuts panel with all available shortcuts
 #[test]
 fn test_tui_question_mark_shows_shortcuts_on_empty_input() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("shortcuts-empty");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("shortcuts-empty", SCENARIO);
+    let previous = tui.capture();
 
     // Press '?' to show shortcuts
-    tmux::send_keys(&session, "?");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("?");
+    let capture = tui.wait_for_change(&previous);
 
     // Should show shortcuts panel with key bindings
     assert!(
@@ -82,24 +86,12 @@ fn test_tui_question_mark_shows_shortcuts_on_empty_input() {
 /// Shortcuts panel matches the captured fixture
 #[test]
 fn test_tui_shortcuts_display_matches_fixture() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "default_response": "Hello!",
-            "trusted": true,
-            "claude_version": "2.1.12"
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("shortcuts-fixture");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("shortcuts-fixture", JSON_SCENARIO);
+    let previous = tui.capture();
 
     // Press '?' to show shortcuts
-    tmux::send_keys(&session, "?");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("?");
+    let capture = tui.wait_for_change(&previous);
 
     assert_tui_matches_fixture(&capture, "shortcuts_display.txt", None);
 }
@@ -109,21 +101,12 @@ fn test_tui_shortcuts_display_matches_fixture() {
 /// Pressing Escape dismisses the shortcuts panel
 #[test]
 fn test_tui_escape_dismisses_shortcuts_panel() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("shortcuts-dismiss");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("shortcuts-dismiss", SCENARIO);
+    let previous = tui.capture();
 
     // Press '?' to show shortcuts
-    tmux::send_keys(&session, "?");
-    let after_question = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("?");
+    let after_question = tui.wait_for_change(&previous);
 
     // Verify shortcuts are shown
     assert!(
@@ -133,10 +116,8 @@ fn test_tui_escape_dismisses_shortcuts_panel() {
     );
 
     // Press Escape to dismiss
-    tmux::send_keys(&session, "Escape");
-    let after_escape = tmux::wait_for_change(&session, &after_question);
-
-    tmux::kill_session(&session);
+    tui.send_keys("Escape");
+    let after_escape = tui.wait_for_change(&after_question);
 
     // Should be back to normal state without shortcuts panel
     assert!(
@@ -160,27 +141,15 @@ fn test_tui_escape_dismisses_shortcuts_panel() {
 /// When input is not empty, '?' types a literal '?' instead of showing shortcuts
 #[test]
 fn test_tui_question_mark_types_literal_when_input_present() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("shortcuts-literal");
-    let _previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("shortcuts-literal", SCENARIO);
 
     // Type some text first
-    tmux::send_keys(&session, "Hello");
-    let _after_hello = tmux::wait_for_content(&session, "Hello");
+    tui.send_keys("Hello");
+    let _after_hello = tui.wait_for("Hello");
 
     // Now press '?' - should type literal '?', not show shortcuts
-    tmux::send_keys(&session, "?");
-    let capture = tmux::wait_for_content(&session, "Hello?");
-
-    tmux::kill_session(&session);
+    tui.send_keys("?");
+    let capture = tui.wait_for("Hello?");
 
     // Should show "Hello?" in input, NOT the shortcuts panel
     assert!(

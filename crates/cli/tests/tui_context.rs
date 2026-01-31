@@ -18,35 +18,30 @@
 
 mod common;
 
-use common::{start_tui, tmux, write_scenario};
+use common::TuiTestSession;
+
+const SCENARIO: &str = r#"
+    {
+        "trusted": true,
+        "claude_version": "2.1.12",
+        "responses": [
+            { "pattern": { "type": "any" }, "response": "ok" }
+        ]
+    }
+"#;
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// When /context is executed, it shows a context usage grid with token estimates.
 #[test]
 fn test_context_shows_usage_grid() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "trusted": true,
-            "claude_version": "2.1.12",
-            "responses": [
-                { "pattern": { "type": "any" }, "response": "ok" }
-            ]
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("context-usage-grid");
-    start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("context-usage-grid", SCENARIO);
 
     // Execute /context command
-    tmux::send_line(&session, "/context");
+    tui.send_line("/context");
 
     // Wait for the context grid to appear
-    let capture = tmux::wait_for_content(&session, "Estimated usage by category");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Estimated usage by category");
 
     // Should show the grid header
     assert!(
@@ -80,28 +75,13 @@ fn test_context_shows_usage_grid() {
 /// /context shows memory files section listing loaded CLAUDE.md files.
 #[test]
 fn test_context_shows_memory_files() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "trusted": true,
-            "claude_version": "2.1.12",
-            "responses": [
-                { "pattern": { "type": "any" }, "response": "ok" }
-            ]
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("context-memory-files");
-    start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("context-memory-files", SCENARIO);
 
     // Execute /context command
-    tmux::send_line(&session, "/context");
+    tui.send_line("/context");
 
     // Wait for the memory files section
-    let capture = tmux::wait_for_content(&session, "Memory files");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Memory files");
 
     // Should show memory files section with /memory reference
     assert!(
@@ -116,28 +96,13 @@ fn test_context_shows_memory_files() {
 /// /context appears in slash command autocomplete with correct description.
 #[test]
 fn test_context_in_autocomplete() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "trusted": true,
-            "claude_version": "2.1.12",
-            "responses": [
-                { "pattern": { "type": "any" }, "response": "ok" }
-            ]
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("context-autocomplete");
-    start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("context-autocomplete", SCENARIO);
 
     // Type /context to trigger autocomplete
-    tmux::send_keys(&session, "/context");
+    tui.send_keys("/context");
 
     // Wait for autocomplete to appear
-    let capture = tmux::wait_for_content(&session, "/context");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("/context");
 
     // Should show /context in autocomplete
     assert!(
@@ -160,28 +125,13 @@ fn test_context_in_autocomplete() {
 /// /context displays a visual grid using Unicode symbols.
 #[test]
 fn test_context_shows_visual_grid() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "trusted": true,
-            "claude_version": "2.1.12",
-            "responses": [
-                { "pattern": { "type": "any" }, "response": "ok" }
-            ]
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("context-visual-grid");
-    start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("context-visual-grid", SCENARIO);
 
     // Execute /context command
-    tmux::send_line(&session, "/context");
+    tui.send_line("/context");
 
     // Wait for the grid symbols to appear
-    let capture = tmux::wait_for_content(&session, "Estimated usage");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Estimated usage");
 
     // Should contain grid symbols (⛶ for free space, ⛝ for autocompact buffer)
     let has_grid_symbols = capture.contains('⛶') || capture.contains('⛝') || capture.contains('⛁');
@@ -197,28 +147,13 @@ fn test_context_shows_visual_grid() {
 /// /context shows token counts with percentages for each category.
 #[test]
 fn test_context_shows_token_percentages() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "trusted": true,
-            "claude_version": "2.1.12",
-            "responses": [
-                { "pattern": { "type": "any" }, "response": "ok" }
-            ]
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("context-percentages");
-    start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("context-percentages", SCENARIO);
 
     // Execute /context command
-    tmux::send_line(&session, "/context");
+    tui.send_line("/context");
 
     // Wait for percentage to appear
-    let capture = tmux::wait_for_content(&session, "tokens");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("tokens");
 
     // Should show token counts with percentages (e.g., "2.8k tokens (1.4%)")
     assert!(

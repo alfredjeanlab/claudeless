@@ -10,46 +10,40 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, start_tui, tmux, write_scenario};
+use common::{assert_tui_matches_fixture, TuiTestSession};
+
+const COMPACT_SCENARIO: &str = r#"
+    name = "compact-test"
+    [[responses]]
+    pattern = { type = "contains", text = "read" }
+    response = "The file contains test content."
+    [[responses]]
+    pattern = { type = "contains", text = "lorem" }
+    response = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+    [[responses]]
+    pattern = { type = "any" }
+    response = "ok"
+"#;
 
 /// Helper to run a conversation and then trigger /compact
-fn run_compact_test(session: &str) -> (String, String, String) {
-    let scenario = write_scenario(
-        r#"
-        name = "compact-test"
-        [[responses]]
-        pattern = { type = "contains", text = "read" }
-        response = "The file contains test content."
-        [[responses]]
-        pattern = { type = "contains", text = "lorem" }
-        response = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-        [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
-        "#,
-    );
+fn run_compact_test(name: &str) -> (String, String, String) {
+    let tui = TuiTestSession::new(name, COMPACT_SCENARIO);
 
-    start_tui(&session, &scenario);
+    tui.send_line("read the file");
+    tui.wait_for("file contains test content");
 
-    tmux::send_line(&session, "read the file");
-    tmux::wait_for_content(&session, "file contains test content");
+    tui.send_line("generate lorem ipsum");
+    tui.wait_for("Lorem ipsum");
 
-    tmux::send_line(&session, "generate lorem ipsum");
-    tmux::wait_for_content(&session, "Lorem ipsum");
+    let before_capture = tui.capture();
 
-    let before_capture = tmux::capture_pane(&session);
-
-    tmux::send_line(&session, "/compact");
+    tui.send_line("/compact");
 
     // Capture during compacting (look for compacting indicator)
-    let during_capture = tmux::wait_for_content(&session, "Compacting");
+    let during_capture = tui.wait_for("Compacting");
 
     // Wait for completion
-    let after_capture = tmux::wait_for_content(&session, "Compacted");
-
-    tmux::send_keys(&session, "C-c");
-    tmux::send_keys(&session, "C-c");
-    tmux::kill_session(&session);
+    let after_capture = tui.wait_for("Compacted");
 
     (before_capture, during_capture, after_capture)
 }
@@ -152,7 +146,8 @@ fn test_compact_collapses_history() {
 #[test]
 #[ignore] // BLOCKED: Simulator header/response format differs from real CLI. See tests/capture/skipped/CLAUDE.md
 fn test_compact_before_matches_fixture() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "fixture-compact-before",
         r#"
         {
             "trusted": true,
@@ -165,17 +160,12 @@ fn test_compact_before_matches_fixture() {
         "#,
     );
 
-    let session = tmux::unique_session("fixture-compact-before");
-    start_tui(&session, &scenario);
-
     // Build up conversation
-    tmux::send_line(&session, "read Cargo.toml and tell me the package name");
-    tmux::wait_for_content(&session, "workspace configuration");
+    tui.send_line("read Cargo.toml and tell me the package name");
+    tui.wait_for("workspace configuration");
 
-    tmux::send_line(&session, "generate 3 paragraphs of lorem ipsum");
-    let capture = tmux::wait_for_content(&session, "dolor repellendus");
-
-    tmux::kill_session(&session);
+    tui.send_line("generate 3 paragraphs of lorem ipsum");
+    let capture = tui.wait_for("dolor repellendus");
 
     assert_tui_matches_fixture(&capture, "compact_before.txt", None);
 }
@@ -184,7 +174,8 @@ fn test_compact_before_matches_fixture() {
 #[test]
 #[ignore] // BLOCKED: Simulator header format differs from real CLI. See tests/capture/skipped/CLAUDE.md
 fn test_compact_during_matches_fixture() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "fixture-compact-during",
         r#"
         {
             "trusted": true,
@@ -196,20 +187,15 @@ fn test_compact_during_matches_fixture() {
         "#,
     );
 
-    let session = tmux::unique_session("fixture-compact-during");
-    start_tui(&session, &scenario);
-
     // Build up some conversation
-    tmux::send_line(&session, "lorem");
-    tmux::wait_for_content(&session, "Lorem ipsum");
+    tui.send_line("lorem");
+    tui.wait_for("Lorem ipsum");
 
     // Trigger compact
-    tmux::send_line(&session, "/compact");
+    tui.send_line("/compact");
 
     // Capture during compacting
-    let capture = tmux::wait_for_content(&session, "Compacting");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Compacting");
 
     assert_tui_matches_fixture(&capture, "compact_during.txt", None);
 }
@@ -218,7 +204,8 @@ fn test_compact_during_matches_fixture() {
 #[test]
 #[ignore] // BLOCKED: Simulator doesn't track tool calls for compaction summary. See tests/capture/skipped/CLAUDE.md
 fn test_compact_after_matches_fixture() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "fixture-compact-after",
         r#"
         {
             "trusted": true,
@@ -230,18 +217,13 @@ fn test_compact_after_matches_fixture() {
         "#,
     );
 
-    let session = tmux::unique_session("fixture-compact-after");
-    start_tui(&session, &scenario);
-
     // Build up some conversation
-    tmux::send_line(&session, "read Cargo.toml and tell me about it");
-    tmux::wait_for_content(&session, "workspace configuration");
+    tui.send_line("read Cargo.toml and tell me about it");
+    tui.wait_for("workspace configuration");
 
     // Trigger compact and wait for completion
-    tmux::send_line(&session, "/compact");
-    let capture = tmux::wait_for_content(&session, "Compacted");
-
-    tmux::kill_session(&session);
+    tui.send_line("/compact");
+    let capture = tui.wait_for("Compacted");
 
     assert_tui_matches_fixture(&capture, "compact_after.txt", None);
 }

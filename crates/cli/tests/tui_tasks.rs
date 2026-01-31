@@ -17,35 +17,30 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, start_tui, tmux, write_scenario};
+use common::{assert_tui_matches_fixture, TuiTestSession};
+
+const JSON_SCENARIO: &str = r#"
+    {
+        "trusted": true,
+        "claude_version": "2.1.12",
+        "responses": [
+            { "pattern": { "type": "any" }, "response": "ok" }
+        ]
+    }
+"#;
 
 /// Behavior observed with: claude --version 2.1.14 (Claude Code)
 ///
 /// When /tasks is executed with no background tasks, it shows a dialog with "No tasks currently running".
 #[test]
 fn test_tasks_empty_shows_no_tasks_message() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "trusted": true,
-            "claude_version": "2.1.12",
-            "responses": [
-                { "pattern": { "type": "any" }, "response": "ok" }
-            ]
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("tasks-empty");
-    start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("tasks-empty", JSON_SCENARIO);
 
     // Execute /tasks
-    tmux::send_line(&session, "/tasks");
+    tui.send_line("/tasks");
 
     // Wait for dialog to appear
-    let capture = tmux::wait_for_content(&session, "Background tasks");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Background tasks");
 
     assert!(
         capture.contains("No tasks currently running"),
@@ -59,28 +54,13 @@ fn test_tasks_empty_shows_no_tasks_message() {
 /// /tasks dialog shows correct header and footer controls.
 #[test]
 fn test_tasks_dialog_has_controls() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "trusted": true,
-            "claude_version": "2.1.12",
-            "responses": [
-                { "pattern": { "type": "any" }, "response": "ok" }
-            ]
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("tasks-controls");
-    start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("tasks-controls", JSON_SCENARIO);
 
     // Execute /tasks
-    tmux::send_line(&session, "/tasks");
+    tui.send_line("/tasks");
 
     // Wait for dialog to appear
-    let capture = tmux::wait_for_content(&session, "Background tasks");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Background tasks");
 
     // Check for header
     assert!(
@@ -106,28 +86,13 @@ fn test_tasks_dialog_has_controls() {
 #[test]
 #[ignore]
 fn test_tasks_empty_matches_fixture() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "trusted": true,
-            "claude_version": "2.1.12",
-            "responses": [
-                { "pattern": { "type": "any" }, "response": "ok" }
-            ]
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("fixture-tasks-empty");
-    start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("fixture-tasks-empty", JSON_SCENARIO);
 
     // Execute /tasks
-    tmux::send_line(&session, "/tasks");
+    tui.send_line("/tasks");
 
     // Wait for dialog to appear
-    let capture = tmux::wait_for_content(&session, "Background tasks");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Background tasks");
 
     assert_tui_matches_fixture(&capture, "tasks_empty_dialog.txt", None);
 }
@@ -137,34 +102,19 @@ fn test_tasks_empty_matches_fixture() {
 /// Pressing Escape dismisses the /tasks dialog.
 #[test]
 fn test_tasks_dialog_dismiss_with_escape() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "trusted": true,
-            "claude_version": "2.1.12",
-            "responses": [
-                { "pattern": { "type": "any" }, "response": "ok" }
-            ]
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("tasks-dismiss");
-    start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("tasks-dismiss", JSON_SCENARIO);
 
     // Execute /tasks
-    tmux::send_line(&session, "/tasks");
+    tui.send_line("/tasks");
 
     // Wait for dialog to appear
-    let _ = tmux::wait_for_content(&session, "Background tasks");
+    let _ = tui.wait_for("Background tasks");
 
     // Press Escape to dismiss
-    tmux::send_keys(&session, "Escape");
+    tui.send_keys("Escape");
 
     // Wait for dialog to be dismissed
-    let capture = tmux::wait_for_content(&session, "dialog dismissed");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("dialog dismissed");
 
     assert!(
         capture.contains("Background tasks dialog dismissed"),
@@ -178,28 +128,13 @@ fn test_tasks_dialog_dismiss_with_escape() {
 /// /tasks appears in slash command autocomplete with correct description.
 #[test]
 fn test_tasks_in_autocomplete() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "trusted": true,
-            "claude_version": "2.1.12",
-            "responses": [
-                { "pattern": { "type": "any" }, "response": "ok" }
-            ]
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("tasks-autocomplete");
-    start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("tasks-autocomplete", JSON_SCENARIO);
 
     // Type /tasks to trigger autocomplete
-    tmux::send_keys(&session, "/tasks");
+    tui.send_keys("/tasks");
 
     // Wait for autocomplete to appear
-    let capture = tmux::wait_for_content(&session, "/tasks");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("/tasks");
 
     // Should show /tasks in autocomplete
     assert!(

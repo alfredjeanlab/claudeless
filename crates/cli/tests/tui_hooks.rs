@@ -32,7 +32,14 @@
 
 mod common;
 
-use common::{start_tui, tmux, write_scenario};
+use common::TuiTestSession;
+
+const SCENARIO: &str = r#"
+    name = "test"
+    [[responses]]
+    pattern = { type = "any" }
+    response = "Hello!"
+"#;
 
 // =============================================================================
 // /hooks Autocomplete Tests
@@ -44,23 +51,12 @@ use common::{start_tui, tmux, write_scenario};
 // Note: requires slash command autocomplete
 #[test]
 fn test_tui_hooks_command_shows_autocomplete() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("hooks-autocomplete");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("hooks-autocomplete", SCENARIO);
+    let previous = tui.capture();
 
     // Type /hooks
-    tmux::send_keys(&session, "/hooks");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("/hooks");
+    let capture = tui.wait_for_change(&previous);
 
     assert!(
         capture.contains("/hooks")
@@ -80,25 +76,14 @@ fn test_tui_hooks_command_shows_autocomplete() {
 // Note: requires /hooks dialog
 #[test]
 fn test_tui_hooks_shows_dialog_with_hook_types() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("hooks-dialog");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("hooks-dialog", SCENARIO);
+    let previous = tui.capture();
 
     // Type /hooks and press Enter
-    tmux::send_keys(&session, "/hooks");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let capture = tmux::wait_for_content(&session, "Hooks");
-
-    tmux::kill_session(&session);
+    tui.send_keys("/hooks");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let capture = tui.wait_for("Hooks");
 
     // Should show the hooks dialog with hook types
     assert!(
@@ -124,25 +109,14 @@ fn test_tui_hooks_shows_dialog_with_hook_types() {
 // Note: requires /hooks dialog
 #[test]
 fn test_tui_hooks_shows_active_hooks_count() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("hooks-count");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("hooks-count", SCENARIO);
+    let previous = tui.capture();
 
     // Type /hooks and press Enter
-    tmux::send_keys(&session, "/hooks");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let capture = tmux::wait_for_content(&session, "Hooks");
-
-    tmux::kill_session(&session);
+    tui.send_keys("/hooks");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let capture = tui.wait_for("Hooks");
 
     // Should show count of active hooks
     assert!(
@@ -162,23 +136,14 @@ fn test_tui_hooks_shows_active_hooks_count() {
 // Note: requires /hooks dialog navigation
 #[test]
 fn test_tui_hooks_arrow_navigation() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("hooks-nav");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("hooks-nav", SCENARIO);
+    let previous = tui.capture();
 
     // Open hooks dialog
-    tmux::send_keys(&session, "/hooks");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let initial = tmux::wait_for_content(&session, "PreToolUse");
+    tui.send_keys("/hooks");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let initial = tui.wait_for("PreToolUse");
 
     // Should start with first hook selected
     assert!(
@@ -188,10 +153,8 @@ fn test_tui_hooks_arrow_navigation() {
     );
 
     // Press Down to move to next hook
-    tmux::send_keys(&session, "Down");
-    let after_down = tmux::wait_for_change(&session, &initial);
-
-    tmux::kill_session(&session);
+    tui.send_keys("Down");
+    let after_down = tui.wait_for_change(&initial);
 
     // Should show next hook selected (PostToolUse)
     assert!(
@@ -207,31 +170,20 @@ fn test_tui_hooks_arrow_navigation() {
 // Note: requires /hooks dialog scrolling
 #[test]
 fn test_tui_hooks_list_scrolls() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("hooks-scroll");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("hooks-scroll", SCENARIO);
+    let previous = tui.capture();
 
     // Open hooks dialog
-    tmux::send_keys(&session, "/hooks");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let initial = tmux::wait_for_content(&session, "Hooks");
+    tui.send_keys("/hooks");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let initial = tui.wait_for("Hooks");
 
     // Navigate down multiple times to trigger scrolling
     for _ in 0..6 {
-        tmux::send_keys(&session, "Down");
+        tui.send_keys("Down");
     }
-    let after_scroll = tmux::wait_for_change(&session, &initial);
-
-    tmux::kill_session(&session);
+    let after_scroll = tui.wait_for_change(&initial);
 
     // Should show later hooks that weren't initially visible
     assert!(
@@ -251,27 +203,16 @@ fn test_tui_hooks_list_scrolls() {
 // Note: requires /hooks matcher dialog
 #[test]
 fn test_tui_hooks_select_shows_matchers() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("hooks-matchers");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("hooks-matchers", SCENARIO);
+    let previous = tui.capture();
 
     // Open hooks dialog and select PreToolUse
-    tmux::send_keys(&session, "/hooks");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let hooks = tmux::wait_for_content(&session, "PreToolUse");
-    tmux::send_keys(&session, "Enter");
-    let capture = tmux::wait_for_change(&session, &hooks);
-
-    tmux::kill_session(&session);
+    tui.send_keys("/hooks");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let hooks = tui.wait_for("PreToolUse");
+    tui.send_keys("Enter");
+    let capture = tui.wait_for_change(&hooks);
 
     // Should show matchers dialog for PreToolUse
     assert!(
@@ -292,27 +233,16 @@ fn test_tui_hooks_select_shows_matchers() {
 // Note: requires /hooks matcher dialog
 #[test]
 fn test_tui_hooks_matchers_shows_exit_code_help() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("hooks-exit-codes");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("hooks-exit-codes", SCENARIO);
+    let previous = tui.capture();
 
     // Open hooks dialog and select PreToolUse
-    tmux::send_keys(&session, "/hooks");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let hooks = tmux::wait_for_content(&session, "PreToolUse");
-    tmux::send_keys(&session, "Enter");
-    let capture = tmux::wait_for_change(&session, &hooks);
-
-    tmux::kill_session(&session);
+    tui.send_keys("/hooks");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let hooks = tui.wait_for("PreToolUse");
+    tui.send_keys("Enter");
+    let capture = tui.wait_for_change(&hooks);
 
     // Should show exit code documentation
     assert!(
@@ -337,29 +267,18 @@ fn test_tui_hooks_matchers_shows_exit_code_help() {
 // Note: requires /hooks dialog dismiss
 #[test]
 fn test_tui_hooks_escape_dismisses_dialog() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("hooks-dismiss");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("hooks-dismiss", SCENARIO);
+    let previous = tui.capture();
 
     // Open hooks dialog
-    tmux::send_keys(&session, "/hooks");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let dialog = tmux::wait_for_content(&session, "Hooks");
+    tui.send_keys("/hooks");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let dialog = tui.wait_for("Hooks");
 
     // Press Escape to dismiss
-    tmux::send_keys(&session, "Escape");
-    let capture = tmux::wait_for_change(&session, &dialog);
-
-    tmux::kill_session(&session);
+    tui.send_keys("Escape");
+    let capture = tui.wait_for_change(&dialog);
 
     assert!(
         capture.contains("Hooks dialog dismissed"),
@@ -374,31 +293,20 @@ fn test_tui_hooks_escape_dismisses_dialog() {
 // Note: requires /hooks nested dialog navigation
 #[test]
 fn test_tui_hooks_escape_from_matchers_returns_to_hooks() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("hooks-back");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("hooks-back", SCENARIO);
+    let previous = tui.capture();
 
     // Open hooks dialog and select PreToolUse
-    tmux::send_keys(&session, "/hooks");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let _ = tmux::wait_for_content(&session, "PreToolUse");
-    tmux::send_keys(&session, "Enter");
-    let matchers = tmux::wait_for_content(&session, "Tool Matchers");
+    tui.send_keys("/hooks");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let _ = tui.wait_for("PreToolUse");
+    tui.send_keys("Enter");
+    let matchers = tui.wait_for("Tool Matchers");
 
     // Press Escape to go back to hooks list
-    tmux::send_keys(&session, "Escape");
-    let capture = tmux::wait_for_change(&session, &matchers);
-
-    tmux::kill_session(&session);
+    tui.send_keys("Escape");
+    let capture = tui.wait_for_change(&matchers);
 
     // Should return to main hooks dialog
     assert!(

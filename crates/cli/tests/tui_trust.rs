@@ -12,30 +12,25 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, start_tui_ext, tmux, write_scenario, TUI_READY_PATTERN};
+use common::{assert_tui_matches_fixture, TuiTestSession, TUI_READY_PATTERN};
+
+const UNTRUSTED_SCENARIO: &str = r#"
+    {
+        "default_response": "Hello!",
+        "trusted": false
+    }
+"#;
 
 /// Pressing Enter on Yes should proceed to main TUI
 #[test]
 fn test_trust_prompt_yes_proceeds() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "default_response": "Hello!",
-            "trusted": false
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("trust-yes");
-    start_tui_ext(&session, &scenario, 120, 30, "trust");
+    let tui = TuiTestSession::with_custom_wait("trust-yes", UNTRUSTED_SCENARIO, 120, 30, "trust");
 
     // Press Enter to accept trust
-    tmux::send_keys(&session, "Enter");
+    tui.send_keys("Enter");
 
     // Wait for main TUI to appear (header pattern indicates ready)
-    let capture = tmux::wait_for_content(&session, TUI_READY_PATTERN);
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for(TUI_READY_PATTERN);
 
     // After accepting trust, should show main TUI (not trust prompt)
     assert!(
@@ -52,25 +47,13 @@ fn test_trust_prompt_yes_proceeds() {
 #[test]
 #[ignore]
 fn test_trust_prompt_escape_cancels() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "default_response": "Hello!",
-            "trusted": false
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("trust-esc");
-    start_tui_ext(&session, &scenario, 120, 30, "trust");
+    let tui = TuiTestSession::with_custom_wait("trust-esc", UNTRUSTED_SCENARIO, 120, 30, "trust");
 
     // Press Escape to cancel
-    tmux::send_keys(&session, "Escape");
+    tui.send_keys("Escape");
 
     // Wait for shell prompt or exit indication
-    let capture = tmux::wait_for_any(&session, &["$", "❯", "%"]);
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for_any(&["$", "❯", "%"]);
 
     // After escape, should either exit or show shell prompt (not TUI)
     let has_trust_prompt = capture.to_lowercase().contains("do you trust");
@@ -89,19 +72,9 @@ fn test_trust_prompt_escape_cancels() {
 #[test]
 #[ignore]
 fn test_trust_prompt_matches_fixture() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "default_response": "Hello!",
-            "trusted": false
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("fixture-trust");
-    let capture = start_tui_ext(&session, &scenario, 120, 40, "trust");
-
-    tmux::kill_session(&session);
+    let tui =
+        TuiTestSession::with_custom_wait("fixture-trust", UNTRUSTED_SCENARIO, 120, 40, "trust");
+    let capture = tui.capture();
 
     assert_tui_matches_fixture(&capture, "trust_prompt.txt", None);
 }

@@ -10,14 +10,15 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, start_tui, tmux, write_scenario};
+use common::{assert_tui_matches_fixture, TuiTestSession};
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// Typing in the input area should show the typed text
 #[test]
 fn test_tui_shows_typed_input() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "input-test",
         r#"
         name = "test"
         [[responses]]
@@ -26,16 +27,9 @@ fn test_tui_shows_typed_input() {
         "#,
     );
 
-    let session = tmux::unique_session("input-test");
-    start_tui(&session, &scenario);
+    tui.send_keys("Hello Claude");
 
-    tmux::send_keys(&session, "Hello Claude");
-
-    let capture = tmux::wait_for_content(&session, "Hello Claude");
-
-    tmux::send_keys(&session, "C-c");
-    tmux::send_keys(&session, "C-c");
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Hello Claude");
 
     assert!(
         capture.contains("Hello Claude"),
@@ -49,7 +43,8 @@ fn test_tui_shows_typed_input() {
 /// After submitting, the response should appear with "⏺" prefix
 #[test]
 fn test_tui_shows_response_with_indicator() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "response-test",
         r#"
         name = "test"
         [[responses]]
@@ -58,16 +53,9 @@ fn test_tui_shows_response_with_indicator() {
         "#,
     );
 
-    let session = tmux::unique_session("response-test");
-    start_tui(&session, &scenario);
+    tui.send_line("test prompt");
 
-    tmux::send_line(&session, "test prompt");
-
-    let capture = tmux::wait_for_content(&session, "Test response from simulator");
-
-    tmux::send_keys(&session, "C-c");
-    tmux::send_keys(&session, "C-c");
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Test response from simulator");
 
     assert!(
         capture.contains("Test response from simulator"),
@@ -85,7 +73,8 @@ fn test_tui_shows_response_with_indicator() {
 /// Compare response format against real Claude fixture
 #[test]
 fn test_response_format_matches_fixture() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "fixture-response",
         r#"
         {
             "default_response": "Hello there friend.",
@@ -95,16 +84,11 @@ fn test_response_format_matches_fixture() {
         "#,
     );
 
-    let session = tmux::unique_session("fixture-response");
-    start_tui(&session, &scenario);
-
     // Send a prompt
-    tmux::send_line(&session, "Hello");
+    tui.send_line("Hello");
 
     // Wait for response to appear
-    let capture = tmux::wait_for_content(&session, "Hello there friend");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Hello there friend");
 
     assert_tui_matches_fixture(&capture, "after_response.txt", None);
 }
@@ -113,7 +97,8 @@ fn test_response_format_matches_fixture() {
 #[test]
 #[ignore] // TODO(slash-cleanup): Simulator shows status bar while fixture does not
 fn test_input_display_matches_fixture() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "fixture-input",
         r#"
         {
             "default_response": "Hello!",
@@ -122,16 +107,11 @@ fn test_input_display_matches_fixture() {
         "#,
     );
 
-    let session = tmux::unique_session("fixture-input");
-    start_tui(&session, &scenario);
-
     // Type input text (without sending/Enter)
-    tmux::send_keys(&session, "Say hello in exactly 3 words");
+    tui.send_keys("Say hello in exactly 3 words");
 
     // Wait for the typed text to appear
-    let capture = tmux::wait_for_content(&session, "Say hello in exactly 3 words");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Say hello in exactly 3 words");
 
     assert_tui_matches_fixture(&capture, "with_input.txt", None);
 }
@@ -145,7 +125,8 @@ fn test_input_display_matches_fixture() {
 /// When input has text and Escape is pressed once, shows "Esc to clear again" hint
 #[test]
 fn test_tui_escape_shows_clear_hint_with_input() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "escape-hint",
         r#"
         {
             "default_response": "Hello!",
@@ -153,19 +134,15 @@ fn test_tui_escape_shows_clear_hint_with_input() {
         }
         "#,
     );
-
-    let session = tmux::unique_session("escape-hint");
-    let previous = start_tui(&session, &scenario);
+    let previous = tui.capture();
 
     // Type some input
-    tmux::send_keys(&session, "Some test input");
-    let _ = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("Some test input");
+    let _ = tui.wait_for_change(&previous);
 
     // Press Escape once
-    tmux::send_keys(&session, "Escape");
-    let capture = tmux::wait_for_content(&session, "Esc to clear again");
-
-    tmux::kill_session(&session);
+    tui.send_keys("Escape");
+    let capture = tui.wait_for("Esc to clear again");
 
     assert!(
         capture.contains("Esc to clear again"),
@@ -184,7 +161,8 @@ fn test_tui_escape_shows_clear_hint_with_input() {
 /// Double-tap Escape clears the input field
 #[test]
 fn test_tui_double_escape_clears_input() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "double-escape",
         r#"
         {
             "default_response": "Hello!",
@@ -192,23 +170,19 @@ fn test_tui_double_escape_clears_input() {
         }
         "#,
     );
-
-    let session = tmux::unique_session("double-escape");
-    let previous = start_tui(&session, &scenario);
+    let previous = tui.capture();
 
     // Type some input
-    tmux::send_keys(&session, "Text to be cleared");
-    let after_input = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("Text to be cleared");
+    let after_input = tui.wait_for_change(&previous);
 
     // Double-tap Escape quickly
-    tmux::send_keys(&session, "Escape");
+    tui.send_keys("Escape");
     std::thread::sleep(std::time::Duration::from_millis(50));
-    tmux::send_keys(&session, "Escape");
+    tui.send_keys("Escape");
 
     // Wait for change - input should be cleared
-    let capture = tmux::wait_for_change(&session, &after_input);
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for_change(&after_input);
 
     assert!(
         !capture.contains("Text to be cleared"),
@@ -228,7 +202,8 @@ fn test_tui_double_escape_clears_input() {
 /// Escape on empty input does nothing (no hint shown)
 #[test]
 fn test_tui_escape_on_empty_input_does_nothing() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "escape-empty",
         r#"
         {
             "default_response": "Hello!",
@@ -236,17 +211,13 @@ fn test_tui_escape_on_empty_input_does_nothing() {
         }
         "#,
     );
-
-    let session = tmux::unique_session("escape-empty");
-    let initial = start_tui(&session, &scenario);
+    let initial = tui.capture();
 
     // Press Escape on empty input
-    tmux::send_keys(&session, "Escape");
+    tui.send_keys("Escape");
 
     // Use assert_unchanged to verify nothing happens
-    let capture = tmux::assert_unchanged_ms(&session, &initial, 200);
-
-    tmux::kill_session(&session);
+    let capture = tui.assert_unchanged_ms(&initial, 200);
 
     assert!(
         !capture.contains("Esc to clear"),
@@ -260,7 +231,8 @@ fn test_tui_escape_on_empty_input_does_nothing() {
 /// The "Esc to clear again" hint times out after ~2 seconds
 #[test]
 fn test_tui_escape_clear_hint_timeout() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "escape-timeout",
         r#"
         {
             "default_response": "Hello!",
@@ -268,23 +240,19 @@ fn test_tui_escape_clear_hint_timeout() {
         }
         "#,
     );
-
-    let session = tmux::unique_session("escape-timeout");
-    let previous = start_tui(&session, &scenario);
+    let previous = tui.capture();
 
     // Type some input
-    tmux::send_keys(&session, "Test input");
-    let _ = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("Test input");
+    let _ = tui.wait_for_change(&previous);
 
     // Press Escape once to show hint
-    tmux::send_keys(&session, "Escape");
-    let with_hint = tmux::wait_for_content(&session, "Esc to clear again");
+    tui.send_keys("Escape");
+    let with_hint = tui.wait_for("Esc to clear again");
 
     // Wait for timeout (~2 seconds)
     std::thread::sleep(std::time::Duration::from_millis(2500));
-    let capture = tmux::capture_pane(&session);
-
-    tmux::kill_session(&session);
+    let capture = tui.capture();
 
     assert!(
         with_hint.contains("Esc to clear again"),
@@ -318,7 +286,8 @@ fn test_tui_escape_clear_hint_timeout() {
 #[test]
 #[ignore = "tmux cannot reliably send Ctrl+_ - unit tests verify this behavior"]
 fn test_tui_ctrl_underscore_undoes_last_word() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "ctrl-underscore-word",
         r#"
         {
             "default_response": "Hello!",
@@ -326,23 +295,19 @@ fn test_tui_ctrl_underscore_undoes_last_word() {
         }
         "#,
     );
-
-    let session = tmux::unique_session("ctrl-underscore-word");
-    let previous = start_tui(&session, &scenario);
+    let previous = tui.capture();
 
     // Type words with pauses
-    tmux::send_keys(&session, "first");
+    tui.send_keys("first");
     std::thread::sleep(std::time::Duration::from_millis(200));
-    tmux::send_keys(&session, " second");
+    tui.send_keys(" second");
     std::thread::sleep(std::time::Duration::from_millis(200));
-    tmux::send_keys(&session, " third");
-    let _ = tmux::wait_for_change(&session, &previous);
+    tui.send_keys(" third");
+    let _ = tui.wait_for_change(&previous);
 
     // Press Ctrl+_ (via Ctrl+/ which produces the same ASCII 31 character)
-    tmux::send_keys(&session, "C-/");
-    let after_first_undo = tmux::wait_for_content(&session, "first second");
-
-    tmux::kill_session(&session);
+    tui.send_keys("C-/");
+    let after_first_undo = tui.wait_for("first second");
 
     // Should have removed "third"
     assert!(
@@ -366,7 +331,8 @@ fn test_tui_ctrl_underscore_undoes_last_word() {
 #[test]
 #[ignore = "tmux cannot reliably send Ctrl+_ - unit tests verify this behavior"]
 fn test_tui_ctrl_underscore_clears_all_input() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "ctrl-underscore-clear",
         r#"
         {
             "default_response": "Hello!",
@@ -374,21 +340,17 @@ fn test_tui_ctrl_underscore_clears_all_input() {
         }
         "#,
     );
-
-    let session = tmux::unique_session("ctrl-underscore-clear");
-    let previous = start_tui(&session, &scenario);
+    let previous = tui.capture();
 
     // Type some text
-    tmux::send_keys(&session, "Hello world");
-    let _ = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("Hello world");
+    let _ = tui.wait_for_change(&previous);
 
     // Press Ctrl+_ multiple times to clear all (via Ctrl+/)
-    tmux::send_keys(&session, "C-/");
+    tui.send_keys("C-/");
     std::thread::sleep(std::time::Duration::from_millis(100));
-    tmux::send_keys(&session, "C-/");
-    let capture = tmux::wait_for_content(&session, "? for shortcuts");
-
-    tmux::kill_session(&session);
+    tui.send_keys("C-/");
+    let capture = tui.wait_for("? for shortcuts");
 
     // Input should be cleared
     assert!(
@@ -409,7 +371,8 @@ fn test_tui_ctrl_underscore_clears_all_input() {
 /// Pressing Ctrl+_ on empty input does nothing
 #[test]
 fn test_tui_ctrl_underscore_on_empty_input_does_nothing() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "ctrl-underscore-empty",
         r#"
         {
             "default_response": "Hello!",
@@ -417,17 +380,13 @@ fn test_tui_ctrl_underscore_on_empty_input_does_nothing() {
         }
         "#,
     );
-
-    let session = tmux::unique_session("ctrl-underscore-empty");
-    let initial = start_tui(&session, &scenario);
+    let initial = tui.capture();
 
     // Press Ctrl+_ on empty input (via Ctrl+/)
-    tmux::send_keys(&session, "C-/");
+    tui.send_keys("C-/");
 
     // Use assert_unchanged to verify nothing happens
-    let capture = tmux::assert_unchanged_ms(&session, &initial, 200);
-
-    tmux::kill_session(&session);
+    let capture = tui.assert_unchanged_ms(&initial, 200);
 
     // Should still show initial state
     assert!(

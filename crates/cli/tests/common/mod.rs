@@ -76,6 +76,134 @@ pub fn start_tui_ext(
     tmux::wait_for_content(session, wait_for)
 }
 
+// =============================================================================
+// TUI Test Session RAII Wrapper
+// =============================================================================
+
+use std::time::Duration;
+
+/// RAII wrapper for TUI test sessions.
+///
+/// Automatically handles session setup and cleanup:
+/// - Creates scenario file and unique tmux session on construction
+/// - Starts the TUI and waits for it to be ready
+/// - Sends cleanup keys (C-c, C-c) and kills session on drop
+///
+/// # Example
+/// ```ignore
+/// let tui = TuiTestSession::new("my-test", r#"
+///     name = "test"
+///     [[responses]]
+///     pattern = { type = "any" }
+///     response = "Hello!"
+/// "#);
+///
+/// tui.send_keys("hello");
+/// let capture = tui.wait_for_content("hello");
+/// // Session automatically cleaned up when `tui` goes out of scope
+/// ```
+pub struct TuiTestSession {
+    session: String,
+    #[allow(dead_code)]
+    scenario: NamedTempFile,
+}
+
+impl TuiTestSession {
+    /// Create a new TUI test session with default dimensions (120x40).
+    pub fn new(name: &str, scenario_content: &str) -> Self {
+        Self::with_dimensions(name, scenario_content, 120, 40)
+    }
+
+    /// Create a new TUI test session with custom dimensions.
+    pub fn with_dimensions(name: &str, scenario_content: &str, width: u16, height: u16) -> Self {
+        Self::with_custom_wait(name, scenario_content, width, height, TUI_READY_PATTERN)
+    }
+
+    /// Create a new TUI test session with custom dimensions and wait pattern.
+    pub fn with_custom_wait(
+        name: &str,
+        scenario_content: &str,
+        width: u16,
+        height: u16,
+        wait_for: &str,
+    ) -> Self {
+        let scenario = write_scenario(scenario_content);
+        let session = tmux::unique_session(name);
+        start_tui_ext(&session, &scenario, width, height, wait_for);
+        Self { session, scenario }
+    }
+
+    /// Get the tmux session name.
+    pub fn name(&self) -> &str {
+        &self.session
+    }
+
+    /// Send keys to the TUI (without pressing Enter).
+    pub fn send_keys(&self, keys: &str) {
+        tmux::send_keys(&self.session, keys);
+    }
+
+    /// Send keys followed by Enter.
+    pub fn send_line(&self, line: &str) {
+        tmux::send_line(&self.session, line);
+    }
+
+    /// Capture the current pane content.
+    pub fn capture(&self) -> String {
+        tmux::capture_pane(&self.session)
+    }
+
+    /// Capture the current pane content with ANSI escape sequences.
+    pub fn capture_ansi(&self) -> String {
+        tmux::capture_pane_ansi(&self.session)
+    }
+
+    /// Wait for specific content to appear.
+    pub fn wait_for(&self, pattern: &str) -> String {
+        tmux::wait_for_content(&self.session, pattern)
+    }
+
+    /// Wait for specific content with a custom timeout.
+    pub fn wait_for_timeout(&self, pattern: &str, timeout: Duration) -> String {
+        tmux::wait_for_content_timeout(&self.session, pattern, timeout)
+    }
+
+    /// Wait for any of the specified patterns to appear.
+    pub fn wait_for_any(&self, patterns: &[&str]) -> String {
+        tmux::wait_for_any(&self.session, patterns)
+    }
+
+    /// Wait for content to change from a previous state.
+    pub fn wait_for_change(&self, previous: &str) -> String {
+        tmux::wait_for_change(&self.session, previous)
+    }
+
+    /// Wait for content to change, then capture with ANSI sequences.
+    pub fn wait_for_change_ansi(&self, previous: &str) -> String {
+        tmux::wait_for_change_ansi(&self.session, previous)
+    }
+
+    /// Wait for content, then capture with ANSI sequences.
+    pub fn wait_for_ansi(&self, pattern: &str) -> String {
+        tmux::wait_for_content_ansi(&self.session, pattern)
+    }
+
+    /// Assert that pane content remains unchanged for the specified duration.
+    pub fn assert_unchanged_ms(&self, previous: &str, duration_ms: u64) -> String {
+        tmux::assert_unchanged_ms(&self.session, previous, duration_ms)
+    }
+}
+
+impl Drop for TuiTestSession {
+    fn drop(&mut self) {
+        // Send C-c twice to exit the TUI gracefully
+        tmux::send_keys(&self.session, "C-c");
+        tmux::send_keys(&self.session, "C-c");
+        // Kill the tmux session
+        tmux::kill_session(&self.session);
+    }
+}
+
 /// Helper to start claudeless TUI and capture initial state
 pub fn capture_tui_initial(session: impl AsRef<str>, extra_args: &str) -> String {
     let session = session.as_ref();

@@ -20,7 +20,14 @@
 
 mod common;
 
-use common::{start_tui, tmux, write_scenario};
+use common::TuiTestSession;
+
+const SCENARIO: &str = r#"
+    name = "test"
+    [[responses]]
+    pattern = { type = "any" }
+    response = "Hello!"
+"#;
 
 // =============================================================================
 // /help Autocomplete Tests
@@ -32,23 +39,12 @@ use common::{start_tui, tmux, write_scenario};
 // TODO(implement): requires slash command autocomplete
 #[test]
 fn test_tui_help_command_shows_autocomplete() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("help-autocomplete");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("help-autocomplete", SCENARIO);
+    let previous = tui.capture();
 
     // Type /help
-    tmux::send_keys(&session, "/help");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("/help");
+    let capture = tui.wait_for_change(&previous);
 
     assert!(
         capture.contains("/help") && capture.contains("Show help and available commands"),
@@ -67,25 +63,14 @@ fn test_tui_help_command_shows_autocomplete() {
 // TODO(implement): requires /help dialog
 #[test]
 fn test_tui_help_shows_dialog_with_general_tab() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("help-general-tab");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("help-general-tab", SCENARIO);
+    let previous = tui.capture();
 
     // Type /help and press Enter
-    tmux::send_keys(&session, "/help");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let capture = tmux::wait_for_content(&session, "general");
-
-    tmux::kill_session(&session);
+    tui.send_keys("/help");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let capture = tui.wait_for("general");
 
     // Should show the help dialog with tabs
     assert!(
@@ -116,27 +101,16 @@ fn test_tui_help_shows_dialog_with_general_tab() {
 // TODO(implement): requires /help dialog tab navigation
 #[test]
 fn test_tui_help_tab_shows_commands_tab() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("help-commands-tab");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("help-commands-tab", SCENARIO);
+    let previous = tui.capture();
 
     // Type /help, press Enter, then Tab to go to commands tab
-    tmux::send_keys(&session, "/help");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let general = tmux::wait_for_content(&session, "general");
-    tmux::send_keys(&session, "Tab");
-    let capture = tmux::wait_for_change(&session, &general);
-
-    tmux::kill_session(&session);
+    tui.send_keys("/help");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let general = tui.wait_for("general");
+    tui.send_keys("Tab");
+    let capture = tui.wait_for_change(&general);
 
     assert!(
         capture.contains("Browse default commands:"),
@@ -156,27 +130,18 @@ fn test_tui_help_tab_shows_commands_tab() {
 // TODO(implement): requires /help dialog tab cycling
 #[test]
 fn test_tui_help_tab_cycles_through_all_tabs() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("help-tab-cycle");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("help-tab-cycle", SCENARIO);
+    let previous = tui.capture();
 
     // Type /help and press Enter
-    tmux::send_keys(&session, "/help");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let general = tmux::wait_for_content(&session, "general");
+    tui.send_keys("/help");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let general = tui.wait_for("general");
 
     // Tab to commands
-    tmux::send_keys(&session, "Tab");
-    let commands = tmux::wait_for_change(&session, &general);
+    tui.send_keys("Tab");
+    let commands = tui.wait_for_change(&general);
     assert!(
         commands.contains("Browse default commands:"),
         "First tab should show commands tab.\nCapture:\n{}",
@@ -184,15 +149,13 @@ fn test_tui_help_tab_cycles_through_all_tabs() {
     );
 
     // Tab to custom-commands
-    tmux::send_keys(&session, "Tab");
-    let custom = tmux::wait_for_change(&session, &commands);
+    tui.send_keys("Tab");
+    let custom = tui.wait_for_change(&commands);
     assert!(
         custom.contains("custom-commands") || custom.contains("Browse custom commands:"),
         "Second tab should show custom-commands tab.\nCapture:\n{}",
         custom
     );
-
-    tmux::kill_session(&session);
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -200,27 +163,18 @@ fn test_tui_help_tab_cycles_through_all_tabs() {
 /// Left/Right arrow keys navigate between tabs (alternative to Tab key)
 #[test]
 fn test_tui_help_arrow_keys_navigate_tabs() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("help-arrow-tabs");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("help-arrow-tabs", SCENARIO);
+    let previous = tui.capture();
 
     // Open help dialog
-    tmux::send_keys(&session, "/help");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let general = tmux::wait_for_content(&session, "general");
+    tui.send_keys("/help");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let general = tui.wait_for("general");
 
     // Right arrow should go to commands tab
-    tmux::send_keys(&session, "Right");
-    let commands = tmux::wait_for_change(&session, &general);
+    tui.send_keys("Right");
+    let commands = tui.wait_for_change(&general);
     assert!(
         commands.contains("Browse default commands:"),
         "Right arrow should navigate to commands tab.\nCapture:\n{}",
@@ -228,10 +182,8 @@ fn test_tui_help_arrow_keys_navigate_tabs() {
     );
 
     // Left arrow should go back to general tab
-    tmux::send_keys(&session, "Left");
-    let back_to_general = tmux::wait_for_change(&session, &commands);
-
-    tmux::kill_session(&session);
+    tui.send_keys("Left");
+    let back_to_general = tui.wait_for_change(&commands);
 
     assert!(
         back_to_general.contains("/ for commands"),
@@ -250,25 +202,16 @@ fn test_tui_help_arrow_keys_navigate_tabs() {
 // TODO(implement): requires /help command list navigation
 #[test]
 fn test_tui_help_commands_arrow_navigation() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("help-commands-nav");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("help-commands-nav", SCENARIO);
+    let previous = tui.capture();
 
     // Navigate to commands tab
-    tmux::send_keys(&session, "/help");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let general = tmux::wait_for_content(&session, "general");
-    tmux::send_keys(&session, "Tab");
-    let commands = tmux::wait_for_change(&session, &general);
+    tui.send_keys("/help");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let general = tui.wait_for("general");
+    tui.send_keys("Tab");
+    let commands = tui.wait_for_change(&general);
 
     // Should start with first command selected
     assert!(
@@ -278,10 +221,8 @@ fn test_tui_help_commands_arrow_navigation() {
     );
 
     // Press Down to move to next command
-    tmux::send_keys(&session, "Down");
-    let after_down = tmux::wait_for_change(&session, &commands);
-
-    tmux::kill_session(&session);
+    tui.send_keys("Down");
+    let after_down = tui.wait_for_change(&commands);
 
     // Should show next command selected (e.g., /agents)
     assert!(
@@ -301,29 +242,18 @@ fn test_tui_help_commands_arrow_navigation() {
 // TODO(implement): requires /help dialog dismiss
 #[test]
 fn test_tui_help_escape_dismisses_dialog() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("help-dismiss");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("help-dismiss", SCENARIO);
+    let previous = tui.capture();
 
     // Open help dialog
-    tmux::send_keys(&session, "/help");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let dialog = tmux::wait_for_content(&session, "general");
+    tui.send_keys("/help");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let dialog = tui.wait_for("general");
 
     // Press Escape to dismiss
-    tmux::send_keys(&session, "Escape");
-    let capture = tmux::wait_for_change(&session, &dialog);
-
-    tmux::kill_session(&session);
+    tui.send_keys("Escape");
+    let capture = tui.wait_for_change(&dialog);
 
     assert!(
         capture.contains("Help dialog dismissed"),
@@ -338,27 +268,16 @@ fn test_tui_help_escape_dismisses_dialog() {
 // TODO(implement): requires /help dialog dismiss
 #[test]
 fn test_tui_help_dismiss_returns_to_clean_input() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("help-dismiss-clean");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("help-dismiss-clean", SCENARIO);
+    let previous = tui.capture();
 
     // Open and dismiss help dialog
-    tmux::send_keys(&session, "/help");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let dialog = tmux::wait_for_content(&session, "general");
-    tmux::send_keys(&session, "Escape");
-    let capture = tmux::wait_for_change(&session, &dialog);
-
-    tmux::kill_session(&session);
+    tui.send_keys("/help");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let dialog = tui.wait_for("general");
+    tui.send_keys("Escape");
+    let capture = tui.wait_for_change(&dialog);
 
     // Should show empty input area (with placeholder)
     assert!(

@@ -27,7 +27,14 @@
 
 mod common;
 
-use common::{capture_tui_initial, start_tui, tmux, write_scenario};
+use common::{capture_tui_initial, TuiTestSession};
+
+const SCENARIO: &str = r#"
+    name = "test"
+    [[responses]]
+    pattern = { type = "any" }
+    response = "ok"
+"#;
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
@@ -95,23 +102,12 @@ fn test_tui_model_display_format() {
 /// Meta+P (Option+P on macOS) opens a model picker dialog showing available models.
 #[test]
 fn test_tui_meta_p_opens_model_picker() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
-        "#,
-    );
-
-    let session = tmux::unique_session("meta-p-picker");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("meta-p-picker", SCENARIO);
+    let previous = tui.capture();
 
     // Press Meta+P to open model picker
-    tmux::send_keys(&session, "M-p");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("M-p");
+    let capture = tui.wait_for_change(&previous);
 
     assert!(
         capture.contains("Select model"),
@@ -126,22 +122,11 @@ fn test_tui_meta_p_opens_model_picker() {
 #[test]
 #[ignore] // TODO(flaky): wait_for_change sometimes captures state before picker renders on CI
 fn test_tui_model_picker_shows_available_models() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
-        "#,
-    );
+    let tui = TuiTestSession::new("picker-models", SCENARIO);
+    let previous = tui.capture();
 
-    let session = tmux::unique_session("picker-models");
-    let previous = start_tui(&session, &scenario);
-
-    tmux::send_keys(&session, "M-p");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("M-p");
+    let capture = tui.wait_for_change(&previous);
 
     assert!(
         capture.contains("Default") && capture.contains("Sonnet") && capture.contains("Haiku"),
@@ -155,22 +140,11 @@ fn test_tui_model_picker_shows_available_models() {
 /// Model picker shows checkmark (✔) next to currently active model.
 #[test]
 fn test_tui_model_picker_shows_active_model_checkmark() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
-        "#,
-    );
+    let tui = TuiTestSession::new("picker-checkmark", SCENARIO);
+    let previous = tui.capture();
 
-    let session = tmux::unique_session("picker-checkmark");
-    let previous = start_tui(&session, &scenario);
-
-    tmux::send_keys(&session, "M-p");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("M-p");
+    let capture = tui.wait_for_change(&previous);
 
     assert!(
         capture.contains("✔"),
@@ -184,27 +158,16 @@ fn test_tui_model_picker_shows_active_model_checkmark() {
 /// Model picker can be navigated with Up/Down arrow keys.
 #[test]
 fn test_tui_model_picker_arrow_navigation() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
-        "#,
-    );
-
-    let session = tmux::unique_session("picker-nav");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("picker-nav", SCENARIO);
+    let previous = tui.capture();
 
     // Open model picker
-    tmux::send_keys(&session, "M-p");
-    let after_open = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("M-p");
+    let after_open = tui.wait_for_change(&previous);
 
     // Navigate up
-    tmux::send_keys(&session, "Up");
-    let after_up = tmux::wait_for_change(&session, &after_open);
-
-    tmux::kill_session(&session);
+    tui.send_keys("Up");
+    let after_up = tui.wait_for_change(&after_open);
 
     // The cursor position (❯) should have moved
     assert!(
@@ -220,27 +183,16 @@ fn test_tui_model_picker_arrow_navigation() {
 /// Pressing Escape closes the model picker without changing the model.
 #[test]
 fn test_tui_model_picker_escape_closes() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
-        "#,
-    );
-
-    let session = tmux::unique_session("picker-escape");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("picker-escape", SCENARIO);
+    let previous = tui.capture();
 
     // Open model picker
-    tmux::send_keys(&session, "M-p");
-    let _ = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("M-p");
+    let _ = tui.wait_for_change(&previous);
 
     // Press Escape to close
-    tmux::send_keys(&session, "Escape");
-    let after_escape = tmux::wait_for_content(&session, "? for shortcuts");
-
-    tmux::kill_session(&session);
+    tui.send_keys("Escape");
+    let after_escape = tui.wait_for("? for shortcuts");
 
     assert!(
         !after_escape.contains("Select model"),
@@ -254,22 +206,11 @@ fn test_tui_model_picker_escape_closes() {
 /// Model picker footer shows "Enter to confirm · esc to exit".
 #[test]
 fn test_tui_model_picker_shows_footer_hints() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
-        "#,
-    );
+    let tui = TuiTestSession::new("picker-footer", SCENARIO);
+    let previous = tui.capture();
 
-    let session = tmux::unique_session("picker-footer");
-    let previous = start_tui(&session, &scenario);
-
-    tmux::send_keys(&session, "M-p");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("M-p");
+    let capture = tui.wait_for_change(&previous);
 
     assert!(
         capture.contains("Enter to confirm") && capture.contains("esc to exit"),

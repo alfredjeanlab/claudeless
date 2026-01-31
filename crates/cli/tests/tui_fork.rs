@@ -15,35 +15,30 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, start_tui, tmux, write_scenario};
+use common::{assert_tui_matches_fixture, TuiTestSession};
+
+const SCENARIO: &str = r#"
+    {
+        "trusted": true,
+        "claude_version": "2.1.12",
+        "responses": [
+            { "pattern": { "type": "any" }, "response": "ok" }
+        ]
+    }
+"#;
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
 /// When /fork is executed with no conversation, it shows an error message.
 #[test]
 fn test_fork_no_conversation_shows_error() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "trusted": true,
-            "claude_version": "2.1.12",
-            "responses": [
-                { "pattern": { "type": "any" }, "response": "ok" }
-            ]
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("fork-no-conversation");
-    start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("fork-no-conversation", SCENARIO);
 
     // Execute /fork with no conversation
-    tmux::send_line(&session, "/fork");
+    tui.send_line("/fork");
 
     // Wait for error message
-    let capture = tmux::wait_for_content(&session, "Failed to fork");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Failed to fork");
 
     assert!(
         capture.contains("Failed to fork conversation: No conversation to fork"),
@@ -57,28 +52,13 @@ fn test_fork_no_conversation_shows_error() {
 /// Compare /fork error state against fixture when no conversation exists.
 #[test]
 fn test_fork_no_conversation_matches_fixture() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "trusted": true,
-            "claude_version": "2.1.12",
-            "responses": [
-                { "pattern": { "type": "any" }, "response": "ok" }
-            ]
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("fixture-fork-no-conv");
-    start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("fixture-fork-no-conv", SCENARIO);
 
     // Execute /fork with no conversation
-    tmux::send_line(&session, "/fork");
+    tui.send_line("/fork");
 
     // Wait for error message
-    let capture = tmux::wait_for_content(&session, "Failed to fork");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Failed to fork");
 
     assert_tui_matches_fixture(&capture, "fork_no_conversation.txt", None);
 }
@@ -88,28 +68,13 @@ fn test_fork_no_conversation_matches_fixture() {
 /// /fork appears in slash command autocomplete with correct description.
 #[test]
 fn test_fork_in_autocomplete() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "trusted": true,
-            "claude_version": "2.1.12",
-            "responses": [
-                { "pattern": { "type": "any" }, "response": "ok" }
-            ]
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("fork-autocomplete");
-    start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("fork-autocomplete", SCENARIO);
 
     // Type /fork to trigger autocomplete
-    tmux::send_keys(&session, "/fork");
+    tui.send_keys("/fork");
 
     // Wait for autocomplete to appear
-    let capture = tmux::wait_for_content(&session, "/fork");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("/fork");
 
     // Should show /fork in autocomplete
     assert!(
@@ -132,7 +97,8 @@ fn test_fork_in_autocomplete() {
 #[test]
 #[ignore] // TODO(flaky): Timing-sensitive tmux test that fails intermittently on CI
 fn test_fork_success_with_conversation() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "fork-success",
         r#"
         {
             "trusted": true,
@@ -145,20 +111,15 @@ fn test_fork_success_with_conversation() {
         "#,
     );
 
-    let session = tmux::unique_session("fork-success");
-    start_tui(&session, &scenario);
-
     // Build up a conversation first
-    tmux::send_line(&session, "hello");
-    tmux::wait_for_content(&session, "How can I help you");
+    tui.send_line("hello");
+    tui.wait_for("How can I help you");
 
     // Execute /fork with existing conversation
-    tmux::send_line(&session, "/fork");
+    tui.send_line("/fork");
 
     // Wait for success message
-    let capture = tmux::wait_for_content(&session, "Conversation forked");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Conversation forked");
 
     // Should show success message (not error)
     assert!(

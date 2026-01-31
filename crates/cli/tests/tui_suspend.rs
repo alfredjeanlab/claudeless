@@ -24,7 +24,14 @@
 
 mod common;
 
-use common::{start_tui, tmux, write_scenario};
+use common::TuiTestSession;
+
+const SCENARIO: &str = r#"
+    name = "test"
+    [[responses]]
+    pattern = { type = "any" }
+    response = "Hello!"
+"#;
 
 // =============================================================================
 // Suspend Behavior Tests
@@ -36,26 +43,14 @@ use common::{start_tui, tmux, write_scenario};
 /// telling the user how to resume.
 #[test]
 fn test_tui_ctrl_z_suspends_with_message() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("suspend-message");
-    let _previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("suspend-message", SCENARIO);
 
     // Send Ctrl+Z to suspend
-    tmux::send_keys(&session, "C-z");
+    tui.send_keys("C-z");
 
     // Wait for the suspend message to appear
     // Note: After suspend, the shell prompt should appear
-    let capture = tmux::wait_for_content(&session, "Claude Code has been suspended");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("Claude Code has been suspended");
 
     // Should show the suspend message
     assert!(
@@ -76,25 +71,13 @@ fn test_tui_ctrl_z_suspends_with_message() {
 #[test]
 #[ignore] // TODO(flaky): Timing-sensitive tmux test that fails intermittently on CI
 fn test_tui_ctrl_z_shows_keybinding_note() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("suspend-note");
-    let _previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("suspend-note", SCENARIO);
 
     // Send Ctrl+Z to suspend
-    tmux::send_keys(&session, "C-z");
+    tui.send_keys("C-z");
 
     // Wait for the suspend message
-    let capture = tmux::wait_for_content(&session, "ctrl + z now suspends");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("ctrl + z now suspends");
 
     // Should show the keybinding note
     assert!(
@@ -109,26 +92,14 @@ fn test_tui_ctrl_z_shows_keybinding_note() {
 /// After Ctrl+Z, the shell prompt appears (process is suspended).
 #[test]
 fn test_tui_ctrl_z_returns_to_shell() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("suspend-shell");
-    let _previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("suspend-shell", SCENARIO);
 
     // Send Ctrl+Z to suspend
-    tmux::send_keys(&session, "C-z");
+    tui.send_keys("C-z");
 
     // Wait for the shell prompt or suspend indicator
     // Note: The exact shell prompt varies, but we should see "suspended" in the output
-    let capture = tmux::wait_for_any(&session, &["suspended", "$", "%", "❯"]);
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for_any(&["suspended", "$", "%", "❯"]);
 
     // Should have returned to shell (suspended message from shell)
     assert!(
@@ -148,31 +119,19 @@ fn test_tui_ctrl_z_returns_to_shell() {
 /// Claude Code redraws its TUI interface.
 #[test]
 fn test_tui_ctrl_z_resume_redraws_tui() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("suspend-resume");
-    let _previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("suspend-resume", SCENARIO);
 
     // Send Ctrl+Z to suspend
-    tmux::send_keys(&session, "C-z");
+    tui.send_keys("C-z");
 
     // Wait for suspend
-    tmux::wait_for_content(&session, "suspended");
+    tui.wait_for("suspended");
 
     // Resume with fg
-    tmux::send_line(&session, "fg");
+    tui.send_line("fg");
 
     // Wait for TUI to redraw
-    let capture = tmux::wait_for_content(&session, "? for shortcuts");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("? for shortcuts");
 
     // Should have redrawn the TUI
     assert!(
@@ -187,33 +146,21 @@ fn test_tui_ctrl_z_resume_redraws_tui() {
 /// After resume, any input text that was in the prompt is preserved.
 #[test]
 fn test_tui_ctrl_z_resume_preserves_input_state() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("suspend-preserve");
-    let _previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("suspend-preserve", SCENARIO);
 
     // Type some text
-    tmux::send_keys(&session, "hello world");
-    tmux::wait_for_content(&session, "hello world");
+    tui.send_keys("hello world");
+    tui.wait_for("hello world");
 
     // Send Ctrl+Z to suspend
-    tmux::send_keys(&session, "C-z");
-    tmux::wait_for_content(&session, "suspended");
+    tui.send_keys("C-z");
+    tui.wait_for("suspended");
 
     // Resume with fg
-    tmux::send_line(&session, "fg");
+    tui.send_line("fg");
 
     // Wait for TUI to redraw
-    let capture = tmux::wait_for_content(&session, "hello world");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("hello world");
 
     // Input text should be preserved
     assert!(

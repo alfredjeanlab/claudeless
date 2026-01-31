@@ -11,7 +11,7 @@
 
 mod common;
 
-use common::{start_tui_ext, tmux, write_scenario, TUI_READY_PATTERN};
+use common::TuiTestSession;
 
 /// Helper to find separator lines in output
 fn find_separator_line(capture: &str) -> Option<&str> {
@@ -20,14 +20,13 @@ fn find_separator_line(capture: &str) -> Option<&str> {
         .find(|line| line.chars().all(|c| c == '─') && line.chars().count() > 50)
 }
 
+const JSON_SCENARIO: &str = r#"{ "default_response": "ok", "trusted": true }"#;
+
 /// Separator should span full terminal width at 80 columns
 #[test]
 fn test_separator_width_80() {
-    let scenario = write_scenario(r#"{ "default_response": "ok", "trusted": true }"#);
-    let session = tmux::unique_session("responsive-80");
-
-    let capture = start_tui_ext(&session, &scenario, 80, 24, TUI_READY_PATTERN);
-    tmux::kill_session(&session);
+    let tui = TuiTestSession::with_dimensions("responsive-80", JSON_SCENARIO, 80, 24);
+    let capture = tui.capture();
 
     // Find separator line and verify width
     let separator_line = find_separator_line(&capture).expect("Should have separator line");
@@ -42,11 +41,8 @@ fn test_separator_width_80() {
 /// Separator should span full terminal width at 100 columns
 #[test]
 fn test_separator_width_100() {
-    let scenario = write_scenario(r#"{ "default_response": "ok", "trusted": true }"#);
-    let session = tmux::unique_session("responsive-100");
-
-    let capture = start_tui_ext(&session, &scenario, 100, 24, TUI_READY_PATTERN);
-    tmux::kill_session(&session);
+    let tui = TuiTestSession::with_dimensions("responsive-100", JSON_SCENARIO, 100, 24);
+    let capture = tui.capture();
 
     let separator_line = find_separator_line(&capture).expect("Should have separator line");
 
@@ -60,11 +56,8 @@ fn test_separator_width_100() {
 /// Separator should span full terminal width at 150 columns
 #[test]
 fn test_separator_width_150() {
-    let scenario = write_scenario(r#"{ "default_response": "ok", "trusted": true }"#);
-    let session = tmux::unique_session("responsive-150");
-
-    let capture = start_tui_ext(&session, &scenario, 150, 24, TUI_READY_PATTERN);
-    tmux::kill_session(&session);
+    let tui = TuiTestSession::with_dimensions("responsive-150", JSON_SCENARIO, 150, 24);
+    let capture = tui.capture();
 
     let separator_line = find_separator_line(&capture).expect("Should have separator line");
 
@@ -78,26 +71,24 @@ fn test_separator_width_150() {
 /// Compact separator should span full width after /compact
 #[test]
 fn test_compact_separator_width() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::with_dimensions(
+        "compact-width",
         r#"{
         "default_response": "ok",
         "trusted": true,
         "timeouts": { "compact_delay_ms": 100 }
     }"#,
+        100,
+        24,
     );
-    let session = tmux::unique_session("compact-width");
-
-    let _ = start_tui_ext(&session, &scenario, 100, 24, TUI_READY_PATTERN);
 
     // Type a message and wait for response
-    tmux::send_line(&session, "hello");
-    let _ = tmux::wait_for_content(&session, "ok");
+    tui.send_line("hello");
+    let _ = tui.wait_for("ok");
 
     // Type /compact
-    tmux::send_line(&session, "/compact");
-    let capture = tmux::wait_for_content(&session, "compacted");
-
-    tmux::kill_session(&session);
+    tui.send_line("/compact");
+    let capture = tui.wait_for("compacted");
 
     // Find compact separator line (uses ═ character)
     let compact_line = capture

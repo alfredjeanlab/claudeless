@@ -18,7 +18,14 @@
 
 mod common;
 
-use common::{start_tui, tmux, write_scenario};
+use common::TuiTestSession;
+
+const SCENARIO: &str = r#"
+    name = "test"
+    [[responses]]
+    pattern = { type = "any" }
+    response = "Hello!"
+"#;
 
 // =============================================================================
 // Stash Behavior Tests
@@ -30,27 +37,16 @@ use common::{start_tui, tmux, write_scenario};
 /// and a message is displayed.
 #[test]
 fn test_tui_ctrl_s_stashes_prompt_with_message() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("stash-message");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("stash-message", SCENARIO);
+    let previous = tui.capture();
 
     // Type some text
-    tmux::send_keys(&session, "hello world stash test");
-    let with_input = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("hello world stash test");
+    let with_input = tui.wait_for_change(&previous);
 
     // Press Ctrl+S to stash
-    tmux::send_keys(&session, "C-s");
-    let capture = tmux::wait_for_change(&session, &with_input);
-
-    tmux::kill_session(&session);
+    tui.send_keys("C-s");
+    let capture = tui.wait_for_change(&with_input);
 
     // Should show the stash message
     assert!(
@@ -73,25 +69,16 @@ fn test_tui_ctrl_s_stashes_prompt_with_message() {
 /// is restored to the input field.
 #[test]
 fn test_tui_ctrl_s_restores_stashed_prompt() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("stash-restore");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("stash-restore", SCENARIO);
+    let previous = tui.capture();
 
     // Type some text
-    tmux::send_keys(&session, "my stashed prompt");
-    let _with_input = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("my stashed prompt");
+    let _with_input = tui.wait_for_change(&previous);
 
     // Press Ctrl+S to stash
-    tmux::send_keys(&session, "C-s");
-    let stashed = tmux::wait_for_content(&session, "Stashed (auto-restores after submit)");
+    tui.send_keys("C-s");
+    let stashed = tui.wait_for("Stashed (auto-restores after submit)");
 
     // Verify stash state was captured correctly
     assert!(
@@ -101,10 +88,8 @@ fn test_tui_ctrl_s_restores_stashed_prompt() {
     );
 
     // Press Ctrl+S again to restore
-    tmux::send_keys(&session, "C-s");
-    let capture = tmux::wait_for_content(&session, "my stashed prompt");
-
-    tmux::kill_session(&session);
+    tui.send_keys("C-s");
+    let capture = tui.wait_for("my stashed prompt");
 
     // The stashed text should be restored
     assert!(
@@ -126,25 +111,14 @@ fn test_tui_ctrl_s_restores_stashed_prompt() {
 /// Ctrl+S on empty input does nothing - there's nothing to stash.
 #[test]
 fn test_tui_ctrl_s_empty_input_does_nothing() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("stash-empty");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("stash-empty", SCENARIO);
+    let previous = tui.capture();
 
     // Press Ctrl+S on empty input
-    tmux::send_keys(&session, "C-s");
+    tui.send_keys("C-s");
 
     // Screen should not change (nothing to stash)
-    let capture = tmux::assert_unchanged_ms(&session, &previous, 300);
-
-    tmux::kill_session(&session);
+    let capture = tui.assert_unchanged_ms(&previous, 300);
 
     // Should not show stash message
     assert!(
@@ -160,30 +134,19 @@ fn test_tui_ctrl_s_empty_input_does_nothing() {
 /// until the user restores the stash or submits a prompt.
 #[test]
 fn test_tui_stash_message_persists() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("stash-persist");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("stash-persist", SCENARIO);
+    let previous = tui.capture();
 
     // Type and stash
-    tmux::send_keys(&session, "persistent stash");
-    let with_input = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("persistent stash");
+    let with_input = tui.wait_for_change(&previous);
 
-    tmux::send_keys(&session, "C-s");
-    let stashed = tmux::wait_for_change(&session, &with_input);
+    tui.send_keys("C-s");
+    let stashed = tui.wait_for_change(&with_input);
 
     // Wait and verify message persists
     std::thread::sleep(std::time::Duration::from_secs(2));
-    let capture = tmux::capture_pane(&session);
-
-    tmux::kill_session(&session);
+    let capture = tui.capture();
 
     // Stash message should still be visible
     assert!(
@@ -210,7 +173,8 @@ fn test_tui_stash_message_persists() {
 /// is automatically restored to the input field.
 #[test]
 fn test_tui_stash_auto_restores_after_submit() {
-    let scenario = write_scenario(
+    let tui = TuiTestSession::new(
+        "stash-auto-restore",
         r#"
         name = "test"
         [[responses]]
@@ -218,27 +182,23 @@ fn test_tui_stash_auto_restores_after_submit() {
         response = "Quick response"
         "#,
     );
-
-    let session = tmux::unique_session("stash-auto-restore");
-    let previous = start_tui(&session, &scenario);
+    let previous = tui.capture();
 
     // Type and stash the main prompt
-    tmux::send_keys(&session, "my stashed prompt");
-    let with_input = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("my stashed prompt");
+    let with_input = tui.wait_for_change(&previous);
 
-    tmux::send_keys(&session, "C-s");
-    let stashed = tmux::wait_for_change(&session, &with_input);
+    tui.send_keys("C-s");
+    let stashed = tui.wait_for_change(&with_input);
 
     // Type and submit a different prompt
-    tmux::send_keys(&session, "say hello");
-    let new_input = tmux::wait_for_change(&session, &stashed);
+    tui.send_keys("say hello");
+    let new_input = tui.wait_for_change(&stashed);
 
-    tmux::send_keys(&session, "Enter");
+    tui.send_keys("Enter");
 
     // Wait for response and auto-restore
-    let capture = tmux::wait_for_content(&session, "my stashed prompt");
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for("my stashed prompt");
 
     // Verify new prompt was submitted
     assert!(

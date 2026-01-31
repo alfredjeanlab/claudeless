@@ -25,25 +25,21 @@
 mod common;
 
 use common::ansi::assert_ansi_matches_fixture;
-use common::{assert_tui_matches_fixture, start_tui, tmux, write_scenario, TUI_READY_PATTERN};
+use common::{assert_tui_matches_fixture, tmux, TuiTestSession, TUI_READY_PATTERN};
+
+const JSON_SCENARIO: &str = r#"
+    {
+        "default_response": "Hello!",
+        "trusted": true,
+        "claude_version": "2.1.12"
+    }
+"#;
 
 /// Compare initial state against real Claude fixture
 #[test]
 fn test_initial_state_matches_fixture() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "default_response": "Hello!",
-            "trusted": true,
-            "claude_version": "2.1.12"
-        }
-        "#,
-    );
-
-    let session = tmux::unique_session("fixture-initial");
-    let capture = start_tui(&session, &scenario);
-
-    tmux::kill_session(&session);
+    let tui = TuiTestSession::new("fixture-initial", JSON_SCENARIO);
+    let capture = tui.capture();
 
     assert_tui_matches_fixture(&capture, "initial_state.txt", None);
 }
@@ -51,32 +47,13 @@ fn test_initial_state_matches_fixture() {
 /// Compare ANSI-colored initial state against real Claude fixture.
 #[test]
 fn test_initial_state_ansi_matches_fixture() {
-    let scenario = write_scenario(
-        r#"
-        {
-            "default_response": "Hello!",
-            "trusted": true,
-            "claude_version": "2.1.12"
-        }
-        "#,
-    );
+    let tui = TuiTestSession::new("fixture-initial-ansi", JSON_SCENARIO);
 
-    let session = tmux::unique_session("fixture-initial-ansi");
-
-    // Start TUI and wait for ready (using plain text pattern)
-    tmux::kill_session(&session);
-    tmux::new_session(&session, 120, 40);
-    let cmd = format!(
-        "{} --scenario {}",
-        common::claudeless_bin(),
-        scenario.path().display()
-    );
-    tmux::send_line(&session, &cmd);
-    tmux::wait_for_content(&session, TUI_READY_PATTERN);
+    // Wait for ready state first
+    let _ = tui.wait_for(TUI_READY_PATTERN);
 
     // Capture with ANSI sequences
-    let capture = tmux::capture_pane_ansi(&session);
-    tmux::kill_session(&session);
+    let capture = tmux::capture_pane_ansi(tui.name());
 
     // Compare against ANSI fixture
     assert_ansi_matches_fixture(&capture, "initial_state_ansi.txt", None);

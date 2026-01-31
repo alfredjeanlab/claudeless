@@ -23,7 +23,14 @@ mod common;
 
 use std::time::Duration;
 
-use common::{start_tui, tmux, write_scenario};
+use common::TuiTestSession;
+
+const SCENARIO: &str = r#"
+    name = "test"
+    [[responses]]
+    pattern = { type = "any" }
+    response = "Hello!"
+"#;
 
 // =============================================================================
 // Ctrl+C Exit Hint Rendering Tests
@@ -34,23 +41,12 @@ use common::{start_tui, tmux, write_scenario};
 /// First Ctrl+C on empty input shows "Press Ctrl-C again to exit" in status bar
 #[test]
 fn test_tui_ctrl_c_shows_exit_hint_on_empty_input() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("ctrl-c-hint-empty");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("ctrl-c-hint-empty", SCENARIO);
+    let previous = tui.capture();
 
     // Press Ctrl+C on empty input
-    tmux::send_keys(&session, "C-c");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("C-c");
+    let capture = tui.wait_for_change(&previous);
 
     assert!(
         capture.contains("Press Ctrl-C again to exit"),
@@ -64,21 +60,12 @@ fn test_tui_ctrl_c_shows_exit_hint_on_empty_input() {
 /// First Ctrl+C with text in input clears input AND shows exit hint
 #[test]
 fn test_tui_ctrl_c_clears_input_and_shows_exit_hint() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("ctrl-c-hint-text");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("ctrl-c-hint-text", SCENARIO);
+    let previous = tui.capture();
 
     // Type some text
-    tmux::send_keys(&session, "hello world test");
-    let with_text = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("hello world test");
+    let with_text = tui.wait_for_change(&previous);
     assert!(
         with_text.contains("hello world test"),
         "Text should appear in input.\nCapture:\n{}",
@@ -86,10 +73,8 @@ fn test_tui_ctrl_c_clears_input_and_shows_exit_hint() {
     );
 
     // Press Ctrl+C - should clear input AND show exit hint
-    tmux::send_keys(&session, "C-c");
-    let after_ctrl_c = tmux::wait_for_change(&session, &with_text);
-
-    tmux::kill_session(&session);
+    tui.send_keys("C-c");
+    let after_ctrl_c = tui.wait_for_change(&with_text);
 
     assert!(
         !after_ctrl_c.contains("hello world test"),
@@ -108,21 +93,12 @@ fn test_tui_ctrl_c_clears_input_and_shows_exit_hint() {
 /// Exit hint times out and returns to normal status bar
 #[test]
 fn test_tui_ctrl_c_exit_hint_times_out() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("ctrl-c-timeout");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("ctrl-c-timeout", SCENARIO);
+    let previous = tui.capture();
 
     // Press Ctrl+C to show exit hint
-    tmux::send_keys(&session, "C-c");
-    let with_hint = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("C-c");
+    let with_hint = tui.wait_for_change(&previous);
     assert!(
         with_hint.contains("Press Ctrl-C again to exit"),
         "Should show exit hint.\nCapture:\n{}",
@@ -131,10 +107,7 @@ fn test_tui_ctrl_c_exit_hint_times_out() {
 
     // Wait for timeout (~2 seconds) and check it returns to normal
     // Use 3 second timeout to allow for the ~2 second hint timeout plus buffer
-    let after_timeout =
-        tmux::wait_for_content_timeout(&session, "? for shortcuts", Duration::from_secs(3));
-
-    tmux::kill_session(&session);
+    let after_timeout = tui.wait_for_timeout("? for shortcuts", Duration::from_secs(3));
 
     assert!(
         !after_timeout.contains("Press Ctrl-C again to exit"),
@@ -157,30 +130,19 @@ fn test_tui_ctrl_c_exit_hint_times_out() {
 /// Double Ctrl+C (quick succession) exits the TUI
 #[test]
 fn test_tui_ctrl_c_double_press_exits() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("ctrl-c-exit");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("ctrl-c-exit", SCENARIO);
+    let previous = tui.capture();
 
     // First Ctrl+C shows exit hint
-    tmux::send_keys(&session, "C-c");
-    let _ = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("C-c");
+    let _ = tui.wait_for_change(&previous);
 
     // Second Ctrl+C exits
-    tmux::send_keys(&session, "C-c");
+    tui.send_keys("C-c");
 
     // Wait for shell prompt to appear (indicating exit)
     // Note: ❯ is starship/zsh prompt, $ is bash, % is zsh default
-    let capture = tmux::wait_for_any(&session, &["$", "%", "❯"]);
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for_any(&["$", "%", "❯"]);
 
     // Verify we exited (shell prompt visible, TUI elements gone or shell visible)
     assert!(
@@ -199,23 +161,12 @@ fn test_tui_ctrl_c_double_press_exits() {
 /// Ctrl+D on empty input shows "Press Ctrl-D again to exit" in status bar
 #[test]
 fn test_tui_ctrl_d_shows_exit_hint_on_empty_input() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("ctrl-d-hint");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("ctrl-d-hint", SCENARIO);
+    let previous = tui.capture();
 
     // Press Ctrl+D on empty input
-    tmux::send_keys(&session, "C-d");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("C-d");
+    let capture = tui.wait_for_change(&previous);
 
     assert!(
         capture.contains("Press Ctrl-D again to exit"),
@@ -229,21 +180,12 @@ fn test_tui_ctrl_d_shows_exit_hint_on_empty_input() {
 /// Ctrl+D exit hint times out and returns to normal status bar
 #[test]
 fn test_tui_ctrl_d_exit_hint_times_out() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("ctrl-d-timeout");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("ctrl-d-timeout", SCENARIO);
+    let previous = tui.capture();
 
     // Press Ctrl+D to show exit hint
-    tmux::send_keys(&session, "C-d");
-    let with_hint = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("C-d");
+    let with_hint = tui.wait_for_change(&previous);
     assert!(
         with_hint.contains("Press Ctrl-D again to exit"),
         "Should show exit hint.\nCapture:\n{}",
@@ -252,10 +194,7 @@ fn test_tui_ctrl_d_exit_hint_times_out() {
 
     // Wait for timeout (~2 seconds) and check it returns to normal
     // Use 3 second timeout to allow for the ~2 second hint timeout plus buffer
-    let after_timeout =
-        tmux::wait_for_content_timeout(&session, "? for shortcuts", Duration::from_secs(3));
-
-    tmux::kill_session(&session);
+    let after_timeout = tui.wait_for_timeout("? for shortcuts", Duration::from_secs(3));
 
     assert!(
         !after_timeout.contains("Press Ctrl-D again to exit"),
@@ -278,21 +217,12 @@ fn test_tui_ctrl_d_exit_hint_times_out() {
 /// Ctrl+D with text in input is ignored (does nothing)
 #[test]
 fn test_tui_ctrl_d_ignored_with_text_in_input() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("ctrl-d-with-text");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("ctrl-d-with-text", SCENARIO);
+    let previous = tui.capture();
 
     // Type some text
-    tmux::send_keys(&session, "some text here");
-    let with_text = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("some text here");
+    let with_text = tui.wait_for_change(&previous);
     assert!(
         with_text.contains("some text here"),
         "Text should appear in input.\nCapture:\n{}",
@@ -300,12 +230,10 @@ fn test_tui_ctrl_d_ignored_with_text_in_input() {
     );
 
     // Press Ctrl+D - should be ignored (text remains, no exit hint)
-    tmux::send_keys(&session, "C-d");
+    tui.send_keys("C-d");
 
     // Verify nothing changes for 200ms
-    let after_ctrl_d = tmux::assert_unchanged_ms(&session, &with_text, 200);
-
-    tmux::kill_session(&session);
+    let after_ctrl_d = tui.assert_unchanged_ms(&with_text, 200);
 
     // Text should still be there
     assert!(
@@ -326,29 +254,18 @@ fn test_tui_ctrl_d_ignored_with_text_in_input() {
 /// Double Ctrl+D (quick succession) on empty input exits the TUI
 #[test]
 fn test_tui_ctrl_d_double_press_exits() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("ctrl-d-exit");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("ctrl-d-exit", SCENARIO);
+    let previous = tui.capture();
 
     // First Ctrl+D shows exit hint
-    tmux::send_keys(&session, "C-d");
-    let _ = tmux::wait_for_change(&session, &previous);
+    tui.send_keys("C-d");
+    let _ = tui.wait_for_change(&previous);
 
     // Second Ctrl+D exits
-    tmux::send_keys(&session, "C-d");
+    tui.send_keys("C-d");
 
     // Wait for shell prompt to appear (indicating exit)
-    let capture = tmux::wait_for_any(&session, &["$", "%", "❯"]);
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for_any(&["$", "%", "❯"]);
 
     assert!(
         capture.contains("$") || capture.contains("%") || capture.contains("❯"),
@@ -366,23 +283,12 @@ fn test_tui_ctrl_d_double_press_exits() {
 /// Typing /exit shows autocomplete dropdown with "Exit the REPL" description
 #[test]
 fn test_tui_exit_command_shows_autocomplete() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("exit-autocomplete");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("exit-autocomplete", SCENARIO);
+    let previous = tui.capture();
 
     // Type /exit
-    tmux::send_keys(&session, "/exit");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("/exit");
+    let capture = tui.wait_for_change(&previous);
 
     assert!(
         capture.contains("/exit") && capture.contains("Exit the REPL"),
@@ -396,27 +302,16 @@ fn test_tui_exit_command_shows_autocomplete() {
 /// /exit command exits the TUI and shows a farewell message
 #[test]
 fn test_tui_exit_command_exits_with_farewell() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("exit-command");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("exit-command", SCENARIO);
+    let previous = tui.capture();
 
     // Type /exit and press Enter
-    tmux::send_keys(&session, "/exit");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
+    tui.send_keys("/exit");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
 
     // Wait for shell prompt to appear (indicating exit)
-    let capture = tmux::wait_for_any(&session, &["$", "%", "❯"]);
-
-    tmux::kill_session(&session);
+    let capture = tui.wait_for_any(&["$", "%", "❯"]);
 
     // Should show a farewell message (could be "Goodbye!", "Bye!", "See ya!", "Catch you later!", etc.)
     // The farewell is prefixed with "⎿" like other command responses

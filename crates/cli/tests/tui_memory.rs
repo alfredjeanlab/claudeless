@@ -21,7 +21,14 @@
 
 mod common;
 
-use common::{start_tui, tmux, write_scenario};
+use common::TuiTestSession;
+
+const SCENARIO: &str = r#"
+    name = "test"
+    [[responses]]
+    pattern = { type = "any" }
+    response = "Hello!"
+"#;
 
 // =============================================================================
 // /memory Autocomplete Tests
@@ -32,23 +39,12 @@ use common::{start_tui, tmux, write_scenario};
 /// Typing /memory shows autocomplete dropdown with memory description
 #[test]
 fn test_tui_memory_command_shows_autocomplete() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("memory-autocomplete");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("memory-autocomplete", SCENARIO);
+    let previous = tui.capture();
 
     // Type /memory
-    tmux::send_keys(&session, "/memory");
-    let capture = tmux::wait_for_change(&session, &previous);
-
-    tmux::kill_session(&session);
+    tui.send_keys("/memory");
+    let capture = tui.wait_for_change(&previous);
 
     assert!(
         capture.contains("/memory") && capture.contains("View or manage conversation memory"),
@@ -66,25 +62,14 @@ fn test_tui_memory_command_shows_autocomplete() {
 /// /memory command shows a dialog with memory sources
 #[test]
 fn test_tui_memory_shows_dialog_with_sources() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("memory-dialog");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("memory-dialog", SCENARIO);
+    let previous = tui.capture();
 
     // Type /memory and press Enter
-    tmux::send_keys(&session, "/memory");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let capture = tmux::wait_for_content(&session, "Memory");
-
-    tmux::kill_session(&session);
+    tui.send_keys("/memory");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let capture = tui.wait_for("Memory");
 
     // Should show the memory dialog header
     assert!(
@@ -105,25 +90,14 @@ fn test_tui_memory_shows_dialog_with_sources() {
 /// /memory dialog shows count of active memory files
 #[test]
 fn test_tui_memory_shows_active_files_count() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("memory-count");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("memory-count", SCENARIO);
+    let previous = tui.capture();
 
     // Type /memory and press Enter
-    tmux::send_keys(&session, "/memory");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let capture = tmux::wait_for_content(&session, "Memory");
-
-    tmux::kill_session(&session);
+    tui.send_keys("/memory");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let capture = tui.wait_for("Memory");
 
     // Should show count of active files
     assert!(
@@ -142,29 +116,18 @@ fn test_tui_memory_shows_active_files_count() {
 /// Down arrow navigates through memory entries
 #[test]
 fn test_tui_memory_arrow_navigation() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("memory-nav");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("memory-nav", SCENARIO);
+    let previous = tui.capture();
 
     // Open memory dialog
-    tmux::send_keys(&session, "/memory");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let initial = tmux::wait_for_content(&session, "Memory");
+    tui.send_keys("/memory");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let initial = tui.wait_for("Memory");
 
     // Press Down to move to next entry
-    tmux::send_keys(&session, "Down");
-    let after_down = tmux::wait_for_change(&session, &initial);
-
-    tmux::kill_session(&session);
+    tui.send_keys("Down");
+    let after_down = tui.wait_for_change(&initial);
 
     // Should still show memory dialog
     assert!(
@@ -183,29 +146,18 @@ fn test_tui_memory_arrow_navigation() {
 /// Pressing Escape dismisses the memory dialog
 #[test]
 fn test_tui_memory_escape_dismisses_dialog() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("memory-dismiss");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("memory-dismiss", SCENARIO);
+    let previous = tui.capture();
 
     // Open memory dialog
-    tmux::send_keys(&session, "/memory");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let dialog = tmux::wait_for_content(&session, "Memory");
+    tui.send_keys("/memory");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let dialog = tui.wait_for("Memory");
 
     // Press Escape to dismiss
-    tmux::send_keys(&session, "Escape");
-    let capture = tmux::wait_for_change(&session, &dialog);
-
-    tmux::kill_session(&session);
+    tui.send_keys("Escape");
+    let capture = tui.wait_for_change(&dialog);
 
     assert!(
         capture.contains("Memory dialog dismissed"),
@@ -223,29 +175,18 @@ fn test_tui_memory_escape_dismisses_dialog() {
 /// Pressing Enter on a memory entry shows its details
 #[test]
 fn test_tui_memory_enter_shows_selected() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("memory-select");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("memory-select", SCENARIO);
+    let previous = tui.capture();
 
     // Open memory dialog
-    tmux::send_keys(&session, "/memory");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let dialog = tmux::wait_for_content(&session, "Memory");
+    tui.send_keys("/memory");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let dialog = tui.wait_for("Memory");
 
     // Press Enter to select
-    tmux::send_keys(&session, "Enter");
-    let capture = tmux::wait_for_change(&session, &dialog);
-
-    tmux::kill_session(&session);
+    tui.send_keys("Enter");
+    let capture = tui.wait_for_change(&dialog);
 
     // Should show selected entry info
     assert!(
@@ -264,25 +205,14 @@ fn test_tui_memory_enter_shows_selected() {
 /// /memory dialog handles case where no CLAUDE.md files exist
 #[test]
 fn test_tui_memory_shows_no_files_gracefully() {
-    let scenario = write_scenario(
-        r#"
-        name = "test"
-        [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
-        "#,
-    );
-
-    let session = tmux::unique_session("memory-no-files");
-    let previous = start_tui(&session, &scenario);
+    let tui = TuiTestSession::new("memory-no-files", SCENARIO);
+    let previous = tui.capture();
 
     // Type /memory and press Enter
-    tmux::send_keys(&session, "/memory");
-    let _ = tmux::wait_for_change(&session, &previous);
-    tmux::send_keys(&session, "Enter");
-    let capture = tmux::wait_for_content(&session, "Memory");
-
-    tmux::kill_session(&session);
+    tui.send_keys("/memory");
+    let _ = tui.wait_for_change(&previous);
+    tui.send_keys("Enter");
+    let capture = tui.wait_for("Memory");
 
     // Should still show dialog with all source types (even if inactive)
     assert!(
