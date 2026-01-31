@@ -12,6 +12,7 @@ use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
 use super::{extract_bool, extract_str, require_field, BuiltinContext, BuiltinToolExecutor};
+use crate::tools::ToolName;
 
 /// Executor for content search (grep-like functionality).
 #[derive(Clone, Debug, Default)]
@@ -118,8 +119,8 @@ impl BuiltinToolExecutor for GrepExecutor {
         }
     }
 
-    fn tool_name(&self) -> &'static str {
-        "Grep"
+    fn tool_name(&self) -> ToolName {
+        ToolName::Grep
     }
 }
 

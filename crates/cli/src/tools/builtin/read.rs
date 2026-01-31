@@ -9,6 +9,7 @@ use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
 use super::{extract_file_path, require_field, BuiltinContext, BuiltinToolExecutor};
+use crate::tools::ToolName;
 
 /// Executor for file reading.
 #[derive(Clone, Debug, Default)]
@@ -46,8 +47,8 @@ impl BuiltinToolExecutor for ReadExecutor {
         }
     }
 
-    fn tool_name(&self) -> &'static str {
-        "Read"
+    fn tool_name(&self) -> ToolName {
+        ToolName::Read
     }
 }
 

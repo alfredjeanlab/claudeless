@@ -107,5 +107,8 @@ fn test_edit_successful() {
 
 #[test]
 fn test_tool_name() {
-    assert_eq!(EditExecutor::new().tool_name(), "Edit");
+    assert_eq!(
+        EditExecutor::new().tool_name(),
+        crate::tools::ToolName::Edit
+    );
 }

@@ -87,5 +87,8 @@ fn test_glob_with_matches() {
 
 #[test]
 fn test_tool_name() {
-    assert_eq!(GlobExecutor::new().tool_name(), "Glob");
+    assert_eq!(
+        GlobExecutor::new().tool_name(),
+        crate::tools::ToolName::Glob
+    );
 }

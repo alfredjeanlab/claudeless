@@ -126,5 +126,8 @@ fn test_grep_case_insensitive() {
 
 #[test]
 fn test_tool_name() {
-    assert_eq!(GrepExecutor::new().tool_name(), "Grep");
+    assert_eq!(
+        GrepExecutor::new().tool_name(),
+        crate::tools::ToolName::Grep
+    );
 }

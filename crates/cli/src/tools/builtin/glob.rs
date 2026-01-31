@@ -11,6 +11,7 @@ use crate::config::ToolCallSpec;
 use crate::tools::result::ToolExecutionResult;
 
 use super::{extract_directory, extract_str, require_field, BuiltinContext, BuiltinToolExecutor};
+use crate::tools::ToolName;
 
 /// Executor for glob pattern matching.
 #[derive(Clone, Debug, Default)]
@@ -68,8 +69,8 @@ impl BuiltinToolExecutor for GlobExecutor {
         }
     }
 
-    fn tool_name(&self) -> &'static str {
-        "Glob"
+    fn tool_name(&self) -> ToolName {
+        ToolName::Glob
     }
 }
 

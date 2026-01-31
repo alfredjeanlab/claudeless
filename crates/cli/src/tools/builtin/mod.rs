@@ -30,6 +30,7 @@ use crate::config::ToolCallSpec;
 use crate::state::StateWriter;
 use crate::tools::executor::{ExecutionContext, ToolExecutor};
 use crate::tools::result::ToolExecutionResult;
+use crate::tools::ToolName;
 
 pub use bash::BashExecutor;
 pub use edit::EditExecutor;
@@ -66,7 +67,7 @@ impl BuiltinExecutor {
 
         let executors = all_executors
             .into_iter()
-            .map(|e| (e.tool_name().to_string(), e))
+            .map(|e| (e.tool_name().as_str().to_string(), e))
             .collect();
 
         Self {
@@ -91,20 +92,22 @@ impl ToolExecutor for BuiltinExecutor {
     ) -> ToolExecutionResult {
         // Handle stateful tools FIRST (before mock fallback) - these always write to state dir
         if let Some(ref writer) = self.state_writer {
-            match call.tool.as_str() {
-                "TodoWrite" => {
-                    let guard = writer.read();
-                    let mut result = execute_todo_write(call, &guard);
-                    result.tool_use_id = tool_use_id.to_string();
-                    return result;
+            if let Some(tool_name) = ToolName::parse(&call.tool) {
+                match tool_name {
+                    ToolName::TodoWrite => {
+                        let guard = writer.read();
+                        let mut result = execute_todo_write(call, &guard);
+                        result.tool_use_id = tool_use_id.to_string();
+                        return result;
+                    }
+                    ToolName::ExitPlanMode => {
+                        let guard = writer.read();
+                        let mut result = execute_exit_plan_mode(call, &guard);
+                        result.tool_use_id = tool_use_id.to_string();
+                        return result;
+                    }
+                    _ => {}
                 }
-                "ExitPlanMode" => {
-                    let guard = writer.read();
-                    let mut result = execute_exit_plan_mode(call, &guard);
-                    result.tool_use_id = tool_use_id.to_string();
-                    return result;
-                }
-                _ => {}
             }
         }
 
@@ -121,7 +124,11 @@ impl ToolExecutor for BuiltinExecutor {
             executor.execute(call, tool_use_id, &builtin_ctx)
         } else {
             // Return mock result for unknown stateful tools
-            if call.tool == "TodoWrite" || call.tool == "ExitPlanMode" {
+            let is_stateful = matches!(
+                ToolName::parse(&call.tool),
+                Some(ToolName::TodoWrite | ToolName::ExitPlanMode)
+            );
+            if is_stateful {
                 // No state writer, return success with note
                 ToolExecutionResult::success(
                     tool_use_id,
@@ -159,7 +166,7 @@ pub trait BuiltinToolExecutor: Send + Sync {
     ) -> ToolExecutionResult;
 
     /// Get the tool name.
-    fn tool_name(&self) -> &'static str;
+    fn tool_name(&self) -> ToolName;
 }
 
 #[cfg(test)]

@@ -69,5 +69,8 @@ fn test_read_real_file() {
 
 #[test]
 fn test_tool_name() {
-    assert_eq!(ReadExecutor::new().tool_name(), "Read");
+    assert_eq!(
+        ReadExecutor::new().tool_name(),
+        crate::tools::ToolName::Read
+    );
 }
