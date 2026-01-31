@@ -152,6 +152,32 @@ parse_workspace() {
     fi
 }
 
+# Parse config mode from script header comment
+# Usage: parse_config_mode script.capsh
+# Looks for: # Config: trusted|auth-only|empty
+# Returns: trusted (default), auth-only, or empty
+parse_config_mode() {
+    local script="$1"
+    local config_line
+    config_line=$(grep -E '^# Config:' "$script" | head -1) || true
+
+    if [[ -n "$config_line" ]]; then
+        local mode="${config_line#\# Config:}"
+        mode="${mode## }"  # trim leading space
+        mode="${mode%% *}" # trim trailing content
+        case "$mode" in
+            auth-only|empty)
+                echo "$mode"
+                ;;
+            *)
+                echo "trusted"
+                ;;
+        esac
+    else
+        echo "trusted"
+    fi
+}
+
 # Sanitize state files to normalize paths and redact sensitive data
 # Usage: sanitize_state config_dir
 sanitize_state() {
@@ -202,6 +228,22 @@ write_claude_config() {
 EOF
 }
 
+# Write a config with auth but no workspace trust (for trust dialog captures)
+# Usage: write_auth_only_config config_dir [version]
+write_auth_only_config() {
+    local config_dir="$1"
+    local version="${2:-$(detect_version)}"
+
+    mkdir -p "$config_dir"
+    cat > "$config_dir/.claude.json" << EOF
+{
+  "hasCompletedOnboarding": true,
+  "lastOnboardingVersion": "$version",
+  "projects": {}
+}
+EOF
+}
+
 # Run a capsh script and capture output
 # Usage: run_capture script.capsh raw_output_base fixtures_dir [timeout]
 run_capture() {
@@ -229,25 +271,43 @@ run_capture() {
     # Resolve to absolute path (macOS /tmp -> /private/tmp)
     workspace="$(cd "$workspace" && pwd -P)"
 
-    # Create isolated config dir with pre-trusted workspace
+    # Parse config mode from script header (default: trusted)
+    local config_mode
+    config_mode=$(parse_config_mode "$script")
+
+    # Create isolated config dir based on mode
     local config_dir="$raw_dir/state"
-    write_claude_config "$config_dir" "$workspace"
+    local use_oauth_token="1"
+    case "$config_mode" in
+        trusted)
+            write_claude_config "$config_dir" "$workspace"
+            ;;
+        auth-only)
+            write_auth_only_config "$config_dir"
+            ;;
+        empty)
+            mkdir -p "$config_dir"
+            use_oauth_token=""
+            ;;
+    esac
 
     # Snapshot state before capture (relative paths)
     (cd "$raw_dir" && find state -type f | sort) > "$raw_dir/state.before.txt"
 
     echo -e "Running: ${CYAN}$script_name${NC}"
     [[ -n "$claude_args" ]] && echo -e "  Args: ${CYAN}$claude_args${NC}"
+    [[ "$config_mode" != "trusted" ]] && echo -e "  Config: ${MAGENTA}$config_mode${NC}"
     echo -e "  ${DIM}Workspace: $workspace${NC}"
 
-    # Run capsh with isolated config and OAuth token
+    # Run capsh with isolated config
     # Note: We run capsh from the workspace directory so claude detects it correctly
+    # Only pass OAuth token if not in 'empty' mode (onboarding capture)
     # shellcheck disable=SC2086  # intentional word splitting for claude_args
     local exit_code=0
     (
         cd "$workspace"
         CLAUDE_CONFIG_DIR="$config_dir" \
-        CLAUDE_CODE_OAUTH_TOKEN="${CLAUDE_CODE_OAUTH_TOKEN:-}" \
+        CLAUDE_CODE_OAUTH_TOKEN="${use_oauth_token:+${CLAUDE_CODE_OAUTH_TOKEN:-}}" \
         timeout "$capture_timeout" capsh --frames "$raw_dir" -- \
             claude $claude_args < "$script"
     ) || exit_code=$?

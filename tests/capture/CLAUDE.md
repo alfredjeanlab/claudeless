@@ -30,6 +30,8 @@ The capture system supports three scenarios based on config state:
 
 Most capture scripts use this. The workspace is pre-trusted, so Claude goes straight to the prompt.
 
+This includes scripts that trigger API responses - cheap 1-3 turn conversations with Haiku are fine for capturing response states, thinking dialogs, `/clear`, `/compact`, etc.
+
 **Explore with tmux:**
 ```bash
 # Create isolated config with pre-trusted workspace

@@ -1,58 +1,53 @@
 # Missing Fixtures
 
-Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2.1.23.
+Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2.1.27.
 
 ## TODO
 
-- `hooks_dialog` - Hooks dialog
-
-## TODO
-
-- `compact_before` / `compact_during` / `compact_after` - Compaction states
 - `thinking_dialog_mid_conversation` - Thinking dialog during conversation
 
-## Requires API/Response
+## TODO (with API calls)
 
-- `after_response` - After Claude responds
-- `clear_before` / `clear_after` - /clear before/after
+Use Haiku for cheap 1-3 turn conversations to capture these states.
+
+- `after_response` - After Claude responds (send simple prompt, wait for response)
+- `clear_before` / `clear_after` - /clear before/after (need conversation first)
 - `thinking_dialog_disabled_selected` - Thinking dialog with disabled selected
 - `thinking_dialog_enabled_selected` - Thinking dialog with enabled selected
+- `compact_before` / `compact_during` / `compact_after` - Use `/compact` command to trigger
 
-## Permission Dialogs
+## Permission Dialogs (TODO)
 
-- `permission_default`
-- `permission_accept_edits`
-- `permission_bash_command`
-- `permission_edit_file`
-- `permission_write_file`
-- `permission_bypass`
-- `permission_plan`
-- `permission_trust_folder`
-- `trust_prompt`
+- `permission_default` - Default permission prompt
+- `permission_accept_edits` - Accept edits permission
+- `permission_plan` - Plan permission
 
-## Setup Flow (requires fresh config)
+## Setup Flow (use `# Config: empty`)
 
+These require `# Config: empty` in the script header (no OAuth token, shows full onboarding).
+Only the pre-OAuth steps can be fully automated; login requires manual browser auth.
+
+**Pre-OAuth (automatable):**
 - `setup_01_select_theme_dark`
 - `setup_01_select_theme_light`
 - `setup_01a_syntax_highlighting_disabled`
 - `setup_02_login_method`
-- `setup_03_login_browser`
-- `setup_03_security_notes`
-- `setup_04_login_success`
-- `setup_05_use_terminal_setup`
-- `slash_logout`
+
+**Requires manual OAuth:**
+- `setup_03_login_browser` - Opens browser, needs manual login
+- `setup_03_security_notes` - Shown after successful auth
+- `setup_04_login_success` - After OAuth completes
+- `setup_05_use_terminal_setup` - Final onboarding step
+- `slash_logout` - Needs authenticated session first
 
 ## Error States
 
 - `failed_to_open_socket`
 - `failed_to_open_socket_no_version`
 
-## Skipped (special requirements)
+## Blocked (special requirements)
 
-- `api_usage_billing` - Requires Anthropic Console login (see `skipped/api-usage-billing.capsh`)
-- `ctrl_c_exit_hint` - Ctrl-C doesn't work in capsh, use `tmux/ctrl-c-exit-hint.sh`
-- `ctrl_d_exit_hint` - Ctrl-D doesn't work in capsh, use `tmux/ctrl-d-exit-hint.sh`
-- `ctrl_z_suspend` - Ctrl-Z doesn't work in capsh, use `tmux/ctrl-z-suspend.sh`
+- `api_usage_billing` - Requires Anthropic Console account login (different auth flow)
 
 ## Finished
 
@@ -90,3 +85,12 @@ Fixtures present in `crates/cli/tests/fixtures/tui/` but not yet captured for v2
 | `thinking_off_status` | `thinking_off_status` |
 | `ctrl_z_suspend` | `ctrl_z_suspend` |
 | `ctrl_s_stash_active` | `ctrl_s_stash_active` |
+| `hooks_dialog` | `hooks_dialog` |
+| `permission_bash_command` | `permission_bash_command` |
+| `permission_edit_file` | `permission_edit_file` |
+| `permission_write_file` | `permission_write_file` |
+| `permission_bypass` | `permission_bypass` |
+| `permission_trust_folder` | `permission_trust_folder` |
+| `trust_prompt` | `trust_prompt` |
+| `ctrl_c_exit_hint` | `ctrl_c_exit_hint` |
+| `ctrl_d_exit_hint` | `ctrl_d_exit_hint` |
