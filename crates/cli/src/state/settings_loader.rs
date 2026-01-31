@@ -10,6 +10,7 @@
 
 use super::settings::{load_settings_input, ClaudeSettings};
 use super::settings_source::SettingSource;
+use crate::output::print_warning;
 use std::path::{Path, PathBuf};
 
 /// Paths to search for settings files.
@@ -96,7 +97,10 @@ impl SettingsLoader {
                     settings.merge(cli_settings);
                 }
                 Err(e) => {
-                    eprintln!("Warning: Failed to load settings from '{}': {}", input, e);
+                    print_warning(format_args!(
+                        "Failed to load settings from '{}': {}",
+                        input, e
+                    ));
                 }
             }
         }
@@ -127,11 +131,11 @@ impl SettingsLoader {
                     }
                     Err(e) => {
                         // Log warning but continue - don't fail on invalid settings
-                        eprintln!(
-                            "Warning: Failed to load settings from {}: {}",
+                        print_warning(format_args!(
+                            "Failed to load settings from {}: {}",
                             path.display(),
                             e
-                        );
+                        ));
                     }
                 }
             }

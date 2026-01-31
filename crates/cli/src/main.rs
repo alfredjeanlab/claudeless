@@ -16,7 +16,10 @@ use claudeless::cli::Cli;
 use claudeless::config::{ResolvedTimeouts, ResponseSpec, ToolExecutionMode};
 use claudeless::failure::FailureExecutor;
 use claudeless::mcp::{load_mcp_config, McpConfig, McpManager, McpServerStatus};
-use claudeless::output::{McpServerInfo, OutputWriter};
+use claudeless::output::{
+    print_error, print_mcp, print_mcp_error, print_mcp_warning, print_warning, McpServerInfo,
+    OutputWriter,
+};
 use claudeless::permission::PermissionBypass;
 use claudeless::scenario::Scenario;
 use claudeless::session::SessionContext;
@@ -34,17 +37,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Validate --no-session-persistence usage
     if let Err(msg) = cli.validate_no_session_persistence() {
-        eprintln!("Error: {}", msg);
+        print_error(msg);
         std::process::exit(1);
     }
 
     // Validate --session-id is a valid UUID
     if let Err(msg) = cli.validate_session_id() {
-        if io::stderr().is_terminal() {
-            eprintln!("\x1b[31mError: {}\x1b[0m", msg);
-        } else {
-            eprintln!("Error: {}", msg);
-        }
+        print_error(msg);
         std::process::exit(1);
     }
 
@@ -71,7 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // In non-TUI mode (print mode), require a prompt
     if cli.prompt.is_none() {
-        eprintln!("Error: Input must be provided either through stdin or as a prompt argument when using --print");
+        print_error("Input must be provided either through stdin or as a prompt argument when using --print");
         std::process::exit(1);
     }
 
@@ -449,7 +448,7 @@ async fn load_mcp_configs(
         match load_mcp_config(config_input) {
             Ok(config) => configs.push(config),
             Err(e) => {
-                eprintln!("Error loading MCP config: {}", e);
+                print_error(format_args!("loading MCP config: {}", e));
                 std::process::exit(1);
             }
         }
@@ -459,11 +458,11 @@ async fn load_mcp_configs(
     let mut manager = McpManager::from_config(&merged);
 
     if cli.mcp_debug {
-        eprintln!(
-            "MCP: Loading {} server(s): {:?}",
+        print_mcp(format_args!(
+            "Loading {} server(s): {:?}",
             manager.server_count(),
             manager.server_names()
-        );
+        ));
     }
 
     // Initialize servers (spawn processes, discover tools)
@@ -475,21 +474,21 @@ async fn load_mcp_configs(
             Ok(()) => {
                 if cli.mcp_debug {
                     if let Some(server) = manager.get_server(name) {
-                        eprintln!(
-                            "MCP: Server '{}' started with {} tool(s): {:?}",
+                        print_mcp(format_args!(
+                            "Server '{}' started with {} tool(s): {:?}",
                             name,
                             server.tools.len(),
                             server.tool_names()
-                        );
+                        ));
                     }
                 }
             }
             Err(e) => {
                 if cli.strict_mcp_config {
-                    eprintln!("MCP error: Server '{}' failed to start: {}", name, e);
+                    print_mcp_error(format_args!("Server '{}' failed to start: {}", name, e));
                     std::process::exit(1);
                 } else if cli.mcp_debug {
-                    eprintln!("MCP warning: Server '{}' failed to start: {}", name, e);
+                    print_mcp_warning(format_args!("Server '{}' failed to start: {}", name, e));
                 }
             }
         }
@@ -497,7 +496,7 @@ async fn load_mcp_configs(
 
     // Check if any servers are running
     if manager.running_server_count() == 0 && cli.mcp_debug {
-        eprintln!("MCP: No servers running");
+        print_mcp("No servers running");
     }
 
     Ok(Some(Arc::new(RwLock::new(manager))))
@@ -550,7 +549,7 @@ async fn run_tui_mode(
         let flag = Arc::new(AtomicBool::new(false));
         if let Err(e) = signal_hook::flag::register(signal_hook::consts::SIGINT, Arc::clone(&flag))
         {
-            eprintln!("Warning: Failed to ignore SIGINT: {}", e);
+            print_warning(format_args!("Failed to ignore SIGINT: {}", e));
         }
         // Leak the flag so it stays registered for the lifetime of the process
         std::mem::forget(flag);
@@ -614,7 +613,7 @@ async fn run_tui_mode(
     match exit_reason {
         ExitReason::Interrupted => std::process::exit(130),
         ExitReason::Error(msg) => {
-            eprintln!("Error: {}", msg);
+            print_error(&msg);
             std::process::exit(1);
         }
         ExitReason::UserQuit | ExitReason::Completed | ExitReason::Suspended => Ok(()),

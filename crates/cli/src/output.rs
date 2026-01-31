@@ -9,6 +9,12 @@ use crate::state::{to_io_json, ContentBlock};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 
+#[path = "output_diagnostic.rs"]
+mod output_diagnostic;
+pub use output_diagnostic::{
+    print_error, print_mcp, print_mcp_error, print_mcp_warning, print_warning,
+};
+
 #[path = "output_events.rs"]
 mod output_events;
 pub use output_events::{
