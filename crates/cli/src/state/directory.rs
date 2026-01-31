@@ -132,9 +132,26 @@ impl StateDirectory {
     /// 1. Global: {state_dir}/settings.json
     /// 2. Project: {working_dir}/.claude/settings.json
     /// 3. Local: {working_dir}/.claude/settings.local.json
-    pub fn settings_loader(&self, working_dir: &Path) -> super::settings_loader::SettingsLoader {
-        let paths = super::settings_loader::SettingsPaths::resolve(&self.root, working_dir);
+    ///
+    /// # Arguments
+    /// * `working_dir` - The project working directory
+    /// * `sources` - Optional list of sources to include. If None, all sources are loaded.
+    pub fn settings_loader_with_sources(
+        &self,
+        working_dir: &Path,
+        sources: Option<&[super::settings_source::SettingSource]>,
+    ) -> super::settings_loader::SettingsLoader {
+        let paths = super::settings_loader::SettingsPaths::resolve_with_sources(
+            &self.root,
+            working_dir,
+            sources,
+        );
         super::settings_loader::SettingsLoader::new(paths)
+    }
+
+    /// Get a settings loader that loads all sources (existing behavior).
+    pub fn settings_loader(&self, working_dir: &Path) -> super::settings_loader::SettingsLoader {
+        self.settings_loader_with_sources(working_dir, None)
     }
 
     /// Get the project directory for a given project path.

@@ -12,6 +12,7 @@ pub mod session;
 pub mod sessions_index;
 pub mod settings;
 pub mod settings_loader;
+pub mod settings_source;
 pub mod todos;
 pub mod words;
 
@@ -27,6 +28,7 @@ pub use session::{
 pub use sessions_index::{get_git_branch, SessionIndexEntry, SessionsIndex};
 pub use settings::{ClaudeSettings, McpServerConfig, PermissionSettings, Settings};
 pub use settings_loader::{SettingsLoader, SettingsPaths};
+pub use settings_source::SettingSource;
 pub use todos::{ClaudeTodoItem, TodoItem, TodoState, TodoStatus};
 
 use chrono::{DateTime, Utc};

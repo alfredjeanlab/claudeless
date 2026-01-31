@@ -7,6 +7,7 @@ use clap::{Parser, ValueEnum};
 
 use crate::config::ToolExecutionMode;
 use crate::permission::PermissionMode;
+use crate::state::SettingSource;
 
 /// Claude CLI Simulator
 #[derive(Parser, Debug)]
@@ -74,6 +75,11 @@ pub struct Cli {
     /// Working directory
     #[arg(long = "cwd")]
     pub cwd: Option<String>,
+
+    /// Comma-separated list of setting sources to load (user, project, local).
+    /// When not specified, all sources are loaded.
+    #[arg(long = "setting-sources", value_delimiter = ',')]
+    pub setting_sources: Option<Vec<SettingSource>>,
 
     /// Input format (text or stream-json)
     #[arg(long, value_parser = ["text", "stream-json"], default_value = "text")]

@@ -9,6 +9,7 @@
 //! 3. Local (.claude/settings.local.json) - highest priority
 
 use super::settings::ClaudeSettings;
+use super::settings_source::SettingSource;
 use std::path::{Path, PathBuf};
 
 /// Paths to search for settings files.
@@ -23,17 +24,39 @@ pub struct SettingsPaths {
 }
 
 impl SettingsPaths {
-    /// Resolve settings paths for a given working directory.
+    /// Resolve settings paths for a given working directory, optionally filtering by sources.
+    ///
+    /// # Arguments
+    /// * `state_dir` - The ~/.claude equivalent (or CLAUDELESS_STATE_DIR)
+    /// * `working_dir` - The project working directory
+    /// * `sources` - Optional list of sources to include. If None, all sources are included.
+    pub fn resolve_with_sources(
+        state_dir: &Path,
+        working_dir: &Path,
+        sources: Option<&[SettingSource]>,
+    ) -> Self {
+        let sources = sources.unwrap_or(SettingSource::all());
+
+        Self {
+            global: sources
+                .contains(&SettingSource::User)
+                .then(|| state_dir.join("settings.json")),
+            project: sources
+                .contains(&SettingSource::Project)
+                .then(|| working_dir.join(".claude").join("settings.json")),
+            local: sources
+                .contains(&SettingSource::Local)
+                .then(|| working_dir.join(".claude").join("settings.local.json")),
+        }
+    }
+
+    /// Resolve all settings paths (existing behavior, delegates to resolve_with_sources).
     ///
     /// # Arguments
     /// * `state_dir` - The ~/.claude equivalent (or CLAUDELESS_STATE_DIR)
     /// * `working_dir` - The project working directory
     pub fn resolve(state_dir: &Path, working_dir: &Path) -> Self {
-        Self {
-            global: Some(state_dir.join("settings.json")),
-            project: Some(working_dir.join(".claude").join("settings.json")),
-            local: Some(working_dir.join(".claude").join("settings.local.json")),
-        }
+        Self::resolve_with_sources(state_dir, working_dir, None)
     }
 
     /// Create paths for testing (no global).
