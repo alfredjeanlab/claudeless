@@ -1,0 +1,43 @@
+# Capture compact_before, compact_during, compact_after - states around /compact command.
+# Requires API call - Claude must respond to prompts to build conversation context.
+# Args: --model haiku
+
+# Handle trust dialog if it appears, then wait for ready state
+if wait "trust this folder" 5s
+    send <Enter>
+    wait "for shortcuts" 10s
+else
+    wait "for shortcuts" 10s
+end
+
+# Build up conversation with two turns (need context to compact)
+send "what is 2 + 2?"
+wait 100
+send <Enter>
+wait "4" 60s
+
+send "and 3 + 3?"
+wait 100
+send <Enter>
+wait "6" 60s
+
+# Snapshot before compact (conversation with responses visible)
+snapshot "compact_before"
+
+# Run /compact command
+send "/compact"
+wait "/compact" 3s
+send <Enter>
+
+# Capture the during state (shows "Compacting conversation…")
+wait "Compacting conversation" 10s
+snapshot "compact_during"
+
+# Wait for compact to complete (shows "Compacted (ctrl+o")
+wait "ctrl\\+o" 60s
+snapshot "compact_after"
+
+# Exit
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
