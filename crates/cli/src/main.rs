@@ -25,10 +25,7 @@ use claudeless::state::{
     ClaudeSettings, SettingsLoader, SettingsPaths, StateDirectory, StateWriter,
 };
 use claudeless::time::ClockHandle;
-use claudeless::tools::builtin::BuiltinExecutor;
-use claudeless::tools::{
-    create_executor, CompositeExecutor, ExecutionContext, McpToolExecutor, ToolExecutor,
-};
+use claudeless::tools::{create_executor_with_mcp, ExecutionContext};
 use claudeless::tui::{ExitReason, TuiApp, TuiConfig};
 
 #[tokio::main]
@@ -308,20 +305,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             // Create executor with state writer for stateful tools and MCP support
-            let executor: Box<dyn ToolExecutor> = match execution_mode {
-                ToolExecutionMode::Live => {
-                    // Create composite executor with MCP support
-                    let mut builtin = BuiltinExecutor::new();
-                    if let Some(ref writer) = state_writer {
-                        builtin = builtin.with_state_writer(Arc::clone(writer));
-                    }
-                    let mcp = mcp_manager
-                        .as_ref()
-                        .map(|m| McpToolExecutor::new(Arc::clone(m)));
-                    Box::new(CompositeExecutor::new(mcp, builtin))
-                }
-                _ => create_executor(execution_mode),
-            };
+            let executor = create_executor_with_mcp(
+                execution_mode,
+                mcp_manager.as_ref().map(Arc::clone),
+                state_writer.as_ref().map(Arc::clone),
+            );
 
             // Execute each tool call and write results
             for (i, call) in tool_calls.iter().enumerate() {

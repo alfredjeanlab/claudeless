@@ -11,6 +11,7 @@ use parking_lot::RwLock;
 use crate::config::{ToolCallSpec, ToolExecutionMode};
 use crate::mcp::McpManager;
 use crate::permission::{PermissionChecker, PermissionResult};
+use crate::state::StateWriter;
 
 use super::mcp_executor::{CompositeExecutor, McpToolExecutor};
 use super::result::ToolExecutionResult;
@@ -184,15 +185,22 @@ pub fn create_executor_with_permissions(
 ///
 /// If `mcp_manager` is provided, MCP tools are checked first before falling
 /// back to builtin tools. This allows MCP servers to override builtin behavior.
+///
+/// If `state_writer` is provided, stateful tools (TodoWrite, ExitPlanMode)
+/// will persist their results to the session state.
 pub fn create_executor_with_mcp(
     mode: ToolExecutionMode,
     mcp_manager: Option<Arc<RwLock<McpManager>>>,
+    state_writer: Option<Arc<RwLock<StateWriter>>>,
 ) -> Box<dyn ToolExecutor> {
     match mode {
         ToolExecutionMode::Disabled => Box::new(DisabledExecutor::new()),
         ToolExecutionMode::Mock => Box::new(MockExecutor::new()),
         ToolExecutionMode::Live => {
-            let builtin = super::builtin::BuiltinExecutor::new();
+            let mut builtin = super::builtin::BuiltinExecutor::new();
+            if let Some(writer) = state_writer {
+                builtin = builtin.with_state_writer(writer);
+            }
             let mcp = mcp_manager.map(McpToolExecutor::new);
             Box::new(CompositeExecutor::new(mcp, builtin))
         }
@@ -203,9 +211,10 @@ pub fn create_executor_with_mcp(
 pub fn create_executor_with_mcp_and_permissions(
     mode: ToolExecutionMode,
     mcp_manager: Option<Arc<RwLock<McpManager>>>,
+    state_writer: Option<Arc<RwLock<StateWriter>>>,
     checker: PermissionChecker,
 ) -> Box<dyn ToolExecutor> {
-    let inner = create_executor_with_mcp(mode, mcp_manager);
+    let inner = create_executor_with_mcp(mode, mcp_manager, state_writer);
     Box::new(PermissionCheckingExecutor::new(inner, checker))
 }
 
