@@ -295,9 +295,10 @@ fn test_tui_memory_shows_no_files_gracefully() {
         "Should show all memory source types.\nCapture:\n{}",
         capture
     );
-    // Should not crash or show error
+    // Should not crash or show error (check for error patterns, not bare "error"
+    // substring which can appear in branch names like "feature/error-jsonl")
     assert!(
-        !capture.contains("error") && !capture.contains("panic"),
+        !capture.contains("Error:") && !capture.contains("error:") && !capture.contains("panic"),
         "Should handle no CLAUDE.md files gracefully.\nCapture:\n{}",
         capture
     );

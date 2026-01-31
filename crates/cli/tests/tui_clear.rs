@@ -104,7 +104,9 @@ fn test_clear_empty_session_succeeds() {
 
     tmux::kill_session(&session);
 
-    // Verify no error message appears
-    assert!(!capture.contains("error"));
+    // Verify no error message appears (check for error patterns, not bare "error"
+    // substring which can appear in branch names like "feature/error-jsonl")
+    assert!(!capture.contains("Error:"));
+    assert!(!capture.contains("error:"));
     assert!(!capture.contains("Failed"));
 }
