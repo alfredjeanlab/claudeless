@@ -34,6 +34,8 @@ pub struct DisplayState {
     pub spinner_frame: usize,
     /// Current spinner verb (e.g., "Thinking", "Pondering")
     pub spinner_verb: String,
+    /// Pending user message UUID for linking assistant responses in JSONL
+    pub pending_user_uuid: Option<String>,
 }
 
 impl DisplayState {

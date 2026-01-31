@@ -40,6 +40,7 @@ use uuid::Uuid;
 ///
 /// `StateWriter` wraps `StateDirectory` and provides high-level methods
 /// for the operations main.rs needs during session execution.
+#[derive(Debug)]
 pub struct StateWriter {
     /// The underlying state directory.
     dir: StateDirectory,
@@ -216,6 +217,8 @@ impl StateWriter {
     /// Record an assistant response (text only, no tool calls).
     ///
     /// This is for simple text responses without tool_use blocks.
+    /// Sets `stop_reason: "end_turn"` to indicate the response is complete,
+    /// which is critical for external watchers (like otters integration tests).
     pub fn record_assistant_response(
         &mut self,
         parent_user_uuid: &str,
@@ -237,7 +240,7 @@ impl StateWriter {
                 text: response.to_string(),
             }],
             model: &self.model,
-            stop_reason: None,
+            stop_reason: Some("end_turn"),
             cwd: &self.cwd.to_string_lossy(),
             version: env!("CARGO_PKG_VERSION"),
             git_branch: &git_branch,

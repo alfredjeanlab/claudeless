@@ -21,6 +21,7 @@ pub enum StateError {
 }
 
 /// Simulated ~/.claude directory structure
+#[derive(Debug)]
 pub struct StateDirectory {
     /// Root directory (typically a temp dir in tests)
     root: PathBuf,
