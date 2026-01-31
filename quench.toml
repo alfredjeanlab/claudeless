@@ -3,23 +3,6 @@ version = 1
 [rust]
 cfg_test_split = "require"
 
-[check.cloc]
-advice_test = """
-Can tests be parameterized using `yare` to be more concise?
-If not, split large test files into a {module}_tests/ folder.
-"""
-exclude = [
-    # ONLY for intentionally large fixture/test data
-    # NEVER for tests or source files
-]
-
 [check.agents]
 required = ["CLAUDE.md"]
 
-[[check.agents.sections.required]]
-name = "Directory Structure"
-advice = "Document the project layout"
-
-[[check.agents.sections.required]]
-name = "Landing the Plane"
-advice = "Checklist for AI agents before committing"

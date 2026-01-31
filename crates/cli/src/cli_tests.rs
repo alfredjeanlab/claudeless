@@ -189,3 +189,28 @@ fn no_session_persistence_with_print_mode_succeeds() {
     let cli = Cli::try_parse_from(["claude", "-p", "--no-session-persistence", "prompt"]).unwrap();
     assert!(cli.validate_no_session_persistence().is_ok());
 }
+
+#[test]
+fn session_id_valid_uuid_succeeds() {
+    let cli = Cli::try_parse_from([
+        "claude",
+        "-p",
+        "--session-id",
+        "01234567-89ab-cdef-0123-456789abcdef",
+        "test",
+    ])
+    .unwrap();
+    assert!(cli.validate_session_id().is_ok());
+}
+
+#[test]
+fn session_id_invalid_uuid_fails() {
+    let cli = Cli::try_parse_from(["claude", "-p", "--session-id", "abc", "test"]).unwrap();
+    assert!(cli.validate_session_id().is_err());
+}
+
+#[test]
+fn session_id_none_succeeds() {
+    let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
+    assert!(cli.validate_session_id().is_ok());
+}

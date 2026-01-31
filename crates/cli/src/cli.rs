@@ -188,6 +188,16 @@ impl Cli {
         }
         Ok(())
     }
+
+    /// Validate that --session-id is a valid UUID if provided
+    pub fn validate_session_id(&self) -> Result<(), &'static str> {
+        if let Some(ref id) = self.session_id {
+            if uuid::Uuid::parse_str(id).is_err() {
+                return Err("Invalid session ID. Must be a valid UUID.");
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Output format for responses

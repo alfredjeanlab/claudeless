@@ -257,5 +257,17 @@ impl TuiApp {
 }
 
 #[cfg(test)]
-#[path = "app_tests.rs"]
-mod tests;
+#[path = "app_exit_tests.rs"]
+mod exit_tests;
+
+#[cfg(test)]
+#[path = "app_keybinding_tests.rs"]
+mod keybinding_tests;
+
+#[cfg(test)]
+#[path = "app_menu_tests.rs"]
+mod menu_tests;
+
+#[cfg(test)]
+#[path = "app_permission_tests.rs"]
+mod permission_tests;

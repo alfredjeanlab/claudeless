@@ -41,6 +41,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(1);
     }
 
+    // Validate --session-id is a valid UUID
+    if let Err(msg) = cli.validate_session_id() {
+        if io::stderr().is_terminal() {
+            eprintln!("\x1b[31mError: {}\x1b[0m", msg);
+        } else {
+            eprintln!("Error: {}", msg);
+        }
+        std::process::exit(1);
+    }
+
     // Validate permission bypass configuration
     let bypass = PermissionBypass::new(
         cli.allow_dangerously_skip_permissions,
