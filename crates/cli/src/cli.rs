@@ -9,7 +9,7 @@ use crate::permission::PermissionMode;
 use crate::state::SettingSource;
 
 /// Claude CLI Simulator
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command(name = "claude", version, about = "Claude CLI Simulator")]
 pub struct Cli {
     /// The prompt to send (positional or via --print)
