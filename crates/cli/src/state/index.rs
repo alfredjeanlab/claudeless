@@ -119,5 +119,5 @@ pub fn get_git_branch() -> String {
 }
 
 #[cfg(test)]
-#[path = "sessions_index_tests.rs"]
+#[path = "index_tests.rs"]
 mod tests;

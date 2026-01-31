@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Session context merging scenario config with CLI args.
+//! Runtime context merging scenario config with CLI args.
 
 use crate::cli::Cli;
 use crate::config::{
@@ -20,7 +20,7 @@ use uuid::Uuid;
 /// - CLI args override scenario config
 /// - Scenario config overrides defaults
 #[derive(Clone, Debug)]
-pub struct SessionContext {
+pub struct RuntimeContext {
     /// Model to use for this session.
     pub model: String,
     /// Claude version string.
@@ -45,7 +45,7 @@ pub struct SessionContext {
     permission_patterns: PermissionPatterns,
 }
 
-impl SessionContext {
+impl RuntimeContext {
     /// Build context from scenario and CLI, applying precedence rules:
     /// CLI args > scenario config > defaults
     ///

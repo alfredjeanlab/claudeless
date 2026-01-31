@@ -45,7 +45,7 @@ fn default_cli() -> Cli {
 #[test]
 fn test_defaults_applied() {
     let cli = default_cli();
-    let ctx = SessionContext::build(None, &cli);
+    let ctx = RuntimeContext::build(None, &cli);
 
     assert_eq!(ctx.model, DEFAULT_MODEL);
     assert_eq!(ctx.claude_version, DEFAULT_CLAUDE_VERSION);
@@ -75,7 +75,7 @@ fn test_scenario_overrides_defaults() {
         ..Default::default()
     };
 
-    let ctx = SessionContext::build(Some(&scenario), &cli);
+    let ctx = RuntimeContext::build(Some(&scenario), &cli);
 
     assert_eq!(ctx.model, "custom-model");
     assert_eq!(ctx.claude_version, "3.0.0");
@@ -111,7 +111,7 @@ fn test_cli_overrides_scenario() {
         ..Default::default()
     };
 
-    let ctx = SessionContext::build(Some(&scenario), &cli);
+    let ctx = RuntimeContext::build(Some(&scenario), &cli);
 
     // CLI should win
     assert_eq!(ctx.model, "cli-model");
@@ -136,7 +136,7 @@ fn test_launch_timestamp_parsing() {
         ..Default::default()
     };
 
-    let ctx = SessionContext::build(Some(&scenario), &cli);
+    let ctx = RuntimeContext::build(Some(&scenario), &cli);
 
     assert_eq!(ctx.launch_timestamp.year(), 2025);
     assert_eq!(ctx.launch_timestamp.month(), 1);
@@ -153,7 +153,7 @@ fn test_project_path_defaults_to_working_dir() {
         ..Default::default()
     };
 
-    let ctx = SessionContext::build(Some(&scenario), &cli);
+    let ctx = RuntimeContext::build(Some(&scenario), &cli);
 
     assert_eq!(ctx.working_directory, PathBuf::from("/work/dir"));
     assert_eq!(ctx.project_path, PathBuf::from("/work/dir"));
@@ -174,7 +174,7 @@ fn test_project_path_override() {
         ..Default::default()
     };
 
-    let ctx = SessionContext::build(Some(&scenario), &cli);
+    let ctx = RuntimeContext::build(Some(&scenario), &cli);
 
     assert_eq!(ctx.working_directory, PathBuf::from("/work/dir"));
     assert_eq!(ctx.project_path, PathBuf::from("/project/path"));
@@ -213,7 +213,7 @@ fn test_permission_mode_parsing() {
 #[test]
 fn test_build_has_empty_settings() {
     let cli = default_cli();
-    let ctx = SessionContext::build(None, &cli);
+    let ctx = RuntimeContext::build(None, &cli);
 
     assert!(ctx.settings().permissions.allow.is_empty());
     assert!(ctx.settings().permissions.deny.is_empty());
@@ -240,7 +240,7 @@ fn test_build_with_settings() {
         ..Default::default()
     };
 
-    let ctx = SessionContext::build_with_settings(None, &cli, settings);
+    let ctx = RuntimeContext::build_with_settings(None, &cli, settings);
 
     assert_eq!(ctx.settings().permissions.allow, vec!["Read"]);
     assert_eq!(ctx.settings().permissions.deny, vec!["Bash(rm *)"]);
@@ -262,7 +262,7 @@ fn test_permission_patterns_from_settings() {
         ..Default::default()
     };
 
-    let ctx = SessionContext::build_with_settings(None, &cli, settings);
+    let ctx = RuntimeContext::build_with_settings(None, &cli, settings);
 
     // Patterns should be compiled from settings
     assert!(ctx.permission_patterns().is_allowed("Read", None));
@@ -288,7 +288,7 @@ fn test_permission_checker_uses_settings() {
         ..Default::default()
     };
 
-    let ctx = SessionContext::build_with_settings(None, &cli, settings);
+    let ctx = RuntimeContext::build_with_settings(None, &cli, settings);
     let checker = ctx.permission_checker(PermissionBypass::default());
 
     // Read auto-approved by settings
@@ -322,7 +322,7 @@ fn test_permission_checker_with_overrides() {
         ..Default::default()
     };
 
-    let ctx = SessionContext::build_with_settings(None, &cli, settings);
+    let ctx = RuntimeContext::build_with_settings(None, &cli, settings);
 
     // Create scenario overrides that allow Bash
     let mut overrides = HashMap::new();
@@ -360,7 +360,7 @@ fn test_build_with_state_loads_settings() {
     let mut cli = default_cli();
     cli.cwd = Some(work_dir.path().to_string_lossy().to_string());
 
-    let ctx = SessionContext::build_with_state(None, &cli, &state_dir);
+    let ctx = RuntimeContext::build_with_state(None, &cli, &state_dir);
 
     // Settings should be loaded from project
     assert_eq!(ctx.settings().permissions.allow, vec!["TestTool"]);

@@ -21,8 +21,8 @@ use claudeless::output::{
     OutputWriter,
 };
 use claudeless::permission::PermissionBypass;
+use claudeless::runtime::RuntimeContext;
 use claudeless::scenario::Scenario;
-use claudeless::session::SessionContext;
 use claudeless::state::session::SessionManager;
 use claudeless::state::{
     ClaudeSettings, SettingsLoader, SettingsPaths, StateDirectory, StateWriter,
@@ -103,18 +103,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None
     };
 
-    // Build session context early (needed for state_writer in failure handling)
-    let session_ctx = SessionContext::build(scenario.as_ref().map(|s| s.config()), &cli);
+    // Build runtime context early (needed for state_writer in failure handling)
+    let runtime_ctx = RuntimeContext::build(scenario.as_ref().map(|s| s.config()), &cli);
 
     // Create state writer early so failures can record to session JSONL
     // Skip if --no-session-persistence is enabled
     let state_writer = if !cli.no_session_persistence {
         Some(Arc::new(RwLock::new(StateWriter::new(
-            session_ctx.session_id.to_string(),
-            &session_ctx.project_path,
-            session_ctx.launch_timestamp,
-            &session_ctx.model,
-            &session_ctx.working_directory,
+            runtime_ctx.session_id.to_string(),
+            &runtime_ctx.project_path,
+            runtime_ctx.launch_timestamp,
+            &runtime_ctx.model,
+            &runtime_ctx.working_directory,
         )?)))
     } else {
         None
@@ -247,7 +247,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     writer.write_real_response_with_mcp(
         &response,
-        &session_ctx.session_id.to_string(),
+        &runtime_ctx.session_id.to_string(),
         tools,
         mcp_servers,
     )?;
@@ -567,17 +567,17 @@ async fn run_tui_mode(
         Scenario::from_config(config)?
     };
 
-    // Build session context for state directory
-    let session_ctx = SessionContext::build(Some(scenario.config()), cli);
+    // Build runtime context for state directory
+    let runtime_ctx = RuntimeContext::build(Some(scenario.config()), cli);
 
     // Create state writer for JSONL persistence (unless --no-session-persistence)
     let state_writer = if !cli.no_session_persistence {
         StateWriter::new(
-            session_ctx.session_id.to_string(),
-            &session_ctx.project_path,
-            session_ctx.launch_timestamp,
-            &session_ctx.model,
-            &session_ctx.working_directory,
+            runtime_ctx.session_id.to_string(),
+            &runtime_ctx.project_path,
+            runtime_ctx.launch_timestamp,
+            &runtime_ctx.model,
+            &runtime_ctx.working_directory,
         )
         .ok()
         .map(|w| Arc::new(RwLock::new(w)))

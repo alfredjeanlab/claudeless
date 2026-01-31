@@ -2,9 +2,13 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 //! Simulated `~/.claude` directory structure.
+//!
+//! This module provides the `StateDirectory` type, which manages the directory
+//! structure and I/O operations. For pure path computation without I/O, see
+//! the [`paths`](super::paths) module.
 
 use super::io::files_in;
-use sha2::{Digest, Sha256};
+use super::paths::StatePaths;
 use std::fs::{self, Permissions};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -21,31 +25,34 @@ pub enum StateError {
     InvalidProject(String),
 }
 
-/// Simulated ~/.claude directory structure
+/// Simulated ~/.claude directory structure.
+///
+/// This struct combines path computation (via [`StatePaths`]) with directory
+/// lifecycle management and I/O operations.
 #[derive(Debug)]
 pub struct StateDirectory {
-    /// Root directory (typically a temp dir in tests)
-    root: PathBuf,
+    /// Path computation helper
+    paths: StatePaths,
 
     /// Whether the directory has been initialized
     initialized: bool,
 }
 
 impl StateDirectory {
-    /// Create a new state directory at the given root
+    /// Create a new state directory at the given root.
     pub fn new(root: impl Into<PathBuf>) -> Self {
         Self {
-            root: root.into(),
+            paths: StatePaths::new(root),
             initialized: false,
         }
     }
 
-    /// Create a state directory in a temporary location
+    /// Create a state directory in a temporary location.
     pub fn temp() -> std::io::Result<Self> {
         let temp = tempfile::tempdir()?;
         let path = temp.keep();
         Ok(Self {
-            root: path,
+            paths: StatePaths::new(path),
             initialized: false,
         })
     }
@@ -76,7 +83,7 @@ impl StateDirectory {
         }
     }
 
-    /// Initialize the directory structure
+    /// Initialize the directory structure.
     pub fn initialize(&mut self) -> Result<(), StateError> {
         // Create main directories
         fs::create_dir_all(self.todos_dir())?;
@@ -90,45 +97,50 @@ impl StateDirectory {
         }
 
         // Set permissions (readable/writable by user only)
-        self.set_permissions(&self.root, 0o700)?;
+        self.set_permissions(self.root(), 0o700)?;
 
         self.initialized = true;
         Ok(())
     }
 
-    /// Check if the directory has been initialized
+    /// Check if the directory has been initialized.
     pub fn is_initialized(&self) -> bool {
         self.initialized
     }
 
-    /// Get the root directory path
+    /// Get the underlying path computation helper.
+    pub fn paths(&self) -> &StatePaths {
+        &self.paths
+    }
+
+    /// Get the root directory path.
     pub fn root(&self) -> &Path {
-        &self.root
+        self.paths.root()
     }
 
-    /// Get the todos directory path
+    /// Get the todos directory path.
     pub fn todos_dir(&self) -> PathBuf {
-        self.root.join("todos")
+        self.paths.todos_dir()
     }
 
-    /// Get the projects directory path
+    /// Get the projects directory path.
     pub fn projects_dir(&self) -> PathBuf {
-        self.root.join("projects")
+        self.paths.projects_dir()
     }
 
-    /// Get the plans directory path
+    /// Get the plans directory path.
     pub fn plans_dir(&self) -> PathBuf {
-        self.root.join("plans")
+        self.paths.plans_dir()
     }
 
-    /// Get the sessions directory path
+    /// Get the sessions directory path.
     pub fn sessions_dir(&self) -> PathBuf {
-        self.root.join("sessions")
+        self.paths.sessions_dir()
     }
 
-    /// Get the settings file path
+    /// Get the settings file path.
     pub fn settings_path(&self) -> PathBuf {
-        self.root.join("settings.json")
+        self.paths.settings_path()
     }
 
     /// Get a settings loader for this state directory and working directory.
@@ -147,7 +159,7 @@ impl StateDirectory {
         sources: Option<&[super::settings_source::SettingSource]>,
     ) -> super::settings_loader::SettingsLoader {
         let paths = super::settings_loader::SettingsPaths::resolve_with_sources(
-            &self.root,
+            self.root(),
             working_dir,
             sources,
         );
@@ -164,18 +176,17 @@ impl StateDirectory {
     /// Uses the same path normalization as the real Claude CLI:
     /// `/Users/foo/project` → `~/.claude/projects/-Users-foo-project`
     pub fn project_dir(&self, project_path: &Path) -> PathBuf {
-        let dir_name = project_dir_name(project_path);
-        self.projects_dir().join(&dir_name)
+        self.paths.project_dir(project_path)
     }
 
-    /// Get the session file path for a given session ID
+    /// Get the session file path for a given session ID.
     pub fn session_path(&self, session_id: &str) -> PathBuf {
-        self.sessions_dir().join(format!("{}.json", session_id))
+        self.paths.session_path(session_id)
     }
 
-    /// Get the todo file path for a given session/context
+    /// Get the todo file path for a given session/context.
     pub fn todo_path(&self, context: &str) -> PathBuf {
-        self.todos_dir().join(format!("{}.json", context))
+        self.paths.todo_path(context)
     }
 
     /// Reset state to clean slate
@@ -218,7 +229,7 @@ impl StateDirectory {
         Ok(())
     }
 
-    /// Validate directory structure matches expected layout
+    /// Validate directory structure matches expected layout.
     ///
     /// Returns a list of warnings about any structural issues found.
     /// An empty list indicates the structure matches expectations.
@@ -228,7 +239,7 @@ impl StateDirectory {
         // Check required directories
         let required_dirs = ["projects", "todos"];
         for dir in required_dirs {
-            let path = self.root.join(dir);
+            let path = self.root().join(dir);
             if !path.exists() {
                 warnings.push(format!("Missing directory: {}", dir));
             }
@@ -273,53 +284,10 @@ impl StateDirectory {
     }
 }
 
-/// Generate a deterministic hash for a project path (deprecated, use normalize_project_path)
-pub fn project_hash(path: &Path) -> String {
-    let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-    let mut hasher = Sha256::new();
-    hasher.update(canonical.to_string_lossy().as_bytes());
-    let result = hasher.finalize();
-    hex::encode(&result[..8]) // First 8 bytes = 16 hex chars
-}
-
-/// Normalize a project path to match Claude CLI's directory naming convention.
-///
-/// Real Claude CLI converts paths like `/Users/user/Developer/myproject` to
-/// `-Users-user-Developer-myproject` for the projects directory.
-///
-/// The normalization rules are:
-/// 1. Replace all `/` characters with `-`
-/// 2. Replace all `.` characters with `-`
-/// 3. This results in a leading `-` for absolute paths
-///
-/// # Examples
-///
-/// ```
-/// use std::path::Path;
-/// use claudeless::state::directory::normalize_project_path;
-///
-/// assert_eq!(
-///     normalize_project_path(Path::new("/Users/user/Developer/myproject")),
-///     "-Users-user-Developer-myproject"
-/// );
-///
-/// assert_eq!(
-///     normalize_project_path(Path::new("/tmp/test.txt")),
-///     "-tmp-test-txt"
-/// );
-/// ```
-pub fn normalize_project_path(path: &Path) -> String {
-    path.to_string_lossy().replace(['/', '.'], "-")
-}
-
-/// Get the canonical project directory name for a path.
-///
-/// This tries to canonicalize the path first (resolving symlinks, etc.)
-/// and falls back to the original path if canonicalization fails.
-pub fn project_dir_name(path: &Path) -> String {
-    let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-    normalize_project_path(&canonical)
-}
+// Re-export path utilities for backwards compatibility
+#[allow(deprecated)]
+pub use super::paths::project_hash;
+pub use super::paths::{normalize_project_path, project_dir_name};
 
 #[cfg(test)]
 #[path = "directory_tests.rs"]

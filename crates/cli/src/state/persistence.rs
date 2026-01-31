@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! JSONL format types for session logging (matching Claude CLI v2.1.12).
+//! JSONL persistence for session state.
+//!
+//! This module provides types and functions for reading and writing session data
+//! in JSONL format, matching Claude CLI v2.1.12.
 
 use crate::event_types::{line_type, message_type, role, subtype, user_type};
 use chrono::{DateTime, Utc};
@@ -486,5 +489,5 @@ pub fn append_error_jsonl(
 }
 
 #[cfg(test)]
-#[path = "jsonl_tests.rs"]
+#[path = "persistence_tests.rs"]
 mod tests;

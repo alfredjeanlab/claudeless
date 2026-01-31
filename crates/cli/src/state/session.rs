@@ -1,11 +1,28 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Session/conversation state tracking.
+//! In-memory session and conversation state tracking.
+//!
+//! This module provides:
+//!
+//! - [`Session`] - In-memory representation of a conversation session with turns
+//! - [`SessionManager`] - Multi-session management for TUI mode
+//! - [`Turn`] - A single conversation turn (user prompt + assistant response)
+//!
+//! # Session State vs Persistence
+//!
+//! This module manages **in-memory** session state used primarily by the TUI.
+//! For JSONL file persistence, see the [`persistence`](super::persistence) module
+//! and [`StateWriter`](super::StateWriter).
+//!
+//! | Concern | Module | Primary User |
+//! |---------|--------|--------------|
+//! | In-memory state | `session` | TUI mode |
+//! | JSONL persistence | `persistence` | Print mode (`-p`) |
+//! | High-level facade | `StateWriter` | Both modes |
 
-mod jsonl;
-
-pub use jsonl::*;
+// Re-export persistence types for backwards compatibility
+pub use super::persistence::*;
 
 use super::io::{json_files_in, JsonLoad};
 use serde::{Deserialize, Serialize};
@@ -164,7 +181,13 @@ impl Session {
 
 impl JsonLoad for Session {}
 
-/// Session manager for multiple sessions
+/// In-memory session manager for TUI mode.
+///
+/// Manages multiple sessions and tracks the currently active one.
+/// Used by TUI to match responses to sessions and persist state as JSON files.
+///
+/// This is distinct from [`StateWriter`](super::StateWriter), which handles
+/// JSONL persistence for external watchers (e.g., otters integration tests).
 pub struct SessionManager {
     sessions: HashMap<String, Session>,
     current: Option<String>,
