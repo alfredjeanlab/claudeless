@@ -3,6 +3,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+use super::paths::normalize_project_path;
 use super::*;
 
 #[test]

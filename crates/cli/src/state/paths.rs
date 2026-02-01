@@ -6,7 +6,6 @@
 
 //! Path computation and normalization utilities for state directories.
 
-use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 
 /// Normalize a project path to match Claude CLI's directory naming convention.
@@ -24,16 +23,6 @@ pub fn normalize_project_path(path: &Path) -> String {
 pub fn project_dir_name(path: &Path) -> String {
     let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
     normalize_project_path(&canonical)
-}
-
-/// Generate a deterministic hash for a project path (deprecated, use normalize_project_path)
-#[deprecated(since = "0.1.0", note = "Use normalize_project_path instead")]
-pub fn project_hash(path: &Path) -> String {
-    let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-    let mut hasher = Sha256::new();
-    hasher.update(canonical.to_string_lossy().as_bytes());
-    let result = hasher.finalize();
-    hex::encode(&result[..8])
 }
 
 // Free functions for path computation

@@ -230,9 +230,6 @@ impl StateDirectory {
     }
 }
 
-// Re-export path utilities for backwards compatibility
-pub use super::paths::{normalize_project_path, project_dir_name};
-
 #[cfg(test)]
 #[path = "directory_tests.rs"]
 mod tests;
