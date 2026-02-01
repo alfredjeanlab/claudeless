@@ -112,6 +112,11 @@ impl Runtime {
             // Write output
             self.write_turn_result(&result)?;
 
+            // Non-interactive mode can't show permission prompts
+            if result.pending_permission.is_some() {
+                break;
+            }
+
             // Handle hook continuation
             match result.hook_continuation {
                 Some(continuation) => current_prompt = continuation,

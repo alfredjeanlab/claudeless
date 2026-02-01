@@ -116,9 +116,9 @@ fn test_permission_checking_executor_needs_prompt() {
     let ctx = ExecutionContext::default();
     let result = executor.execute(&call, "toolu_789", &ctx);
 
-    // NeedsPrompt is treated as denied in the simulator
-    assert!(result.is_error);
-    assert!(result.text().unwrap().contains("requires permission"));
+    // NeedsPrompt returns a marker result so the caller can show a permission dialog
+    assert!(!result.is_error);
+    assert!(result.needs_prompt);
 }
 
 #[test]

@@ -6,14 +6,13 @@
 //! Contains:
 //! - `execute_shell_command` - Shell command execution via Bash tool
 //! - `process_prompt` - Prompt processing and response generation
-//! - Test permission triggers for fixture tests
+//! - `tool_call_to_permission_type` - Converts tool calls to permission dialogs
 
+use crate::config::ToolCallSpec;
 use crate::runtime::TurnResult;
 use crate::tui::spinner;
 use crate::tui::streaming::{StreamingConfig, StreamingResponse};
-
-#[cfg(test)]
-use crate::tui::widgets::permission::{DiffKind, DiffLine};
+use crate::tui::widgets::permission::{DiffKind, DiffLine, PermissionType};
 
 use super::super::state::TuiAppState;
 use super::super::state::TuiAppStateInner;
@@ -39,7 +38,11 @@ impl TuiAppState {
                 .push_str(&format!("\n\n⏺ Bash({})", command));
 
             // Use shared execute path for consistency (hooks, JSONL recording, etc.)
-            execute_with_runtime(&mut inner, command);
+            let permission = execute_with_runtime(&mut inner, command);
+            if let Some(perm) = permission {
+                drop(inner);
+                self.show_permission_request(perm);
+            }
             return;
         }
 
@@ -59,12 +62,6 @@ impl TuiAppState {
 
     /// Process a prompt and generate response
     pub(in crate::tui::app) fn process_prompt(&self, prompt: String) {
-        // Check for test permission triggers first (before acquiring inner lock)
-        #[cfg(test)]
-        if handle_test_permission_triggers(self, &prompt) {
-            return;
-        }
-
         let mut inner = self.inner.lock();
 
         // If there's previous response content, add it to conversation history first
@@ -87,7 +84,11 @@ impl TuiAppState {
             .add_turn(prompt.clone(), String::new());
 
         // Use Runtime::execute() for shared agent loop
-        execute_with_runtime(&mut inner, prompt);
+        let permission = execute_with_runtime(&mut inner, prompt);
+        if let Some(perm) = permission {
+            drop(inner);
+            self.show_permission_request(perm);
+        }
     }
 }
 
@@ -98,13 +99,17 @@ impl TuiAppState {
 /// - Tool execution
 /// - Hook firing
 /// - State recording (JSONL)
-fn execute_with_runtime(inner: &mut TuiAppStateInner, prompt: String) {
+///
+/// Returns `Some(PermissionType)` if a tool needs an interactive permission
+/// prompt. The caller should drop the inner lock and call
+/// `show_permission_request()` with the returned type.
+fn execute_with_runtime(inner: &mut TuiAppStateInner, prompt: String) -> Option<PermissionType> {
     // Take the runtime temporarily to call execute()
     // Runtime is required in TUI mode
     let Some(mut runtime) = inner.runtime.take() else {
         setup_response_display(inner, "Error: Runtime not available".to_string());
         restore_input_state(inner);
-        return;
+        return None;
     };
 
     // Execute using runtime (via block_in_place + block_on since we're in sync context)
@@ -118,7 +123,10 @@ fn execute_with_runtime(inner: &mut TuiAppStateInner, prompt: String) {
     // Handle the outcome (success or failure)
     match outcome {
         Ok(result) => handle_turn_result(inner, result),
-        Err(failure_spec) => handle_failure(inner, &failure_spec),
+        Err(failure_spec) => {
+            handle_failure(inner, &failure_spec);
+            None
+        }
     }
 }
 
@@ -152,7 +160,25 @@ fn handle_failure(inner: &mut TuiAppStateInner, failure_spec: &crate::config::Fa
 }
 
 /// Handle the result of a Runtime::execute() call.
-fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) {
+///
+/// Returns `Some(PermissionType)` if a tool needs a permission prompt.
+fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> Option<PermissionType> {
+    // Check for pending permission before displaying response
+    if let Some(ref pending) = result.pending_permission {
+        if let Some(perm_type) = tool_call_to_permission_type(&pending.tool_call) {
+            // Display the response text so far (before the tool call)
+            let response_text = if result.response_text().is_empty() {
+                String::new()
+            } else {
+                result.response_text().to_string()
+            };
+            if !response_text.is_empty() {
+                setup_response_display(inner, response_text);
+            }
+            return Some(perm_type);
+        }
+    }
+
     // Set response content
     let response_text = if result.response_text().is_empty() {
         "I'm not sure how to help with that.".to_string()
@@ -168,11 +194,12 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) {
         inner.pending_hook_message = Some(continuation);
         inner.stop_hook_active = true;
         // Stay in responding mode - the render loop will detect pending_hook_message
-        return;
+        return None;
     }
 
     // Normal completion - restore input state
     restore_input_state(inner);
+    None
 }
 
 // ============================================================================
@@ -242,55 +269,78 @@ fn restore_input_state(inner: &mut TuiAppStateInner) {
 }
 
 // ============================================================================
-// Test Helpers
+// Tool Call → Permission Type Conversion
 // ============================================================================
 
-/// Handle test permission triggers for TUI fixture tests.
-/// Returns true if a permission dialog was triggered, false otherwise.
-#[cfg(test)]
-fn handle_test_permission_triggers(state: &TuiAppState, prompt: &str) -> bool {
-    // Test trigger: "test bash permission"
-    if prompt.contains("test bash permission") {
-        state.show_bash_permission(
-            "cat /etc/passwd | head -5".to_string(),
-            Some("Display first 5 lines of /etc/passwd".to_string()),
-        );
-        return true;
-    }
+/// Convert a `ToolCallSpec` into a `PermissionType` for the TUI permission dialog.
+///
+/// Returns `None` for unknown tool names (e.g., MCP tools that don't have
+/// a corresponding permission dialog).
+pub(crate) fn tool_call_to_permission_type(call: &ToolCallSpec) -> Option<PermissionType> {
+    match call.tool.as_str() {
+        "Bash" => {
+            let command = call.input.get("command")?.as_str()?.to_string();
+            let description = call
+                .input
+                .get("description")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            Some(PermissionType::Bash {
+                command,
+                description,
+            })
+        }
+        "Write" => {
+            let file_path = call.input.get("file_path")?.as_str()?.to_string();
+            let content = call
+                .input
+                .get("content")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let content_lines = content.split('\n').map(|s| s.to_string()).collect();
+            Some(PermissionType::Write {
+                file_path,
+                content_lines,
+            })
+        }
+        "Edit" => {
+            let file_path = call.input.get("file_path")?.as_str()?.to_string();
+            let old_string = call
+                .input
+                .get("old_string")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let new_string = call
+                .input
+                .get("new_string")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
 
-    // Test trigger: "test edit permission"
-    if prompt.contains("test edit permission") {
-        let diff_lines = vec![
-            DiffLine {
-                line_num: Some(1),
-                kind: DiffKind::Removed,
-                content: "Hello World".to_string(),
-            },
-            DiffLine {
-                line_num: Some(1),
-                kind: DiffKind::NoNewline,
-                content: " No newline at end of file".to_string(),
-            },
-            DiffLine {
-                line_num: Some(2),
-                kind: DiffKind::Added,
-                content: "Hello Universe".to_string(),
-            },
-            DiffLine {
-                line_num: Some(3),
-                kind: DiffKind::NoNewline,
-                content: " No newline at end of file".to_string(),
-            },
-        ];
-        state.show_edit_permission("hello.txt".to_string(), diff_lines);
-        return true;
-    }
+            let mut diff_lines = Vec::new();
+            for (i, line) in old_string.lines().enumerate() {
+                diff_lines.push(DiffLine {
+                    line_num: Some((i + 1) as u32),
+                    kind: DiffKind::Removed,
+                    content: line.to_string(),
+                });
+            }
+            for (i, line) in new_string.lines().enumerate() {
+                diff_lines.push(DiffLine {
+                    line_num: Some((i + 1) as u32),
+                    kind: DiffKind::Added,
+                    content: line.to_string(),
+                });
+            }
 
-    // Test trigger: "test write permission"
-    if prompt.contains("test write permission") {
-        state.show_write_permission("hello.txt".to_string(), vec!["Hello World".to_string()]);
-        return true;
+            Some(PermissionType::Edit {
+                file_path,
+                diff_lines,
+            })
+        }
+        _ => None,
     }
-
-    false
 }
+
+#[cfg(test)]
+#[path = "execution_tests.rs"]
+mod tests;

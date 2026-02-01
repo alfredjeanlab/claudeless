@@ -45,6 +45,7 @@ pub fn execute_todo_write(call: &ToolCallSpec, state_writer: &StateWriter) -> To
             }],
             is_error: false,
             tool_use_result: Some(tool_use_result),
+            needs_prompt: false,
         },
         Err(e) => ToolExecutionResult {
             tool_use_id: String::new(),
@@ -53,6 +54,7 @@ pub fn execute_todo_write(call: &ToolCallSpec, state_writer: &StateWriter) -> To
             }],
             is_error: true,
             tool_use_result: None,
+            needs_prompt: false,
         },
     }
 }
@@ -114,6 +116,7 @@ pub fn execute_exit_plan_mode(
             }],
             is_error: false,
             tool_use_result: None,
+            needs_prompt: false,
         },
         Err(e) => ToolExecutionResult {
             tool_use_id: String::new(),
@@ -122,6 +125,7 @@ pub fn execute_exit_plan_mode(
             }],
             is_error: true,
             tool_use_result: None,
+            needs_prompt: false,
         },
     }
 }

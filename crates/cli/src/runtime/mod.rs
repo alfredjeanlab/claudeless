@@ -15,4 +15,4 @@ mod print_mode;
 
 pub use builder::{RuntimeBuildError, RuntimeBuilder};
 pub use context::RuntimeContext;
-pub use core::{Runtime, TurnResult};
+pub use core::{PendingPermission, Runtime, TurnResult};

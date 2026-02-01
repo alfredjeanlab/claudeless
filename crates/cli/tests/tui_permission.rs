@@ -152,7 +152,21 @@ fn test_permission_bash_command_matches_fixture() {
         r#"
         {
             "default_response": "Hello!",
-            "trusted": true
+            "trusted": true,
+            "responses": [
+                {
+                    "pattern": { "type": "contains", "text": "run bash" },
+                    "response": {
+                        "text": "Sure, let me run that.",
+                        "tool_calls": [
+                            {
+                                "tool": "Bash",
+                                "input": { "command": "cat /etc/passwd | head -5", "description": "Display first 5 lines of /etc/passwd" }
+                            }
+                        ]
+                    }
+                }
+            ]
         }
         "#,
     );
@@ -161,7 +175,7 @@ fn test_permission_bash_command_matches_fixture() {
     start_tui(&session, &scenario);
 
     // Type the trigger prompt
-    tmux::send_keys(&session, "test bash permission");
+    tmux::send_keys(&session, "run bash");
     tmux::send_keys(&session, "Enter");
 
     // Wait for bash permission dialog to appear
@@ -182,7 +196,21 @@ fn test_permission_edit_file_matches_fixture() {
         r#"
         {
             "default_response": "Hello!",
-            "trusted": true
+            "trusted": true,
+            "responses": [
+                {
+                    "pattern": { "type": "contains", "text": "edit file" },
+                    "response": {
+                        "text": "Sure, let me edit that.",
+                        "tool_calls": [
+                            {
+                                "tool": "Edit",
+                                "input": { "file_path": "hello.txt", "old_string": "Hello World", "new_string": "Hello Universe" }
+                            }
+                        ]
+                    }
+                }
+            ]
         }
         "#,
     );
@@ -191,7 +219,7 @@ fn test_permission_edit_file_matches_fixture() {
     start_tui(&session, &scenario);
 
     // Type the trigger prompt
-    tmux::send_keys(&session, "test edit permission");
+    tmux::send_keys(&session, "edit file");
     tmux::send_keys(&session, "Enter");
 
     // Wait for edit permission dialog to appear
@@ -212,7 +240,21 @@ fn test_permission_write_file_matches_fixture() {
         r#"
         {
             "default_response": "Hello!",
-            "trusted": true
+            "trusted": true,
+            "responses": [
+                {
+                    "pattern": { "type": "contains", "text": "create file" },
+                    "response": {
+                        "text": "Sure, let me create that.",
+                        "tool_calls": [
+                            {
+                                "tool": "Write",
+                                "input": { "file_path": "hello.txt", "content": "Hello World" }
+                            }
+                        ]
+                    }
+                }
+            ]
         }
         "#,
     );
@@ -221,7 +263,7 @@ fn test_permission_write_file_matches_fixture() {
     start_tui(&session, &scenario);
 
     // Type the trigger prompt
-    tmux::send_keys(&session, "test write permission");
+    tmux::send_keys(&session, "create file");
     tmux::send_keys(&session, "Enter");
 
     // Wait for write permission dialog to appear

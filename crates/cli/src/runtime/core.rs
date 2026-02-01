@@ -20,6 +20,15 @@ use crate::tools::{ExecutionContext, ToolExecutionResult, ToolExecutor};
 
 use super::RuntimeContext;
 
+/// A tool call that needs an interactive permission prompt before executing.
+#[derive(Debug)]
+pub struct PendingPermission {
+    /// The tool call specification.
+    pub tool_call: ToolCallSpec,
+    /// The tool use ID for this call.
+    pub tool_use_id: String,
+}
+
 /// Result of a single agent turn.
 ///
 /// This is the unified result type used by both print mode and TUI mode.
@@ -38,6 +47,8 @@ pub struct TurnResult {
     pub hook_continuation: Option<String>,
     /// Whether this turn was a hook continuation (not the initial prompt).
     pub is_hook_continuation: bool,
+    /// If a tool needs an interactive permission prompt, this contains the pending call.
+    pub pending_permission: Option<PendingPermission>,
 }
 
 impl TurnResult {
@@ -199,7 +210,8 @@ impl Runtime {
         let tool_calls = response.tool_calls().to_vec();
 
         // Execute tools and collect results
-        let tool_results = self.execute_tools_for_turn(prompt, &response_text, &tool_calls);
+        let (tool_results, pending_permission) =
+            self.execute_tools_for_turn(prompt, &response_text, &tool_calls);
 
         // Record the turn to state if no tool calls (tool calls record their own state)
         if tool_calls.is_empty() {
@@ -208,8 +220,12 @@ impl Runtime {
             }
         }
 
-        // Fire Stop hook
-        let hook_continuation = self.fire_stop_hook().await;
+        // Skip stop hook when a permission prompt is pending
+        let hook_continuation = if pending_permission.is_some() {
+            None
+        } else {
+            self.fire_stop_hook().await
+        };
 
         // Capture whether THIS turn was a hook continuation (before updating for next turn)
         let is_hook_continuation = self.stop_hook_active;
@@ -222,6 +238,7 @@ impl Runtime {
             tool_results,
             hook_continuation,
             is_hook_continuation,
+            pending_permission,
         })
     }
 
@@ -256,14 +273,19 @@ impl Runtime {
     }
 
     /// Execute tool calls and return results (for execute()).
+    ///
+    /// If a tool returns `needs_prompt: true`, execution stops and a
+    /// `PendingPermission` is returned so the caller can show an interactive
+    /// permission dialog. The tool result is *not* recorded to JSONL because
+    /// the tool hasn't actually executed yet.
     fn execute_tools_for_turn(
         &mut self,
         prompt: &str,
         response_text: &str,
         tool_calls: &[ToolCallSpec],
-    ) -> Vec<ToolExecutionResult> {
+    ) -> (Vec<ToolExecutionResult>, Option<PendingPermission>) {
         if tool_calls.is_empty() {
-            return vec![];
+            return (vec![], None);
         }
 
         // Record user message
@@ -289,6 +311,7 @@ impl Runtime {
         }
 
         let mut results = Vec::with_capacity(tool_calls.len());
+        let mut pending_permission = None;
 
         for (i, call) in tool_calls.iter().enumerate() {
             let tool_use_id = format!("toolu_{:08x}", i);
@@ -312,6 +335,16 @@ impl Runtime {
             // Execute tool
             let result = self.executor.execute(call, &tool_use_id, &ctx);
 
+            // If this tool needs a permission prompt, stop here — don't record
+            // the result to JSONL since the tool hasn't actually executed.
+            if result.needs_prompt {
+                pending_permission = Some(PendingPermission {
+                    tool_call: call.clone(),
+                    tool_use_id,
+                });
+                break;
+            }
+
             // Record tool result to JSONL
             if let (Some(ref state_writer), Some(ref asst_uuid)) = (&self.state, &assistant_uuid) {
                 let result_content = result.text().unwrap_or("");
@@ -327,15 +360,18 @@ impl Runtime {
             results.push(result);
         }
 
-        // Record final assistant response after tool execution
-        if let (Some(ref state_writer), Some(ref uuid)) = (&self.state, &user_uuid) {
-            let final_response = "Done! The requested operation has been completed successfully.";
-            let _ = state_writer
-                .write()
-                .record_assistant_response(uuid, final_response);
+        // Record final assistant response after tool execution (only if no pending permission)
+        if pending_permission.is_none() {
+            if let (Some(ref state_writer), Some(ref uuid)) = (&self.state, &user_uuid) {
+                let final_response =
+                    "Done! The requested operation has been completed successfully.";
+                let _ = state_writer
+                    .write()
+                    .record_assistant_response(uuid, final_response);
+            }
         }
 
-        results
+        (results, pending_permission)
     }
 
     /// Fire Stop hook and return continuation prompt if blocked.

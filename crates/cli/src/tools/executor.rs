@@ -121,17 +121,7 @@ impl ToolExecutor for PermissionCheckingExecutor {
             PermissionResult::Denied { reason } => {
                 ToolExecutionResult::permission_denied(tool_use_id, reason)
             }
-            PermissionResult::NeedsPrompt { tool, action } => {
-                // In the simulator, NeedsPrompt is treated as denied since
-                // we don't have interactive prompting
-                ToolExecutionResult::permission_denied(
-                    tool_use_id,
-                    format!(
-                        "Tool '{}' requires permission for '{}' action",
-                        tool, action
-                    ),
-                )
-            }
+            PermissionResult::NeedsPrompt { .. } => ToolExecutionResult::needs_prompt(tool_use_id),
         }
     }
 

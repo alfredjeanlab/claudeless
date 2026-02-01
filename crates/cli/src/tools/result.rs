@@ -49,10 +49,14 @@ pub struct ToolExecutionResult {
     /// Tool-specific result data for JSONL recording (e.g., oldTodos/newTodos for TodoWrite).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_use_result: Option<serde_json::Value>,
+
+    /// Whether this tool needs an interactive permission prompt before executing.
+    #[serde(skip)]
+    pub needs_prompt: bool,
 }
 
 impl ToolExecutionResult {
-    impl_tool_result_factories!([ToolResultContent::Text], tool_use_result: None);
+    impl_tool_result_factories!([ToolResultContent::Text], tool_use_result: None, needs_prompt: false);
 
     /// Create a successful result with tool-specific result data.
     pub fn success_with_result(
@@ -65,6 +69,18 @@ impl ToolExecutionResult {
             is_error: false,
             content: vec![ToolResultContent::Text { text: text.into() }],
             tool_use_result: Some(tool_use_result),
+            needs_prompt: false,
+        }
+    }
+
+    /// Create a result indicating an interactive permission prompt is needed.
+    pub fn needs_prompt(tool_use_id: impl Into<String>) -> Self {
+        Self {
+            tool_use_id: tool_use_id.into(),
+            is_error: false,
+            content: vec![],
+            tool_use_result: None,
+            needs_prompt: true,
         }
     }
 
