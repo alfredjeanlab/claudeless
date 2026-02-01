@@ -131,7 +131,13 @@ impl TuiAppState {
                         TrustChoice::Yes => {
                             inner.trust_granted = true;
                             inner.dialog.dismiss();
-                            inner.mode = AppMode::Input;
+                            // Check for pending initial prompt
+                            if let Some(initial) = inner.pending_initial_prompt.take() {
+                                drop(inner);
+                                self.process_prompt(initial);
+                            } else {
+                                inner.mode = AppMode::Input;
+                            }
                         }
                         TrustChoice::No => {
                             inner.should_exit = true;
@@ -145,7 +151,13 @@ impl TuiAppState {
             KeyCode::Char('y') | KeyCode::Char('Y') => {
                 inner.trust_granted = true;
                 inner.dialog.dismiss();
-                inner.mode = AppMode::Input;
+                // Check for pending initial prompt
+                if let Some(initial) = inner.pending_initial_prompt.take() {
+                    drop(inner);
+                    self.process_prompt(initial);
+                } else {
+                    inner.mode = AppMode::Input;
+                }
             }
 
             // N/n or Escape - No (exit)
