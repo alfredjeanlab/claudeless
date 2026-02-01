@@ -26,7 +26,6 @@ mod tests;
 
 ```rust
 // src/parser_tests.rs
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 use super::*;
 
 #[test]
