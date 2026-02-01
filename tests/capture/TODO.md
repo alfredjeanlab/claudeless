@@ -22,6 +22,23 @@ Use Haiku for cheap 1-3 turn conversations to capture these states.
 - `permission_accept_edits` - Accept edits permission
 - `permission_plan` - Plan permission
 
+## Plan & Usage Commands (TODO)
+
+Scripts created, need capture run:
+
+- `plan_command_enable` - /plan when not in plan mode (shows "Enabled plan mode")
+- `plan_command_already_active` - /plan when in plan mode (shows "Already in plan mode. No plan written yet.")
+- `plan_autocomplete` - /plan with space showing "open" autocomplete
+- `usage_dialog` - /usage command showing usage limits panel
+
+**Note on /plan subcommands (2026-01-31):**
+Explored /plan in Claude Code v2.1.29. Contrary to expectations, there are NO /plan
+subcommands (list, show, delete). The /plan command simply:
+- Enables plan mode when not active
+- Shows "Already in plan mode. No plan written yet." when active without a plan
+- The "[open]" autocomplete suggestion also just enables plan mode
+- Saved plans in ~/.claude/plans/ have no CLI management UI - they're just files
+
 ## Setup Flow (use `# Config: empty`)
 
 These require `# Config: empty` in the script header (no OAuth token, shows full onboarding).

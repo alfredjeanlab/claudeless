@@ -1,0 +1,15 @@
+# Capture /usage command showing usage limits panel.
+# Args: --model haiku
+
+wait "for shortcuts" 10s
+
+send "/usage" 100 <Enter>
+wait "Current session" 5s
+snapshot "usage_dialog"
+
+send <Esc>
+wait "for shortcuts" 3s
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
