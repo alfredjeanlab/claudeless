@@ -106,8 +106,7 @@ impl TuiAppStateInner {
 
 impl TuiAppState {
     /// Create a new TUI app state for testing (no runtime).
-    ///
-    /// This is only used in unit tests. Production code should use `new()` with a Runtime.
+    #[doc(hidden)]
     pub fn for_test(sessions: SessionManager, clock: ClockHandle, config: TuiConfig) -> Self {
         Self::new(sessions, clock, config, None)
     }

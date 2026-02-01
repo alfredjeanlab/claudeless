@@ -1,0 +1,16 @@
+  When claudeless runs in a TTY (like a tmux session), it ignores the positional prompt argument and enters interactive mode showing the welcome screen instead of processing
+   the prompt. For example, claudeless --scenario test.toml "Hello" should process "Hello" immediately, but instead it displays "Try 'write a test for scenario.rs'" and     
+  waits for manual input.                                                                                                                                                    
+                                                                                                                                                                             
+  Expected behavior (matching real Claude): When a positional prompt is provided, process it immediately after startup, then remain in interactive mode waiting for follow-up
+   input. Real Claude does this correctly - after accepting the trust prompt, it processes the positional argument and responds, then shows the input prompt for more        
+  messages.        
+
+```scenario
+name = "end-turn"                                                                                                                                                          
+                                                                                                                                                                             
+  [[responses]]                                                                                                                                                              
+  pattern = { type = "any" }                                                                                                                                                 
+                                                                                                                                                                             
+  [responses.response]                                                                                                                                                       
+  text = "I've analyzed the task and here's my response."           ```
