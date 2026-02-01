@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: check install license outdated lint lint-shell lint-policy capture capture-retry capture-skipped
+.PHONY: check install license outdated capture capture-retry capture-skipped
 
 # Run all CI checks
 check: lint
@@ -27,24 +27,9 @@ install:
 outdated:
 	cargo outdated --depth 1
 
-# Lint all files
-lint: lint-shell lint-policy
-
-# Lint shell scripts with ShellCheck
-lint-shell:
-	@if ! command -v shellcheck >/dev/null 2>&1; then \
-		echo "Error: shellcheck not found. Install with: brew install shellcheck"; \
-		exit 1; \
-	fi
-	@shellcheck -x -S warning scripts/*
-
-# Check policy enforcement (allow attributes, deny.toml, shellcheck exceptions)
-lint-policy:
-	@scripts/lint-policy
-
 # Add/update license headers in source files
 license:
-	@scripts/license
+	@quench check --ci --fix --license
 
 # Capture TUI fixtures from real Claude CLI
 capture:

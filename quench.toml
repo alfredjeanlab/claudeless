@@ -3,6 +3,20 @@ version = 1
 [rust]
 cfg_test_split = "require"
 
+[git.commit]
+check = "error"
+
 [check.agents]
+check = "error"
 required = ["CLAUDE.md"]
 
+[check.cloc]
+check = "error"
+
+[check.escapes]
+check = "error"
+
+[check.license]
+check = "error"
+license = "MIT"
+copyright = "Alfred Jean LLC"

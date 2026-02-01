@@ -336,9 +336,8 @@ Configure how tools are executed during simulation.
 
 | Mode | Description |
 |------|-------------|
-| `disabled` | No tool execution (default) |
 | `mock` | Return pre-configured results from scenario |
-| `live` | Execute built-in tools directly |
+| `live` | Execute built-in tools directly (default) |
 
 ### Configuration
 
