@@ -336,8 +336,8 @@ Configure how tools are executed during simulation.
 
 | Mode | Description |
 |------|-------------|
-| `mock` | Return pre-configured results from scenario |
-| `live` | Execute built-in tools directly (default) |
+| `mock` | Canned results only; errors if a tool call has no `result` field |
+| `live` | Uses canned `result` when provided, otherwise executes the real tool (default) |
 
 ### Configuration
 
@@ -362,7 +362,7 @@ error = "Permission denied"
 | Field | Type | Description |
 |-------|------|-------------|
 | `auto_approve` | bool | Skip permission prompts |
-| `result` | string | Canned result (mock mode) |
+| `result` | string | Canned result (used in both modes) |
 | `error` | string | Simulate error response |
 
 ---

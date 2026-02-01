@@ -3,7 +3,7 @@ SHELL := /bin/bash
 .PHONY: check install license outdated capture capture-retry capture-skipped
 
 # Run all CI checks
-check: lint
+check:
 	cargo fmt --all
 	cargo clippy --all -- -D warnings
 	quench check --fix

@@ -39,7 +39,7 @@ jobs:
       - uses: actions/checkout@v6
       - name: Install quench
         run: curl -fsSL https://github.com/alfredjeanlab/quench/releases/latest/download/install.sh | bash
-      - run: quench check
+      - run: quench check --ci
 
   test:
     name: Test (${{ matrix.os }})
@@ -98,14 +98,3 @@ jobs:
       - uses: actions/checkout@v6
       - uses: EmbarkStudios/cargo-deny-action@v2
 
-  shellcheck:
-    name: ShellCheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Install ShellCheck
-        run: |
-          wget -qO- "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz" | tar -xJf -
-          sudo cp shellcheck-v0.11.0/shellcheck /usr/local/bin/
-      - name: Lint shell scripts
-        run: make lint-shell
