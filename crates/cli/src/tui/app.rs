@@ -90,6 +90,9 @@ pub fn App(mut hooks: Hooks, props: &AppProps) -> impl Into<AnyElement<'static>>
     // Check for pending stop hook messages
     state_clone.check_pending_hook_message();
 
+    // Check for pending initial prompt (from CLI positional argument)
+    state_clone.check_initial_prompt();
+
     // Advance spinner animation when in Responding or Thinking mode
     {
         let mode = state_clone.mode();

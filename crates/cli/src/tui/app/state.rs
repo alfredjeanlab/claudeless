@@ -92,6 +92,10 @@ pub(super) struct TuiAppStateInner {
     pub stop_hook_active: bool,
     /// Pending message from stop hook to inject as next prompt
     pub pending_hook_message: Option<String>,
+
+    // Initial prompt state
+    /// Pending initial prompt from CLI positional arg (processed once on startup)
+    pub pending_initial_prompt: Option<String>,
 }
 
 impl TuiAppStateInner {
@@ -173,6 +177,9 @@ impl TuiAppState {
                 // Stop hook state
                 stop_hook_active: false,
                 pending_hook_message: None,
+
+                // Initial prompt state
+                pending_initial_prompt: config.initial_prompt.clone(),
 
                 // Config (must be last as it's moved)
                 config,
@@ -419,6 +426,28 @@ impl TuiAppState {
         if let Some(hook_msg) = pending {
             // Process the hook message as a new prompt
             self.process_prompt(hook_msg);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Check for and process pending initial prompt.
+    ///
+    /// Returns true if an initial prompt was processed.
+    /// Only processes if in Input mode (not during trust dialog).
+    pub fn check_initial_prompt(&self) -> bool {
+        let pending = {
+            let mut inner = self.inner.lock();
+            // Only process if in Input mode (not during trust dialog)
+            if inner.mode != AppMode::Input {
+                return false;
+            }
+            inner.pending_initial_prompt.take()
+        };
+
+        if let Some(prompt) = pending {
+            self.process_prompt(prompt);
             true
         } else {
             false

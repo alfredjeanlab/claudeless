@@ -64,7 +64,14 @@ async fn run_tui_mode(runtime: Runtime) -> Result<(), Box<dyn std::error::Error>
     let is_tty = std::io::stdout().is_terminal();
     let tui_config = TuiConfig::from_runtime(&runtime, bypass.is_active(), is_tty);
 
-    let sessions = SessionManager::new();
+    let mut sessions = SessionManager::new();
+
+    // Check for resume flag and load existing session
+    if let Some(ref resume_id) = runtime.cli().session.resume {
+        // Resume existing session (already validated in builder)
+        sessions.resume(resume_id);
+    }
+
     let clock = ClockHandle::system();
 
     // Create TUI app with runtime for shared execution

@@ -84,6 +84,61 @@ impl StateWriter {
         })
     }
 
+    /// Create a new state writer for resuming a session.
+    ///
+    /// Initializes with an existing message count and loads the first prompt
+    /// from the sessions index if available.
+    pub fn new_with_count(
+        session_id: impl Into<String>,
+        project_path: impl Into<PathBuf>,
+        launch_timestamp: DateTime<Utc>,
+        model: impl Into<String>,
+        cwd: impl Into<PathBuf>,
+        message_count: u32,
+    ) -> std::io::Result<Self> {
+        let mut dir = StateDirectory::resolve()?;
+        dir.initialize().map_err(std::io::Error::other)?;
+
+        // Load first_prompt from index if resuming
+        let session_id_str = session_id.into();
+        let project_path_buf = project_path.into();
+        let first_prompt = Self::load_first_prompt(&dir, &project_path_buf, &session_id_str);
+
+        Ok(Self {
+            dir,
+            session_id: session_id_str,
+            project_path: project_path_buf,
+            launch_timestamp,
+            model: model.into(),
+            cwd: cwd.into(),
+            first_prompt,
+            message_count,
+        })
+    }
+
+    fn load_first_prompt(
+        dir: &StateDirectory,
+        project_path: &std::path::Path,
+        session_id: &str,
+    ) -> Option<String> {
+        let index_path = dir.project_dir(project_path).join("sessions-index.json");
+        SessionsIndex::load(&index_path)
+            .ok()
+            .and_then(|idx| idx.get(session_id).map(|e| e.first_prompt.clone()))
+    }
+
+    /// Load message count from sessions index for an existing session.
+    pub fn load_message_count_from_index(
+        project_path: &std::path::Path,
+        session_id: &str,
+    ) -> Option<u32> {
+        let dir = StateDirectory::resolve().ok()?;
+        let index_path = dir.project_dir(project_path).join("sessions-index.json");
+        SessionsIndex::load(&index_path)
+            .ok()
+            .and_then(|idx| idx.get(session_id).map(|e| e.message_count))
+    }
+
     pub fn state_dir(&self) -> &StateDirectory {
         &self.dir
     }

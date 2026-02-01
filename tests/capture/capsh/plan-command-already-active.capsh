@@ -1,0 +1,17 @@
+# Capture /plan command when already in plan mode (no plan written yet).
+# Args: --model haiku
+
+wait "for shortcuts" 10s
+
+# Enable plan mode first
+send "/plan" 100 <Enter>
+wait "Enabled plan mode" 5s
+
+# Now try /plan again while already in plan mode
+send "/plan" 100 <Enter>
+wait "Already in plan mode" 5s
+snapshot "plan_command_already_active"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
