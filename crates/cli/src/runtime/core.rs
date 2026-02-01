@@ -226,10 +226,7 @@ impl Runtime {
     }
 
     /// Match prompt against scenario (for execute()).
-    fn match_prompt_for_turn(
-        &mut self,
-        prompt: &str,
-    ) -> Result<Option<ResponseSpec>, FailureSpec> {
+    fn match_prompt_for_turn(&mut self, prompt: &str) -> Result<Option<ResponseSpec>, FailureSpec> {
         if let Some(ref mut scenario) = self.scenario {
             if let Some(result) = scenario.match_prompt(prompt) {
                 // Check for failure in rule

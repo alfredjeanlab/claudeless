@@ -126,7 +126,8 @@ pub fn App(mut hooks: Hooks, props: &AppProps) -> impl Into<AnyElement<'static>>
 /// This wraps the iocraft-based app and provides the same interface
 pub struct TuiApp {
     state: TuiAppState,
-    /// SIGINT flag - kept alive so signal handler remains registered.
+
+    // NOTE(lifetime): Keep handle alive until app is dropped
     #[cfg(unix)]
     #[allow(dead_code)]
     sigint_flag: Arc<std::sync::atomic::AtomicBool>,
