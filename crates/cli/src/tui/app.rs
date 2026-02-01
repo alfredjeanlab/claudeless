@@ -13,6 +13,8 @@ pub(crate) mod types;
 pub use state::TuiAppState;
 pub use types::{AppMode, ExitReason, PermissionRequest, StatusInfo, TrustPromptState, TuiConfig};
 
+use std::sync::Arc;
+
 use iocraft::prelude::*;
 
 use crate::runtime::Runtime;
@@ -121,6 +123,10 @@ pub fn App(mut hooks: Hooks, props: &AppProps) -> impl Into<AnyElement<'static>>
 /// This wraps the iocraft-based app and provides the same interface
 pub struct TuiApp {
     state: TuiAppState,
+    /// SIGINT flag - kept alive so signal handler remains registered.
+    #[cfg(unix)]
+    #[allow(dead_code)]
+    sigint_flag: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl TuiApp {
@@ -131,8 +137,26 @@ impl TuiApp {
         config: TuiConfig,
         runtime: Runtime,
     ) -> std::io::Result<Self> {
+        // Register SIGINT handler so Ctrl+C is captured as a key event
+        #[cfg(unix)]
+        let sigint_flag = {
+            use std::sync::atomic::AtomicBool;
+            let flag = Arc::new(AtomicBool::new(false));
+            if let Err(e) =
+                signal_hook::flag::register(signal_hook::consts::SIGINT, Arc::clone(&flag))
+            {
+                // Log warning but continue - worst case Ctrl+C will exit abruptly
+                eprintln!("Warning: Failed to register SIGINT handler: {}", e);
+            }
+            flag
+        };
+
         let state = TuiAppState::new(sessions, clock, config, Some(runtime));
-        Ok(Self { state })
+        Ok(Self {
+            state,
+            #[cfg(unix)]
+            sigint_flag,
+        })
     }
 
     /// Run the main event loop using iocraft fullscreen

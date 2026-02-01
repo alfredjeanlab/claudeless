@@ -20,15 +20,6 @@ use crate::tools::{ExecutionContext, ToolExecutionResult, ToolExecutor};
 
 use super::RuntimeContext;
 
-/// Response from a single prompt execution (legacy, kept for compatibility).
-#[derive(Debug)]
-pub struct ExecuteResponse {
-    /// The response text.
-    pub text: String,
-    /// Whether a stop hook blocked and provided a continuation prompt.
-    pub continue_prompt: Option<String>,
-}
-
 /// Result of a single agent turn.
 ///
 /// This is the unified result type used by both print mode and TUI mode.
@@ -187,8 +178,8 @@ impl Runtime {
         }
 
         // Match prompt to get response (or failure)
-        let (response_spec, _matched_rule) = match self.match_prompt_for_turn(prompt) {
-            Ok(result) => result,
+        let response_spec = match self.match_prompt_for_turn(prompt) {
+            Ok(spec) => spec,
             Err(failure_spec) => {
                 // Record error to JSONL before returning
                 self.record_failure_to_jsonl(&failure_spec);
@@ -220,14 +211,17 @@ impl Runtime {
         // Fire Stop hook
         let hook_continuation = self.fire_stop_hook().await;
 
-        // Update stop_hook_active based on result
+        // Capture whether THIS turn was a hook continuation (before updating for next turn)
+        let is_hook_continuation = self.stop_hook_active;
+
+        // Update stop_hook_active for the NEXT turn
         self.stop_hook_active = hook_continuation.is_some();
 
         Ok(TurnResult {
             response,
             tool_results,
             hook_continuation,
-            is_hook_continuation: self.stop_hook_active,
+            is_hook_continuation,
         })
     }
 
@@ -235,7 +229,7 @@ impl Runtime {
     fn match_prompt_for_turn(
         &mut self,
         prompt: &str,
-    ) -> Result<(Option<ResponseSpec>, Option<String>), FailureSpec> {
+    ) -> Result<Option<ResponseSpec>, FailureSpec> {
         if let Some(ref mut scenario) = self.scenario {
             if let Some(result) = scenario.match_prompt(prompt) {
                 // Check for failure in rule
@@ -243,21 +237,17 @@ impl Runtime {
                     return Err(failure_spec.clone());
                 }
 
-                Ok((
-                    scenario.get_response(&result).cloned(),
-                    Some("matched".to_string()),
-                ))
+                Ok(scenario.get_response(&result).cloned())
             } else if let Some(default) = scenario.default_response() {
-                Ok((Some(default.clone()), Some("default".to_string())))
+                Ok(Some(default.clone()))
             } else {
-                Ok((None, None))
+                Ok(None)
             }
         } else {
             // No scenario - use a default response
-            Ok((
-                Some(ResponseSpec::Simple("Hello! I'm Claudeless!".to_string())),
-                None,
-            ))
+            Ok(Some(ResponseSpec::Simple(
+                "Hello! I'm Claudeless!".to_string(),
+            )))
         }
     }
 
@@ -278,14 +268,6 @@ impl Runtime {
         if tool_calls.is_empty() {
             return vec![];
         }
-
-        // Get execution mode from scenario (defaults to Live)
-        let _execution_mode = self
-            .scenario
-            .as_ref()
-            .and_then(|s| s.config().tool_execution.as_ref())
-            .map(|te| te.mode.clone())
-            .unwrap_or_default();
 
         // Record user message
         let user_uuid = if let Some(ref state_writer) = self.state {
@@ -382,17 +364,6 @@ impl Runtime {
             }
         }
         None
-    }
-
-    /// Get response text for a prompt (for simple matching without full execution).
-    ///
-    /// This is a convenience method for TUI mode that just needs the response text.
-    pub fn response_text_or_default(&mut self, prompt: &str) -> String {
-        if let Some(ref mut scenario) = self.scenario {
-            scenario.response_text_or_default(prompt)
-        } else {
-            "Hello! I'm Claudeless!".to_string()
-        }
     }
 
     /// Shutdown MCP manager gracefully.

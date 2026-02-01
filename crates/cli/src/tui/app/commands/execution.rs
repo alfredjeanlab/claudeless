@@ -11,6 +11,8 @@
 use crate::runtime::TurnResult;
 use crate::tui::spinner;
 use crate::tui::streaming::{StreamingConfig, StreamingResponse};
+
+#[cfg(test)]
 use crate::tui::widgets::permission::{DiffKind, DiffLine};
 
 use super::super::state::TuiAppState;
@@ -36,22 +38,8 @@ impl TuiAppState {
                 .conversation_display
                 .push_str(&format!("\n\n⏺ Bash({})", command));
 
-            // Get scenario response for the command from runtime
-            let response_text = {
-                let text = inner
-                    .runtime
-                    .as_mut()
-                    .map(|r| r.response_text_or_default(&command))
-                    .unwrap_or_default();
-                if text.is_empty() {
-                    format!("$ {}", command)
-                } else {
-                    text
-                }
-            };
-
-            // Display the response
-            setup_response_display(&mut inner, response_text);
+            // Use shared execute path for consistency (hooks, JSONL recording, etc.)
+            execute_with_runtime(&mut inner, command);
             return;
         }
 
@@ -72,6 +60,7 @@ impl TuiAppState {
     /// Process a prompt and generate response
     pub(in crate::tui::app) fn process_prompt(&self, prompt: String) {
         // Check for test permission triggers first (before acquiring inner lock)
+        #[cfg(test)]
         if handle_test_permission_triggers(self, &prompt) {
             return;
         }
@@ -256,8 +245,9 @@ fn restore_input_state(inner: &mut TuiAppStateInner) {
 // Test Helpers
 // ============================================================================
 
-/// Handle test permission triggers for TUI fixture tests
-/// Returns true if a permission dialog was triggered, false otherwise
+/// Handle test permission triggers for TUI fixture tests.
+/// Returns true if a permission dialog was triggered, false otherwise.
+#[cfg(test)]
 fn handle_test_permission_triggers(state: &TuiAppState, prompt: &str) -> bool {
     // Test trigger: "test bash permission"
     if prompt.contains("test bash permission") {

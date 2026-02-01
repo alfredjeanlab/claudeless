@@ -4,12 +4,11 @@
 //! Claude CLI Simulator binary entry point.
 
 use std::io::IsTerminal;
-use std::sync::Arc;
 
 use clap::Parser;
 
 use claudeless::cli::Cli;
-use claudeless::output::{print_error, print_warning};
+use claudeless::output::print_error;
 use claudeless::permission::PermissionBypass;
 use claudeless::runtime::{Runtime, RuntimeBuildError, RuntimeBuilder};
 use claudeless::state::session::SessionManager;
@@ -55,19 +54,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Run in TUI mode.
 async fn run_tui_mode(runtime: Runtime) -> Result<(), Box<dyn std::error::Error>> {
-    // Ignore SIGINT so Ctrl+C is captured as a key event rather than killing the process.
-    #[cfg(unix)]
-    {
-        use std::sync::atomic::AtomicBool;
-        let flag = Arc::new(AtomicBool::new(false));
-        if let Err(e) = signal_hook::flag::register(signal_hook::consts::SIGINT, Arc::clone(&flag))
-        {
-            print_warning(format_args!("Failed to ignore SIGINT: {}", e));
-        }
-        // Leak the flag so it stays registered for the lifetime of the process
-        std::mem::forget(flag);
-    }
-
     // Check permission bypass
     let bypass = PermissionBypass::new(
         runtime.cli().permissions.allow_dangerously_skip_permissions,
