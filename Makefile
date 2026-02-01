@@ -36,7 +36,7 @@ lint-shell:
 		echo "Error: shellcheck not found. Install with: brew install shellcheck"; \
 		exit 1; \
 	fi
-	@shellcheck -x -S warning scripts/* tests/capture/*.sh tests/capture/lib/*.sh
+	@shellcheck -x -S warning scripts/*
 
 # Check policy enforcement (allow attributes, deny.toml, shellcheck exceptions)
 lint-policy:
@@ -48,12 +48,12 @@ license:
 
 # Capture TUI fixtures from real Claude CLI
 capture:
-	./tests/capture/capture.sh
+	bun run tests/capture/capture.ts
 
 # Retry only failed capture scripts
 capture-retry:
-	./tests/capture/capture.sh --retry
+	bun run tests/capture/capture.ts --retry
 
 # Capture all TUI fixtures including skipped (may fail)
 capture-skipped:
-	RUN_SKIPPED=1 ./tests/capture/capture.sh
+	RUN_SKIPPED=1 bun run tests/capture/capture.ts
