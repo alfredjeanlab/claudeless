@@ -29,6 +29,8 @@ pub struct TuiConfig {
     pub claude_version: Option<String>,
     /// Whether output is connected to a TTY
     pub is_tty: bool,
+    /// Initial prompt from CLI positional argument
+    pub initial_prompt: Option<String>,
 }
 
 impl Default for TuiConfig {
@@ -43,6 +45,7 @@ impl Default for TuiConfig {
             timeouts: ResolvedTimeouts::default(),
             claude_version: None,
             is_tty: false,
+            initial_prompt: None,
         }
     }
 }
@@ -98,6 +101,7 @@ impl TuiConfig {
             timeouts: runtime.timeouts().clone(),
             claude_version,
             is_tty,
+            initial_prompt: cli.prompt.clone(),
         }
     }
 
@@ -108,6 +112,7 @@ impl TuiConfig {
         allow_bypass_permissions: bool,
         cli_claude_version: Option<&str>,
         is_tty: bool,
+        initial_prompt: Option<String>,
     ) -> Self {
         // CLI permission mode overrides scenario (unless CLI is default)
         let permission_mode = if *cli_permission_mode != PermissionMode::Default {
@@ -148,6 +153,7 @@ impl TuiConfig {
             timeouts: ResolvedTimeouts::resolve(config.timing.timeouts.as_ref()),
             claude_version,
             is_tty,
+            initial_prompt,
         }
     }
 }

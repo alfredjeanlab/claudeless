@@ -245,8 +245,15 @@ fn header_shows_claude_code_when_version_specified() {
     let sessions = SessionManager::new();
     let clock = ClockHandle::fake_at_epoch();
 
-    let tui_config =
-        TuiConfig::from_scenario(&config, None, &PermissionMode::Default, false, None, false);
+    let tui_config = TuiConfig::from_scenario(
+        &config,
+        None,
+        &PermissionMode::Default,
+        false,
+        None,
+        false,
+        None,
+    );
     let state = TuiAppState::for_test(sessions, clock, tui_config);
     let render = state.render_state();
 
@@ -278,6 +285,7 @@ fn cli_version_overrides_scenario() {
         false,
         Some("2.0.0"), // CLI override
         false,
+        None,
     );
 
     assert_eq!(tui_config.claude_version, Some("2.0.0".to_string()));
