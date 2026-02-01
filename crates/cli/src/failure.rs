@@ -58,58 +58,77 @@ impl FailureExecutor {
         writer: &mut W,
         state_writer: Option<&Arc<RwLock<StateWriter>>>,
     ) -> Result<(), std::io::Error> {
-        // MalformedJson doesn't record to JSONL since it simulates corrupted output
-        if matches!(spec, FailureSpec::MalformedJson { .. }) {
-            return Self::execute(spec, writer).await;
-        }
-
         // 1. Record to session JSONL if state_writer provided
         if let Some(sw) = state_writer {
-            let (error, error_type, retry_after, duration) = match spec {
-                FailureSpec::NetworkUnreachable => (
-                    "Network error: Connection refused".to_string(),
-                    Some("network_error"),
-                    None,
-                    5000u64,
-                ),
-                FailureSpec::ConnectionTimeout { after_ms } => (
-                    format!("Network error: Connection timed out after {}ms", after_ms),
-                    Some("timeout_error"),
-                    None,
-                    *after_ms,
-                ),
-                FailureSpec::AuthError { message } => {
-                    (message.clone(), Some("authentication_error"), None, 100u64)
-                }
-                FailureSpec::RateLimit { retry_after } => (
-                    format!("Rate limited. Retry after {} seconds.", retry_after),
-                    Some("rate_limit_error"),
-                    Some(*retry_after),
-                    50u64,
-                ),
-                FailureSpec::OutOfCredits => (
-                    "Billing error: No credits remaining".to_string(),
-                    Some("billing_error"),
-                    None,
-                    100u64,
-                ),
-                FailureSpec::PartialResponse { partial_text } => (
-                    format!("Partial response: {}", partial_text),
-                    Some("partial_response"),
-                    None,
-                    1000u64,
-                ),
-                FailureSpec::MalformedJson { .. } => {
-                    unreachable!("MalformedJson handled above")
-                }
-            };
-            // Acquire lock only for the duration of the record_error call
-            sw.read()
-                .record_error(&error, error_type, retry_after, duration)?;
+            Self::record_to_jsonl(spec, sw)?;
         }
 
         // 2. Execute original failure behavior
         Self::execute(spec, writer).await
+    }
+
+    /// Record failure to JSONL without writing to stderr.
+    ///
+    /// This is used by the shared execute() method to record errors to JSONL
+    /// before returning the error to the caller for mode-specific handling.
+    pub fn record_to_jsonl(
+        spec: &FailureSpec,
+        state_writer: &Arc<RwLock<StateWriter>>,
+    ) -> Result<(), std::io::Error> {
+        // MalformedJson doesn't record to JSONL since it simulates corrupted output
+        if matches!(spec, FailureSpec::MalformedJson { .. }) {
+            return Ok(());
+        }
+
+        let (error, error_type, retry_after, duration) = Self::spec_to_error_params(spec);
+        state_writer
+            .read()
+            .record_error(&error, error_type, retry_after, duration)
+    }
+
+    /// Convert a FailureSpec to error parameters for JSONL recording.
+    fn spec_to_error_params(
+        spec: &FailureSpec,
+    ) -> (String, Option<&'static str>, Option<u64>, u64) {
+        match spec {
+            FailureSpec::NetworkUnreachable => (
+                "Network error: Connection refused".to_string(),
+                Some("network_error"),
+                None,
+                5000u64,
+            ),
+            FailureSpec::ConnectionTimeout { after_ms } => (
+                format!("Network error: Connection timed out after {}ms", after_ms),
+                Some("timeout_error"),
+                None,
+                *after_ms,
+            ),
+            FailureSpec::AuthError { message } => {
+                (message.clone(), Some("authentication_error"), None, 100u64)
+            }
+            FailureSpec::RateLimit { retry_after } => (
+                format!("Rate limited. Retry after {} seconds.", retry_after),
+                Some("rate_limit_error"),
+                Some(*retry_after),
+                50u64,
+            ),
+            FailureSpec::OutOfCredits => (
+                "Billing error: No credits remaining".to_string(),
+                Some("billing_error"),
+                None,
+                100u64,
+            ),
+            FailureSpec::PartialResponse { partial_text } => (
+                format!("Partial response: {}", partial_text),
+                Some("partial_response"),
+                None,
+                1000u64,
+            ),
+            FailureSpec::MalformedJson { .. } => {
+                // Should not be called for MalformedJson
+                ("".to_string(), None, None, 0u64)
+            }
+        }
     }
 
     /// Convert a CLI failure mode to a failure spec

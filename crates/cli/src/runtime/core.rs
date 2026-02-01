@@ -10,7 +10,8 @@ use parking_lot::RwLock;
 
 use crate::capture::CaptureLog;
 use crate::cli::Cli;
-use crate::config::{ResolvedTimeouts, ResponseSpec, ToolCallSpec};
+use crate::config::{FailureSpec, ResolvedTimeouts, ResponseSpec, ToolCallSpec};
+use crate::failure::FailureExecutor;
 use crate::hooks::{HookEvent, HookExecutor, HookMessage, StopHookResponse};
 use crate::mcp::McpManager;
 use crate::scenario::Scenario;
@@ -37,8 +38,8 @@ pub struct ExecuteResponse {
 /// - Handle hook continuations
 #[derive(Debug)]
 pub struct TurnResult {
-    /// The response text from the assistant.
-    pub response_text: String,
+    /// The full response from the assistant (includes usage stats for JSON output).
+    pub response: ResponseSpec,
     /// Results from tool execution (if any tools were called).
     pub tool_results: Vec<ToolExecutionResult>,
     /// If a Stop hook blocked, this contains the continuation prompt.
@@ -46,6 +47,13 @@ pub struct TurnResult {
     pub hook_continuation: Option<String>,
     /// Whether this turn was a hook continuation (not the initial prompt).
     pub is_hook_continuation: bool,
+}
+
+impl TurnResult {
+    /// Get the response text.
+    pub fn response_text(&self) -> &str {
+        self.response.text()
+    }
 }
 
 /// Core runtime for executing prompts.
@@ -170,25 +178,21 @@ impl Runtime {
     /// 3. Fires Stop hooks
     /// 4. Records state to JSONL
     ///
-    /// Returns a `TurnResult` containing the response and any hook continuation.
-    /// If `hook_continuation` is Some, the caller should re-invoke with that prompt.
-    pub async fn execute(&mut self, prompt: &str) -> TurnResult {
+    /// Returns `Ok(TurnResult)` on success, or `Err(FailureSpec)` if the scenario
+    /// specifies a failure. On failure, error is recorded to JSONL before returning.
+    pub async fn execute(&mut self, prompt: &str) -> Result<TurnResult, FailureSpec> {
         // Apply response delay if configured (only on initial prompts)
         if !self.stop_hook_active && self.timeouts.response_delay_ms > 0 {
             tokio::time::sleep(Duration::from_millis(self.timeouts.response_delay_ms)).await;
         }
 
-        // Match prompt to get response
+        // Match prompt to get response (or failure)
         let (response_spec, _matched_rule) = match self.match_prompt_for_turn(prompt) {
             Ok(result) => result,
-            Err(e) => {
-                // Return error as response text
-                return TurnResult {
-                    response_text: format!("Error: {}", e),
-                    tool_results: vec![],
-                    hook_continuation: None,
-                    is_hook_continuation: self.stop_hook_active,
-                };
+            Err(failure_spec) => {
+                // Record error to JSONL before returning
+                self.record_failure_to_jsonl(&failure_spec);
+                return Err(failure_spec);
             }
         };
 
@@ -198,7 +202,7 @@ impl Runtime {
             tokio::time::sleep(Duration::from_millis(delay)).await;
         }
 
-        // Get response text and tool calls
+        // Get response and tool calls
         let response = response_spec.unwrap_or(ResponseSpec::Simple(String::new()));
         let response_text = response.text().to_string();
         let tool_calls = response.tool_calls().to_vec();
@@ -219,24 +223,24 @@ impl Runtime {
         // Update stop_hook_active based on result
         self.stop_hook_active = hook_continuation.is_some();
 
-        TurnResult {
-            response_text,
+        Ok(TurnResult {
+            response,
             tool_results,
             hook_continuation,
             is_hook_continuation: self.stop_hook_active,
-        }
+        })
     }
 
     /// Match prompt against scenario (for execute()).
     fn match_prompt_for_turn(
         &mut self,
         prompt: &str,
-    ) -> Result<(Option<ResponseSpec>, Option<String>), String> {
+    ) -> Result<(Option<ResponseSpec>, Option<String>), FailureSpec> {
         if let Some(ref mut scenario) = self.scenario {
             if let Some(result) = scenario.match_prompt(prompt) {
-                // Check for failure in rule - for TUI, we return the error message
-                if scenario.get_failure(&result).is_some() {
-                    return Err("Scenario failure triggered".to_string());
+                // Check for failure in rule
+                if let Some(failure_spec) = scenario.get_failure(&result) {
+                    return Err(failure_spec.clone());
                 }
 
                 Ok((
@@ -254,6 +258,13 @@ impl Runtime {
                 Some(ResponseSpec::Simple("Hello! I'm Claudeless!".to_string())),
                 None,
             ))
+        }
+    }
+
+    /// Record failure to JSONL (shared behavior for both print mode and TUI).
+    fn record_failure_to_jsonl(&self, failure_spec: &FailureSpec) {
+        if let Some(ref writer) = self.state {
+            let _ = FailureExecutor::record_to_jsonl(failure_spec, writer);
         }
     }
 
@@ -385,12 +396,12 @@ impl Runtime {
     }
 
     /// Shutdown MCP manager gracefully.
+    #[allow(clippy::await_holding_lock)]
     pub async fn shutdown_mcp(&self) {
         if let Some(ref mgr) = self.mcp_manager {
             // SAFETY(await_holding_lock): Holding write lock across await is acceptable here:
             // - Runs once at process exit, no concurrent lock acquisition
             // - parking_lot::RwLock guards are Send
-            #[allow(clippy::await_holding_lock)]
             mgr.write().shutdown().await;
         }
     }

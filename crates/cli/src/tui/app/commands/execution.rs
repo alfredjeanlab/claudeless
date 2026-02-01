@@ -175,7 +175,7 @@ fn execute_with_runtime(inner: &mut TuiAppStateInner, prompt: String) {
     };
 
     // Execute using runtime (via block_in_place + block_on since we're in sync context)
-    let result = if let Ok(handle) = tokio::runtime::Handle::try_current() {
+    let outcome = if let Ok(handle) = tokio::runtime::Handle::try_current() {
         // Use block_in_place to allow blocking from within an async context
         tokio::task::block_in_place(|| handle.block_on(async { runtime.execute(&prompt).await }))
     } else {
@@ -189,8 +189,39 @@ fn execute_with_runtime(inner: &mut TuiAppStateInner, prompt: String) {
     // Put runtime back
     inner.runtime = Some(runtime);
 
-    // Handle the turn result
-    handle_turn_result(inner, result);
+    // Handle the outcome (success or failure)
+    match outcome {
+        Ok(result) => handle_turn_result(inner, result),
+        Err(failure_spec) => handle_failure(inner, &failure_spec),
+    }
+}
+
+/// Handle a failure from Runtime::execute().
+///
+/// In TUI mode, we display the error message and return to input mode.
+/// The JSONL recording was already done by execute().
+fn handle_failure(inner: &mut TuiAppStateInner, failure_spec: &crate::config::FailureSpec) {
+    use crate::config::FailureSpec;
+
+    // Convert failure to user-friendly error message
+    let error_message = match failure_spec {
+        FailureSpec::NetworkUnreachable => "Error: Network is unreachable".to_string(),
+        FailureSpec::ConnectionTimeout { after_ms } => {
+            format!("Error: Connection timed out after {}ms", after_ms)
+        }
+        FailureSpec::AuthError { message } => format!("Error: {}", message),
+        FailureSpec::RateLimit { retry_after } => {
+            format!("Error: Rate limited. Retry after {} seconds.", retry_after)
+        }
+        FailureSpec::OutOfCredits => "Error: No credits remaining".to_string(),
+        FailureSpec::PartialResponse { partial_text } => {
+            format!("Partial response: {}", partial_text)
+        }
+        FailureSpec::MalformedJson { raw } => format!("Malformed response: {}", raw),
+    };
+
+    // Display error as response
+    start_streaming_inner(inner, error_message);
 }
 
 /// Handle the result of a Runtime::execute() call.
@@ -202,10 +233,10 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) {
     inner.display.spinner_verb = spinner::random_verb().to_string();
 
     // Set response content
-    let response_text = if result.response_text.is_empty() {
+    let response_text = if result.response_text().is_empty() {
         "I'm not sure how to help with that.".to_string()
     } else {
-        result.response_text.clone()
+        result.response_text().to_string()
     };
 
     // Use StreamingResponse for token counting
