@@ -16,7 +16,6 @@ pub use types::{AppMode, ExitReason, PermissionRequest, StatusInfo, TrustPromptS
 use iocraft::prelude::*;
 
 use crate::runtime::Runtime;
-use crate::scenario::Scenario;
 use crate::state::session::SessionManager;
 use crate::time::ClockHandle;
 
@@ -125,26 +124,14 @@ pub struct TuiApp {
 }
 
 impl TuiApp {
-    /// Create a new TUI application
+    /// Create a new TUI application with a Runtime
     pub fn new(
-        scenario: Scenario,
-        sessions: SessionManager,
-        clock: ClockHandle,
-        config: TuiConfig,
-    ) -> std::io::Result<Self> {
-        let state = TuiAppState::new(scenario, sessions, clock, config);
-        Ok(Self { state })
-    }
-
-    /// Create a new TUI application with a Runtime for shared execution
-    pub fn new_with_runtime(
-        scenario: Scenario,
         sessions: SessionManager,
         clock: ClockHandle,
         config: TuiConfig,
         runtime: Runtime,
     ) -> std::io::Result<Self> {
-        let state = TuiAppState::new_with_runtime(scenario, sessions, clock, config, Some(runtime));
+        let state = TuiAppState::new(sessions, clock, config, Some(runtime));
         Ok(Self { state })
     }
 

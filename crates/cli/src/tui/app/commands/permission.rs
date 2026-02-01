@@ -8,13 +8,22 @@
 //! - Session-level permission grants
 //! - Tool use content building for JSONL recording
 
-use crate::state::ContentBlock;
+use std::sync::Arc;
+
+use parking_lot::RwLock;
+
+use crate::state::{ContentBlock, StateWriter};
 use crate::tui::widgets::permission::{
     DiffLine, PermissionSelection, PermissionType, RichPermissionDialog,
 };
 
-use super::super::state::{DialogState, TuiAppState};
+use super::super::state::{DialogState, TuiAppState, TuiAppStateInner};
 use super::super::types::{AppMode, PermissionRequest};
+
+/// Get state writer from runtime if available.
+fn get_state_writer(inner: &TuiAppStateInner) -> Option<Arc<RwLock<StateWriter>>> {
+    inner.runtime.as_ref().and_then(|r| r.state_writer())
+}
 
 impl TuiAppState {
     /// Confirm the current permission selection
@@ -42,8 +51,9 @@ impl TuiAppState {
             );
 
             // Record tool result to JSONL
+            let state_writer = get_state_writer(&inner);
             if let (Some(ref writer), Some(ref assistant_uuid), Some(ref tool_use_id)) = (
-                &inner.state_writer,
+                &state_writer,
                 &inner.display.pending_assistant_uuid,
                 &perm.tool_use_id,
             ) {
@@ -109,7 +119,8 @@ impl TuiAppState {
             let inner = self.inner.lock();
             if inner.permission_mode.allows_all() {
                 // Record tool_use and immediate result for bypass mode
-                if let Some(ref writer) = inner.state_writer {
+                let state_writer = get_state_writer(&inner);
+                if let Some(ref writer) = state_writer {
                     if let Some(ref user_uuid) = inner.display.pending_user_uuid {
                         let (tool_use_id, content) = build_tool_use_content(&permission_type);
                         if let Ok(assistant_uuid) =
@@ -139,7 +150,8 @@ impl TuiAppState {
             let mut inner = self.inner.lock();
 
             // Record tool_use and immediate result for session grant
-            if let Some(ref writer) = inner.state_writer {
+            let state_writer = get_state_writer(&inner);
+            if let Some(ref writer) = state_writer {
                 if let Some(ref user_uuid) = inner.display.pending_user_uuid {
                     let (tool_use_id, content) = build_tool_use_content(&permission_type);
                     if let Ok(assistant_uuid) =
@@ -167,8 +179,8 @@ impl TuiAppState {
         // Show dialog as normal - record tool_use message first
         let mut inner = self.inner.lock();
 
-        // Clone writer and user_uuid to avoid borrow conflicts
-        let writer_opt = inner.state_writer.clone();
+        // Get state_writer from runtime and user_uuid
+        let writer_opt = get_state_writer(&inner);
         let user_uuid_opt = inner.display.pending_user_uuid.clone();
 
         let (tool_use_id, assistant_uuid) =

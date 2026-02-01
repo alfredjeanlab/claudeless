@@ -50,6 +50,7 @@ pub enum MatchResult {
 }
 
 /// Compiled scenario ready for matching
+#[derive(Default)]
 pub struct Scenario {
     config: ScenarioConfig,
     compiled_patterns: Vec<CompiledRule>,

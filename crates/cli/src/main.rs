@@ -9,11 +9,9 @@ use std::sync::Arc;
 use clap::Parser;
 
 use claudeless::cli::Cli;
-use claudeless::hooks::load_hooks;
 use claudeless::output::{print_error, print_warning};
 use claudeless::permission::PermissionBypass;
-use claudeless::runtime::{RuntimeBuildError, RuntimeBuilder};
-use claudeless::scenario::Scenario;
+use claudeless::runtime::{Runtime, RuntimeBuildError, RuntimeBuilder};
 use claudeless::state::session::SessionManager;
 use claudeless::time::ClockHandle;
 use claudeless::tui::{ExitReason, TuiApp, TuiConfig};
@@ -56,11 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Run in TUI mode.
-async fn run_tui_mode(
-    runtime: claudeless::runtime::Runtime,
-) -> Result<(), Box<dyn std::error::Error>> {
-    use std::path::Path;
-
+async fn run_tui_mode(runtime: Runtime) -> Result<(), Box<dyn std::error::Error>> {
     // Ignore SIGINT so Ctrl+C is captured as a key event rather than killing the process.
     #[cfg(unix)]
     {
@@ -74,45 +68,21 @@ async fn run_tui_mode(
         std::mem::forget(flag);
     }
 
-    let cli = runtime.cli();
-
     // Check permission bypass
     let bypass = PermissionBypass::new(
-        cli.permissions.allow_dangerously_skip_permissions,
-        cli.permissions.dangerously_skip_permissions,
+        runtime.cli().permissions.allow_dangerously_skip_permissions,
+        runtime.cli().permissions.dangerously_skip_permissions,
     );
 
-    // Load scenario for TUI (separate from Runtime's scenario for fallback)
-    let scenario = if let Some(ref path) = cli.simulator.scenario {
-        Scenario::load(Path::new(path))?
-    } else {
-        let config = claudeless::config::ScenarioConfig::default();
-        Scenario::from_config(config)?
-    };
-
-    // Load settings for hooks
-    let settings = load_settings(cli);
-
-    // Create TUI config from scenario
+    // Create TUI config from runtime's scenario config
     let is_tty = std::io::stdout().is_terminal();
-    let mut tui_config = TuiConfig::from_scenario(
-        scenario.config(),
-        Some(&cli.model),
-        &cli.permissions.permission_mode,
-        bypass.is_active(),
-        cli.simulator.claude_version.as_deref(),
-        is_tty,
-    );
-
-    // Use state writer and hook executor from runtime
-    tui_config.state_writer = runtime.state_writer();
-    tui_config.hook_executor = load_hooks(&settings).ok();
+    let tui_config = TuiConfig::from_runtime(&runtime, bypass.is_active(), is_tty);
 
     let sessions = SessionManager::new();
     let clock = ClockHandle::system();
 
     // Create TUI app with runtime for shared execution
-    let mut app = TuiApp::new_with_runtime(scenario, sessions, clock, tui_config, runtime)?;
+    let mut app = TuiApp::new(sessions, clock, tui_config, runtime)?;
     let exit_reason = app.run()?;
 
     // Print exit message if any (e.g., farewell from /exit)
@@ -132,31 +102,5 @@ async fn run_tui_mode(
             std::process::exit(1);
         }
         ExitReason::UserQuit | ExitReason::Completed | ExitReason::Suspended => Ok(()),
-    }
-}
-
-/// Load settings from all sources with correct precedence.
-fn load_settings(cli: &Cli) -> claudeless::state::ClaudeSettings {
-    use claudeless::state::{SettingsLoader, SettingsPaths, StateDirectory};
-    use std::path::PathBuf;
-
-    let working_dir = cli
-        .cwd
-        .as_ref()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-
-    // Resolve state directory
-    let state_dir = StateDirectory::resolve().ok();
-
-    if let Some(ref dir) = state_dir {
-        let paths = SettingsPaths::resolve(dir.root(), &working_dir);
-        let loader = SettingsLoader::new(paths);
-        loader.load_with_overrides(&cli.settings)
-    } else {
-        // No state directory available, just load from CLI settings
-        let paths = SettingsPaths::project_only(&working_dir);
-        let loader = SettingsLoader::new(paths);
-        loader.load_with_overrides(&cli.settings)
     }
 }

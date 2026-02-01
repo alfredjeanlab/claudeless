@@ -5,19 +5,15 @@ use super::render::{format_header_lines, format_status_bar};
 use super::types::ExitHint;
 use super::*;
 use crate::ansi::strip_ansi;
-use crate::config::ScenarioConfig;
 use crate::permission::PermissionMode;
-use crate::scenario::Scenario;
 use crate::state::session::SessionManager;
 use crate::time::ClockHandle;
 
 fn create_test_app() -> TuiAppState {
-    let config = ScenarioConfig::default();
-    let scenario = Scenario::from_config(config).unwrap();
     let sessions = SessionManager::new();
     let clock = ClockHandle::fake_at_epoch();
     let tui_config = TuiConfig::default();
-    TuiAppState::new(scenario, sessions, clock, tui_config)
+    TuiAppState::for_test(sessions, clock, tui_config)
 }
 
 fn key_event(code: KeyCode, modifiers: KeyModifiers) -> KeyEvent {
@@ -237,7 +233,7 @@ fn header_shows_claudeless_when_no_version_specified() {
 
 #[test]
 fn header_shows_claude_code_when_version_specified() {
-    use crate::config::IdentityConfig;
+    use crate::config::{IdentityConfig, ScenarioConfig};
 
     let config = ScenarioConfig {
         identity: IdentityConfig {
@@ -246,19 +242,12 @@ fn header_shows_claude_code_when_version_specified() {
         },
         ..Default::default()
     };
-    let scenario = Scenario::from_config(config).unwrap();
     let sessions = SessionManager::new();
     let clock = ClockHandle::fake_at_epoch();
 
-    let tui_config = TuiConfig::from_scenario(
-        scenario.config(),
-        None,
-        &PermissionMode::Default,
-        false,
-        None,
-        false,
-    );
-    let state = TuiAppState::new(scenario, sessions, clock, tui_config);
+    let tui_config =
+        TuiConfig::from_scenario(&config, None, &PermissionMode::Default, false, None, false);
+    let state = TuiAppState::for_test(sessions, clock, tui_config);
     let render = state.render_state();
 
     assert_eq!(render.claude_version, Some("2.1.12".to_string()));
@@ -272,7 +261,7 @@ fn header_shows_claude_code_when_version_specified() {
 
 #[test]
 fn cli_version_overrides_scenario() {
-    use crate::config::IdentityConfig;
+    use crate::config::{IdentityConfig, ScenarioConfig};
 
     let scenario_config = ScenarioConfig {
         identity: IdentityConfig {

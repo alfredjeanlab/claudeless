@@ -14,16 +14,14 @@ pub use dialog_state::DialogState;
 pub use display_state::DisplayState;
 pub use input_state::InputState;
 
-use parking_lot::{Mutex, RwLock};
+use parking_lot::Mutex;
 use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate::permission::PermissionMode;
 use crate::runtime::Runtime;
-use crate::scenario::Scenario;
 use crate::state::session::SessionManager;
 use crate::state::todos::{TodoState, TodoStatus};
-use crate::state::StateWriter;
 use crate::time::{Clock, ClockHandle};
 use crate::tui::widgets::context::ContextUsage;
 use crate::tui::widgets::permission::{RichPermissionDialog, SessionPermissionKey};
@@ -46,18 +44,14 @@ pub(super) struct TuiAppStateInner {
     pub display: DisplayState,
 
     // Core dependencies
-    /// Scenario for response matching (used when runtime is None)
-    pub scenario: Scenario,
-    /// Runtime for shared execution (optional, used when available)
+    /// Runtime for shared execution (required for TUI mode)
     pub runtime: Option<Runtime>,
     /// Session manager for conversation state
     pub sessions: SessionManager,
     /// Clock for timing
     pub clock: ClockHandle,
-    /// Configuration from scenario
+    /// Configuration
     pub config: TuiConfig,
-    /// State writer for JSONL persistence
-    pub state_writer: Option<Arc<RwLock<StateWriter>>>,
 
     // Session state
     /// Current application mode
@@ -111,19 +105,15 @@ impl TuiAppStateInner {
 }
 
 impl TuiAppState {
-    /// Create a new TUI app state
-    pub fn new(
-        scenario: Scenario,
-        sessions: SessionManager,
-        clock: ClockHandle,
-        config: TuiConfig,
-    ) -> Self {
-        Self::new_with_runtime(scenario, sessions, clock, config, None)
+    /// Create a new TUI app state for testing (no runtime).
+    ///
+    /// This is only used in unit tests. Production code should use `new()` with a Runtime.
+    pub fn for_test(sessions: SessionManager, clock: ClockHandle, config: TuiConfig) -> Self {
+        Self::new(sessions, clock, config, None)
     }
 
-    /// Create a new TUI app state with an optional Runtime for shared execution
-    pub fn new_with_runtime(
-        scenario: Scenario,
+    /// Create a new TUI app state with a Runtime for shared execution
+    pub fn new(
         sessions: SessionManager,
         clock: ClockHandle,
         config: TuiConfig,
@@ -145,9 +135,6 @@ impl TuiAppState {
             DialogState::None
         };
 
-        // Extract state writer before moving config
-        let state_writer = config.state_writer.clone();
-
         Self {
             inner: Arc::new(Mutex::new(TuiAppStateInner {
                 // Focused state groups
@@ -156,11 +143,9 @@ impl TuiAppState {
                 display: DisplayState::new(),
 
                 // Core dependencies
-                scenario,
                 runtime,
                 sessions,
                 clock,
-                state_writer,
 
                 // Session state
                 mode: initial_mode,

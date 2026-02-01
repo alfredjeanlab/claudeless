@@ -6,10 +6,8 @@
 //! Contains:
 //! - `execute_shell_command` - Shell command execution via Bash tool
 //! - `process_prompt` - Prompt processing and response generation
-//! - `start_streaming_inner` - Streaming response handling
 //! - Test permission triggers for fixture tests
 
-use crate::hooks::{HookEvent, HookMessage, StopHookResponse};
 use crate::runtime::TurnResult;
 use crate::tui::spinner;
 use crate::tui::streaming::{StreamingConfig, StreamingResponse};
@@ -25,25 +23,10 @@ impl TuiAppState {
         let mut inner = self.inner.lock();
 
         // Add previous response to conversation display if any
-        if !inner.display.response_content.is_empty() && !inner.display.is_command_output {
-            let response = inner.display.response_content.clone();
-            if !inner.display.conversation_display.is_empty() {
-                inner.display.conversation_display.push_str("\n\n");
-            }
-            inner
-                .display
-                .conversation_display
-                .push_str(&format!("⏺ {}", response));
-        }
+        append_previous_response(&mut inner);
 
         // Add the shell command to conversation display with ! prefix
-        if !inner.display.conversation_display.is_empty() {
-            inner.display.conversation_display.push_str("\n\n");
-        }
-        inner
-            .display
-            .conversation_display
-            .push_str(&format!("❯ ! {}", command));
+        append_to_conversation(&mut inner, "❯ !", &command);
 
         // Check if bypass mode - execute directly without permission dialog
         if inner.permission_mode.allows_all() {
@@ -53,9 +36,13 @@ impl TuiAppState {
                 .conversation_display
                 .push_str(&format!("\n\n⏺ Bash({})", command));
 
-            // Get scenario response for the command
+            // Get scenario response for the command from runtime
             let response_text = {
-                let text = inner.scenario.response_text_or_default(&command);
+                let text = inner
+                    .runtime
+                    .as_mut()
+                    .map(|r| r.response_text_or_default(&command))
+                    .unwrap_or_default();
                 if text.is_empty() {
                     format!("$ {}", command)
                 } else {
@@ -63,10 +50,8 @@ impl TuiAppState {
                 }
             };
 
-            // Start streaming the response
-            inner.display.response_content.clear();
-            inner.display.is_command_output = false;
-            start_streaming_inner(&mut inner, response_text);
+            // Display the response
+            setup_response_display(&mut inner, response_text);
             return;
         }
 
@@ -94,25 +79,10 @@ impl TuiAppState {
         let mut inner = self.inner.lock();
 
         // If there's previous response content, add it to conversation history first
-        if !inner.display.response_content.is_empty() && !inner.display.is_command_output {
-            let response = inner.display.response_content.clone();
-            if !inner.display.conversation_display.is_empty() {
-                inner.display.conversation_display.push_str("\n\n");
-            }
-            inner
-                .display
-                .conversation_display
-                .push_str(&format!("⏺ {}", response));
-        }
+        append_previous_response(&mut inner);
 
         // Add the new user prompt to conversation display
-        if !inner.display.conversation_display.is_empty() {
-            inner.display.conversation_display.push_str("\n\n");
-        }
-        inner
-            .display
-            .conversation_display
-            .push_str(&format!("❯ {}", prompt));
+        append_to_conversation(&mut inner, "❯", &prompt);
 
         inner.mode = AppMode::Thinking;
         inner.display.response_content.clear();
@@ -127,31 +97,8 @@ impl TuiAppState {
             .current_session()
             .add_turn(prompt.clone(), String::new());
 
-        // Check if Runtime is available for shared execution
-        if inner.runtime.is_some() {
-            // Use Runtime::execute() for shared agent loop
-            execute_with_runtime(&mut inner, prompt);
-        } else {
-            // Fallback: Record user message to JSONL and store UUID for linking
-            inner.display.pending_user_uuid = if let Some(ref writer) = inner.state_writer {
-                writer.write().record_user_message(&prompt).ok()
-            } else {
-                None
-            };
-
-            // Match scenario
-            let response_text = {
-                let text = inner.scenario.response_text_or_default(&prompt);
-                if text.is_empty() {
-                    "I'm not sure how to help with that.".to_string()
-                } else {
-                    text
-                }
-            };
-
-            // Start streaming (legacy path)
-            start_streaming_inner(&mut inner, response_text);
-        }
+        // Use Runtime::execute() for shared agent loop
+        execute_with_runtime(&mut inner, prompt);
     }
 }
 
@@ -164,27 +111,17 @@ impl TuiAppState {
 /// - State recording (JSONL)
 fn execute_with_runtime(inner: &mut TuiAppStateInner, prompt: String) {
     // Take the runtime temporarily to call execute()
-    let mut runtime = match inner.runtime.take() {
-        Some(r) => r,
-        None => {
-            // Fallback if runtime was somehow taken
-            let response_text = inner.scenario.response_text_or_default(&prompt);
-            start_streaming_inner(inner, response_text);
-            return;
-        }
+    // Runtime is required in TUI mode
+    let Some(mut runtime) = inner.runtime.take() else {
+        setup_response_display(inner, "Error: Runtime not available".to_string());
+        restore_input_state(inner);
+        return;
     };
 
     // Execute using runtime (via block_in_place + block_on since we're in sync context)
-    let outcome = if let Ok(handle) = tokio::runtime::Handle::try_current() {
-        // Use block_in_place to allow blocking from within an async context
-        tokio::task::block_in_place(|| handle.block_on(async { runtime.execute(&prompt).await }))
-    } else {
-        // No tokio runtime available, fall back to legacy
-        inner.runtime = Some(runtime);
-        let response_text = inner.scenario.response_text_or_default(&prompt);
-        start_streaming_inner(inner, response_text);
-        return;
-    };
+    let handle = tokio::runtime::Handle::current();
+    let outcome =
+        tokio::task::block_in_place(|| handle.block_on(async { runtime.execute(&prompt).await }));
 
     // Put runtime back
     inner.runtime = Some(runtime);
@@ -220,18 +157,13 @@ fn handle_failure(inner: &mut TuiAppStateInner, failure_spec: &crate::config::Fa
         FailureSpec::MalformedJson { raw } => format!("Malformed response: {}", raw),
     };
 
-    // Display error as response
-    start_streaming_inner(inner, error_message);
+    // Display error as response and return to input
+    setup_response_display(inner, error_message);
+    restore_input_state(inner);
 }
 
 /// Handle the result of a Runtime::execute() call.
 fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) {
-    // Update display with response
-    inner.mode = AppMode::Responding;
-    inner.display.is_streaming = true;
-    inner.display.spinner_frame = 0;
-    inner.display.spinner_verb = spinner::random_verb().to_string();
-
     // Set response content
     let response_text = if result.response_text().is_empty() {
         "I'm not sure how to help with that.".to_string()
@@ -239,7 +171,57 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) {
         result.response_text().to_string()
     };
 
-    // Use StreamingResponse for token counting
+    // Display the response
+    setup_response_display(inner, response_text);
+
+    // Handle hook continuation if present
+    if let Some(continuation) = result.hook_continuation {
+        inner.pending_hook_message = Some(continuation);
+        inner.stop_hook_active = true;
+        // Stay in responding mode - the render loop will detect pending_hook_message
+        return;
+    }
+
+    // Normal completion - restore input state
+    restore_input_state(inner);
+}
+
+// ============================================================================
+// Helper Functions - Extracted to reduce duplication
+// ============================================================================
+
+/// Append previous response content to conversation display (if any).
+fn append_previous_response(inner: &mut TuiAppStateInner) {
+    if !inner.display.response_content.is_empty() && !inner.display.is_command_output {
+        let response = inner.display.response_content.clone();
+        if !inner.display.conversation_display.is_empty() {
+            inner.display.conversation_display.push_str("\n\n");
+        }
+        inner
+            .display
+            .conversation_display
+            .push_str(&format!("⏺ {}", response));
+    }
+}
+
+/// Append a message to the conversation display with the given prefix.
+fn append_to_conversation(inner: &mut TuiAppStateInner, prefix: &str, content: &str) {
+    if !inner.display.conversation_display.is_empty() {
+        inner.display.conversation_display.push_str("\n\n");
+    }
+    inner
+        .display
+        .conversation_display
+        .push_str(&format!("{} {}", prefix, content));
+}
+
+/// Set up response display with streaming simulation.
+fn setup_response_display(inner: &mut TuiAppStateInner, response_text: String) {
+    inner.mode = AppMode::Responding;
+    inner.display.is_streaming = true;
+    inner.display.spinner_frame = 0;
+    inner.display.spinner_verb = spinner::random_verb().to_string();
+
     let config = StreamingConfig;
     let clock = inner.clock.clone();
     let response = StreamingResponse::new(response_text, config, clock);
@@ -255,16 +237,10 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) {
     if let Some(turn) = inner.sessions.current_session().turns.last_mut() {
         turn.response = inner.display.response_content.clone();
     }
+}
 
-    // Handle hook continuation if present
-    if let Some(continuation) = result.hook_continuation {
-        inner.pending_hook_message = Some(continuation);
-        inner.stop_hook_active = true;
-        // Stay in responding mode - the render loop will detect pending_hook_message
-        return;
-    }
-
-    // Reset stop_hook_active on normal completion
+/// Restore input state after response completes.
+fn restore_input_state(inner: &mut TuiAppStateInner) {
     inner.stop_hook_active = false;
     inner.mode = AppMode::Input;
 
@@ -276,91 +252,9 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) {
     }
 }
 
-/// Start streaming a response
-pub(super) fn start_streaming_inner(inner: &mut TuiAppStateInner, text: String) {
-    inner.mode = AppMode::Responding;
-    inner.display.is_streaming = true;
-    // Reset spinner for responding animation
-    inner.display.spinner_frame = 0;
-    inner.display.spinner_verb = spinner::random_verb().to_string();
-
-    let config = StreamingConfig;
-    let clock = inner.clock.clone();
-    let response = StreamingResponse::new(text, config, clock);
-
-    // For synchronous operation, just set the full text
-    // In async mode, this would use the TokenStream
-    inner.display.response_content = response.full_text().to_string();
-    inner.display.is_streaming = false;
-
-    // Update token counts
-    inner.status.output_tokens += response.tokens_streamed();
-    inner.status.input_tokens += (inner.input.buffer.len() / 4).max(1) as u32;
-
-    // Update session with response
-    if let Some(turn) = inner.sessions.current_session().turns.last_mut() {
-        turn.response = inner.display.response_content.clone();
-    }
-
-    // Record assistant response to JSONL (errors are ignored to not disrupt TUI)
-    if let (Some(ref writer), Some(ref user_uuid)) =
-        (&inner.state_writer, &inner.display.pending_user_uuid)
-    {
-        let _ = writer
-            .write()
-            .record_assistant_response(user_uuid, &inner.display.response_content);
-    }
-    inner.display.pending_user_uuid = None;
-
-    // Fire Stop hook if configured (synchronously using block_on for TUI)
-    // Note: This is a simplified implementation for the simulator
-    if let Some(ref executor) = inner.config.hook_executor {
-        if executor.has_hooks(&HookEvent::Stop) {
-            // Generate a session ID for the hook message
-            let session_id = inner
-                .status
-                .session_id
-                .clone()
-                .unwrap_or_else(|| "tui-session".to_string());
-            let stop_msg = HookMessage::stop(&session_id, inner.stop_hook_active);
-
-            // Execute hook synchronously using tokio block_on
-            if let Ok(handle) = tokio::runtime::Handle::try_current() {
-                let responses = handle.block_on(async { executor.execute(&stop_msg).await });
-                if let Ok(responses) = responses {
-                    for resp in responses {
-                        if let Some(data) = resp.data {
-                            if let Ok(stop_resp) = serde_json::from_value::<StopHookResponse>(data)
-                            {
-                                if stop_resp.is_blocked() {
-                                    // Queue the reason as next user message
-                                    inner.pending_hook_message = Some(
-                                        stop_resp.reason.unwrap_or_else(|| "continue".to_string()),
-                                    );
-                                    inner.stop_hook_active = true;
-                                    // Stay in responding mode briefly to trigger re-process
-                                    // The input handler will detect pending_hook_message
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Reset stop_hook_active on normal completion
-    inner.stop_hook_active = false;
-    inner.mode = AppMode::Input;
-
-    // Auto-restore stashed text after response completes
-    if let Some(stashed) = inner.input.stash.take() {
-        inner.input.buffer = stashed;
-        inner.input.cursor_pos = inner.input.buffer.len();
-        inner.input.show_stash_indicator = false;
-    }
-}
+// ============================================================================
+// Test Helpers
+// ============================================================================
 
 /// Handle test permission triggers for TUI fixture tests
 /// Returns true if a permission dialog was triggered, false otherwise

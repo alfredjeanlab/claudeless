@@ -2,19 +2,15 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 use super::*;
-use crate::config::ScenarioConfig;
-use crate::scenario::Scenario;
 use crate::state::session::SessionManager;
 use crate::time::ClockHandle;
 use crate::tui::widgets::permission::PermissionSelection;
 
 fn create_test_app() -> TuiAppState {
-    let config = ScenarioConfig::default();
-    let scenario = Scenario::from_config(config).unwrap();
     let sessions = SessionManager::new();
     let clock = ClockHandle::fake_at_epoch();
     let tui_config = TuiConfig::default();
-    TuiAppState::new(scenario, sessions, clock, tui_config)
+    TuiAppState::for_test(sessions, clock, tui_config)
 }
 
 fn key_event(code: KeyCode, modifiers: KeyModifiers) -> KeyEvent {

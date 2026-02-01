@@ -4,14 +4,10 @@
 //! TUI application types and configuration.
 
 use std::path::PathBuf;
-use std::sync::Arc;
-
-use parking_lot::RwLock;
 
 use crate::config::{ResolvedTimeouts, ScenarioConfig, DEFAULT_MODEL, DEFAULT_USER_NAME};
-use crate::hooks::HookExecutor;
 use crate::permission::PermissionMode;
-use crate::state::StateWriter;
+use crate::runtime::Runtime;
 use crate::tui::widgets::permission::RichPermissionDialog;
 use crate::tui::widgets::trust::TrustChoice;
 
@@ -33,10 +29,6 @@ pub struct TuiConfig {
     pub claude_version: Option<String>,
     /// Whether output is connected to a TTY
     pub is_tty: bool,
-    /// State writer for JSONL persistence
-    pub state_writer: Option<Arc<RwLock<StateWriter>>>,
-    /// Hook executor for Stop hooks
-    pub hook_executor: Option<HookExecutor>,
 }
 
 impl Default for TuiConfig {
@@ -51,13 +43,64 @@ impl Default for TuiConfig {
             timeouts: ResolvedTimeouts::default(),
             claude_version: None,
             is_tty: false,
-            state_writer: None,
-            hook_executor: None,
         }
     }
 }
 
 impl TuiConfig {
+    /// Create TuiConfig from a Runtime.
+    ///
+    /// This extracts all needed configuration from the Runtime, avoiding
+    /// duplicate loading of scenario, settings, and hooks.
+    pub fn from_runtime(runtime: &Runtime, allow_bypass_permissions: bool, is_tty: bool) -> Self {
+        let cli = runtime.cli();
+        let config = runtime.scenario_config();
+
+        // CLI permission mode overrides scenario (unless CLI is default)
+        let permission_mode = if cli.permissions.permission_mode != PermissionMode::Default {
+            cli.permissions.permission_mode.clone()
+        } else {
+            config
+                .environment
+                .permission_mode
+                .as_deref()
+                .and_then(|s| clap::ValueEnum::from_str(s, true).ok())
+                .unwrap_or_default()
+        };
+
+        // CLI claude_version overrides scenario
+        let claude_version = cli
+            .simulator
+            .claude_version
+            .clone()
+            .or_else(|| config.identity.claude_version.clone());
+
+        Self {
+            trusted: config.environment.trusted,
+            user_name: config
+                .identity
+                .user_name
+                .clone()
+                .unwrap_or_else(|| DEFAULT_USER_NAME.to_string()),
+            model: config
+                .identity
+                .default_model
+                .clone()
+                .unwrap_or_else(|| cli.model.clone()),
+            working_directory: config
+                .environment
+                .working_directory
+                .as_ref()
+                .map(PathBuf::from)
+                .unwrap_or_else(|| std::env::current_dir().unwrap_or_default()),
+            permission_mode,
+            allow_bypass_permissions,
+            timeouts: runtime.timeouts().clone(),
+            claude_version,
+            is_tty,
+        }
+    }
+
     pub fn from_scenario(
         config: &ScenarioConfig,
         cli_model: Option<&str>,
@@ -105,8 +148,6 @@ impl TuiConfig {
             timeouts: ResolvedTimeouts::resolve(config.timing.timeouts.as_ref()),
             claude_version,
             is_tty,
-            state_writer: None,
-            hook_executor: None,
         }
     }
 }

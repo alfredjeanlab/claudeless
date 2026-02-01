@@ -170,10 +170,10 @@ impl Runtime {
 
         // Combine builtin tools with MCP tools
         let mut tools: Vec<String> = self.cli.allowed_tools.clone();
-        tools.extend(self.get_mcp_tool_names());
+        tools.extend(self.mcp_tool_names());
 
         // Get MCP server info for init event
-        let mcp_servers = self.get_mcp_server_info();
+        let mcp_servers = self.mcp_server_info();
 
         writer.write_real_response_with_mcp(
             &result.response,
@@ -202,7 +202,7 @@ impl Runtime {
     }
 
     /// Get MCP tool names in qualified format.
-    pub(super) fn get_mcp_tool_names(&self) -> Vec<String> {
+    pub fn mcp_tool_names(&self) -> Vec<String> {
         match &self.mcp_manager {
             Some(manager) => {
                 let guard = manager.read();
@@ -217,7 +217,7 @@ impl Runtime {
     }
 
     /// Get MCP server info for init event.
-    pub(super) fn get_mcp_server_info(&self) -> Vec<McpServerInfo> {
+    pub fn mcp_server_info(&self) -> Vec<McpServerInfo> {
         use crate::mcp::McpServerStatus;
 
         match &self.mcp_manager {
