@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-02-01T00:50:16.212684Z",
+  "updated": "2026-02-01T00:50:32.280692Z",
   "commit": "bff817f",
   "metrics": {
     "escapes": {
@@ -9,8 +9,8 @@
         "transmute": 0
       },
       "test": {
-        "unsafe": 0,
-        "transmute": 0
+        "transmute": 0,
+        "unsafe": 0
       }
     }
   }
