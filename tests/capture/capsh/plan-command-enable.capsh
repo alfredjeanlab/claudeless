@@ -1,0 +1,26 @@
+# Capture /plan command enabling plan mode from normal state.
+# Args: --model haiku
+
+wait "for shortcuts" 10s
+
+# Ensure not in plan mode (shift-tab cycles: default -> accept-edits -> plan -> default)
+# Send once to cycle away if in plan mode
+send <Esc> "[Z"
+wait "accept edits" 3s
+
+# Send again to cycle to default mode
+send <Esc> "[Z"
+wait 1s
+
+# One more to be sure we're in default mode
+send <Esc> "[Z"
+wait "for shortcuts" 3s
+
+# Now send /plan to enable plan mode
+send "/plan" 100 <Enter>
+wait "Enabled plan mode" 5s
+snapshot "plan_command_enable"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
