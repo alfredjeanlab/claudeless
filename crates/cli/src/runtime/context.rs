@@ -121,12 +121,18 @@ impl RuntimeContext {
             .and_then(|s| s.identity.user_name.clone())
             .unwrap_or_else(|| DEFAULT_USER_NAME.to_string());
 
-        // Session ID: CLI overrides scenario, then generate random
+        // Session ID: --resume has highest priority, then --session-id, scenario, or generate random
         let session_id = cli
             .session
-            .session_id
+            .resume
             .as_ref()
             .and_then(|s| Uuid::parse_str(s).ok())
+            .or_else(|| {
+                cli.session
+                    .session_id
+                    .as_ref()
+                    .and_then(|s| Uuid::parse_str(s).ok())
+            })
             .or_else(|| {
                 scenario
                     .and_then(|s| s.identity.session_id.as_ref())

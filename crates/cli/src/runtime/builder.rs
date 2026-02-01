@@ -15,7 +15,10 @@ use crate::hooks::load_hooks;
 use crate::mcp::{load_mcp_config, McpConfig, McpManager};
 use crate::output::{print_mcp, print_mcp_warning};
 use crate::scenario::Scenario;
-use crate::state::{ClaudeSettings, SettingsLoader, SettingsPaths, StateDirectory, StateWriter};
+use crate::state::io::JsonLoad;
+use crate::state::{
+    ClaudeSettings, SessionsIndex, SettingsLoader, SettingsPaths, StateDirectory, StateWriter,
+};
 use crate::tools::create_executor_with_mcp;
 
 use super::core::Runtime;
@@ -182,21 +185,74 @@ impl RuntimeBuilder {
         // Load settings if not already loaded
         let settings = self.settings.unwrap_or_else(|| load_settings(&self.cli));
 
+        // Validate resume session exists
+        if let Some(ref resume_id) = self.cli.session.resume {
+            let state_dir = StateDirectory::resolve()
+                .map_err(|e| RuntimeBuildError::Validation(e.to_string()))?;
+
+            let working_dir = self
+                .cli
+                .cwd
+                .as_ref()
+                .map(std::path::PathBuf::from)
+                .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+
+            let index_path = state_dir
+                .project_dir(&working_dir)
+                .join("sessions-index.json");
+
+            if index_path.exists() {
+                let index = SessionsIndex::load(&index_path)
+                    .map_err(|e| RuntimeBuildError::Validation(e.to_string()))?;
+
+                if index.get(resume_id).is_none() {
+                    return Err(RuntimeBuildError::SessionNotFound(resume_id.clone()));
+                }
+            } else {
+                return Err(RuntimeBuildError::SessionNotFound(resume_id.clone()));
+            }
+        }
+
         // Build runtime context
         let runtime_ctx =
             RuntimeContext::build(self.scenario.as_ref().map(|s| s.config()), &self.cli);
 
         // Create state writer (unless --no-session-persistence)
         let state_writer = if !self.cli.session.no_session_persistence {
-            StateWriter::new(
-                runtime_ctx.session_id.to_string(),
-                &runtime_ctx.project_path,
-                runtime_ctx.launch_timestamp,
-                &runtime_ctx.model,
-                &runtime_ctx.working_directory,
-            )
-            .ok()
-            .map(|w| Arc::new(RwLock::new(w)))
+            let session_id = runtime_ctx.session_id.to_string();
+
+            // Load existing message count if resuming
+            let initial_message_count = if self.cli.session.resume.is_some() {
+                StateWriter::load_message_count_from_index(&runtime_ctx.project_path, &session_id)
+                    .unwrap_or(0)
+            } else {
+                0
+            };
+
+            if initial_message_count > 0 {
+                // Resuming with existing messages
+                StateWriter::new_with_count(
+                    session_id,
+                    &runtime_ctx.project_path,
+                    runtime_ctx.launch_timestamp,
+                    &runtime_ctx.model,
+                    &runtime_ctx.working_directory,
+                    initial_message_count,
+                )
+                .ok()
+                .map(|w| Arc::new(RwLock::new(w)))
+            } else {
+                // New session or no messages yet
+                StateWriter::new(
+                    session_id,
+                    &runtime_ctx.project_path,
+                    runtime_ctx.launch_timestamp,
+                    &runtime_ctx.model,
+                    &runtime_ctx.working_directory,
+                )
+                .ok()
+                .map(|w| Arc::new(RwLock::new(w)))
+            }
         } else {
             None
         };
@@ -296,6 +352,9 @@ pub enum RuntimeBuildError {
 
     #[error("MCP server '{name}' failed to start: {error}")]
     McpServer { name: String, error: String },
+
+    #[error("Session not found: {0}")]
+    SessionNotFound(String),
 }
 
 #[cfg(test)]

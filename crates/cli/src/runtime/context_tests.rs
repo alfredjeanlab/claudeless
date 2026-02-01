@@ -351,3 +351,64 @@ fn test_build_with_state_loads_settings() {
     // Settings should be loaded from project
     assert_eq!(ctx.settings().permissions.allow, vec!["TestTool"]);
 }
+
+// =========================================================================
+// Resume Session Tests
+// =========================================================================
+
+#[test]
+fn test_resume_session_id_priority() {
+    // --resume should take priority over --session-id
+    let mut cli = default_cli();
+    cli.session.resume = Some("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa".to_string());
+    cli.session.session_id = Some("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb".to_string());
+
+    let ctx = RuntimeContext::build(None, &cli);
+
+    // --resume wins
+    assert_eq!(
+        ctx.session_id.to_string(),
+        "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    );
+}
+
+#[test]
+fn test_resume_overrides_scenario() {
+    use crate::config::IdentityConfig;
+
+    let mut cli = default_cli();
+    cli.session.resume = Some("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa".to_string());
+
+    let scenario = ScenarioConfig {
+        name: "test".to_string(),
+        identity: IdentityConfig {
+            session_id: Some("cccccccc-cccc-cccc-cccc-cccccccccccc".to_string()),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
+    let ctx = RuntimeContext::build(Some(&scenario), &cli);
+
+    // --resume wins over scenario
+    assert_eq!(
+        ctx.session_id.to_string(),
+        "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    );
+}
+
+#[test]
+fn test_resume_invalid_uuid_ignored() {
+    // Invalid resume UUID should be ignored, falling back to session_id
+    let mut cli = default_cli();
+    cli.session.resume = Some("not-a-valid-uuid".to_string());
+    cli.session.session_id = Some("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb".to_string());
+
+    let ctx = RuntimeContext::build(None, &cli);
+
+    // Falls back to session_id since resume is invalid
+    assert_eq!(
+        ctx.session_id.to_string(),
+        "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+    );
+}
