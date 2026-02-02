@@ -498,6 +498,7 @@ impl<W: Write> OutputWriter<W> {
         mcp_servers: Vec<McpServerInfo>,
     ) -> std::io::Result<()> {
         let (text, usage) = response.text_and_usage();
+        let tool_calls = response.tool_calls();
 
         let msg_id = format!("msg_{}", uuid_stub());
 
@@ -510,12 +511,24 @@ impl<W: Write> OutputWriter<W> {
             input_tokens: 100,
             output_tokens: estimate_tokens(&text),
         });
+
+        // Build content blocks: text + any tool_use blocks
+        let mut content_blocks = vec![serde_json::json!({"type": "text", "text": text})];
+        for (i, call) in tool_calls.iter().enumerate() {
+            content_blocks.push(serde_json::json!({
+                "type": "tool_use",
+                "id": format!("toolu_{:08x}", i),
+                "name": call.tool,
+                "input": call.input,
+            }));
+        }
+
         let message = CondensedMessage {
             id: msg_id,
             model: self.model.clone(),
             role: "assistant".to_string(),
             message_type: "message".to_string(),
-            content: serde_json::json!([{"type": "text", "text": text}]),
+            content: serde_json::json!(content_blocks),
             stop_reason: None,
             stop_sequence: None,
             usage: serde_json::json!({

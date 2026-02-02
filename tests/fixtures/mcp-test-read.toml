@@ -6,6 +6,9 @@ name = "mcp-read-test"
 [tool_execution]
 mode = "mock"
 
+[tool_execution.tools.mcp__filesystem__read_file]
+auto_approve = true
+
 [[responses]]
 pattern = { type = "contains", text = "read" }
 

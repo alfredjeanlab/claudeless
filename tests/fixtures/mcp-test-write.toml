@@ -6,6 +6,9 @@ name = "mcp-write-test"
 [tool_execution]
 mode = "mock"
 
+[tool_execution.tools.mcp__filesystem__write_file]
+auto_approve = true
+
 [[responses]]
 pattern = { type = "contains", text = "create" }
 
