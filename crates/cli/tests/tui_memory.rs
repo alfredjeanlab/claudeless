@@ -41,7 +41,7 @@ fn test_tui_memory_command_shows_autocomplete() {
 
     // Type /memory
     tui.send_keys("/memory");
-    let capture = tui.wait_for_change(&previous);
+    let capture = tui.wait_for("conversation memory");
 
     assert!(
         capture.contains("/memory") && capture.contains("View or manage conversation memory"),
@@ -64,7 +64,7 @@ fn test_tui_memory_shows_dialog_with_sources() {
 
     // Type /memory and press Enter
     tui.send_keys("/memory");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("conversation memory");
     tui.send_keys("Enter");
     let capture = tui.wait_for("Memory");
 
@@ -92,7 +92,7 @@ fn test_tui_memory_shows_active_files_count() {
 
     // Type /memory and press Enter
     tui.send_keys("/memory");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("conversation memory");
     tui.send_keys("Enter");
     let capture = tui.wait_for("Memory");
 
@@ -118,7 +118,7 @@ fn test_tui_memory_arrow_navigation() {
 
     // Open memory dialog
     tui.send_keys("/memory");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("conversation memory");
     tui.send_keys("Enter");
     let initial = tui.wait_for("Memory");
 
@@ -148,7 +148,7 @@ fn test_tui_memory_escape_dismisses_dialog() {
 
     // Open memory dialog
     tui.send_keys("/memory");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("conversation memory");
     tui.send_keys("Enter");
     let dialog = tui.wait_for("Memory");
 
@@ -177,7 +177,7 @@ fn test_tui_memory_enter_shows_selected() {
 
     // Open memory dialog
     tui.send_keys("/memory");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("conversation memory");
     tui.send_keys("Enter");
     let dialog = tui.wait_for("Memory");
 
@@ -207,7 +207,7 @@ fn test_tui_memory_shows_no_files_gracefully() {
 
     // Type /memory and press Enter
     tui.send_keys("/memory");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("conversation memory");
     tui.send_keys("Enter");
     let capture = tui.wait_for("Memory");
 

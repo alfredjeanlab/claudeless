@@ -52,11 +52,10 @@ const SCENARIO: &str = r#"
 #[test]
 fn test_tui_hooks_command_shows_autocomplete() {
     let tui = TuiTestSession::new("hooks-autocomplete", SCENARIO);
-    let previous = tui.capture();
 
     // Type /hooks
     tui.send_keys("/hooks");
-    let capture = tui.wait_for_change(&previous);
+    let capture = tui.wait_for("Manage hook configurations for tool events");
 
     assert!(
         capture.contains("/hooks")
@@ -81,7 +80,7 @@ fn test_tui_hooks_shows_dialog_with_hook_types() {
 
     // Type /hooks and press Enter
     tui.send_keys("/hooks");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Manage hook");
     tui.send_keys("Enter");
     let capture = tui.wait_for("Hooks");
 
@@ -114,7 +113,7 @@ fn test_tui_hooks_shows_active_hooks_count() {
 
     // Type /hooks and press Enter
     tui.send_keys("/hooks");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Manage hook");
     tui.send_keys("Enter");
     let capture = tui.wait_for("Hooks");
 
@@ -141,7 +140,7 @@ fn test_tui_hooks_arrow_navigation() {
 
     // Open hooks dialog
     tui.send_keys("/hooks");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Manage hook");
     tui.send_keys("Enter");
     let initial = tui.wait_for("PreToolUse");
 
@@ -171,11 +170,10 @@ fn test_tui_hooks_arrow_navigation() {
 #[test]
 fn test_tui_hooks_list_scrolls() {
     let tui = TuiTestSession::new("hooks-scroll", SCENARIO);
-    let previous = tui.capture();
 
     // Open hooks dialog
     tui.send_keys("/hooks");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Manage hook");
     tui.send_keys("Enter");
     let initial = tui.wait_for("Hooks");
 
@@ -208,7 +206,7 @@ fn test_tui_hooks_select_shows_matchers() {
 
     // Open hooks dialog and select PreToolUse
     tui.send_keys("/hooks");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Manage hook");
     tui.send_keys("Enter");
     let hooks = tui.wait_for("PreToolUse");
     tui.send_keys("Enter");
@@ -238,7 +236,7 @@ fn test_tui_hooks_matchers_shows_exit_code_help() {
 
     // Open hooks dialog and select PreToolUse
     tui.send_keys("/hooks");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Manage hook");
     tui.send_keys("Enter");
     let hooks = tui.wait_for("PreToolUse");
     tui.send_keys("Enter");
@@ -272,7 +270,7 @@ fn test_tui_hooks_escape_dismisses_dialog() {
 
     // Open hooks dialog
     tui.send_keys("/hooks");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Manage hook");
     tui.send_keys("Enter");
     let dialog = tui.wait_for("Hooks");
 
@@ -298,7 +296,7 @@ fn test_tui_hooks_escape_from_matchers_returns_to_hooks() {
 
     // Open hooks dialog and select PreToolUse
     tui.send_keys("/hooks");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Manage hook");
     tui.send_keys("Enter");
     let _ = tui.wait_for("PreToolUse");
     tui.send_keys("Enter");

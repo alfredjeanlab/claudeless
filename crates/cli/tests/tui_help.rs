@@ -37,11 +37,10 @@ fn scenario() -> String {
 #[test]
 fn test_tui_help_command_shows_autocomplete() {
     let tui = TuiTestSession::new("help-autocomplete", &scenario());
-    let previous = tui.capture();
 
     // Type /help
     tui.send_keys("/help");
-    let capture = tui.wait_for_change(&previous);
+    let capture = tui.wait_for("Show help and available commands");
 
     assert!(
         capture.contains("/help") && capture.contains("Show help and available commands"),
@@ -65,7 +64,7 @@ fn test_tui_help_shows_dialog_with_general_tab() {
 
     // Type /help and press Enter
     tui.send_keys("/help");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Show help and available commands");
     tui.send_keys("Enter");
     let capture = tui.wait_for("general");
 
@@ -103,7 +102,7 @@ fn test_tui_help_tab_shows_commands_tab() {
 
     // Type /help, press Enter, then Tab to go to commands tab
     tui.send_keys("/help");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Show help and available commands");
     tui.send_keys("Enter");
     let general = tui.wait_for("general");
     tui.send_keys("Tab");
@@ -132,7 +131,7 @@ fn test_tui_help_tab_cycles_through_all_tabs() {
 
     // Type /help and press Enter
     tui.send_keys("/help");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Show help and available commands");
     tui.send_keys("Enter");
     let general = tui.wait_for("general");
 
@@ -165,7 +164,7 @@ fn test_tui_help_arrow_keys_navigate_tabs() {
 
     // Open help dialog
     tui.send_keys("/help");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Show help and available commands");
     tui.send_keys("Enter");
     let general = tui.wait_for("general");
 
@@ -204,7 +203,7 @@ fn test_tui_help_commands_arrow_navigation() {
 
     // Navigate to commands tab
     tui.send_keys("/help");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Show help and available commands");
     tui.send_keys("Enter");
     let general = tui.wait_for("general");
     tui.send_keys("Tab");
@@ -244,7 +243,7 @@ fn test_tui_help_escape_dismisses_dialog() {
 
     // Open help dialog
     tui.send_keys("/help");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Show help and available commands");
     tui.send_keys("Enter");
     let dialog = tui.wait_for("general");
 
@@ -270,7 +269,7 @@ fn test_tui_help_dismiss_returns_to_clean_input() {
 
     // Open and dismiss help dialog
     tui.send_keys("/help");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Show help and available commands");
     tui.send_keys("Enter");
     let dialog = tui.wait_for("general");
     tui.send_keys("Escape");
