@@ -300,11 +300,10 @@ fn test_tui_exit_command_shows_autocomplete() {
 #[test]
 fn test_tui_exit_command_exits_with_farewell() {
     let tui = TuiTestSession::new("exit-command", &scenario());
-    let previous = tui.capture();
 
     // Type /exit and press Enter
     tui.send_keys("/exit");
-    let _ = tui.wait_for_change(&previous);
+    let _ = tui.wait_for("Exit the REPL");
     tui.send_keys("Enter");
 
     // Wait for shell prompt to appear (indicating exit)
