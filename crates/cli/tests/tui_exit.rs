@@ -281,11 +281,10 @@ fn test_tui_ctrl_d_double_press_exits() {
 #[test]
 fn test_tui_exit_command_shows_autocomplete() {
     let tui = TuiTestSession::new("exit-autocomplete", &scenario());
-    let previous = tui.capture();
 
     // Type /exit
     tui.send_keys("/exit");
-    let capture = tui.wait_for_change(&previous);
+    let capture = tui.wait_for("Exit the REPL");
 
     assert!(
         capture.contains("/exit") && capture.contains("Exit the REPL"),

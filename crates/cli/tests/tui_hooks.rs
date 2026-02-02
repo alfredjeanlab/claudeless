@@ -76,8 +76,6 @@ fn test_tui_hooks_command_shows_autocomplete() {
 #[test]
 fn test_tui_hooks_shows_dialog_with_hook_types() {
     let tui = TuiTestSession::new("hooks-dialog", SCENARIO);
-    let previous = tui.capture();
-
     // Type /hooks and press Enter
     tui.send_keys("/hooks");
     let _ = tui.wait_for("Manage hook");
@@ -109,8 +107,6 @@ fn test_tui_hooks_shows_dialog_with_hook_types() {
 #[test]
 fn test_tui_hooks_shows_active_hooks_count() {
     let tui = TuiTestSession::new("hooks-count", SCENARIO);
-    let previous = tui.capture();
-
     // Type /hooks and press Enter
     tui.send_keys("/hooks");
     let _ = tui.wait_for("Manage hook");
@@ -136,8 +132,6 @@ fn test_tui_hooks_shows_active_hooks_count() {
 #[test]
 fn test_tui_hooks_arrow_navigation() {
     let tui = TuiTestSession::new("hooks-nav", SCENARIO);
-    let previous = tui.capture();
-
     // Open hooks dialog
     tui.send_keys("/hooks");
     let _ = tui.wait_for("Manage hook");
@@ -202,8 +196,6 @@ fn test_tui_hooks_list_scrolls() {
 #[test]
 fn test_tui_hooks_select_shows_matchers() {
     let tui = TuiTestSession::new("hooks-matchers", SCENARIO);
-    let previous = tui.capture();
-
     // Open hooks dialog and select PreToolUse
     tui.send_keys("/hooks");
     let _ = tui.wait_for("Manage hook");
@@ -232,8 +224,6 @@ fn test_tui_hooks_select_shows_matchers() {
 #[test]
 fn test_tui_hooks_matchers_shows_exit_code_help() {
     let tui = TuiTestSession::new("hooks-exit-codes", SCENARIO);
-    let previous = tui.capture();
-
     // Open hooks dialog and select PreToolUse
     tui.send_keys("/hooks");
     let _ = tui.wait_for("Manage hook");
@@ -266,8 +256,6 @@ fn test_tui_hooks_matchers_shows_exit_code_help() {
 #[test]
 fn test_tui_hooks_escape_dismisses_dialog() {
     let tui = TuiTestSession::new("hooks-dismiss", SCENARIO);
-    let previous = tui.capture();
-
     // Open hooks dialog
     tui.send_keys("/hooks");
     let _ = tui.wait_for("Manage hook");
@@ -292,8 +280,6 @@ fn test_tui_hooks_escape_dismisses_dialog() {
 #[test]
 fn test_tui_hooks_escape_from_matchers_returns_to_hooks() {
     let tui = TuiTestSession::new("hooks-back", SCENARIO);
-    let previous = tui.capture();
-
     // Open hooks dialog and select PreToolUse
     tui.send_keys("/hooks");
     let _ = tui.wait_for("Manage hook");

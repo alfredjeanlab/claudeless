@@ -37,8 +37,6 @@ fn scenario() -> String {
 #[test]
 fn test_tui_memory_command_shows_autocomplete() {
     let tui = TuiTestSession::new("memory-autocomplete", &scenario());
-    let previous = tui.capture();
-
     // Type /memory
     tui.send_keys("/memory");
     let capture = tui.wait_for("conversation memory");
@@ -60,8 +58,6 @@ fn test_tui_memory_command_shows_autocomplete() {
 #[test]
 fn test_tui_memory_shows_dialog_with_sources() {
     let tui = TuiTestSession::new("memory-dialog", &scenario());
-    let previous = tui.capture();
-
     // Type /memory and press Enter
     tui.send_keys("/memory");
     let _ = tui.wait_for("conversation memory");
@@ -88,8 +84,6 @@ fn test_tui_memory_shows_dialog_with_sources() {
 #[test]
 fn test_tui_memory_shows_active_files_count() {
     let tui = TuiTestSession::new("memory-count", &scenario());
-    let previous = tui.capture();
-
     // Type /memory and press Enter
     tui.send_keys("/memory");
     let _ = tui.wait_for("conversation memory");
@@ -114,8 +108,6 @@ fn test_tui_memory_shows_active_files_count() {
 #[test]
 fn test_tui_memory_arrow_navigation() {
     let tui = TuiTestSession::new("memory-nav", &scenario());
-    let previous = tui.capture();
-
     // Open memory dialog
     tui.send_keys("/memory");
     let _ = tui.wait_for("conversation memory");
@@ -144,8 +136,6 @@ fn test_tui_memory_arrow_navigation() {
 #[test]
 fn test_tui_memory_escape_dismisses_dialog() {
     let tui = TuiTestSession::new("memory-dismiss", &scenario());
-    let previous = tui.capture();
-
     // Open memory dialog
     tui.send_keys("/memory");
     let _ = tui.wait_for("conversation memory");
@@ -173,8 +163,6 @@ fn test_tui_memory_escape_dismisses_dialog() {
 #[test]
 fn test_tui_memory_enter_shows_selected() {
     let tui = TuiTestSession::new("memory-select", &scenario());
-    let previous = tui.capture();
-
     // Open memory dialog
     tui.send_keys("/memory");
     let _ = tui.wait_for("conversation memory");
@@ -203,8 +191,6 @@ fn test_tui_memory_enter_shows_selected() {
 #[test]
 fn test_tui_memory_shows_no_files_gracefully() {
     let tui = TuiTestSession::new("memory-no-files", &scenario());
-    let previous = tui.capture();
-
     // Type /memory and press Enter
     tui.send_keys("/memory");
     let _ = tui.wait_for("conversation memory");

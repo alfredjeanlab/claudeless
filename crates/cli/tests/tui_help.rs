@@ -60,8 +60,6 @@ fn test_tui_help_command_shows_autocomplete() {
 #[test]
 fn test_tui_help_shows_dialog_with_general_tab() {
     let tui = TuiTestSession::new("help-general-tab", &scenario());
-    let previous = tui.capture();
-
     // Type /help and press Enter
     tui.send_keys("/help");
     let _ = tui.wait_for("Show help and available commands");
@@ -98,8 +96,6 @@ fn test_tui_help_shows_dialog_with_general_tab() {
 #[test]
 fn test_tui_help_tab_shows_commands_tab() {
     let tui = TuiTestSession::new("help-commands-tab", &scenario());
-    let previous = tui.capture();
-
     // Type /help, press Enter, then Tab to go to commands tab
     tui.send_keys("/help");
     let _ = tui.wait_for("Show help and available commands");
@@ -127,8 +123,6 @@ fn test_tui_help_tab_shows_commands_tab() {
 #[test]
 fn test_tui_help_tab_cycles_through_all_tabs() {
     let tui = TuiTestSession::new("help-tab-cycle", &scenario());
-    let previous = tui.capture();
-
     // Type /help and press Enter
     tui.send_keys("/help");
     let _ = tui.wait_for("Show help and available commands");
@@ -160,8 +154,6 @@ fn test_tui_help_tab_cycles_through_all_tabs() {
 #[test]
 fn test_tui_help_arrow_keys_navigate_tabs() {
     let tui = TuiTestSession::new("help-arrow-tabs", &scenario());
-    let previous = tui.capture();
-
     // Open help dialog
     tui.send_keys("/help");
     let _ = tui.wait_for("Show help and available commands");
@@ -199,8 +191,6 @@ fn test_tui_help_arrow_keys_navigate_tabs() {
 #[test]
 fn test_tui_help_commands_arrow_navigation() {
     let tui = TuiTestSession::new("help-commands-nav", &scenario());
-    let previous = tui.capture();
-
     // Navigate to commands tab
     tui.send_keys("/help");
     let _ = tui.wait_for("Show help and available commands");
@@ -239,8 +229,6 @@ fn test_tui_help_commands_arrow_navigation() {
 #[test]
 fn test_tui_help_escape_dismisses_dialog() {
     let tui = TuiTestSession::new("help-dismiss", &scenario());
-    let previous = tui.capture();
-
     // Open help dialog
     tui.send_keys("/help");
     let _ = tui.wait_for("Show help and available commands");
@@ -265,8 +253,6 @@ fn test_tui_help_escape_dismisses_dialog() {
 #[test]
 fn test_tui_help_dismiss_returns_to_clean_input() {
     let tui = TuiTestSession::new("help-dismiss-clean", &scenario());
-    let previous = tui.capture();
-
     // Open and dismiss help dialog
     tui.send_keys("/help");
     let _ = tui.wait_for("Show help and available commands");
