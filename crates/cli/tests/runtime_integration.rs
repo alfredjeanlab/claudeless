@@ -111,20 +111,23 @@ fn test_runtime_builder_with_settings() {
     // with_settings should not fail - if it did, we'd have panicked above
 }
 
-/// Test that permission bypass validation works.
+/// Test that permission bypass flags are accepted by the builder.
+///
+/// Real Claude CLI allows --dangerously-skip-permissions without --allow in print mode.
+/// The TUI handles validation via a confirmation dialog instead.
 #[test]
 fn test_runtime_builder_permission_bypass() {
-    // --dangerously-skip-permissions without --allow-dangerously-skip-permissions should fail
+    // --dangerously-skip-permissions without --allow succeeds (matches real Claude CLI)
     let cli =
         Cli::try_parse_from(["claude", "-p", "test", "--dangerously-skip-permissions"]).unwrap();
 
     let builder = RuntimeBuilder::new(cli);
     assert!(
-        builder.is_err(),
-        "Should fail without allow-dangerously-skip-permissions"
+        builder.is_ok(),
+        "Should succeed in print mode without --allow flag"
     );
 
-    // With both flags, should succeed
+    // With both flags, should also succeed
     let cli = Cli::try_parse_from([
         "claude",
         "-p",

@@ -87,10 +87,11 @@ fn test_tui_shell_mode_shows_command() {
     tui.send_keys("ls -la");
     let capture = tui.wait_for("ls -la");
 
-    // Should show '! ls -la' in input (with space after !)
+    // Should show '!' followed by 'ls -la' in input
+    // Note: TUI uses non-breaking space (U+00A0) between '!' and the command
     assert!(
-        capture.contains("! ls -la"),
-        "Shell mode should show command after '! ' prefix.\nCapture:\n{}",
+        capture.contains("!\u{a0}ls -la") || capture.contains("! ls -la"),
+        "Shell mode should show command after '!' prefix.\nCapture:\n{}",
         capture
     );
 }
@@ -222,8 +223,9 @@ fn test_tui_shell_mode_with_pipe_command() {
     let capture = tui.wait_for("ls | head");
 
     // Should show the full command with pipe
+    // Note: TUI uses non-breaking space (U+00A0) between '!' and the command
     assert!(
-        capture.contains("! ls | head"),
+        capture.contains("!\u{a0}ls | head") || capture.contains("! ls | head"),
         "Shell mode should handle pipe characters.\nCapture:\n{}",
         capture
     );
@@ -267,8 +269,9 @@ fn test_tui_shell_mode_with_env_variable() {
     let capture = tui.wait_for("$HOME");
 
     // Should show the command with env variable
+    // Note: TUI uses non-breaking space (U+00A0) between '!' and the command
     assert!(
-        capture.contains("! echo $HOME"),
+        capture.contains("!\u{a0}echo $HOME") || capture.contains("! echo $HOME"),
         "Shell mode should handle environment variables.\nCapture:\n{}",
         capture
     );

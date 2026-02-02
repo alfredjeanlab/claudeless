@@ -245,7 +245,8 @@ fn test_tui_slash_tab_completes_first_command() {
     // Press Tab without navigation (should complete to first command)
     tui.send_keys("Tab");
     // Wait for completion - the input line should show /add-dir
-    let capture = tui.wait_for("❯ /add-dir");
+    // Note: TUI uses non-breaking space (U+00A0) after ❯
+    let capture = tui.wait_for("❯\u{a0}/add-dir");
 
     assert!(
         capture.contains("/add-dir"),
@@ -358,8 +359,9 @@ fn test_tui_slash_escape_from_filtered_keeps_text() {
     let capture = tui.wait_for("Esc to clear again");
 
     // Should still show /he in input
+    // Note: TUI uses non-breaking space (U+00A0) after ❯
     assert!(
-        capture.contains("❯ /he"),
+        capture.contains("❯\u{a0}/he") || capture.contains("❯ /he"),
         "Input should still contain /he.\nCapture:\n{}",
         capture
     );

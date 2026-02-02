@@ -70,20 +70,15 @@ fn test_default_permission_mode() {
 mod bypass_validation {
     use super::*;
 
+    /// Real Claude CLI allows --dangerously-skip-permissions without --allow in print mode.
     #[test]
-    fn test_bypass_without_allow_fails() {
+    fn test_bypass_without_allow_succeeds_in_print_mode() {
         let output = Command::new(claudeless_bin())
             .args(["-p", "--dangerously-skip-permissions", "hello"])
             .output()
             .expect("Failed to run claudeless");
 
-        assert!(!output.status.success(), "Expected failure: {:?}", output);
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        assert!(
-            stderr.contains("--allow-dangerously-skip-permissions"),
-            "Expected stderr to contain '--allow-dangerously-skip-permissions': {}",
-            stderr
-        );
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
     #[test]
@@ -123,37 +118,16 @@ mod bypass_validation {
         assert!(output.status.success(), "Expected success: {:?}", output);
     }
 
+    /// Real Claude CLI allows CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS without allow env in print mode.
     #[test]
-    fn test_bypass_env_without_allow_env_fails() {
+    fn test_bypass_env_without_allow_env_succeeds_in_print_mode() {
         let output = Command::new(claudeless_bin())
             .env("CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS", "true")
             .args(["-p", "hello"])
             .output()
             .expect("Failed to run claudeless");
 
-        assert!(!output.status.success(), "Expected failure: {:?}", output);
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        assert!(
-            stderr.contains("--allow-dangerously-skip-permissions"),
-            "Expected stderr to contain '--allow-dangerously-skip-permissions': {}",
-            stderr
-        );
-    }
-
-    #[test]
-    fn test_bypass_error_mentions_sandbox() {
-        let output = Command::new(claudeless_bin())
-            .args(["-p", "--dangerously-skip-permissions", "hello"])
-            .output()
-            .expect("Failed to run claudeless");
-
-        assert!(!output.status.success(), "Expected failure: {:?}", output);
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        assert!(
-            stderr.contains("sandbox"),
-            "Expected stderr to contain 'sandbox': {}",
-            stderr
-        );
+        assert!(output.status.success(), "Expected success: {:?}", output);
     }
 }
 
