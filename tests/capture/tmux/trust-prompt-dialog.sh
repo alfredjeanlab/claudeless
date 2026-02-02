@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Alfred Jean LLC
 # Capture trust prompt dialog using tmux.
 #
 # Creates a temp folder with .claude/settings.json containing allowedTools,

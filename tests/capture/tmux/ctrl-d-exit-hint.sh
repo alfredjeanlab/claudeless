@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Alfred Jean LLC
 # Capture "Press Ctrl-D to exit" hint using tmux.
 #
 # Ctrl-D cannot be captured via capsh because TUI runs in raw mode,

@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Alfred Jean LLC
 # Common library for capsh fixture capture
 # shellcheck disable=SC2034  # Variables used by sourcing scripts
 

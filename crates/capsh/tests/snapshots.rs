@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC
+
 //! Snapshot tests comparing full screen output against fixtures.
 //!
 //! These tests verify exact terminal rendering by comparing captured frames

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC
+
 //! PTY (pseudo-terminal) handling.
 //!
 //! Creates a PTY pair, spawns the child process, and provides

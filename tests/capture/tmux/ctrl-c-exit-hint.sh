@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Alfred Jean LLC
 # Capture "Press Ctrl-C again to exit" hint using tmux.
 #
 # Ctrl-C cannot be captured via capsh because TUI runs in raw mode,

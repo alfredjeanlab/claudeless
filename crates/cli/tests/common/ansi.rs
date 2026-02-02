@@ -354,5 +354,4 @@ mod tests {
         let escaped = escape_ansi_for_display(input);
         assert_eq!(escaped, "[38;2;215;119;87mOrange[39m");
     }
-
 }

@@ -1,4 +1,6 @@
 #!/usr/bin/env bun
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC
 
 import * as fs from "node:fs";
 import * as os from "node:os";

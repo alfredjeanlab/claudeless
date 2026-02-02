@@ -92,11 +92,10 @@ fn test_tui_slash_menu_shows_descriptions() {
 #[test]
 fn test_tui_slash_filters_commands() {
     let tui = TuiTestSession::new("slash-filter", &scenario());
-    let previous = tui.capture();
 
     // Type /co
     tui.send_keys("/co");
-    let capture = tui.wait_for_change(&previous);
+    let capture = tui.wait_for("/compact");
 
     // Should show commands matching "co"
     assert!(
@@ -331,8 +330,9 @@ fn test_tui_slash_escape_closes_menu_keeps_text() {
     let capture = tui.wait_for("Esc to clear again");
 
     // Should still show / in input but menu closed
+    // Note: TUI uses non-breaking space (U+00A0) after ❯
     assert!(
-        capture.contains("❯ /"),
+        capture.contains("❯\u{a0}/") || capture.contains("❯ /"),
         "Input should still contain /.\nCapture:\n{}",
         capture
     );

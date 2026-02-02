@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC
+
 //! Non-blocking I/O helpers for PTY operations.
 
 use nix::errno::Errno;

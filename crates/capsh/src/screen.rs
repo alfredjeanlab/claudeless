@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC
+
 //! Terminal screen buffer using avt.
 //!
 //! Wraps the avt virtual terminal to track rendered state
