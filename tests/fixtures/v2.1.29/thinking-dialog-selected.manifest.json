@@ -1,0 +1,7 @@
+{
+  "script": "thinking-dialog-selected",
+  "snapshots": [
+    "thinking_dialog_disabled_selected",
+    "thinking_dialog_enabled_selected"
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "script": "slash-search-tab-complete",
+  "snapshots": [
+    "slash_search_tab_complete"
+  ]
+}

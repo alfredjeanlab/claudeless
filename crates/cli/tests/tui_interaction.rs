@@ -10,7 +10,7 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, simple_scenario_toml, TuiTestSession};
+use common::{simple_scenario_toml, TuiTestSession};
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
@@ -55,52 +55,6 @@ fn test_tui_shows_response_with_indicator() {
         "TUI should show response indicator (⏺ or similar).\nCapture:\n{}",
         capture
     );
-}
-
-/// Compare response format against real Claude fixture
-#[test]
-fn test_response_format_matches_fixture() {
-    let tui = TuiTestSession::new(
-        "fixture-response",
-        r#"
-        {
-            "default_response": "Hello there friend.",
-            "trusted": true,
-            "claude_version": "2.1.12"
-        }
-        "#,
-    );
-
-    // Send a prompt
-    tui.send_line("Hello");
-
-    // Wait for response to appear
-    let capture = tui.wait_for("Hello there friend");
-
-    assert_tui_matches_fixture(&capture, "after_response.txt", None);
-}
-
-/// Compare input display against real Claude fixture
-#[test]
-#[ignore] // TODO(slash-cleanup): Simulator shows status bar while fixture does not
-fn test_input_display_matches_fixture() {
-    let tui = TuiTestSession::new(
-        "fixture-input",
-        r#"
-        {
-            "default_response": "Hello!",
-            "trusted": true
-        }
-        "#,
-    );
-
-    // Type input text (without sending/Enter)
-    tui.send_keys("Say hello in exactly 3 words");
-
-    // Wait for the typed text to appear
-    let capture = tui.wait_for("Say hello in exactly 3 words");
-
-    assert_tui_matches_fixture(&capture, "with_input.txt", None);
 }
 
 // ============================================================================

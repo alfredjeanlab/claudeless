@@ -1,8 +1,7 @@
 # Capture state after Claude responds to a simple prompt.
 # Requires API call - sends a simple question to Haiku.
-# Note: Requires KEYBOARD_TIMEOUT=120 or longer (API response time varies).
-# Run with: KEYBOARD_TIMEOUT=120 ./tests/capture/capture.sh --script after-response
 # Args: --model haiku
+# Timeout: 60
 
 wait "for shortcuts" 10s
 
@@ -11,8 +10,11 @@ send "What is 2+2? Just give me the number."
 wait 100
 send <Enter>
 
+# Wait for response to start (spinner appears, "for shortcuts" disappears)
+wait !"for shortcuts" 10s
+
 # Wait for response to complete (status bar returns to ready state)
-wait "for shortcuts" 120s
+wait "for shortcuts" 30s
 snapshot "after_response"
 
 # Exit cleanly

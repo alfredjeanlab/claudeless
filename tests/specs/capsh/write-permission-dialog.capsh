@@ -1,0 +1,24 @@
+# Capture Write tool permission dialog.
+# Requires API call - Claude must decide to use Write tool.
+# Args: --model haiku
+# Timeout: 60
+
+# Handle trust dialog if it appears, then wait for ready state
+wait "for shortcuts" 3s
+
+# Ask Claude to create a new file
+send "Create a new file called newfile.txt with the content hello"
+wait 100
+send <Enter>
+
+# Wait for Write permission dialog to appear
+wait "Create file" 5s
+wait "Do you want to create" 3s
+snapshot "write_permission_dialog"
+
+# Cancel and exit cleanly
+send <Esc>
+wait 500
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

@@ -1,0 +1,11 @@
+# Capture theme selection dialog with light mode selected.
+# Config: empty
+
+wait "Dark mode" 5s
+send <Down>
+wait "Light mode" 5s
+snapshot "setup_01_select_theme_light"
+
+send <C-c>
+wait 500
+kill TERM

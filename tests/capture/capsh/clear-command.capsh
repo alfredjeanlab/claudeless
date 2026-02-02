@@ -1,6 +1,7 @@
 # Capture clear_before and clear_after - state before and after /clear command.
 # Requires API call - Claude must respond to prompts.
 # Args: --model haiku
+# Timeout: 60
 
 # Handle trust dialog if it appears, then wait for ready state
 if wait "trust this folder" 5s
@@ -14,12 +15,16 @@ end
 send "what is 2 + 2?"
 wait 100
 send <Enter>
-wait "4" 60s
+# Wait for thinking spinner to appear, then disappear (response complete)
+# \w+… matches spinner text like "Thinking…" but not path "/…/"
+wait "\w+…" 15s
+wait !"\w+…" 15s
 
 send "and 3 + 3?"
 wait 100
 send <Enter>
-wait "6" 60s
+wait "\w+…" 15s
+wait !"\w+…" 15s
 
 # Snapshot before clear (conversation with responses visible)
 snapshot "clear_before"

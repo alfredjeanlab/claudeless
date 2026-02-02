@@ -1,0 +1,22 @@
+# Capture Bash tool permission dialog.
+# Requires API call - Claude must decide to use Bash tool.
+# Args: --model haiku
+# Timeout: 60
+
+# Handle trust dialog if it appears, then wait for ready state
+wait "for shortcuts" 3s
+
+# Ask Claude to run a bash command that requires permission
+send "Use the Bash tool to run: touch /tmp/test_file.txt" 100 <Enter>
+
+# Wait for Bash permission dialog to appear
+wait "Bash command" 5s
+wait "Do you want to proceed" 3s
+snapshot "bash_permission_dialog"
+
+# Cancel and exit cleanly
+send <Esc>
+wait 500
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

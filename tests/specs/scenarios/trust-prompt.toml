@@ -1,0 +1,11 @@
+name = "trust-prompt"
+
+session_id = "00000000-0000-0000-0000-000000000001"
+project_path = "/test/project"
+launch_timestamp = "2025-01-01T00:00:00Z"
+user_name = "TestUser"
+
+trusted = true
+
+[default_response]
+text = "I understand. Let me help with that."

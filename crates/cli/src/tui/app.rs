@@ -4,7 +4,7 @@
 //! TUI application state and main iocraft component.
 
 mod commands;
-mod dialogs;
+pub(crate) mod dialogs;
 mod input;
 pub(crate) mod render;
 pub(crate) mod state;

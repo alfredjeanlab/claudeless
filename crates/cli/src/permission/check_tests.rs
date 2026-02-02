@@ -199,7 +199,7 @@ fn test_scenario_override_auto_approve() {
 
     // Other tools still need prompt
     assert!(matches!(
-        checker.check("Read", "read"),
+        checker.check("Write", "write"),
         PermissionResult::NeedsPrompt { .. }
     ));
 }

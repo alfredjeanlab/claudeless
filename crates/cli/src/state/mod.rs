@@ -169,6 +169,30 @@ impl StateWriter {
         self.message_count += 1;
     }
 
+    /// Write initial session state files (JSONL, empty todo).
+    ///
+    /// Real Claude CLI creates these on startup before any user interaction.
+    /// Note: `sessions-index.json` is timing-dependent and written separately.
+    pub fn initialize_session(&self) -> std::io::Result<()> {
+        let project_dir = self.project_dir();
+        std::fs::create_dir_all(&project_dir)?;
+
+        // Write initial queue operation to session JSONL
+        write_queue_operation(
+            &self.session_jsonl_path(),
+            &self.session_id,
+            "dequeue",
+            self.launch_timestamp,
+        )?;
+
+        // Create empty todo file
+        std::fs::create_dir_all(self.dir.todos_dir())?;
+        let state = TodoState { items: vec![] };
+        state.save_claude_format(&self.todo_path())?;
+
+        Ok(())
+    }
+
     /// Write queue-operation line for `-p` (print) mode.
     pub fn write_queue_operation(&self) -> std::io::Result<()> {
         let project_dir = self.project_dir();

@@ -1,25 +1,22 @@
 # Capture Bash tool permission dialog.
 # Requires API call - Claude must decide to use Bash tool.
-# Note: Requires KEYBOARD_TIMEOUT=120 or longer (API response time varies).
-# Run with: KEYBOARD_TIMEOUT=120 ./tests/capture/capture.sh --script bash-permission-dialog
 # Args: --model haiku
+# Timeout: 60
 
 # Handle trust dialog if it appears, then wait for ready state
 if wait "trust this folder" 5s
     send <Enter>
-    wait "for shortcuts" 10s
+    wait "for shortcuts" 3s
 else
-    wait "for shortcuts" 10s
+    wait "for shortcuts" 3s
 end
 
 # Ask Claude to run a bash command that requires permission
-send "Use the Bash tool to run: touch /tmp/test_file.txt"
-wait 100
-send <Enter>
+send "Use the Bash tool to run: touch /tmp/test_file.txt" 100 <Enter>
 
 # Wait for Bash permission dialog to appear
-wait "Bash command" 120s
-wait "Do you want to proceed" 10s
+wait "Bash command" 30s
+wait "Do you want to proceed" 3s
 snapshot "bash_permission_dialog"
 
 # Cancel and exit cleanly

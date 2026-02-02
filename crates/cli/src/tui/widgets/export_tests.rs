@@ -13,7 +13,7 @@ fn new_dialog_defaults_to_clipboard_selection() {
 #[test]
 fn new_dialog_has_default_filename() {
     let dialog = ExportDialog::new();
-    assert!(dialog.filename.starts_with("conversation_"));
+    assert!(dialog.filename.starts_with("conversation-"));
     assert!(dialog.filename.ends_with(".txt"));
 }
 

@@ -1,0 +1,7 @@
+{
+  "script": "slash-menu",
+  "snapshots": [
+    "slash_menu",
+    "slash_menu_filtered"
+  ]
+}

@@ -107,14 +107,39 @@ fn edit_tool_converts_to_edit_permission() {
             diff_lines,
         } => {
             assert_eq!(file_path, "src/main.rs");
-            assert_eq!(diff_lines.len(), 2);
+            // Removed + NoNewline + Added + NoNewline = 4 lines
+            assert_eq!(diff_lines.len(), 4);
             assert_eq!(diff_lines[0].kind, DiffKind::Removed);
             assert_eq!(diff_lines[0].content, "old line");
-            assert_eq!(diff_lines[1].kind, DiffKind::Added);
-            assert_eq!(diff_lines[1].content, "new line");
+            assert_eq!(diff_lines[1].kind, DiffKind::NoNewline);
+            assert_eq!(diff_lines[2].kind, DiffKind::Added);
+            assert_eq!(diff_lines[2].content, "new line");
+            assert_eq!(diff_lines[3].kind, DiffKind::NoNewline);
         }
         other => panic!("Expected Edit, got {:?}", other),
     }
+}
+
+#[test]
+fn read_completed_display_uses_read_prefix() {
+    let call = ToolCallSpec {
+        tool: "Read".to_string(),
+        input: json!({ "file_path": "test.txt" }),
+        result: Some("1 file".to_string()),
+    };
+    let display = super::format_completed_tool_display(&call, Some("1 file"));
+    assert_eq!(display, "Read 1 file (ctrl+o to expand)");
+}
+
+#[test]
+fn read_streaming_display_uses_reading_prefix() {
+    let call = ToolCallSpec {
+        tool: "Read".to_string(),
+        input: json!({ "file_path": "test.txt" }),
+        result: Some("1 file\u{2026}".to_string()),
+    };
+    let display = super::format_completed_tool_display(&call, Some("1 file\u{2026}"));
+    assert_eq!(display, "Reading 1 file\u{2026} (ctrl+o to expand)");
 }
 
 #[test]

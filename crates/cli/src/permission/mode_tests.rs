@@ -14,34 +14,34 @@ fn test_default_mode() {
 
 #[test]
 fn test_cycle_next_without_bypass() {
-    // Without bypass: Default → Plan → AcceptEdits → Default
+    // Without bypass: Default → AcceptEdits → Plan → Default
     assert_eq!(
         PermissionMode::Default.cycle_next(false),
-        PermissionMode::Plan
-    );
-    assert_eq!(
-        PermissionMode::Plan.cycle_next(false),
         PermissionMode::AcceptEdits
     );
     assert_eq!(
         PermissionMode::AcceptEdits.cycle_next(false),
+        PermissionMode::Plan
+    );
+    assert_eq!(
+        PermissionMode::Plan.cycle_next(false),
         PermissionMode::Default
     );
 }
 
 #[test]
 fn test_cycle_next_with_bypass() {
-    // With bypass: Default → Plan → AcceptEdits → BypassPermissions → Default
+    // With bypass: Default → AcceptEdits → Plan → BypassPermissions → Default
     assert_eq!(
         PermissionMode::Default.cycle_next(true),
-        PermissionMode::Plan
-    );
-    assert_eq!(
-        PermissionMode::Plan.cycle_next(true),
         PermissionMode::AcceptEdits
     );
     assert_eq!(
         PermissionMode::AcceptEdits.cycle_next(true),
+        PermissionMode::Plan
+    );
+    assert_eq!(
+        PermissionMode::Plan.cycle_next(true),
         PermissionMode::BypassPermissions
     );
     assert_eq!(

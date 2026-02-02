@@ -1,0 +1,6 @@
+{
+  "script": "export-autocomplete",
+  "snapshots": [
+    "export_autocomplete"
+  ]
+}

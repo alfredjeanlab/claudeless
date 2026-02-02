@@ -30,10 +30,6 @@ fn test_categorize_named_commands() {
         BashCommandCategory::NamedCommand("npm".to_string())
     );
     assert_eq!(
-        categorize_bash_command("rm -rf /tmp/foo"),
-        BashCommandCategory::NamedCommand("rm".to_string())
-    );
-    assert_eq!(
         categorize_bash_command("cargo build --release"),
         BashCommandCategory::NamedCommand("cargo".to_string())
     );
@@ -53,6 +49,44 @@ fn test_categorize_commands_with_paths() {
         categorize_bash_command("./scripts/build.sh"),
         BashCommandCategory::NamedCommand("build.sh".to_string())
     );
+}
+
+#[test]
+fn test_categorize_path_access() {
+    assert_eq!(
+        categorize_bash_command("touch /tmp/test_file.txt"),
+        BashCommandCategory::PathAccess("tmp/".to_string())
+    );
+    assert_eq!(
+        categorize_bash_command("rm -rf /tmp/foo"),
+        BashCommandCategory::PathAccess("tmp/".to_string())
+    );
+}
+
+#[test]
+fn test_categorize_reading_path() {
+    assert_eq!(
+        categorize_bash_command("ls -la ~/Downloads"),
+        BashCommandCategory::ReadingPath("Downloads/".to_string())
+    );
+    assert_eq!(
+        categorize_bash_command("cat /var/log/syslog"),
+        BashCommandCategory::ReadingPath("var/".to_string())
+    );
+    assert_eq!(
+        categorize_bash_command("head -n 10 ~/Documents/file.txt"),
+        BashCommandCategory::ReadingPath("Documents/".to_string())
+    );
+}
+
+#[test]
+fn test_option2_text_reading_path() {
+    let dialog = RichPermissionDialog::new(PermissionType::Bash {
+        command: "ls -la ~/Downloads".to_string(),
+        description: Some("List files in Downloads directory".to_string()),
+    });
+    let output = dialog.render(120);
+    assert!(output.contains("Yes, allow reading from Downloads/ from this project"));
 }
 
 #[test]
@@ -86,13 +120,13 @@ fn test_option2_text_npm_command() {
 }
 
 #[test]
-fn test_option2_text_rm_command() {
+fn test_option2_text_path_access() {
     let dialog = RichPermissionDialog::new(PermissionType::Bash {
-        command: "rm -rf /tmp/test".to_string(),
+        command: "touch /tmp/test_file.txt".to_string(),
         description: None,
     });
     let output = dialog.render(120);
-    assert!(output.contains("Yes, allow rm commands from this project"));
+    assert!(output.contains("Yes, and always allow access to tmp/ from this project"));
 }
 
 // =========================================================================
@@ -200,7 +234,7 @@ fn test_edit_dialog_render() {
             DiffLine {
                 line_num: Some(1),
                 kind: DiffKind::NoNewline,
-                content: "  No newline at end of file".to_string(),
+                content: "No newline at end of file".to_string(),
             },
             DiffLine {
                 line_num: Some(2),
@@ -210,15 +244,15 @@ fn test_edit_dialog_render() {
             DiffLine {
                 line_num: Some(3),
                 kind: DiffKind::NoNewline,
-                content: "  No newline at end of file".to_string(),
+                content: "No newline at end of file".to_string(),
             },
         ],
     });
 
     let output = dialog.render(120);
 
-    // Check key elements
-    assert!(output.contains("Edit file hello.txt"));
+    // Check key elements (title split across two lines)
+    assert!(output.contains("Edit file\n hello.txt"));
     assert!(output.contains("╌")); // Dashed separator
     assert!(output.contains(" 1 -Hello World"));
     assert!(output.contains(" 2 +Hello Universe"));
@@ -252,14 +286,17 @@ fn test_diff_line_rendering() {
     };
     assert_eq!(render_diff_line(&context), " 3  unchanged");
 
-    // Test line without number (uses space padding for alignment)
-    let no_num = DiffLine {
-        line_num: None,
+    // Test NoNewline line with number
+    let no_newline = DiffLine {
+        line_num: Some(1),
         kind: DiffKind::NoNewline,
-        content: " No newline".to_string(),
+        content: "No newline at end of file".to_string(),
     };
-    // Format: "    " (4 spaces) + " " (prefix for NoNewline) + " No newline" (content)
-    assert_eq!(render_diff_line(&no_num), "      No newline");
+    // Format: " {line_num} {prefix}{content}" with prefix "  " (two spaces)
+    assert_eq!(
+        render_diff_line(&no_newline),
+        " 1   No newline at end of file"
+    );
 }
 
 // =========================================================================
@@ -275,8 +312,8 @@ fn test_write_dialog_render() {
 
     let output = dialog.render(120);
 
-    // Check key elements
-    assert!(output.contains("Create file hello.txt"));
+    // Check key elements (title split across two lines)
+    assert!(output.contains("Create file\n hello.txt"));
     assert!(output.contains("╌")); // Dashed separator
     assert!(output.contains("  1 Hello World"));
     assert!(output.contains("Do you want to create hello.txt?"));

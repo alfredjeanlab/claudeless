@@ -90,16 +90,15 @@ fn test_compact_separator_width() {
     tui.send_line("/compact");
     let capture = tui.wait_for("compacted");
 
-    // Find compact separator line (uses ═ character)
+    // Find compact separator line (✻ prefix, matches real Claude format)
     let compact_line = capture
         .lines()
-        .find(|line| line.contains("compacted") && line.contains('═'))
+        .find(|line| line.contains("Conversation compacted") && line.starts_with('✻'))
         .expect("Should have compact separator");
 
     assert_eq!(
-        compact_line.chars().count(),
-        100,
-        "Compact separator should be 100 chars at 100-column terminal, got: '{}'",
+        compact_line, "✻ Conversation compacted (ctrl+o for history)",
+        "Compact separator should match real Claude format, got: '{}'",
         compact_line
     );
 }

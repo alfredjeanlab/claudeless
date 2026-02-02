@@ -1,0 +1,24 @@
+      [0m[38;2;215;119;87m▗[0m[38;2;0;0;0;48;2;215;119;87m ▗     ▖ [0m[38;2;215;119;87m▖[0m                       [0m[1m*[0m                                       [0m
+       [0m[48;2;215;119;87m         [0m      *                                                         [0m
+…………………[0m[48;2;215;119;87m [0m [0m[48;2;215;119;87m [0m   [0m[48;2;215;119;87m [0m [0m[48;2;215;119;87m [0m………………………………………………………………………………………………………………                      [0m
+                                                                                [0m
+                                                                                [0m
+ [0m[1mClaude Code can be used with your Claude subscription or billed based on API [0m  [0m
+ [0m[1musage through your Console account.[0m                                            [0m
+                                                                                [0m
+ Select login method:                                                           [0m
+                                                                                [0m
+ [0m[38;2;177;185;249m❯[0m [0m[38;2;153;153;153m1. [0m[38;2;177;185;249mClaude account with subscription · [0m[38;2;153;153;153mPro, Max, Team, or Enterprise[0m          [0m
+                                                                                [0m
+   [0m[38;2;153;153;153m2. [0mAnthropic Console account · [0m[38;2;153;153;153mAPI usage billing[0m                             [0m
+                                                                                [0m
+   [0m[38;2;153;153;153m3. [0m3rd-party platform · [0m[38;2;153;153;153mAmazon Bedrock, Microsoft Foundry, or Vertex AI[0m      [0m
+                                                                                [0m
+                                                                                [0m
+                                                                                [0m
+                                                                                [0m
+                                                                                [0m
+                                                                                [0m
+                                                                                [0m
+                                                                                [0m
+                                                                                [0m

@@ -7,7 +7,8 @@ use std::io::IsTerminal;
 
 use clap::Parser;
 
-use claudeless::cli::Cli;
+use claudeless::cli::{Cli, Commands, McpCommands, PluginCommands};
+use claudeless::help;
 use claudeless::output::print_error;
 use claudeless::permission::PermissionBypass;
 use claudeless::runtime::{Runtime, RuntimeBuildError, RuntimeBuilder};
@@ -18,6 +19,34 @@ use claudeless::tui::{ExitReason, TuiApp, TuiConfig};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
+
+    // Handle help for subcommands
+    if let Some(ref cmd) = cli.command {
+        if cmd.wants_help() {
+            let text = render_subcommand_help(cmd);
+            print!("{}", text);
+            return Ok(());
+        }
+    }
+
+    // Handle top-level help
+    if cli.help {
+        let mut text = help::render_main_help();
+        text.push('\n');
+        text.push_str(&help::claudeless_options_section());
+        print!("{}", text);
+        return Ok(());
+    }
+
+    // Handle version
+    if cli.version {
+        if let Some(ref v) = cli.simulator.claude_version {
+            println!("{v} (Claude Code)");
+        } else {
+            println!("claudeless {}", env!("CARGO_PKG_VERSION"));
+        }
+        return Ok(());
+    }
 
     // Build runtime using RuntimeBuilder
     let runtime = match RuntimeBuilder::new(cli.clone()) {
@@ -52,6 +81,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
+/// Render help text for a subcommand.
+fn render_subcommand_help(cmd: &Commands) -> String {
+    match cmd {
+        Commands::Doctor { .. } => help::render_doctor_help(),
+        Commands::Install { .. } => help::render_install_help(),
+        Commands::Mcp { command, .. } => match command {
+            Some(McpCommands::Add { .. }) => help::render_mcp_add_help(),
+            Some(McpCommands::Serve { .. }) => help::render_mcp_serve_help(),
+            _ => help::render_mcp_help(),
+        },
+        Commands::Plugin { command, .. } => match command {
+            Some(PluginCommands::Marketplace { .. }) => help::render_plugin_marketplace_help(),
+            _ => help::render_plugin_help(),
+        },
+        Commands::SetupToken { .. } => help::render_setup_token_help(),
+        Commands::Update { .. } => help::render_update_help(),
+    }
+}
+
 /// Run in TUI mode.
 async fn run_tui_mode(runtime: Runtime) -> Result<(), Box<dyn std::error::Error>> {
     // Check permission bypass
@@ -62,7 +110,12 @@ async fn run_tui_mode(runtime: Runtime) -> Result<(), Box<dyn std::error::Error>
 
     // Create TUI config from runtime's scenario config
     let is_tty = std::io::stdout().is_terminal();
-    let tui_config = TuiConfig::from_runtime(&runtime, bypass.is_active(), is_tty);
+    let tui_config = TuiConfig::from_runtime(
+        &runtime,
+        bypass.is_active() || bypass.is_not_allowed(),
+        bypass.is_not_allowed(),
+        is_tty,
+    );
 
     let mut sessions = SessionManager::new();
 

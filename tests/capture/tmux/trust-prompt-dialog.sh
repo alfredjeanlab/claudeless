@@ -62,10 +62,9 @@ done
 sleep 0.5
 
 # Capture the pane and strip shell prompt lines (keep from horizontal rule onward)
-tmux capture-pane -t "$SESSION" -p | sed -n '/^─/,$p' > "$FIXTURES_DIR/trust_prompt.txt"
+tmux capture-pane -t "$SESSION" -p | sed -n '/^─/,$p' > "$FIXTURES_DIR/trust_prompt.tmux.txt"
 
 echo -e "${GREEN}✓${NC} Captured trust_prompt"
-echo "  Plain: $FIXTURES_DIR/trust_prompt.txt"
 
 # Send Escape to cancel and exit
 tmux send-keys -t "$SESSION" Escape

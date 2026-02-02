@@ -49,8 +49,8 @@ impl Default for ExportDialog {
 impl ExportDialog {
     pub fn new() -> Self {
         // Generate default filename with timestamp
-        let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
-        let default_filename = format!("conversation_{}.txt", timestamp);
+        let timestamp = chrono::Local::now().format("%Y-%m-%d-%H%M%S");
+        let default_filename = format!("conversation-{}.txt", timestamp);
 
         Self {
             step: ExportStep::MethodSelection,

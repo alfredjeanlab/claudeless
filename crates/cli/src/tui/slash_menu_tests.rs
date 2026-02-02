@@ -67,7 +67,6 @@ fn test_filter_commands_co() {
     assert!(names.contains(&"compact"));
     assert!(names.contains(&"config"));
     assert!(names.contains(&"context"));
-    assert!(names.contains(&"cost"));
     // Should not include commands without 'co' in sequence
     assert!(!names.contains(&"clear"));
     assert!(!names.contains(&"add-dir"));

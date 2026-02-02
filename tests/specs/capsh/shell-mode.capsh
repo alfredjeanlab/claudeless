@@ -1,0 +1,17 @@
+# Capture shell mode (! prefix) states.
+
+wait "for shortcuts" 5s
+
+# Type shell mode prefix and wait for it to render
+send "!"
+wait "! for bash mode" 3s
+snapshot "shell_mode_prefix"
+
+# Add a command
+send "ls -la"
+wait "ls -la" 3s
+snapshot "shell_mode_command"
+
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

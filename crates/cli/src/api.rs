@@ -3,11 +3,10 @@
 
 //! Rust API for configuring and controlling the simulator in tests.
 
-use crate::capture::{CaptureLog, CapturedArgs, CapturedInteraction, CapturedOutcome};
 use crate::config::{PatternSpec, ResponseRule, ResponseSpec, ScenarioConfig};
-use crate::scenario::{MatchResult, Scenario, ScenarioError};
+use crate::scenario::{Scenario, ScenarioError};
 use parking_lot::Mutex;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use tempfile::TempDir;
 use thiserror::Error;
@@ -32,11 +31,21 @@ pub enum SimulatorError {
     Serialize(#[from] toml::ser::Error),
 }
 
+/// A recorded interaction from SimulatorHandle::execute.
+#[derive(Clone, Debug)]
+pub struct RecordedInteraction {
+    /// The prompt that was sent.
+    pub prompt: String,
+    /// The model used.
+    pub model: String,
+    /// The response text.
+    pub response: String,
+}
+
 /// Builder for configuring a simulator instance
 #[derive(Default)]
 pub struct SimulatorBuilder {
     scenario: ScenarioConfig,
-    capture: Option<PathBuf>,
 }
 
 impl SimulatorBuilder {
@@ -44,7 +53,6 @@ impl SimulatorBuilder {
     pub fn new() -> Self {
         Self {
             scenario: ScenarioConfig::default(),
-            capture: None,
         }
     }
 
@@ -109,22 +117,12 @@ impl SimulatorBuilder {
         self
     }
 
-    /// Enable capture to file
-    pub fn capture_to(mut self, path: impl Into<PathBuf>) -> Self {
-        self.capture = Some(path.into());
-        self
-    }
-
     /// Build an in-process simulator handle
     pub fn build_in_process(self) -> Result<SimulatorHandle, SimulatorError> {
         let scenario = Scenario::from_config(self.scenario)?;
-        let capture = match self.capture {
-            Some(path) => CaptureLog::with_file(&path)?,
-            None => CaptureLog::new(),
-        };
-        Ok(SimulatorHandle::InProcess {
+        Ok(SimulatorHandle {
             scenario: Arc::new(Mutex::new(scenario)),
-            capture: Arc::new(capture),
+            interactions: Arc::new(Mutex::new(Vec::new())),
         })
     }
 
@@ -137,35 +135,20 @@ impl SimulatorBuilder {
         let scenario_toml = toml::to_string(&self.scenario)?;
         std::fs::write(&scenario_path, scenario_toml)?;
 
-        // Capture file path
-        let capture_path = self
-            .capture
-            .unwrap_or_else(|| temp_dir.path().join("capture.jsonl"));
-
         Ok(BinarySimulatorHandle {
             _temp_dir: temp_dir,
             scenario_path,
-            capture_path,
         })
     }
 }
 
 /// Handle to a running simulator
-pub enum SimulatorHandle {
-    InProcess {
-        scenario: Arc<Mutex<Scenario>>,
-        capture: Arc<CaptureLog>,
-    },
+pub struct SimulatorHandle {
+    scenario: Arc<Mutex<Scenario>>,
+    interactions: Arc<Mutex<Vec<RecordedInteraction>>>,
 }
 
 impl SimulatorHandle {
-    /// Get the capture log
-    pub fn capture(&self) -> &CaptureLog {
-        match self {
-            Self::InProcess { capture, .. } => capture,
-        }
-    }
-
     /// Execute a simulated request (in-process mode)
     pub fn execute(&self, prompt: &str) -> String {
         self.execute_with_args(prompt, None)
@@ -173,75 +156,44 @@ impl SimulatorHandle {
 
     /// Execute a simulated request with additional args
     pub fn execute_with_args(&self, prompt: &str, model: Option<&str>) -> String {
-        match self {
-            Self::InProcess { scenario, capture } => {
-                let mut s = scenario.lock();
+        let mut s = self.scenario.lock();
+        let model = model.unwrap_or("claude-test").to_string();
 
-                let args = CapturedArgs {
-                    prompt: Some(prompt.to_string()),
-                    model: model.unwrap_or("claude-test").to_string(),
-                    output_format: "text".to_string(),
-                    print_mode: true,
-                    continue_conversation: false,
-                    resume: None,
-                    allowed_tools: vec![],
-                    cwd: None,
-                };
-
-                let (text, matched_rule) = if let Some(result) = s.match_prompt(prompt) {
-                    // Check for failure first
-                    if s.get_failure(&result).is_some() {
-                        // TODO: Handle failure injection
-                        (String::new(), Some("failure".to_string()))
-                    } else {
-                        let response = s.get_response(&result);
-                        let text = match response {
-                            Some(ResponseSpec::Simple(text)) => text.clone(),
-                            Some(ResponseSpec::Detailed { text, .. }) => text.clone(),
-                            None => String::new(),
-                        };
-                        let matched = match result {
-                            MatchResult::Response { rule_index } => {
-                                format!("response[{}]", rule_index)
-                            }
-                            MatchResult::Turn {
-                                rule_index,
-                                turn_index,
-                            } => {
-                                format!("response[{}].turn[{}]", rule_index, turn_index)
-                            }
-                        };
-                        (text, Some(matched))
-                    }
-                } else if let Some(default) = s.default_response() {
-                    let text = match default {
-                        ResponseSpec::Simple(text) => text.clone(),
-                        ResponseSpec::Detailed { text, .. } => text.clone(),
-                    };
-                    (text, Some("default".to_string()))
-                } else {
-                    (String::new(), None)
-                };
-
-                capture.record(
-                    args,
-                    CapturedOutcome::Response {
-                        text: text.clone(),
-                        matched_rule,
-                        delay_ms: 0,
-                    },
-                );
-
-                text
+        let text = if let Some(result) = s.match_prompt(prompt) {
+            if s.get_failure(&result).is_some() {
+                String::new()
+            } else {
+                let response = s.get_response(&result);
+                match response {
+                    Some(ResponseSpec::Simple(text)) => text.clone(),
+                    Some(ResponseSpec::Detailed { text, .. }) => text.clone(),
+                    None => String::new(),
+                }
             }
-        }
+        } else if let Some(default) = s.default_response() {
+            match default {
+                ResponseSpec::Simple(text) => text.clone(),
+                ResponseSpec::Detailed { text, .. } => text.clone(),
+            }
+        } else {
+            String::new()
+        };
+
+        self.interactions.lock().push(RecordedInteraction {
+            prompt: prompt.to_string(),
+            model,
+            response: text.clone(),
+        });
+
+        text
     }
 
     /// Assert that a prompt was received
     pub fn assert_received(&self, pattern: &str) {
-        let matches = self.capture().find_by_prompt(pattern);
+        let interactions = self.interactions.lock();
+        let found = interactions.iter().any(|i| i.prompt.contains(pattern));
         assert!(
-            !matches.is_empty(),
+            found,
             "Expected prompt containing '{}' but none found",
             pattern
         );
@@ -249,18 +201,22 @@ impl SimulatorHandle {
 
     /// Assert that a prompt was NOT received
     pub fn assert_not_received(&self, pattern: &str) {
-        let matches = self.capture().find_by_prompt(pattern);
+        let interactions = self.interactions.lock();
+        let count = interactions
+            .iter()
+            .filter(|i| i.prompt.contains(pattern))
+            .count();
         assert!(
-            matches.is_empty(),
+            count == 0,
             "Expected no prompt containing '{}' but found {}",
             pattern,
-            matches.len()
+            count
         );
     }
 
     /// Assert interaction count
     pub fn assert_count(&self, expected: usize) {
-        let actual = self.capture().len();
+        let actual = self.interactions.lock().len();
         assert_eq!(
             actual, expected,
             "Expected {} interactions, got {}",
@@ -270,74 +226,48 @@ impl SimulatorHandle {
 
     /// Assert that the last response contains a pattern
     pub fn assert_last_response_contains(&self, pattern: &str) {
-        let last = self.capture().last(1);
-        assert!(!last.is_empty(), "No interactions recorded");
-
+        let interactions = self.interactions.lock();
+        assert!(!interactions.is_empty(), "No interactions recorded");
+        let last = &interactions[interactions.len() - 1];
         assert!(
-            matches!(&last[0].outcome, CapturedOutcome::Response { .. }),
-            "Last interaction was not a response: {:?}",
-            last[0].outcome
-        );
-
-        // Safe to extract now due to the assert above
-        let CapturedOutcome::Response { text, .. } = &last[0].outcome else {
-            return;
-        };
-        assert!(
-            text.contains(pattern),
+            last.response.contains(pattern),
             "Expected last response to contain '{}', got '{}'",
             pattern,
-            text
+            last.response
         );
     }
 
     /// Reset the scenario match counts
     pub fn reset(&self) {
-        match self {
-            Self::InProcess { scenario, capture } => {
-                scenario.lock().reset_counts();
-                capture.clear();
-            }
-        }
+        self.scenario.lock().reset_counts();
+        self.interactions.lock().clear();
     }
 }
 
 /// Handle for binary-mode simulator
 pub struct BinarySimulatorHandle {
     _temp_dir: TempDir,
-    scenario_path: PathBuf,
-    capture_path: PathBuf,
+    scenario_path: std::path::PathBuf,
 }
 
 impl BinarySimulatorHandle {
     /// Get environment variables to set for subprocess
     pub fn env_vars(&self) -> Vec<(&str, String)> {
-        vec![
-            (
-                "CLAUDELESS_SCENARIO",
-                self.scenario_path.to_string_lossy().to_string(),
-            ),
-            (
-                "CLAUDELESS_CAPTURE",
-                self.capture_path.to_string_lossy().to_string(),
-            ),
-        ]
+        vec![(
+            "CLAUDELESS_SCENARIO",
+            self.scenario_path.to_string_lossy().to_string(),
+        )]
     }
 
     /// Get the path to use for the simulator binary
-    ///
-    /// This returns the path to the claudeless binary in the target directory.
-    /// The binary should be built before running tests that use it.
-    pub fn binary_path() -> PathBuf {
-        // Try to get from CARGO_BIN_EXE_claudeless (set during cargo test)
+    pub fn binary_path() -> std::path::PathBuf {
         if let Ok(path) = std::env::var("CARGO_BIN_EXE_claudeless") {
-            return PathBuf::from(path);
+            return std::path::PathBuf::from(path);
         }
 
-        // Fallback: look for it in target/debug or target/release
         let target_dir = std::env::var("CARGO_TARGET_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from("target"));
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|_| std::path::PathBuf::from("target"));
 
         let debug_path = target_dir.join("debug/claudeless");
         if debug_path.exists() {
@@ -349,27 +279,12 @@ impl BinarySimulatorHandle {
             return release_path;
         }
 
-        // Last resort: assume it's in PATH
-        PathBuf::from("claudeless")
+        std::path::PathBuf::from("claudeless")
     }
 
     /// Get the scenario file path
     pub fn scenario_path(&self) -> &Path {
         &self.scenario_path
-    }
-
-    /// Get the capture file path
-    pub fn capture_path(&self) -> &Path {
-        &self.capture_path
-    }
-
-    /// Read capture log from file
-    pub fn read_capture(&self) -> Vec<CapturedInteraction> {
-        let content = std::fs::read_to_string(&self.capture_path).unwrap_or_default();
-        content
-            .lines()
-            .filter_map(|line| serde_json::from_str(line).ok())
-            .collect()
     }
 }
 

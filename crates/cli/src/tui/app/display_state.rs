@@ -38,6 +38,12 @@ pub struct DisplayState {
     pub pending_user_uuid: Option<String>,
     /// Pending assistant UUID for linking tool results in JSONL
     pub pending_assistant_uuid: Option<String>,
+    /// Display content to show after a permission is granted.
+    /// Built during handle_turn_result() and consumed by confirm_permission().
+    pub pending_post_grant_display: Option<String>,
+    /// When Escape was last pressed (milliseconds from clock).
+    /// Used to detect Escape-then-letter sequences as Alt/Meta key in PTY environments.
+    pub escape_pressed_at: Option<u64>,
 }
 
 impl DisplayState {
@@ -93,13 +99,18 @@ impl DisplayState {
     /// Update slash menu based on input buffer
     pub fn update_slash_menu(&mut self, input_buffer: &str) {
         if let Some(suffix) = input_buffer.strip_prefix('/') {
-            let filter = suffix.to_string();
-            if let Some(menu) = self.slash_menu.as_mut() {
-                menu.set_filter(filter);
+            // Close menu once user types a space (moved past command name to arguments)
+            if suffix.contains(' ') {
+                self.slash_menu = None;
             } else {
-                let mut menu = SlashMenuState::new();
-                menu.set_filter(filter);
-                self.slash_menu = Some(menu);
+                let filter = suffix.to_string();
+                if let Some(menu) = self.slash_menu.as_mut() {
+                    menu.set_filter(filter);
+                } else {
+                    let mut menu = SlashMenuState::new();
+                    menu.set_filter(filter);
+                    self.slash_menu = Some(menu);
+                }
             }
         } else {
             self.slash_menu = None;
@@ -109,5 +120,19 @@ impl DisplayState {
     /// Close slash menu
     pub fn close_slash_menu(&mut self) {
         self.slash_menu = None;
+    }
+
+    /// Check if an Escape key was recently pressed (within 100ms).
+    /// Used to detect Escape-then-letter sequences sent by terminals for Alt/Meta keys in PTY
+    /// environments where crossterm cannot distinguish Alt+key from two separate events.
+    pub fn is_escape_sequence(&self, now: u64) -> bool {
+        self.escape_pressed_at
+            .map(|t| now.saturating_sub(t) < 100)
+            .unwrap_or(false)
+    }
+
+    /// Clear the escape sequence timestamp (call after consuming the sequence).
+    pub fn clear_escape_sequence(&mut self) {
+        self.escape_pressed_at = None;
     }
 }

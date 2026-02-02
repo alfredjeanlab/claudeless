@@ -1,25 +1,32 @@
 # Capture Edit tool permission dialog.
 # Requires API call - Claude must decide to use Edit tool.
-# Note: Requires KEYBOARD_TIMEOUT=120 or longer (API response time varies).
-# Run with: KEYBOARD_TIMEOUT=120 ./tests/capture/capture.sh --script edit-permission-dialog
 # Args: --model haiku
+# Timeout: 120
 
 # Handle trust dialog if it appears, then wait for ready state
 if wait "trust this folder" 5s
     send <Enter>
-    wait "for shortcuts" 10s
+    wait "for shortcuts" 3s
 else
-    wait "for shortcuts" 10s
+    wait "for shortcuts" 3s
 end
 
-# Ask Claude to edit an existing file (README.md exists in project)
-send "Edit README.md and add a line at the end that says: # Test Line"
+# First create a file
+send "Create a file called test.txt with the content: Hello World"
+wait 100
+send <Enter>
+wait "Create file" 30s
+send <Enter>
+wait "for shortcuts" 5s
+
+# Now ask Claude to edit the existing file
+send "Edit test.txt and change Hello to Goodbye"
 wait 100
 send <Enter>
 
 # Wait for Edit permission dialog to appear
-wait "Edit file" 120s
-wait "Do you want to make this edit" 10s
+wait "Edit file" 45s
+wait "Do you want to make this edit" 3s
 snapshot "edit_permission_dialog"
 
 # Cancel and exit cleanly

@@ -1,0 +1,26 @@
+name = "bash-permission-dialog"
+
+session_id = "00000000-0000-0000-0000-000000000001"
+project_path = "/test/project"
+launch_timestamp = "2025-01-01T00:00:00Z"
+user_name = "TestUser"
+claude_version = "2.1.29"
+provider = "Claude API"
+
+trusted = true
+
+[default_response]
+text = "I understand. Let me help with that."
+
+[[responses]]
+pattern = { type = "contains", text = "touch /tmp/test_file.txt" }
+
+[responses.response]
+text = ""
+
+[[responses.response.tool_calls]]
+tool = "Bash"
+
+[responses.response.tool_calls.input]
+command = "touch /tmp/test_file.txt"
+description = "Create an empty file at /tmp/test_file.txt"

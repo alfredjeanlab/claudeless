@@ -1,0 +1,18 @@
+# Capture export filename dialog.
+# Args: --model haiku
+
+wait "for shortcuts" 5s
+
+# Open export dialog and navigate to filename input
+send "/export"
+wait "Export the current" 3s
+send <Enter>
+wait "Select export method" 5s
+send "2"
+wait "Enter filename" 5s
+snapshot "export_filename_dialog"
+
+# Exit cleanly
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

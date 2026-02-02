@@ -55,13 +55,13 @@ impl PermissionMode {
     /// in the cycle. In Claude Code, bypass mode is only available when the
     /// `--dangerously-skip-permissions` flag is passed.
     ///
-    /// Without bypass: Default → Plan → AcceptEdits → Default
-    /// With bypass: Default → Plan → AcceptEdits → BypassPermissions → Default
+    /// Without bypass: Default → AcceptEdits → Plan → Default
+    /// With bypass: Default → AcceptEdits → Plan → BypassPermissions → Default
     pub fn cycle_next(&self, allow_bypass: bool) -> Self {
         match self {
-            Self::Default => Self::Plan,
-            Self::Plan => Self::AcceptEdits,
-            Self::AcceptEdits => {
+            Self::Default => Self::AcceptEdits,
+            Self::AcceptEdits => Self::Plan,
+            Self::Plan => {
                 if allow_bypass {
                     Self::BypassPermissions
                 } else {

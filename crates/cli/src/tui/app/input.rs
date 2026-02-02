@@ -40,7 +40,9 @@ impl TuiAppState {
     pub fn handle_key_event(&self, key: KeyEvent) {
         let mode = self.mode();
         match mode {
+            AppMode::Setup => self.handle_setup_key(key),
             AppMode::Trust => self.handle_trust_key(key),
+            AppMode::BypassConfirm => self.handle_bypass_confirm_key(key),
             AppMode::Input => self.handle_input_key(key),
             AppMode::Permission => self.handle_permission_key(key),
             AppMode::Responding | AppMode::Thinking => self.handle_responding_key(key),
@@ -77,7 +79,7 @@ impl TuiAppState {
                     // Complete the selected command
                     if let Some(ref menu) = inner.display.slash_menu {
                         if let Some(cmd) = menu.selected_command() {
-                            inner.input.buffer = cmd.full_name();
+                            inner.input.buffer = format!("{} ", cmd.full_name());
                             inner.input.cursor_pos = inner.input.buffer.len();
                         }
                     }
@@ -141,22 +143,25 @@ impl TuiAppState {
             }
 
             // Meta+t (Alt+t) - Toggle thinking mode
+            // Also matches Escape followed by 't' within 100ms (PTY escape sequence)
             (m, KeyCode::Char('t'))
-                if m.contains(KeyModifiers::META) || m.contains(KeyModifiers::ALT) =>
+                if m.contains(KeyModifiers::META)
+                    || m.contains(KeyModifiers::ALT)
+                    || inner.display.is_escape_sequence(inner.clock.now_millis()) =>
             {
-                // Check if we're mid-conversation (has at least one turn)
-                let is_mid_conversation = !inner.sessions.current_session().turns.is_empty();
-                inner.dialog = DialogState::Thinking(ThinkingDialog::with_mid_conversation(
-                    inner.thinking_enabled,
-                    is_mid_conversation,
-                ));
+                inner.display.clear_escape_sequence();
+                inner.dialog = DialogState::Thinking(ThinkingDialog::new(inner.thinking_enabled));
                 inner.mode = AppMode::ThinkingToggle;
             }
 
             // Meta+p (Alt+p) - Open model picker
+            // Also matches Escape followed by 'p' within 100ms (PTY escape sequence)
             (m, KeyCode::Char('p'))
-                if m.contains(KeyModifiers::META) || m.contains(KeyModifiers::ALT) =>
+                if m.contains(KeyModifiers::META)
+                    || m.contains(KeyModifiers::ALT)
+                    || inner.display.is_escape_sequence(inner.clock.now_millis()) =>
             {
+                inner.display.clear_escape_sequence();
                 inner.dialog = DialogState::ModelPicker(
                     crate::tui::widgets::ModelPickerDialog::new(&inner.status.model),
                 );
@@ -174,7 +179,7 @@ impl TuiAppState {
             }
 
             // Shift+Tab - Cycle permission mode
-            (m, KeyCode::BackTab) if m.contains(KeyModifiers::SHIFT) => {
+            (_, KeyCode::BackTab) => {
                 inner.permission_mode = inner
                     .permission_mode
                     .cycle_next(inner.allow_bypass_permissions);
@@ -195,6 +200,11 @@ impl TuiAppState {
             // Escape - Dismiss shortcuts panel first, then exit shell mode, then check for clear
             // Note: slash menu escape is handled above in the slash_menu.is_some() block
             (_, KeyCode::Esc) => {
+                // Always record escape timestamp for Esc+letter sequence detection
+                // (PTY environments send Alt/Meta keys as Escape followed by the letter)
+                let now = inner.clock.now_millis();
+                inner.display.escape_pressed_at = Some(now);
+
                 if inner.display.show_shortcuts_panel {
                     // First priority: dismiss shortcuts panel
                     inner.display.show_shortcuts_panel = false;
@@ -204,7 +214,6 @@ impl TuiAppState {
                     inner.input.clear();
                 } else if !inner.input.buffer.is_empty() {
                     // Input has text - check for double-tap
-                    let now = inner.clock.now_millis();
                     let exit_hint_timeout = inner.config.timeouts.exit_hint_ms;
                     let within_timeout = inner.display.exit_hint == Some(ExitHint::Escape)
                         && inner
@@ -451,8 +460,13 @@ impl TuiAppState {
                 drop(inner);
                 self.confirm_permission();
             }
-            AppMode::Trust => {
-                // Exit on interrupt during trust prompt
+            AppMode::Setup => {
+                // Exit on interrupt during setup wizard
+                inner.should_exit = true;
+                inner.exit_reason = Some(ExitReason::UserQuit);
+            }
+            AppMode::Trust | AppMode::BypassConfirm => {
+                // Exit on interrupt during trust/bypass prompt
                 inner.should_exit = true;
                 inner.exit_reason = Some(ExitReason::UserQuit);
             }

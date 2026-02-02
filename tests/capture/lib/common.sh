@@ -354,3 +354,18 @@ check_capsh() {
         return 1
     fi
 }
+
+# Capture tmux pane to fixture file
+# Usage: capture_tmux_pane session_name fixture_name fixtures_dir
+capture_tmux_pane() {
+    local session_name="$1"
+    local fixture_name="$2"
+    local fixtures_dir="$3"
+
+    mkdir -p "$fixtures_dir"
+
+    # Capture pane and strip shell prompt lines (everything before Claude logo)
+    tmux capture-pane -t "$session_name" -p | sed -n '/▐▛███▜▌/,$p' > "$fixtures_dir/${fixture_name}.tmux.txt"
+
+    echo -e "${DIM}  $fixture_name${NC}"
+}

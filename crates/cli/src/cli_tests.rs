@@ -58,8 +58,6 @@ fn test_parse_simulator_flags() {
         "claude",
         "--scenario",
         "/path/to/scenario.toml",
-        "--capture",
-        "/tmp/capture.jsonl",
         "--failure",
         "rate-limit",
         "-p",
@@ -69,10 +67,6 @@ fn test_parse_simulator_flags() {
     assert_eq!(
         cli.simulator.scenario,
         Some("/path/to/scenario.toml".to_string())
-    );
-    assert_eq!(
-        cli.simulator.capture,
-        Some("/tmp/capture.jsonl".to_string())
     );
     assert!(matches!(
         cli.simulator.failure,

@@ -16,16 +16,16 @@ fn styled_logo_line1_contains_ansi_codes() {
     // Should contain gray foreground
     assert!(line.contains("\x1b[38;2;153;153;153m"));
     // Should contain resets
-    assert!(line.contains("\x1b[39m"));
     assert!(line.contains("\x1b[49m"));
     assert!(line.contains("\x1b[0m"));
     // Should contain content
     assert!(line.contains("Claude Code"));
     assert!(line.contains("v2.1.12"));
-    // Should end with fg_reset after version
+    // Should NOT end with reset — iocraft inserts \x1b[K after Text content
+    // and a trailing \x1b[0m would get split, leaking a stray 'm' character.
     assert!(
-        line.ends_with("\x1b[39m"),
-        "Line should end with [39m, got: {:?}",
+        line.ends_with("v2.1.12"),
+        "Line should end with version (no trailing reset), got: {:?}",
         &line[line.len().saturating_sub(20)..]
     );
 }
@@ -93,7 +93,7 @@ fn styled_status_text_contains_gray() {
     // Should contain gray foreground
     assert!(status.contains("\x1b[38;2;153;153;153m"));
     // Should contain reset
-    assert!(status.contains("\x1b[39m"));
+    assert!(status.contains("\x1b[0m"));
     // Should contain content
     assert!(status.contains("? for shortcuts"));
 }

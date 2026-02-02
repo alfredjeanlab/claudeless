@@ -1,0 +1,13 @@
+# Capture extended status bar with "accept edits on" state.
+# Args: --model haiku
+
+wait "for shortcuts" 5s
+
+# Send Shift+Tab (BackTab) escape sequence to cycle to "accept edits on" mode
+send <Esc> "[Z"
+wait "accept edits" 3s
+snapshot "status_bar_extended"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

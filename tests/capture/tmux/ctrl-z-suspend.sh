@@ -56,10 +56,9 @@ done
 
 # Capture the suspend message (it appears after the TUI exits)
 # The message starts with "Claude Code has been suspended"
-tmux capture-pane -t "$SESSION" -p | grep -A1 "Claude Code has been suspended" > "$FIXTURES_DIR/ctrl_z_suspend.txt"
+tmux capture-pane -t "$SESSION" -p | grep -A1 "Claude Code has been suspended" > "$FIXTURES_DIR/ctrl_z_suspend.tmux.txt"
 
 echo -e "${GREEN}✓${NC} Captured ctrl_z_suspend"
-echo "  Plain: $FIXTURES_DIR/ctrl_z_suspend.txt"
 
 # Resume and exit Claude cleanly
 tmux send-keys -t "$SESSION" 'fg' Enter

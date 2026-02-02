@@ -3,6 +3,8 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+use serial_test::serial;
+
 use super::paths::normalize_project_path;
 use super::*;
 
@@ -268,6 +270,7 @@ fn test_permissions() {
 // The only way to use a real path is to explicitly set CLAUDELESS_CONFIG_DIR.
 
 #[test]
+#[serial(env)]
 fn test_resolve_defaults_to_temp_directory_not_home() {
     // SAFETY: When no environment variable is set, resolve() must return
     // a temporary directory, NOT ~/.claude. This prevents accidental
@@ -302,6 +305,7 @@ fn test_resolve_defaults_to_temp_directory_not_home() {
 }
 
 #[test]
+#[serial(env)]
 fn test_resolve_respects_env_var_override() {
     // When CLAUDELESS_CONFIG_DIR is explicitly set, resolve() should use it.
     // This allows users to intentionally specify a directory for testing.
@@ -323,6 +327,7 @@ fn test_resolve_respects_env_var_override() {
 }
 
 #[test]
+#[serial(env)]
 fn test_resolve_with_env_var_does_not_require_existing_dir() {
     // The directory specified by CLAUDELESS_CONFIG_DIR doesn't need to exist
     // yet - it will be created when initialize() is called.
@@ -344,6 +349,7 @@ fn test_resolve_with_env_var_does_not_require_existing_dir() {
 }
 
 #[test]
+#[serial(env)]
 fn test_resolve_respects_claude_config_dir() {
     // When CLAUDE_CONFIG_DIR is set (and CLAUDELESS_CONFIG_DIR/CLAUDELESS_STATE_DIR are not),
     // resolve() should use it. This provides compatibility with Claude Code's
@@ -369,6 +375,7 @@ fn test_resolve_respects_claude_config_dir() {
 }
 
 #[test]
+#[serial(env)]
 fn test_resolve_claudeless_config_dir_takes_precedence() {
     // When CLAUDELESS_CONFIG_DIR, CLAUDELESS_STATE_DIR, and CLAUDE_CONFIG_DIR are all set,
     // CLAUDELESS_CONFIG_DIR should take precedence.
@@ -396,6 +403,7 @@ fn test_resolve_claudeless_config_dir_takes_precedence() {
 }
 
 #[test]
+#[serial(env)]
 fn test_resolve_claudeless_state_dir_backwards_compat() {
     // CLAUDELESS_STATE_DIR should still work for backwards compatibility,
     // taking precedence over CLAUDE_CONFIG_DIR but not CLAUDELESS_CONFIG_DIR.

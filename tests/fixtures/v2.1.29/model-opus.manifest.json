@@ -1,0 +1,6 @@
+{
+  "script": "model-opus",
+  "snapshots": [
+    "model_opus"
+  ]
+}

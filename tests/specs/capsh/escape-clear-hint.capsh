@@ -1,0 +1,16 @@
+# Capture "Esc to clear again" hint.
+
+wait "for shortcuts" 5s
+
+# Type some text first
+send "hello world"
+wait "hello world" 3s
+
+# Press Escape to show the hint
+send <Esc>
+wait 500
+snapshot "escape_clear_hint"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

@@ -129,7 +129,7 @@ pub struct HooksDialog {
 
 impl Default for HooksDialog {
     fn default() -> Self {
-        Self::new(4) // Default to showing 4 active hooks
+        Self::new(5) // Default to showing 5 active hooks
     }
 }
 

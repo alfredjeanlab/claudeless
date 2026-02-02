@@ -1,2 +1,0 @@
-Claude Code has been suspended. Run `fg` to bring Claude Code back.
-Note: ctrl + z now suspends Claude Code, ctrl + _ undoes input.

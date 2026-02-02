@@ -1,0 +1,40 @@
+# Capture clear_before and clear_after - state before and after /clear command.
+# Requires API call - Claude must respond to prompts.
+# Args: --model haiku
+# Timeout: 60
+
+# Handle trust dialog if it appears, then wait for ready state
+wait "for shortcuts" 5s
+
+# Build up conversation with two turns (matches test expectations)
+send "what is 2 + 2?"
+wait 100
+send <Enter>
+# Wait for thinking spinner to appear then disappear, or for response directly
+if wait "\w+…" 3s
+    wait !"\w+…" 15s
+end
+
+send "and 3 + 3?"
+wait 100
+send <Enter>
+if wait "\w+…" 3s
+    wait !"\w+…" 15s
+end
+
+# Snapshot before clear (conversation with responses visible)
+snapshot "clear_before"
+
+# Run /clear command
+send "/clear"
+wait "/clear" 3s
+send <Enter>
+
+# Wait for clear to complete (shows "(no content)")
+wait "no content" 5s
+snapshot "clear_after"
+
+# Exit
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

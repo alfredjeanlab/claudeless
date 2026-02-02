@@ -54,11 +54,10 @@ for i in {1..10}; do
     sleep 0.5
 done
 
-# Capture the pane and strip shell prompt lines
-tmux capture-pane -t "$SESSION" -p | sed -n '/▐▛███▜▌/,$p' > "$FIXTURES_DIR/ctrl_d_exit_hint.txt"
+# Capture the pane to fixture
+capture_tmux_pane "$SESSION" "ctrl_d_exit_hint" "$FIXTURES_DIR"
 
 echo -e "${GREEN}✓${NC} Captured ctrl_d_exit_hint"
-echo "  Plain: $FIXTURES_DIR/ctrl_d_exit_hint.txt"
 
 # Send second Ctrl-D to actually exit
 tmux send-keys -t "$SESSION" C-d

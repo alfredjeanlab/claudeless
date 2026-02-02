@@ -10,7 +10,7 @@
 //! This module keeps the types used by the app component.
 
 /// User's choice in trust prompt
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TrustChoice {
     Yes,
     No,

@@ -1,0 +1,32 @@
+# Capture Edit tool permission dialog.
+# Requires API call - Claude must decide to use Edit tool.
+# Args: --model haiku
+# Timeout: 120
+
+# Handle trust dialog if it appears, then wait for ready state
+wait "for shortcuts" 3s
+
+# First create a file
+send "Create a file called test.txt with the content: Hello World"
+wait 100
+send <Enter>
+wait "Create file" 5s
+send <Enter>
+wait "for shortcuts" 5s
+
+# Now ask Claude to edit the existing file
+send "Edit test.txt and change Hello to Goodbye"
+wait 100
+send <Enter>
+
+# Wait for Edit permission dialog to appear
+wait "Edit file" 5s
+wait "Do you want to make this edit" 3s
+snapshot "edit_permission_dialog"
+
+# Cancel and exit cleanly
+send <Esc>
+wait 500
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

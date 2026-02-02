@@ -81,6 +81,11 @@ impl StateDirectory {
             fs::write(self.settings_path(), "{}")?;
         }
 
+        // Real Claude creates .claude.json on every startup.
+        if !self.claude_json_path().exists() {
+            fs::write(self.claude_json_path(), "{}\n")?;
+        }
+
         self.set_permissions(&self.root, 0o700)?;
         self.initialized = true;
         Ok(())
@@ -112,6 +117,10 @@ impl StateDirectory {
 
     pub fn settings_path(&self) -> PathBuf {
         paths::settings_path(&self.root)
+    }
+
+    pub fn claude_json_path(&self) -> PathBuf {
+        paths::claude_json_path(&self.root)
     }
 
     /// Get a settings loader for this state directory and working directory.

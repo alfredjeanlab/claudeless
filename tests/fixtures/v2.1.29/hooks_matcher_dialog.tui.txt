@@ -1,0 +1,23 @@
+
+▗ ▗   ▖ ▖  Claude Code v2.1.29
+           Haiku 4.5 · Claude API
+  ▘▘ ▝▝    /…/var/folders/t5/6tq8cxtj20z035rv8hsnzwvh0000gn/T/capture-cVnrNN
+
+  /model to try Opus 4.5
+
+❯ /hooks
+────────────────────────────────────────────────────────────────────────────────
+ PreToolUse - Tool Matchers
+ Input to command is JSON of tool call arguments.
+ Exit code 0 - stdout/stderr not shown
+ Exit code 2 - show stderr to model and block tool call
+ Other exit codes - show stderr to user only but continue with tool call
+
+ ❯ 1. + Add new matcher…
+   2. + Match all (no filter)
+   No matchers configured yet
+
+ Enter to confirm · Esc to cancel
+
+
+

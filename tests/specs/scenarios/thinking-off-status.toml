@@ -1,0 +1,14 @@
+name = "thinking-off-status"
+
+session_id = "00000000-0000-0000-0000-000000000001"
+project_path = "/test/project"
+launch_timestamp = "2025-01-01T00:00:00Z"
+user_name = "TestUser"
+claude_version = "2.1.29"
+provider = "Claude API"
+placeholder = 'Try "create a util logging.py that..."'
+
+trusted = true
+
+[default_response]
+text = "I understand. Let me help with that."

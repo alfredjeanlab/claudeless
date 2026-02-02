@@ -126,8 +126,8 @@ fn test_tui_model_picker_shows_available_models() {
     let capture = tui.wait_for_change(&previous);
 
     assert!(
-        capture.contains("Default") && capture.contains("Sonnet") && capture.contains("Haiku"),
-        "Model picker should show Default, Sonnet, and Haiku options.\nCapture:\n{}",
+        capture.contains("Default") && capture.contains("Opus") && capture.contains("Haiku"),
+        "Model picker should show Default, Opus, and Haiku options.\nCapture:\n{}",
         capture
     );
 }
@@ -200,7 +200,7 @@ fn test_tui_model_picker_escape_closes() {
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
 ///
-/// Model picker footer shows "Enter to confirm · esc to exit".
+/// Model picker footer shows "Enter to confirm · Esc to exit".
 #[test]
 fn test_tui_model_picker_shows_footer_hints() {
     let tui = TuiTestSession::new("picker-footer", &scenario());
@@ -210,8 +210,8 @@ fn test_tui_model_picker_shows_footer_hints() {
     let capture = tui.wait_for_change(&previous);
 
     assert!(
-        capture.contains("Enter to confirm") && capture.contains("esc to exit"),
-        "Model picker should show 'Enter to confirm · esc to exit' footer.\nCapture:\n{}",
+        capture.contains("Enter to confirm") && capture.contains("Esc to exit"),
+        "Model picker should show 'Enter to confirm · Esc to exit' footer.\nCapture:\n{}",
         capture
     );
 }

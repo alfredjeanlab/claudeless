@@ -28,7 +28,7 @@ fn claudeless_bin() -> PathBuf {
 ///
 /// Real Claude supports --add-dir. claudeless should accept it (even if ignored).
 #[test]
-#[ignore] // DEFERRED: Requires missing CLI flags (epic-05x-fix-cli)
+
 fn test_add_dir_flag_should_be_accepted() {
     let scenario = write_scenario(
         r#"
@@ -59,7 +59,7 @@ fn test_add_dir_flag_should_be_accepted() {
 ///
 /// Real Claude supports --json-schema. claudeless should accept it (even if ignored).
 #[test]
-#[ignore] // DEFERRED: Requires missing CLI flags (epic-05x-fix-cli)
+
 fn test_json_schema_flag_should_be_accepted() {
     let scenario = write_scenario(
         r#"
@@ -89,7 +89,7 @@ fn test_json_schema_flag_should_be_accepted() {
 ///
 /// Real Claude supports --tools. claudeless should accept it (even if ignored).
 #[test]
-#[ignore] // DEFERRED: Requires missing CLI flags (epic-05x-fix-cli)
+
 fn test_tools_flag_should_be_accepted() {
     let scenario = write_scenario(
         r#"
@@ -119,7 +119,7 @@ fn test_tools_flag_should_be_accepted() {
 ///
 /// Real Claude supports --agent. claudeless should accept it (even if ignored).
 #[test]
-#[ignore] // DEFERRED: Requires missing CLI flags (epic-05x-fix-cli)
+
 fn test_agent_flag_should_be_accepted() {
     let scenario = write_scenario(
         r#"
@@ -149,7 +149,7 @@ fn test_agent_flag_should_be_accepted() {
 ///
 /// Real Claude supports --append-system-prompt. claudeless should accept it.
 #[test]
-#[ignore] // DEFERRED: Requires missing CLI flags (epic-05x-fix-cli)
+
 fn test_append_system_prompt_flag_should_be_accepted() {
     let scenario = write_scenario(
         r#"

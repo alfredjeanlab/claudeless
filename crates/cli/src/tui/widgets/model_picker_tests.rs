@@ -7,7 +7,7 @@ use super::*;
 fn model_choice_from_opus_model_id() {
     assert_eq!(
         ModelChoice::from_model_id("claude-opus-4-5-20251101"),
-        ModelChoice::Default
+        ModelChoice::Opus
     );
 }
 
@@ -15,7 +15,7 @@ fn model_choice_from_opus_model_id() {
 fn model_choice_from_sonnet_model_id() {
     assert_eq!(
         ModelChoice::from_model_id("claude-sonnet-4-20250514"),
-        ModelChoice::Sonnet
+        ModelChoice::Default
     );
 }
 
@@ -29,11 +29,11 @@ fn model_choice_from_haiku_model_id() {
 
 #[test]
 fn model_picker_navigation() {
-    let mut dialog = ModelPickerDialog::new("claude-opus-4-5-20251101");
+    let mut dialog = ModelPickerDialog::new("claude-sonnet-4-20250514");
     assert_eq!(dialog.selected, ModelChoice::Default);
 
     dialog.move_down();
-    assert_eq!(dialog.selected, ModelChoice::Sonnet);
+    assert_eq!(dialog.selected, ModelChoice::Opus);
 
     dialog.move_down();
     assert_eq!(dialog.selected, ModelChoice::Haiku);

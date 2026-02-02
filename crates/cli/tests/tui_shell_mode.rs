@@ -18,19 +18,11 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, simple_scenario_toml, TuiTestSession};
+use common::{simple_scenario_toml, TuiTestSession};
 
 fn scenario() -> String {
     simple_scenario_toml("Hello!")
 }
-
-const JSON_SCENARIO: &str = r#"
-    {
-        "default_response": "Hello!",
-        "trusted": true,
-        "claude_version": "2.1.12"
-    }
-"#;
 
 const BYPASS_SCENARIO: &str = r#"
     name = "test"
@@ -77,21 +69,6 @@ fn test_tui_exclamation_shows_shell_prefix() {
     );
 }
 
-/// Behavior observed with: claude --version 2.1.12 (Claude Code)
-///
-/// Shell mode prefix display matches the captured fixture
-#[test]
-fn test_tui_shell_prefix_matches_fixture() {
-    let tui = TuiTestSession::new("shell-prefix-fixture", JSON_SCENARIO);
-    let previous = tui.capture();
-
-    // Press '!' to enter shell mode
-    tui.send_keys("!");
-    let capture = tui.wait_for_change(&previous);
-
-    assert_tui_matches_fixture(&capture, "shell_mode_prefix.txt", None);
-}
-
 // =============================================================================
 // Shell Mode Command Input Tests
 // =============================================================================
@@ -116,23 +93,6 @@ fn test_tui_shell_mode_shows_command() {
         "Shell mode should show command after '! ' prefix.\nCapture:\n{}",
         capture
     );
-}
-
-/// Behavior observed with: claude --version 2.1.12 (Claude Code)
-///
-/// Shell mode with command matches the captured fixture
-#[test]
-fn test_tui_shell_command_matches_fixture() {
-    let tui = TuiTestSession::new("shell-command-fixture", JSON_SCENARIO);
-    let previous = tui.capture();
-
-    // Enter shell mode and type a command
-    tui.send_keys("!");
-    tui.wait_for_change(&previous);
-    tui.send_keys("ls -la");
-    let capture = tui.wait_for("ls -la");
-
-    assert_tui_matches_fixture(&capture, "shell_mode_command.txt", None);
 }
 
 // =============================================================================
@@ -312,41 +272,4 @@ fn test_tui_shell_mode_with_env_variable() {
         "Shell mode should handle environment variables.\nCapture:\n{}",
         capture
     );
-}
-
-// =============================================================================
-// Shell Mode ANSI Color Tests (v2.1.17)
-// =============================================================================
-
-/// Behavior observed with: claude --version 2.1.17 (Claude Code)
-///
-/// Shell mode prefix ANSI output matches v2.1.17 fixture.
-/// In bash mode, the CLI shows:
-/// - Pink separators (RGB 253, 93, 177) instead of gray
-/// - `! Try "..."` prompt with `!` in pink (no `❯` prefix)
-/// - Status bar shows `! for bash mode` in pink
-///
-#[test]
-#[ignore] // TODO(implement): Requires bash mode pink styling and `!` prefix
-fn test_tui_shell_prefix_ansi_matches_fixture_v2117() {
-    use common::ansi::assert_versioned_ansi_matches_fixture;
-    use common::tmux;
-
-    let tui = TuiTestSession::new(
-        "shell-prefix-ansi",
-        r#"
-        {
-            "default_response": "Hello!",
-            "trusted": true,
-            "claude_version": "2.1.17"
-        }
-        "#,
-    );
-    let previous = tui.capture();
-
-    // Press '!' to enter shell mode
-    tui.send_keys("!");
-    let capture = tmux::wait_for_change_ansi(tui.name(), &previous);
-
-    assert_versioned_ansi_matches_fixture(&capture, "v2.1.17", "shell_mode_prefix_ansi.txt", None);
 }

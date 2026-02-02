@@ -11,29 +11,62 @@
 enum BashCommandCategory {
     /// Command reads from /etc/ directory
     ReadingEtc,
+    /// Read-only command accessing a specific path directory (ls, cat, head, etc.)
+    ReadingPath(String),
+    /// Command accesses a specific path directory
+    PathAccess(String),
     /// Named command (npm, cargo, git, rm, etc.)
     NamedCommand(String),
     /// Fallback for complex or unrecognized commands
     Generic,
 }
 
+/// Commands that are read-only (used for "allow reading from" vs "allow access to")
+const READ_ONLY_COMMANDS: &[&str] = &[
+    "ls", "cat", "head", "tail", "less", "more", "wc", "file", "stat", "find", "grep", "egrep",
+    "fgrep", "rg", "ag", "fd", "tree", "du", "df", "readlink", "realpath", "diff",
+];
+
 /// Categorize a bash command for permission text generation.
 ///
 /// Priority:
 /// 1. If command contains `/etc/` path, categorize as ReadingEtc
-/// 2. Extract first word as the command name
-/// 3. Fallback to Generic for empty or unrecognizable commands
+/// 2. If command has path arguments, categorize as PathAccess or ReadingPath
+/// 3. Extract first word as the command name
+/// 4. Fallback to Generic for empty or unrecognizable commands
 fn categorize_bash_command(command: &str) -> BashCommandCategory {
     // Check for /etc/ access first (highest priority)
     if command.contains("/etc/") {
         return BashCommandCategory::ReadingEtc;
     }
 
-    // Extract the first word (command name)
-    let first_word = command.split_whitespace().next().unwrap_or("");
+    let parts: Vec<&str> = command.split_whitespace().collect();
+    if parts.is_empty() {
+        return BashCommandCategory::Generic;
+    }
 
-    // Handle commands with paths (e.g., /usr/bin/npm -> npm)
+    // Extract command name for read-only check
+    let first_word = parts[0];
     let command_name = first_word.rsplit('/').next().unwrap_or(first_word);
+    let is_read_only = READ_ONLY_COMMANDS.contains(&command_name);
+
+    // Check if any argument is a path — use directory-based categorization
+    for part in parts.iter().skip(1) {
+        if part.starts_with('/') || part.starts_with("~/") {
+            // Extract the first directory component from the path
+            let path = part.trim_start_matches('/').trim_start_matches("~/");
+            if let Some(dir) = path.split('/').next() {
+                if !dir.is_empty() {
+                    let dir_with_slash = format!("{}/", dir);
+                    return if is_read_only {
+                        BashCommandCategory::ReadingPath(dir_with_slash)
+                    } else {
+                        BashCommandCategory::PathAccess(dir_with_slash)
+                    };
+                }
+            }
+        }
+    }
 
     if command_name.is_empty() {
         BashCommandCategory::Generic
@@ -176,6 +209,12 @@ impl RichPermissionDialog {
                 BashCommandCategory::ReadingEtc => {
                     "Yes, allow reading from etc/ from this project".to_string()
                 }
+                BashCommandCategory::ReadingPath(dir) => {
+                    format!("Yes, allow reading from {} from this project", dir)
+                }
+                BashCommandCategory::PathAccess(dir) => {
+                    format!("Yes, and always allow access to {} from this project", dir)
+                }
                 BashCommandCategory::NamedCommand(name) => {
                     format!("Yes, allow {} commands from this project", name)
                 }
@@ -215,10 +254,12 @@ impl RichPermissionDialog {
                 lines.push(" Bash command".to_string());
             }
             PermissionType::Edit { file_path, .. } => {
-                lines.push(format!(" Edit file {}", file_path));
+                lines.push(" Edit file".to_string());
+                lines.push(format!(" {}", file_path));
             }
             PermissionType::Write { file_path, .. } => {
-                lines.push(format!(" Create file {}", file_path));
+                lines.push(" Create file".to_string());
+                lines.push(format!(" {}", file_path));
             }
         }
 
@@ -277,7 +318,7 @@ impl RichPermissionDialog {
 
         // Footer
         lines.push(String::new());
-        lines.push(" Esc to cancel · Tab to add additional instructions".to_string());
+        lines.push(" Esc to cancel \u{00b7} Tab to amend".to_string());
 
         lines.join("\n")
     }
@@ -293,7 +334,8 @@ fn render_diff_line(line: &DiffLine) -> String {
     let prefix = match line.kind {
         DiffKind::Removed => "-",
         DiffKind::Added => "+",
-        DiffKind::Context | DiffKind::NoNewline => " ",
+        DiffKind::Context => " ",
+        DiffKind::NoNewline => "  ",
     };
 
     match line.line_num {

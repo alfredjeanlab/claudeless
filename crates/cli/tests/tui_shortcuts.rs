@@ -30,19 +30,11 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, simple_scenario_toml, TuiTestSession};
+use common::{simple_scenario_toml, TuiTestSession};
 
 fn scenario() -> String {
     simple_scenario_toml("Hello!")
 }
-
-const JSON_SCENARIO: &str = r#"
-    {
-        "default_response": "Hello!",
-        "trusted": true,
-        "claude_version": "2.1.12"
-    }
-"#;
 
 // =============================================================================
 // Shortcuts Display Tests
@@ -76,21 +68,6 @@ fn test_tui_question_mark_shows_shortcuts_on_empty_input() {
         "Shortcuts panel should show '@ for file paths'.\nCapture:\n{}",
         capture
     );
-}
-
-/// Behavior observed with: claude --version 2.1.12 (Claude Code)
-///
-/// Shortcuts panel matches the captured fixture
-#[test]
-fn test_tui_shortcuts_display_matches_fixture() {
-    let tui = TuiTestSession::new("shortcuts-fixture", JSON_SCENARIO);
-    let previous = tui.capture();
-
-    // Press '?' to show shortcuts
-    tui.send_keys("?");
-    let capture = tui.wait_for_change(&previous);
-
-    assert_tui_matches_fixture(&capture, "shortcuts_display.txt", None);
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)

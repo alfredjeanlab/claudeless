@@ -8,18 +8,18 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use crate::capture::CaptureLog;
 use crate::cli::Cli;
 use crate::config::ResolvedTimeouts;
 use crate::hooks::load_hooks;
 use crate::mcp::{load_mcp_config, McpConfig, McpManager};
 use crate::output::{print_mcp, print_mcp_warning};
+use crate::permission::PermissionBypass;
 use crate::scenario::Scenario;
 use crate::state::io::JsonLoad;
 use crate::state::{
     ClaudeSettings, SessionsIndex, SettingsLoader, SettingsPaths, StateDirectory, StateWriter,
 };
-use crate::tools::create_executor_with_mcp;
+use crate::tools::create_executor_with_mcp_and_permissions;
 
 use super::core::Runtime;
 use super::RuntimeContext;
@@ -30,14 +30,12 @@ use super::RuntimeContext;
 /// ```ignore
 /// let runtime = RuntimeBuilder::new(cli)
 ///     .with_scenario(path)?
-///     .with_capture(path)?
 ///     .build()
 ///     .await?;
 /// ```
 pub struct RuntimeBuilder {
     cli: Cli,
     scenario: Option<Scenario>,
-    capture: Option<CaptureLog>,
     mcp_manager: Option<Arc<RwLock<McpManager>>>,
     settings: Option<ClaudeSettings>,
 }
@@ -52,19 +50,12 @@ impl RuntimeBuilder {
             return Err(RuntimeBuildError::Validation(msg.to_string()));
         }
 
-        // Validate permission bypass configuration
-        let bypass = crate::permission::PermissionBypass::new(
-            cli.permissions.allow_dangerously_skip_permissions,
-            cli.permissions.dangerously_skip_permissions,
-        );
-        if bypass.is_not_allowed() {
-            return Err(RuntimeBuildError::PermissionBypass);
-        }
+        // Note: --dangerously-skip-permissions without --allow-dangerously-skip-permissions
+        // is handled by the TUI with a confirmation dialog (not a build error).
 
         Ok(Self {
             cli,
             scenario: None,
-            capture: None,
             mcp_manager: None,
             settings: None,
         })
@@ -80,20 +71,6 @@ impl RuntimeBuilder {
     pub fn with_scenario_from_cli(mut self) -> Result<Self, RuntimeBuildError> {
         if let Some(ref path) = self.cli.simulator.scenario {
             self.scenario = Some(Scenario::load(Path::new(path))?);
-        }
-        Ok(self)
-    }
-
-    /// Set up capture logging.
-    pub fn with_capture(mut self, path: &Path) -> Result<Self, RuntimeBuildError> {
-        self.capture = Some(CaptureLog::with_file(path)?);
-        Ok(self)
-    }
-
-    /// Set up capture logging from CLI args if specified.
-    pub fn with_capture_from_cli(mut self) -> Result<Self, RuntimeBuildError> {
-        if let Some(ref path) = self.cli.simulator.capture {
-            self.capture = Some(CaptureLog::with_file(Path::new(path))?);
         }
         Ok(self)
     }
@@ -251,7 +228,11 @@ impl RuntimeBuilder {
                     &runtime_ctx.working_directory,
                 )
                 .ok()
-                .map(|w| Arc::new(RwLock::new(w)))
+                .map(|w| {
+                    // Write initial session state (JSONL, sessions-index, empty todo)
+                    let _ = w.initialize_session();
+                    Arc::new(RwLock::new(w))
+                })
             }
         } else {
             None
@@ -268,11 +249,25 @@ impl RuntimeBuilder {
             .map(|te| te.mode.clone())
             .unwrap_or_default();
 
-        // Create executor with MCP support
-        let executor = create_executor_with_mcp(
+        // Build permission checker from runtime context
+        let bypass = PermissionBypass::new(
+            self.cli.permissions.allow_dangerously_skip_permissions,
+            self.cli.permissions.dangerously_skip_permissions,
+        );
+        let scenario_tools = self
+            .scenario
+            .as_ref()
+            .and_then(|s| s.config().tool_execution.as_ref())
+            .map(|te| te.tools.clone())
+            .unwrap_or_default();
+        let checker = runtime_ctx.permission_checker_with_overrides(bypass, scenario_tools);
+
+        // Create executor with MCP support and permission checking
+        let executor = create_executor_with_mcp_and_permissions(
             execution_mode,
             self.mcp_manager.as_ref().map(Arc::clone),
             state_writer.as_ref().map(Arc::clone),
+            checker,
         );
 
         // Resolve timeouts
@@ -287,7 +282,6 @@ impl RuntimeBuilder {
             self.scenario,
             executor,
             state_writer,
-            self.capture,
             hook_executor,
             self.mcp_manager,
             self.cli,
@@ -297,10 +291,9 @@ impl RuntimeBuilder {
 
     /// Build with default initialization from CLI args.
     ///
-    /// Convenience method that loads scenario, capture, and MCP from CLI.
+    /// Convenience method that loads scenario and MCP from CLI.
     pub async fn build_from_cli(self) -> Result<Runtime, RuntimeBuildError> {
         self.with_scenario_from_cli()?
-            .with_capture_from_cli()?
             .with_mcp_from_cli()
             .await?
             .with_settings()
@@ -343,9 +336,6 @@ pub enum RuntimeBuildError {
 
     #[error("Failed to load scenario: {0}")]
     Scenario(#[from] crate::scenario::ScenarioError),
-
-    #[error("Failed to create capture log: {0}")]
-    Capture(#[from] std::io::Error),
 
     #[error("Failed to load MCP config: {0}")]
     McpConfig(String),

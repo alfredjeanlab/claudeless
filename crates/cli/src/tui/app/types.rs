@@ -17,12 +17,16 @@ use super::state::{DialogState, DisplayState, InputState};
 #[derive(Clone, Debug)]
 pub struct TuiConfig {
     pub trusted: bool,
+    pub logged_in: bool,
     pub user_name: String,
     pub model: String,
     pub working_directory: PathBuf,
     pub permission_mode: PermissionMode,
     /// Whether bypass permissions mode is allowed (requires --dangerously-skip-permissions)
     pub allow_bypass_permissions: bool,
+    /// Whether bypass confirmation dialog should be shown on startup
+    /// (--dangerously-skip-permissions without --allow-dangerously-skip-permissions)
+    pub bypass_confirmation_needed: bool,
     /// Resolved timeout configuration
     pub timeouts: ResolvedTimeouts,
     /// Explicit Claude version, or None for Claudeless-native mode
@@ -31,21 +35,35 @@ pub struct TuiConfig {
     pub is_tty: bool,
     /// Initial prompt from CLI positional argument
     pub initial_prompt: Option<String>,
+    /// Placeholder text for the input prompt
+    pub placeholder: Option<String>,
+    /// Provider name shown in header (default: "Claude Max")
+    pub provider: Option<String>,
+    /// Show "Welcome back!" splash instead of normal header
+    pub show_welcome_back: bool,
+    /// Right panel rows for the welcome back box (None = default Tips/Recent activity)
+    pub welcome_back_right_panel: Option<Vec<String>>,
 }
 
 impl Default for TuiConfig {
     fn default() -> Self {
         Self {
             trusted: true,
+            logged_in: true,
             user_name: DEFAULT_USER_NAME.to_string(),
             model: DEFAULT_MODEL.to_string(),
             working_directory: std::env::current_dir().unwrap_or_default(),
             permission_mode: PermissionMode::Default,
             allow_bypass_permissions: false,
+            bypass_confirmation_needed: false,
             timeouts: ResolvedTimeouts::default(),
             claude_version: None,
             is_tty: false,
             initial_prompt: None,
+            placeholder: None,
+            provider: None,
+            show_welcome_back: false,
+            welcome_back_right_panel: None,
         }
     }
 }
@@ -55,7 +73,12 @@ impl TuiConfig {
     ///
     /// This extracts all needed configuration from the Runtime, avoiding
     /// duplicate loading of scenario, settings, and hooks.
-    pub fn from_runtime(runtime: &Runtime, allow_bypass_permissions: bool, is_tty: bool) -> Self {
+    pub fn from_runtime(
+        runtime: &Runtime,
+        allow_bypass_permissions: bool,
+        bypass_confirmation_needed: bool,
+        is_tty: bool,
+    ) -> Self {
         let cli = runtime.cli();
         let config = runtime.scenario_config();
 
@@ -80,6 +103,7 @@ impl TuiConfig {
 
         Self {
             trusted: config.environment.trusted,
+            logged_in: config.environment.logged_in,
             user_name: config
                 .identity
                 .user_name
@@ -98,18 +122,26 @@ impl TuiConfig {
                 .unwrap_or_else(|| std::env::current_dir().unwrap_or_default()),
             permission_mode,
             allow_bypass_permissions,
+            bypass_confirmation_needed,
             timeouts: runtime.timeouts().clone(),
             claude_version,
             is_tty,
             initial_prompt: cli.prompt.clone(),
+            placeholder: config.identity.placeholder.clone(),
+            provider: config.identity.provider.clone(),
+            show_welcome_back: config.identity.show_welcome_back.unwrap_or(false),
+            welcome_back_right_panel: config.identity.welcome_back_right_panel.clone(),
         }
     }
 
+    // TODO(refactor): Group bypass/permission params into a struct
+    #[allow(clippy::too_many_arguments)]
     pub fn from_scenario(
         config: &ScenarioConfig,
         cli_model: Option<&str>,
         cli_permission_mode: &PermissionMode,
         allow_bypass_permissions: bool,
+        bypass_confirmation_needed: bool,
         cli_claude_version: Option<&str>,
         is_tty: bool,
         initial_prompt: Option<String>,
@@ -133,6 +165,7 @@ impl TuiConfig {
 
         Self {
             trusted: config.environment.trusted,
+            logged_in: config.environment.logged_in,
             user_name: config
                 .identity
                 .user_name
@@ -150,10 +183,15 @@ impl TuiConfig {
                 .unwrap_or_else(|| std::env::current_dir().unwrap_or_default()),
             permission_mode,
             allow_bypass_permissions,
+            bypass_confirmation_needed,
             timeouts: ResolvedTimeouts::resolve(config.timing.timeouts.as_ref()),
             claude_version,
             is_tty,
             initial_prompt,
+            placeholder: config.identity.placeholder.clone(),
+            provider: config.identity.provider.clone(),
+            show_welcome_back: config.identity.show_welcome_back.unwrap_or(false),
+            welcome_back_right_panel: config.identity.welcome_back_right_panel.clone(),
         }
     }
 }
@@ -161,6 +199,8 @@ impl TuiConfig {
 /// Application mode
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AppMode {
+    /// Showing setup wizard (first run)
+    Setup,
     /// Waiting for user input
     Input,
     /// Processing/streaming response
@@ -171,6 +211,8 @@ pub enum AppMode {
     Thinking,
     /// Showing trust prompt dialog
     Trust,
+    /// Showing bypass permissions confirmation dialog
+    BypassConfirm,
     /// Showing thinking toggle dialog
     ThinkingToggle,
     /// Showing tasks dialog
@@ -220,6 +262,14 @@ pub struct RenderState {
     pub spinner_frame: usize,
     /// Current spinner verb
     pub spinner_verb: String,
+    /// Placeholder text for the input prompt
+    pub placeholder: Option<String>,
+    /// Provider name shown in header
+    pub provider: Option<String>,
+    /// Show "Welcome back!" splash instead of normal header
+    pub show_welcome_back: bool,
+    /// Right panel rows for the welcome back box
+    pub welcome_back_right_panel: Option<Vec<String>>,
 }
 
 /// Permission request state using the rich permission dialog
@@ -228,6 +278,9 @@ pub struct PermissionRequest {
     pub dialog: RichPermissionDialog,
     /// Tool use ID for JSONL recording
     pub tool_use_id: Option<String>,
+    /// Display content to show after permission is granted (completed tools + response text).
+    /// If None, falls back to the simple "[Permission granted]" message.
+    pub post_grant_display: Option<String>,
 }
 
 impl PermissionRequest {
@@ -235,6 +288,7 @@ impl PermissionRequest {
         Self {
             dialog,
             tool_use_id: None,
+            post_grant_display: None,
         }
     }
 
@@ -242,6 +296,7 @@ impl PermissionRequest {
         Self {
             dialog,
             tool_use_id: Some(tool_use_id),
+            post_grant_display: None,
         }
     }
 }
@@ -275,6 +330,21 @@ pub const DEFAULT_TERMINAL_WIDTH: u16 = 120;
 pub struct TrustPromptState {
     pub working_directory: String,
     pub selected: TrustChoice,
+}
+
+/// Bypass confirmation dialog choice
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BypassChoice {
+    /// No, exit (default)
+    No,
+    /// Yes, I accept
+    Yes,
+}
+
+/// Bypass confirmation dialog state
+#[derive(Clone, Debug)]
+pub struct BypassConfirmState {
+    pub selected: BypassChoice,
 }
 
 impl TrustPromptState {

@@ -1,0 +1,53 @@
+name = "edit-permission-dialog"
+
+session_id = "00000000-0000-0000-0000-000000000001"
+project_path = "/test/project"
+launch_timestamp = "2025-01-01T00:00:00Z"
+user_name = "TestUser"
+claude_version = "2.1.29"
+provider = "Claude API"
+
+trusted = true
+
+[default_response]
+text = "I understand. Let me help with that."
+
+# First turn: create test.txt (Write auto-approved)
+[[responses]]
+pattern = { type = "contains", text = "test.txt" }
+
+[responses.response]
+text = "Done! I've created the file test.txt with the content \"Hello World\"."
+
+[[responses.response.tool_calls]]
+tool = "Write"
+result = "Wrote 1 lines to test.txt"
+
+[responses.response.tool_calls.input]
+file_path = "test.txt"
+content = "Hello World"
+
+# Second turn: edit test.txt (Read auto-allowed, Edit needs permission)
+[[responses.turns]]
+expect = { type = "contains", text = "Edit" }
+
+[responses.turns.response]
+text = ""
+
+[[responses.turns.response.tool_calls]]
+tool = "Read"
+result = "1 file"
+
+[responses.turns.response.tool_calls.input]
+file_path = "test.txt"
+
+[[responses.turns.response.tool_calls]]
+tool = "Edit"
+
+[responses.turns.response.tool_calls.input]
+file_path = "test.txt"
+old_string = "Hello World"
+new_string = "Goodbye World"
+
+[tool_execution]
+mode = "mock"

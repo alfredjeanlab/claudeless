@@ -26,8 +26,6 @@ pub mod docs {
 pub mod ansi;
 #[doc(hidden)]
 pub mod api;
-/// Interaction capture and recording for test assertions.
-pub mod capture;
 #[doc(hidden)]
 pub mod cli;
 #[doc(hidden)]
@@ -36,6 +34,8 @@ pub mod config;
 pub mod event_types;
 #[doc(hidden)]
 pub mod failure;
+#[doc(hidden)]
+pub mod help;
 #[doc(hidden)]
 pub mod hooks;
 #[doc(hidden)]

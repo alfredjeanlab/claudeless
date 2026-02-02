@@ -15,7 +15,7 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, TuiTestSession};
+use common::TuiTestSession;
 
 const SCENARIO: &str = r#"
     {
@@ -45,22 +45,6 @@ fn test_fork_no_conversation_shows_error() {
         "/fork with no conversation should show error.\nCapture:\n{}",
         capture
     );
-}
-
-/// Behavior observed with: claude --version 2.1.12 (Claude Code)
-///
-/// Compare /fork error state against fixture when no conversation exists.
-#[test]
-fn test_fork_no_conversation_matches_fixture() {
-    let tui = TuiTestSession::new("fixture-fork-no-conv", SCENARIO);
-
-    // Execute /fork with no conversation
-    tui.send_line("/fork");
-
-    // Wait for error message
-    let capture = tui.wait_for("Failed to fork");
-
-    assert_tui_matches_fixture(&capture, "fork_no_conversation.txt", None);
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)

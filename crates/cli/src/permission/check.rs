@@ -140,6 +140,10 @@ impl PermissionChecker {
                 reason: "Execution not allowed in Plan mode".into(),
             },
             PermissionMode::Delegate | PermissionMode::Default | PermissionMode::AcceptEdits => {
+                // Read-only and state actions are auto-allowed in interactive modes
+                if is_auto_allowed_action(action) {
+                    return PermissionResult::Allowed;
+                }
                 PermissionResult::NeedsPrompt {
                     tool: tool_name.into(),
                     action: action.into(),
@@ -169,6 +173,14 @@ fn is_edit_action(action: &str) -> bool {
     matches!(
         action.to_lowercase().as_str(),
         "edit" | "write" | "create" | "delete" | "modify"
+    )
+}
+
+/// Check if an action is auto-allowed (read-only, state management, delegation).
+fn is_auto_allowed_action(action: &str) -> bool {
+    matches!(
+        action.to_lowercase().as_str(),
+        "read" | "state" | "delegate"
     )
 }
 

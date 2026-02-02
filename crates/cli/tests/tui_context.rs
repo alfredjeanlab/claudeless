@@ -6,14 +6,14 @@
 
 //! Context command tests - /context slash command behavior.
 //!
-//! Behavior observed with: claude --version 2.1.12 (Claude Code)
+//! Behavior observed with: claude --version 2.1.29 (Claude Code)
 //!
 //! ## /context Behavior
 //! - `/context` visualizes current context usage as a colored grid
-//! - Shows a 10x9 grid with symbols representing different context categories
+//! - Shows a 10x10 grid with symbols representing different context categories
 //! - Displays "Estimated usage by category" with token counts and percentages
-//! - Categories include: System prompt, System tools, Memory files, Messages, Free space, Autocompact buffer
-//! - Shows "Memory files · /memory" section listing loaded CLAUDE.md files
+//! - Categories: System prompt, System tools, Messages, Free space, Autocompact buffer
+//! - Row 0 shows model info: model name + used/total tokens
 //! - The command appears in autocomplete with description "Visualize current context usage as a colored grid"
 
 mod common;
@@ -23,14 +23,14 @@ use common::TuiTestSession;
 const SCENARIO: &str = r#"
     {
         "trusted": true,
-        "claude_version": "2.1.12",
+        "claude_version": "2.1.29",
         "responses": [
             { "pattern": { "type": "any" }, "response": "ok" }
         ]
     }
 "#;
 
-/// Behavior observed with: claude --version 2.1.12 (Claude Code)
+/// Behavior observed with: claude --version 2.1.29 (Claude Code)
 ///
 /// When /context is executed, it shows a context usage grid with token estimates.
 #[test]
@@ -50,7 +50,7 @@ fn test_context_shows_usage_grid() {
         capture
     );
 
-    // Should show category breakdowns
+    // Should show category breakdowns (no Memory files category in v2.1.29)
     assert!(
         capture.contains("System prompt"),
         "/context should show System prompt category.\nCapture:\n{}",
@@ -70,28 +70,28 @@ fn test_context_shows_usage_grid() {
     );
 }
 
-/// Behavior observed with: claude --version 2.1.12 (Claude Code)
+/// Behavior observed with: claude --version 2.1.29 (Claude Code)
 ///
-/// /context shows memory files section listing loaded CLAUDE.md files.
+/// /context shows model info on the first grid row.
 #[test]
-fn test_context_shows_memory_files() {
-    let tui = TuiTestSession::new("context-memory-files", SCENARIO);
+fn test_context_shows_model_info() {
+    let tui = TuiTestSession::new("context-model-info", SCENARIO);
 
     // Execute /context command
     tui.send_line("/context");
 
-    // Wait for the memory files section
-    let capture = tui.wait_for("Memory files");
+    // Wait for model info to appear
+    let capture = tui.wait_for("tokens");
 
-    // Should show memory files section with /memory reference
+    // Should show model name and token summary on row 0
     assert!(
-        capture.contains("Memory files") && capture.contains("/memory"),
-        "/context should show Memory files section.\nCapture:\n{}",
+        capture.contains("19k/200k tokens"),
+        "/context should show used/total token summary.\nCapture:\n{}",
         capture
     );
 }
 
-/// Behavior observed with: claude --version 2.1.12 (Claude Code)
+/// Behavior observed with: claude --version 2.1.29 (Claude Code)
 ///
 /// /context appears in slash command autocomplete with correct description.
 #[test]
@@ -120,9 +120,9 @@ fn test_context_in_autocomplete() {
     );
 }
 
-/// Behavior observed with: claude --version 2.1.12 (Claude Code)
+/// Behavior observed with: claude --version 2.1.29 (Claude Code)
 ///
-/// /context displays a visual grid using Unicode symbols.
+/// /context displays a visual grid using Unicode symbols including ⛁ for used cells.
 #[test]
 fn test_context_shows_visual_grid() {
     let tui = TuiTestSession::new("context-visual-grid", SCENARIO);
@@ -133,8 +133,15 @@ fn test_context_shows_visual_grid() {
     // Wait for the grid symbols to appear
     let capture = tui.wait_for("Estimated usage");
 
-    // Should contain grid symbols (⛶ for free space, ⛝ for autocompact buffer)
-    let has_grid_symbols = capture.contains('⛶') || capture.contains('⛝') || capture.contains('⛁');
+    // Should contain ⛁ (used cells) in the grid
+    assert!(
+        capture.contains('\u{26C1}'),
+        "/context should show \u{26C1} symbols for used cells.\nCapture:\n{}",
+        capture
+    );
+
+    // Should contain ⛶ (free space) and ⛝ (autocompact buffer)
+    let has_grid_symbols = capture.contains('\u{26F6}') || capture.contains('\u{26DD}');
     assert!(
         has_grid_symbols,
         "/context should show visual grid with Unicode symbols.\nCapture:\n{}",
@@ -142,7 +149,7 @@ fn test_context_shows_visual_grid() {
     );
 }
 
-/// Behavior observed with: claude --version 2.1.12 (Claude Code)
+/// Behavior observed with: claude --version 2.1.29 (Claude Code)
 ///
 /// /context shows token counts with percentages for each category.
 #[test]
@@ -155,7 +162,7 @@ fn test_context_shows_token_percentages() {
     // Wait for percentage to appear
     let capture = tui.wait_for("tokens");
 
-    // Should show token counts with percentages (e.g., "2.8k tokens (1.4%)")
+    // Should show token counts with percentages (e.g., "2.3k tokens (1.1%)")
     assert!(
         capture.contains("tokens") && capture.contains('%'),
         "/context should show token counts with percentages.\nCapture:\n{}",

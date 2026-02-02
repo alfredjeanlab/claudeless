@@ -355,11 +355,4 @@ mod tests {
         assert_eq!(escaped, "[38;2;215;119;87mOrange[39m");
     }
 
-    #[test]
-    fn test_load_ansi_fixture() {
-        let fixture = load_ansi_fixture("initial_state_ansi.txt");
-        assert!(!fixture.is_empty());
-        // Should contain ANSI escape sequences
-        assert!(fixture.contains("\x1b["));
-    }
 }

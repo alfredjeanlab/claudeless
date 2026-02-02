@@ -2,6 +2,7 @@
 # Opens thinking dialog after a response to show mid-conversation state.
 # Requires API call - sends a simple question to Haiku.
 # Args: --model haiku
+# Timeout: 120
 
 wait "for shortcuts" 10s
 

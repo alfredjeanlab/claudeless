@@ -13,7 +13,7 @@ pub const DEFAULT_CLAUDE_VERSION: &str = "2.1.12";
 /// Default user display name
 pub const DEFAULT_USER_NAME: &str = "Alfred";
 
-fn default_trusted() -> bool {
+fn default_true() -> bool {
     true
 }
 
@@ -36,6 +36,24 @@ pub struct IdentityConfig {
     /// Fixed session UUID for deterministic file paths (default: random)
     #[serde(default)]
     pub session_id: Option<String>,
+
+    /// Placeholder text for the input prompt (default: "Try \"write a test for scenario.rs\"")
+    #[serde(default)]
+    pub placeholder: Option<String>,
+
+    /// Provider name shown in header (default: "Claude Max")
+    #[serde(default)]
+    pub provider: Option<String>,
+
+    /// Show "Welcome back!" splash instead of normal header (default: false)
+    #[serde(default)]
+    pub show_welcome_back: Option<bool>,
+
+    /// Right panel rows for the welcome back box.
+    /// Use "---" for a separator line, "" for an empty row.
+    /// Defaults to Tips/Recent activity if not specified.
+    #[serde(default)]
+    pub welcome_back_right_panel: Option<Vec<String>>,
 }
 
 impl IdentityConfig {
@@ -63,8 +81,13 @@ pub struct EnvironmentConfig {
 
     /// Whether directory is trusted (default: true)
     /// When false, TUI shows trust prompt before proceeding
-    #[serde(default = "default_trusted")]
+    #[serde(default = "default_true")]
     pub trusted: bool,
+
+    /// Whether user is logged in (default: true)
+    /// When false, TUI shows setup wizard on launch
+    #[serde(default = "default_true")]
+    pub logged_in: bool,
 
     /// Permission mode override
     /// Values: "default", "plan", "bypass-permissions", "accept-edits", "dont-ask", "delegate"
@@ -78,6 +101,7 @@ impl Default for EnvironmentConfig {
             project_path: None,
             working_directory: None,
             trusted: true,
+            logged_in: true,
             permission_mode: None,
         }
     }
@@ -402,7 +426,7 @@ impl ResolvedTimeouts {
     pub const DEFAULT_COMPACT_DELAY_MS: u64 = 20;
     pub const DEFAULT_HOOK_TIMEOUT_MS: u64 = 5000;
     pub const DEFAULT_MCP_TIMEOUT_MS: u64 = 30000;
-    pub const DEFAULT_RESPONSE_DELAY_MS: u64 = 0;
+    pub const DEFAULT_RESPONSE_DELAY_MS: u64 = 20;
 
     /// Resolve from optional config with precedence: scenario > env > default
     pub fn resolve(config: Option<&TimeoutOverrides>) -> Self {

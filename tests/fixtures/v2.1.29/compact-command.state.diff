@@ -1,0 +1,21 @@
+2,6c2,6
+< state/.claude.json.backup.1769920549622
+< state/.claude.json.backup.1769920549689
+< state/.claude.json.backup.1769920552023
+< state/.claude.json.backup.1769920552024
+< state/.claude.json.backup.1769920560629
+---
+> state/.claude.json.backup.1769920774029
+> state/.claude.json.backup.1769920774031
+> state/.claude.json.backup.1769920774883
+> state/.claude.json.backup.1769920774885
+> state/.claude.json.backup.1769920775014
+11a12
+> state/debug/95b16636-6a0b-4d6a-9f7d-a8481fa5197c.txt
+268a270,273
+> state/projects/-private-var-folders-t5-6tq8cxtj20z035rv8hsnzwvh0000gn-T-capture-QQ8ye9/95b16636-6a0b-4d6a-9f7d-a8481fa5197c.jsonl
+> state/projects/-private-var-folders-t5-6tq8cxtj20z035rv8hsnzwvh0000gn-T-capture-QQ8ye9/95b16636-6a0b-4d6a-9f7d-a8481fa5197c/subagents/agent-aprompt_suggestion-5300fa.jsonl
+> state/projects/-private-var-folders-t5-6tq8cxtj20z035rv8hsnzwvh0000gn-T-capture-QQ8ye9/95b16636-6a0b-4d6a-9f7d-a8481fa5197c/subagents/agent-aprompt_suggestion-5f6326.jsonl
+> state/projects/-private-var-folders-t5-6tq8cxtj20z035rv8hsnzwvh0000gn-T-capture-QQ8ye9/sessions-index.json
+277a283
+> state/todos/95b16636-6a0b-4d6a-9f7d-a8481fa5197c-agent-95b16636-6a0b-4d6a-9f7d-a8481fa5197c.json

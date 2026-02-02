@@ -97,7 +97,7 @@ fn test_tui_hooks_shows_dialog_with_hook_types() {
         capture
     );
     assert!(
-        capture.contains("Enter to confirm") && capture.contains("esc to cancel"),
+        capture.contains("Enter to confirm") && capture.contains("Esc to cancel"),
         "Should show navigation hints.\nCapture:\n{}",
         capture
     );

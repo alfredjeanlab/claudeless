@@ -1,0 +1,11 @@
+# Capture status bar showing the default permission prompt state.
+# This is the normal mode where Claude asks for permission for each tool use.
+# Use Shift+Tab to cycle through permission modes (default -> accept edits -> plan).
+# Args: --model haiku
+
+wait "for shortcuts" 5s
+snapshot "permission_default"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

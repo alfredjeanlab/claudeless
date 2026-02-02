@@ -1,0 +1,16 @@
+# Capture Ctrl-S stash active state with input stashed.
+
+wait "for shortcuts" 5s
+
+# Type some text
+send "Try \"refactor mod.rs\""
+wait 500
+
+# Press Ctrl-S to stash
+send <C-s>
+wait "Stashed" 3s
+snapshot "ctrl_s_stash_active"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

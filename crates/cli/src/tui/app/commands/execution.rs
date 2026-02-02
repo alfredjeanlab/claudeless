@@ -38,9 +38,9 @@ impl TuiAppState {
                 .push_str(&format!("\n\n⏺ Bash({})", command));
 
             // Use shared execute path for consistency (hooks, JSONL recording, etc.)
-            let permission = execute_with_runtime(&mut inner, command);
+            drop(inner);
+            let permission = self.execute_with_runtime(command);
             if let Some(perm) = permission {
-                drop(inner);
                 self.show_permission_request(perm);
             }
             return;
@@ -62,70 +62,84 @@ impl TuiAppState {
 
     /// Process a prompt and generate response
     pub(in crate::tui::app) fn process_prompt(&self, prompt: String) {
-        let mut inner = self.inner.lock();
+        {
+            let mut inner = self.inner.lock();
 
-        // If there's previous response content, add it to conversation history first
-        append_previous_response(&mut inner);
+            // If there's previous response content, add it to conversation history first
+            append_previous_response(&mut inner);
 
-        // Add the new user prompt to conversation display
-        append_to_conversation(&mut inner, "❯", &prompt);
+            // Add the new user prompt to conversation display
+            append_to_conversation(&mut inner, "❯", &prompt);
 
-        inner.mode = AppMode::Thinking;
-        inner.display.response_content.clear();
-        inner.display.is_command_output = false;
-        // Reset spinner for thinking animation
-        inner.display.spinner_frame = 0;
-        inner.display.spinner_verb = spinner::random_verb().to_string();
+            inner.mode = AppMode::Thinking;
+            inner.is_compacting = false;
+            inner.display.response_content.clear();
+            inner.display.is_command_output = false;
+            // Reset spinner for thinking animation
+            inner.display.spinner_frame = 0;
+            inner.display.spinner_verb = spinner::random_verb().to_string();
 
-        // Record the turn
-        inner
-            .sessions
-            .current_session()
-            .add_turn(prompt.clone(), String::new());
+            // Record the turn
+            inner
+                .sessions
+                .current_session()
+                .add_turn(prompt.clone(), String::new());
+
+            // Drop lock before execution so the render thread can see Thinking mode
+        }
 
         // Use Runtime::execute() for shared agent loop
-        let permission = execute_with_runtime(&mut inner, prompt);
+        let permission = self.execute_with_runtime(prompt);
         if let Some(perm) = permission {
-            drop(inner);
             self.show_permission_request(perm);
         }
     }
-}
 
-/// Execute a prompt using the shared Runtime.
-///
-/// This uses Runtime::execute() which handles:
-/// - Scenario matching
-/// - Tool execution
-/// - Hook firing
-/// - State recording (JSONL)
-///
-/// Returns `Some(PermissionType)` if a tool needs an interactive permission
-/// prompt. The caller should drop the inner lock and call
-/// `show_permission_request()` with the returned type.
-fn execute_with_runtime(inner: &mut TuiAppStateInner, prompt: String) -> Option<PermissionType> {
-    // Take the runtime temporarily to call execute()
-    // Runtime is required in TUI mode
-    let Some(mut runtime) = inner.runtime.take() else {
-        setup_response_display(inner, "Error: Runtime not available".to_string());
-        restore_input_state(inner);
-        return None;
-    };
+    /// Execute a prompt using the shared Runtime.
+    ///
+    /// This uses Runtime::execute() which handles:
+    /// - Scenario matching
+    /// - Tool execution
+    /// - Hook firing
+    /// - State recording (JSONL)
+    ///
+    /// The lock is dropped during execution so the render thread can observe
+    /// intermediate mode changes (e.g., Thinking mode).
+    ///
+    /// Returns `Some(PermissionType)` if a tool needs an interactive permission
+    /// prompt. The caller should call `show_permission_request()` with the
+    /// returned type.
+    fn execute_with_runtime(&self, prompt: String) -> Option<PermissionType> {
+        // Take the runtime out while holding the lock briefly
+        let mut runtime = {
+            let mut inner = self.inner.lock();
+            let Some(runtime) = inner.runtime.take() else {
+                setup_response_display(&mut inner, "Error: Runtime not available".to_string());
+                restore_input_state(&mut inner);
+                return None;
+            };
+            runtime
+            // Lock is dropped here - render thread can now see Thinking mode
+        };
 
-    // Execute using runtime (via block_in_place + block_on since we're in sync context)
-    let handle = tokio::runtime::Handle::current();
-    let outcome =
-        tokio::task::block_in_place(|| handle.block_on(async { runtime.execute(&prompt).await }));
+        // Execute using runtime (via block_in_place + block_on since we're in sync context)
+        // Lock is NOT held during this blocking call
+        let handle = tokio::runtime::Handle::current();
+        let outcome = tokio::task::block_in_place(|| {
+            handle.block_on(async { runtime.execute(&prompt).await })
+        });
 
-    // Put runtime back
-    inner.runtime = Some(runtime);
+        // Re-acquire lock to put runtime back and handle the result
+        let mut inner = self.inner.lock();
+        inner.runtime = Some(runtime);
 
-    // Handle the outcome (success or failure)
-    match outcome {
-        Ok(result) => handle_turn_result(inner, result),
-        Err(failure_spec) => {
-            handle_failure(inner, &failure_spec);
-            None
+        // Handle the outcome (success or failure)
+        match outcome {
+            Ok(result) => handle_turn_result(&mut inner, result),
+            Err(failure_spec) => {
+                handle_failure(&mut inner, &failure_spec);
+                None
+            }
         }
     }
 }
@@ -163,31 +177,90 @@ fn handle_failure(inner: &mut TuiAppStateInner, failure_spec: &crate::config::Fa
 ///
 /// Returns `Some(PermissionType)` if a tool needs a permission prompt.
 fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> Option<PermissionType> {
+    // Build display parts from completed tool calls
+    let tool_calls = result.response.tool_calls().to_vec();
+    let completed_count = result.tool_results.len();
+
     // Check for pending permission before displaying response
     if let Some(ref pending) = result.pending_permission {
         if let Some(perm_type) = tool_call_to_permission_type(&pending.tool_call) {
-            // Display the response text so far (before the tool call)
-            let response_text = if result.response_text().is_empty() {
-                String::new()
-            } else {
-                result.response_text().to_string()
-            };
-            if !response_text.is_empty() {
-                setup_response_display(inner, response_text);
+            // Build display: completed tool calls + pending tool call context
+            let mut parts = Vec::new();
+
+            // Format completed tool calls with their results
+            for (i, call) in tool_calls.iter().take(completed_count).enumerate() {
+                let result_text = result.tool_results.get(i).and_then(|r| r.text());
+                parts.push(format_completed_tool_display(call, result_text));
             }
+
+            // Add response text (if any)
+            let response_text = result.response_text();
+            if !response_text.is_empty() {
+                parts.push(response_text.to_string());
+            }
+
+            // Add pending tool call context display.
+            // For Bash, only show "Running…" display when it's the sole tool;
+            // for Edit/Write, always show the pending tool name.
+            if completed_count == 0 || pending.tool_call.tool != "Bash" {
+                parts.push(format_tool_call_display(&pending.tool_call));
+            }
+
+            // Join with ⏺ prefix on subsequent parts (first gets prefix from display layer)
+            let display = join_display_parts(&parts);
+            if !display.is_empty() {
+                setup_response_display(inner, display);
+            }
+
+            // Build post-grant display: what to show after permission is granted.
+            // This replaces the pending tool display with its completed form.
+            let mut post_parts = Vec::new();
+            for (i, call) in tool_calls.iter().take(completed_count).enumerate() {
+                let result_text = result.tool_results.get(i).and_then(|r| r.text());
+                post_parts.push(format_completed_tool_display(call, result_text));
+            }
+            // Format the pending tool as completed (using its mock result if available)
+            let pending_result = pending.tool_call.result.as_deref();
+            post_parts.push(format_completed_tool_display(
+                &pending.tool_call,
+                pending_result,
+            ));
+            if !response_text.is_empty() {
+                post_parts.push(response_text.to_string());
+            }
+            inner.display.pending_post_grant_display = Some(join_display_parts(&post_parts));
+
             return Some(perm_type);
         }
     }
 
-    // Set response content
-    let response_text = if result.response_text().is_empty() {
+    // Build display: completed tool calls + response text
+    let mut parts = Vec::new();
+
+    // Format completed tool calls with their results
+    for (i, call) in tool_calls.iter().take(completed_count).enumerate() {
+        let result_text = result.tool_results.get(i).and_then(|r| r.text());
+        parts.push(format_completed_tool_display(call, result_text));
+    }
+
+    // Add response text
+    let response_text = if result.response_text().is_empty() && parts.is_empty() {
         "I'm not sure how to help with that.".to_string()
     } else {
         result.response_text().to_string()
     };
+    if !response_text.is_empty() {
+        parts.push(response_text);
+    }
 
-    // Display the response
-    setup_response_display(inner, response_text);
+    // Build display
+    let display = if parts.is_empty() {
+        "I'm not sure how to help with that.".to_string()
+    } else {
+        join_display_parts(&parts)
+    };
+
+    setup_response_display(inner, display);
 
     // Handle hook continuation if present
     if let Some(continuation) = result.hook_continuation {
@@ -269,6 +342,111 @@ fn restore_input_state(inner: &mut TuiAppStateInner) {
 }
 
 // ============================================================================
+// Tool Call Display Formatting
+// ============================================================================
+
+/// Join display parts where the first part is unprefixed (gets ⏺ from display layer)
+/// and subsequent parts get their own ⏺ prefix.
+fn join_display_parts(parts: &[String]) -> String {
+    let mut result = String::new();
+    for (i, part) in parts.iter().enumerate() {
+        if i == 0 {
+            result.push_str(part);
+        } else {
+            result.push_str("\n\n⏺ ");
+            result.push_str(part);
+        }
+    }
+    result
+}
+
+/// Format a completed tool call with its result for display.
+fn format_completed_tool_display(call: &ToolCallSpec, result_text: Option<&str>) -> String {
+    match call.tool.as_str() {
+        "Write" => {
+            let file_path = call
+                .input
+                .get("file_path")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let mut display = format!("Write({})", file_path);
+            if let Some(result) = result_text {
+                display.push_str(&format!("\n  \u{23bf} \u{a0}{}", result));
+                // Show content lines indented under the result
+                if let Some(content) = call.input.get("content").and_then(|v| v.as_str()) {
+                    for (i, line) in content.split('\n').enumerate() {
+                        display.push_str(&format!("\n      {} {}", i + 1, line));
+                    }
+                }
+            }
+            display
+        }
+        "Read" => {
+            if let Some(result) = result_text {
+                // Results ending with "…" indicate a streaming/in-progress read
+                if result.ends_with('\u{2026}') {
+                    format!("Reading {} (ctrl+o to expand)", result)
+                } else {
+                    format!("Read {} (ctrl+o to expand)", result)
+                }
+            } else {
+                "Read (ctrl+o to expand)".to_string()
+            }
+        }
+        "Bash" => {
+            let command = call
+                .input
+                .get("command")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let mut display = format!("Bash({})", command);
+            if let Some(result) = result_text {
+                display.push_str(&format!("\n  \u{23bf} \u{a0}{}", result));
+            }
+            display
+        }
+        _ => {
+            if let Some(result) = result_text {
+                result.to_string()
+            } else {
+                call.tool.clone()
+            }
+        }
+    }
+}
+
+/// Format a tool call for display above the permission dialog.
+fn format_tool_call_display(call: &ToolCallSpec) -> String {
+    match call.tool.as_str() {
+        "Bash" => {
+            let command = call
+                .input
+                .get("command")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            format!("Bash({})\n  \u{23bf} \u{a0}Running\u{2026}", command)
+        }
+        "Edit" => {
+            let file_path = call
+                .input
+                .get("file_path")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            format!("Update({})", file_path)
+        }
+        "Write" => {
+            let file_path = call
+                .input
+                .get("file_path")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            format!("Write({})", file_path)
+        }
+        _ => call.tool.clone(),
+    }
+}
+
+// ============================================================================
 // Tool Call → Permission Type Conversion
 // ============================================================================
 
@@ -317,18 +495,42 @@ pub(crate) fn tool_call_to_permission_type(call: &ToolCallSpec) -> Option<Permis
                 .unwrap_or("");
 
             let mut diff_lines = Vec::new();
-            for (i, line) in old_string.lines().enumerate() {
+            let mut line_num: u32 = 1;
+
+            // Removed lines
+            for line in old_string.lines() {
                 diff_lines.push(DiffLine {
-                    line_num: Some((i + 1) as u32),
+                    line_num: Some(line_num),
                     kind: DiffKind::Removed,
                     content: line.to_string(),
                 });
+                line_num += 1;
             }
+            // NoNewline marker after removed lines if old_string doesn't end with newline
+            if !old_string.is_empty() && !old_string.ends_with('\n') {
+                diff_lines.push(DiffLine {
+                    line_num: Some(line_num - 1),
+                    kind: DiffKind::NoNewline,
+                    content: "No newline at end of file".to_string(),
+                });
+            }
+
+            // Added lines (line numbering continues from removed)
+            let added_start = line_num;
             for (i, line) in new_string.lines().enumerate() {
                 diff_lines.push(DiffLine {
-                    line_num: Some((i + 1) as u32),
+                    line_num: Some(added_start + i as u32),
                     kind: DiffKind::Added,
                     content: line.to_string(),
+                });
+            }
+            // NoNewline marker after added lines
+            let added_count = new_string.lines().count();
+            if !new_string.is_empty() && !new_string.ends_with('\n') {
+                diff_lines.push(DiffLine {
+                    line_num: Some(added_start + added_count as u32),
+                    kind: DiffKind::NoNewline,
+                    content: "No newline at end of file".to_string(),
                 });
             }
 

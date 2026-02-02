@@ -29,9 +29,12 @@ impl SlashCommand {
     }
 }
 
+/// Maximum number of commands visible in the autocomplete menu at once.
+pub const MENU_VISIBLE_COUNT: usize = 6;
+
 /// All available slash commands, in alphabetical order.
 ///
-/// This list matches Claude Code v2.1.12's command set.
+/// This list matches Claude Code v2.1.29's command set.
 pub static COMMANDS: &[SlashCommand] = &[
     SlashCommand {
         name: "add-dir",
@@ -44,38 +47,28 @@ pub static COMMANDS: &[SlashCommand] = &[
         argument_hint: None,
     },
     SlashCommand {
-        name: "bug",
-        description: "Report a bug or issue",
+        name: "chrome",
+        description: "Claude in Chrome (Beta) settings",
         argument_hint: None,
     },
     SlashCommand {
         name: "clear",
-        description: "Clear conversation history",
+        description: "Clear conversation history and free up context",
         argument_hint: None,
     },
     SlashCommand {
         name: "compact",
-        description: "Compact conversation (keep a summary in context)",
+        description: "Clear conversation history but keep a summary in context",
         argument_hint: None,
     },
     SlashCommand {
         name: "config",
-        description: "Open configuration settings",
+        description: "Open config panel",
         argument_hint: None,
     },
     SlashCommand {
         name: "context",
         description: "Visualize current context usage as a colored grid",
-        argument_hint: None,
-    },
-    SlashCommand {
-        name: "cost",
-        description: "Show session cost summary",
-        argument_hint: None,
-    },
-    SlashCommand {
-        name: "doctor",
-        description: "Run diagnostics and check system health",
         argument_hint: None,
     },
     SlashCommand {
@@ -137,6 +130,11 @@ pub static COMMANDS: &[SlashCommand] = &[
         name: "permissions",
         description: "View or manage permissions",
         argument_hint: None,
+    },
+    SlashCommand {
+        name: "plan",
+        description: "Create or switch to plan mode",
+        argument_hint: Some("[open]"),
     },
     SlashCommand {
         name: "pr-comments",

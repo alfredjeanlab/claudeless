@@ -10,6 +10,10 @@ claudeless/
 │   └── cli/          # CLI binary and library
 ├── scenarios/        # Test scenario definitions
 ├── scripts/          # Build and utility scripts
+├── tests/
+│   ├── capture/      # Capture scripts for recording real Claude Code
+│   ├── fixtures/     # Immutable snapshots from real Claude Code (DO NOT EDIT)
+│   └── specs/        # Integration test specs (capsh + scenario pairs)
 └── docs/             # Documentation
 ```
 

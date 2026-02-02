@@ -47,6 +47,10 @@ pub fn settings_path(root: &Path) -> PathBuf {
     root.join("settings.json")
 }
 
+pub fn claude_json_path(root: &Path) -> PathBuf {
+    root.join(".claude.json")
+}
+
 pub fn project_dir(root: &Path, project_path: &Path) -> PathBuf {
     let dir_name = project_dir_name(project_path);
     projects_dir(root).join(&dir_name)

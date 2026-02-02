@@ -16,7 +16,9 @@ pub struct Shortcut {
 }
 
 /// All keyboard shortcuts displayed in the panel
-/// Organized in 3 columns matching the fixture layout
+/// Organized in 3 columns matching the fixture layout.
+/// Long entries are pre-split into continuation lines to match
+/// the real Claude Code rendering at 80-column width.
 pub static SHORTCUTS: &[Shortcut] = &[
     // Left column
     Shortcut {
@@ -41,9 +43,13 @@ pub static SHORTCUTS: &[Shortcut] = &[
         column: 1,
     },
     Shortcut {
-        keys: "shift + tab to auto-accept edits",
+        keys: "shift + tab to auto-accept",
         column: 1,
     },
+    Shortcut {
+        keys: "edits",
+        column: 1,
+    }, // continuation of "shift + tab to auto-accept edits"
     Shortcut {
         keys: "ctrl + o for verbose output",
         column: 1,
@@ -53,34 +59,62 @@ pub static SHORTCUTS: &[Shortcut] = &[
         column: 1,
     },
     Shortcut {
-        keys: "backslash (\\) + return (\u{23ce}) for",
+        keys: "shift + \u{23ce} for newline",
         column: 1,
     },
-    Shortcut {
-        keys: "newline",
-        column: 1,
-    }, // continuation line
     // Right column
     Shortcut {
-        keys: "ctrl + _ to undo",
+        keys: "ctrl + shift + - to",
         column: 2,
     },
+    Shortcut {
+        keys: "undo",
+        column: 2,
+    }, // continuation of "ctrl + shift + - to undo"
     Shortcut {
         keys: "ctrl + z to suspend",
         column: 2,
     },
     Shortcut {
-        keys: "cmd + v to paste images",
+        keys: "ctrl + v to paste",
         column: 2,
     },
     Shortcut {
-        keys: "meta + p to switch model",
+        keys: "images",
+        column: 2,
+    }, // continuation of "ctrl + v to paste images"
+    Shortcut {
+        keys: "meta + p to switch",
         column: 2,
     },
     Shortcut {
-        keys: "ctrl + s to stash prompt",
+        keys: "model",
+        column: 2,
+    }, // continuation of "meta + p to switch model"
+    Shortcut {
+        keys: "ctrl + s to stash",
         column: 2,
     },
+    Shortcut {
+        keys: "prompt",
+        column: 2,
+    }, // continuation of "ctrl + s to stash prompt"
+    Shortcut {
+        keys: "ctrl + g to edit in",
+        column: 2,
+    },
+    Shortcut {
+        keys: "$EDITOR",
+        column: 2,
+    }, // continuation of "ctrl + g to edit in $EDITOR"
+    Shortcut {
+        keys: "/keybindings to",
+        column: 2,
+    },
+    Shortcut {
+        keys: "customize",
+        column: 2,
+    }, // continuation of "/keybindings to customize"
 ];
 
 /// Get shortcuts organized by column

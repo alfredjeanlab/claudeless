@@ -1,0 +1,23 @@
+
+▗ ▗   ▖ ▖  Claude Code v2.1.29
+           Haiku 4.5 · Claude API
+  ▘▘ ▝▝    /…/var/folders/t5/6tq8cxtj20z035rv8hsnzwvh0000gn/T/capture-rkWaks
+
+  /model to try Opus 4.5
+
+────────────────────────────────────────────────────────────────────────────────
+❯ /context
+────────────────────────────────────────────────────────────────────────────────
+  /context                Visualize current context usage as a colored grid
+  /clear                  Clear conversation history and free up context
+  /compact                Clear conversation history but keep a summary in co…
+  /status                 Show Claude Code status including version, model, a…
+
+
+
+
+
+
+
+
+

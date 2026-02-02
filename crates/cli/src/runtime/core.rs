@@ -8,7 +8,6 @@ use std::time::Duration;
 
 use parking_lot::RwLock;
 
-use crate::capture::CaptureLog;
 use crate::cli::Cli;
 use crate::config::{FailureSpec, ResolvedTimeouts, ResponseSpec, ToolCallSpec};
 use crate::failure::FailureExecutor;
@@ -60,7 +59,7 @@ impl TurnResult {
 
 /// Core runtime for executing prompts.
 ///
-/// Owns the composed subsystems: context, scenario, executor, state, and capture.
+/// Owns the composed subsystems: context, scenario, executor, and state.
 /// Provides a unified `execute` method for processing prompts.
 pub struct Runtime {
     /// Merged runtime context from scenario + CLI.
@@ -71,8 +70,6 @@ pub struct Runtime {
     pub(super) executor: Box<dyn ToolExecutor>,
     /// State writer for JSONL persistence (optional).
     pub(super) state: Option<Arc<RwLock<StateWriter>>>,
-    /// Capture log for test assertions (optional).
-    pub(super) capture: Option<CaptureLog>,
     /// Hook executor for Stop hooks (optional).
     pub(super) hook_executor: Option<HookExecutor>,
     /// MCP manager for server lifecycle (optional).
@@ -94,7 +91,6 @@ impl Runtime {
         scenario: Option<Scenario>,
         executor: Box<dyn ToolExecutor>,
         state: Option<Arc<RwLock<StateWriter>>>,
-        capture: Option<CaptureLog>,
         hook_executor: Option<HookExecutor>,
         mcp_manager: Option<Arc<RwLock<McpManager>>>,
         cli: Cli,
@@ -105,7 +101,6 @@ impl Runtime {
             scenario,
             executor,
             state,
-            capture,
             hook_executor,
             mcp_manager,
             cli,

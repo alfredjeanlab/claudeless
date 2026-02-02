@@ -1,0 +1,8 @@
+Usage: claude mcp serve [options]
+
+Start the Claude Code MCP server
+
+Options:
+  -d, --debug  Enable debug mode
+  -h, --help   Display help for command
+  --verbose    Override verbose mode setting from config

@@ -1,0 +1,11 @@
+# Capture /exit autocomplete menu.
+
+wait "for shortcuts" 5s
+
+send "/exit"
+wait "Exit the REPL" 3s
+snapshot "exit_autocomplete"
+
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

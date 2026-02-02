@@ -250,6 +250,7 @@ fn header_shows_claude_code_when_version_specified() {
         None,
         &PermissionMode::Default,
         false,
+        false,
         None,
         false,
         None,
@@ -282,6 +283,7 @@ fn cli_version_overrides_scenario() {
         &scenario_config,
         None,
         &PermissionMode::Default,
+        false,
         false,
         Some("2.0.0"), // CLI override
         false,

@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: check install license outdated capture capture-retry capture-skipped
+.PHONY: check install license outdated capture capture-retry capture-skipped generate-specs
 
 # Run all CI checks
 check:
@@ -42,3 +42,7 @@ capture-retry:
 # Capture all TUI fixtures including skipped (may fail)
 capture-skipped:
 	RUN_SKIPPED=1 bun run tests/capture/capture.ts
+
+# Generate spec tests from capture fixtures
+generate-specs:
+	bun run tests/capture/generate.ts

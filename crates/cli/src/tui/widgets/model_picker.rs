@@ -8,8 +8,8 @@
 /// Available model choices
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ModelChoice {
-    Default, // Opus 4.5 (recommended)
-    Sonnet,  // Sonnet 4.5
+    Default, // Sonnet 4.5 (recommended)
+    Opus,    // Opus 4.5
     Haiku,   // Haiku 4.5
 }
 
@@ -17,8 +17,8 @@ impl ModelChoice {
     /// Returns the full model ID string
     pub fn model_id(&self) -> &'static str {
         match self {
-            ModelChoice::Default => "claude-opus-4-5-20251101",
-            ModelChoice::Sonnet => "claude-sonnet-4-20250514",
+            ModelChoice::Default => "claude-sonnet-4-20250514",
+            ModelChoice::Opus => "claude-opus-4-5-20251101",
             ModelChoice::Haiku => "claude-haiku-4-5-20251101",
         }
     }
@@ -26,8 +26,8 @@ impl ModelChoice {
     /// Returns the display name for the model
     pub fn display_name(&self) -> &'static str {
         match self {
-            ModelChoice::Default => "Opus 4.5",
-            ModelChoice::Sonnet => "Sonnet 4.5",
+            ModelChoice::Default => "Sonnet 4.5",
+            ModelChoice::Opus => "Opus 4.5",
             ModelChoice::Haiku => "Haiku 4.5",
         }
     }
@@ -35,19 +35,15 @@ impl ModelChoice {
     /// Returns the description for the picker
     pub fn description(&self) -> &'static str {
         match self {
-            ModelChoice::Default => "Most capable for complex work",
-            ModelChoice::Sonnet => "Best for everyday tasks",
+            ModelChoice::Default => "Best for everyday tasks",
+            ModelChoice::Opus => "Most capable for complex work",
             ModelChoice::Haiku => "Fastest for quick answers",
         }
     }
 
     /// Returns all choices in display order
     pub fn all() -> [ModelChoice; 3] {
-        [
-            ModelChoice::Default,
-            ModelChoice::Sonnet,
-            ModelChoice::Haiku,
-        ]
+        [ModelChoice::Default, ModelChoice::Opus, ModelChoice::Haiku]
     }
 
     /// Convert from model ID string
@@ -55,8 +51,8 @@ impl ModelChoice {
         let lower = id.to_lowercase();
         if lower.contains("haiku") {
             ModelChoice::Haiku
-        } else if lower.contains("sonnet") {
-            ModelChoice::Sonnet
+        } else if lower.contains("opus") {
+            ModelChoice::Opus
         } else {
             ModelChoice::Default
         }
@@ -85,16 +81,16 @@ impl ModelPickerDialog {
     pub fn move_up(&mut self) {
         self.selected = match self.selected {
             ModelChoice::Default => ModelChoice::Haiku,
-            ModelChoice::Sonnet => ModelChoice::Default,
-            ModelChoice::Haiku => ModelChoice::Sonnet,
+            ModelChoice::Opus => ModelChoice::Default,
+            ModelChoice::Haiku => ModelChoice::Opus,
         };
     }
 
     /// Move selection down (wraps around)
     pub fn move_down(&mut self) {
         self.selected = match self.selected {
-            ModelChoice::Default => ModelChoice::Sonnet,
-            ModelChoice::Sonnet => ModelChoice::Haiku,
+            ModelChoice::Default => ModelChoice::Opus,
+            ModelChoice::Opus => ModelChoice::Haiku,
             ModelChoice::Haiku => ModelChoice::Default,
         };
     }

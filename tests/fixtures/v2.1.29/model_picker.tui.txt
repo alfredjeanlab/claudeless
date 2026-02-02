@@ -1,0 +1,23 @@
+
+▗ ▗   ▖ ▖  Claude Code v2.1.29
+           Haiku 4.5 · Claude API
+  ▘▘ ▝▝    /…/var/folders/t5/6tq8cxtj20z035rv8hsnzwvh0000gn/T/capture-ZfAVql
+
+  /model to try Opus 4.5
+
+────────────────────────────────────────────────────────────────────────────────
+ Select model
+ Switch between Claude models. Applies to this session and future Claude Code
+ sessions. For other/previous model names, specify with --model.
+
+   1. Default (recommended)  Sonnet 4.5 · Best for everyday tasks
+   2. Opus                   Opus 4.5 · Most capable for complex work
+ ❯ 3. Haiku ✔                Haiku 4.5 · Fastest for quick answers
+
+ Enter to confirm · Esc to exit
+
+
+
+
+
+

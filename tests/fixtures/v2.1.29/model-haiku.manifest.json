@@ -1,0 +1,6 @@
+{
+  "script": "model-haiku",
+  "snapshots": [
+    "model_haiku"
+  ]
+}

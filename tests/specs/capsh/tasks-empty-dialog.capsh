@@ -1,0 +1,15 @@
+# Capture empty background tasks dialog.
+
+wait "for shortcuts" 5s
+
+# Open tasks dialog (via slash command)
+send "/tasks"
+wait "/tasks" 3s
+send <Enter>
+wait "Background tasks" 3s
+snapshot "tasks_empty_dialog"
+
+# Exit
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

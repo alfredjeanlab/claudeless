@@ -134,6 +134,31 @@ fn test_clear_command_clears_session_grants() {
 }
 
 #[test]
+fn test_clear_command_clears_conversation_display() {
+    let state = create_test_app();
+
+    // Simulate conversation history in display
+    {
+        let mut inner = state.inner.lock();
+        inner.display.conversation_display = "❯ what is 2 + 2?\n\n⏺ The answer is 4.".to_string();
+        inner.display.response_content = "The answer is 6.".to_string();
+        inner.display.is_command_output = false;
+    }
+
+    // Run /clear
+    {
+        let mut inner = state.inner.lock();
+        inner.input.buffer = "/clear".to_string();
+    }
+    state.handle_key_event(key_event(KeyCode::Enter, KeyModifiers::empty()));
+
+    // Verify conversation display only contains the /clear command
+    let inner = state.inner.lock();
+    assert_eq!(inner.display.conversation_display, "❯ /clear");
+    assert_eq!(inner.display.response_content, "(no content)");
+}
+
+#[test]
 fn test_no_grant_stored_for_denied_permission() {
     let state = create_test_app();
     state.show_bash_permission("cat /etc/passwd".to_string(), None);

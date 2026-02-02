@@ -14,6 +14,7 @@ pub mod memory;
 pub mod model_picker;
 pub mod permission;
 pub mod scrollable;
+pub mod setup;
 pub mod tasks;
 pub mod thinking;
 pub mod trust;

@@ -3,14 +3,19 @@
 
 //! CLI argument parsing matching Claude's interface.
 
-use clap::{Args, Parser, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::permission::PermissionMode;
 use crate::state::SettingSource;
 
 /// Claude CLI Simulator
 #[derive(Parser, Debug, Clone)]
-#[command(name = "claude", version, about = "Claude CLI Simulator")]
+#[command(
+    name = "claude",
+    about = "Claude CLI Simulator",
+    disable_help_flag = true,
+    disable_version_flag = true
+)]
 pub struct Cli {
     /// The prompt to send (positional or via --print)
     #[arg(value_name = "PROMPT")]
@@ -29,11 +34,11 @@ pub struct Cli {
     pub system_prompt: Option<String>,
 
     /// Allowed tools (can be specified multiple times)
-    #[arg(long = "allowedTools")]
+    #[arg(long = "allowedTools", alias = "allowed-tools")]
     pub allowed_tools: Vec<String>,
 
     /// Disallowed tools
-    #[arg(long = "disallowedTools")]
+    #[arg(long = "disallowedTools", alias = "disallowed-tools")]
     pub disallowed_tools: Vec<String>,
 
     /// Input file to read prompt from
@@ -65,6 +70,84 @@ pub struct Cli {
     #[arg(long, value_name = "FILE_OR_JSON")]
     pub settings: Vec<String>,
 
+    // === Help and version (manual, not clap-managed) ===
+    /// Display help for command
+    #[arg(short = 'h', long)]
+    pub help: bool,
+
+    /// Output the version number
+    #[arg(short = 'v', long)]
+    pub version: bool,
+
+    // === Compatibility flags (accepted but ignored) ===
+    /// Additional directories to allow tool access to
+    #[arg(long)]
+    pub add_dir: Vec<String>,
+
+    /// Agent for the current session
+    #[arg(long)]
+    pub agent: Option<String>,
+
+    /// JSON object defining custom agents
+    #[arg(long)]
+    pub agents: Option<String>,
+
+    /// Append a system prompt to the default system prompt
+    #[arg(long)]
+    pub append_system_prompt: Option<String>,
+
+    /// Beta headers to include in API requests
+    #[arg(long)]
+    pub betas: Vec<String>,
+
+    /// Enable Claude in Chrome integration
+    #[arg(long)]
+    pub chrome: bool,
+
+    /// Disable Claude in Chrome integration
+    #[arg(long)]
+    pub no_chrome: bool,
+
+    /// Write debug logs to a specific file path
+    #[arg(long)]
+    pub debug_file: Option<String>,
+
+    /// Disable all skills
+    #[arg(long)]
+    pub disable_slash_commands: bool,
+
+    /// File resources to download at startup
+    #[arg(long)]
+    pub file: Vec<String>,
+
+    /// When resuming, create a new session ID
+    #[arg(long)]
+    pub fork_session: bool,
+
+    /// Resume a session linked to a PR
+    #[arg(long)]
+    pub from_pr: Option<Option<String>>,
+
+    /// Automatically connect to IDE on startup
+    #[arg(long)]
+    pub ide: bool,
+
+    /// JSON Schema for structured output validation
+    #[arg(long)]
+    pub json_schema: Option<String>,
+
+    /// Load plugins from directories for this session only
+    #[arg(long)]
+    pub plugin_dir: Vec<String>,
+
+    /// Re-emit user messages from stdin back on stdout
+    #[arg(long)]
+    pub replay_user_messages: bool,
+
+    /// Specify the list of available tools from the built-in set
+    #[arg(long)]
+    pub tools: Vec<String>,
+
     #[command(flatten)]
     pub output: OutputOptions,
 
@@ -79,6 +162,10 @@ pub struct Cli {
 
     #[command(flatten)]
     pub simulator: SimulatorOptions,
+
+    /// Subcommand
+    #[command(subcommand)]
+    pub command: Option<Commands>,
 }
 
 /// Output formatting options.
@@ -105,7 +192,7 @@ pub struct OutputOptions {
 #[derive(Args, Debug, Clone, Default)]
 pub struct SessionOptions {
     /// Continue previous conversation
-    #[arg(long, short = 'c')]
+    #[arg(long = "continue", short = 'c')]
     pub continue_conversation: bool,
 
     /// Resume a specific conversation by ID
@@ -194,10 +281,6 @@ pub struct SimulatorOptions {
     #[arg(long, env = "CLAUDELESS_SCENARIO")]
     pub scenario: Option<String>,
 
-    /// Capture file for recording interactions
-    #[arg(long, env = "CLAUDELESS_CAPTURE")]
-    pub capture: Option<String>,
-
     /// Failure mode to inject
     #[arg(long, env = "CLAUDELESS_FAILURE")]
     pub failure: Option<FailureMode>,
@@ -225,6 +308,173 @@ impl Cli {
         self.session.validate_session_id()?;
         Ok(())
     }
+}
+
+/// Subcommands matching real Claude Code CLI.
+#[derive(Subcommand, Debug, Clone)]
+pub enum Commands {
+    /// Check the health of your Claude Code auto-updater
+    #[command(disable_help_flag = true)]
+    Doctor {
+        #[arg(short = 'h', long)]
+        help: bool,
+    },
+
+    /// Install Claude Code native build
+    #[command(disable_help_flag = true)]
+    Install {
+        /// Target version (stable, latest, or specific version)
+        target: Option<String>,
+
+        /// Force installation even if already installed
+        #[arg(long)]
+        force: bool,
+
+        #[arg(short = 'h', long)]
+        help: bool,
+    },
+
+    /// Configure and manage MCP servers
+    #[command(disable_help_flag = true)]
+    Mcp {
+        #[command(subcommand)]
+        command: Option<McpCommands>,
+
+        #[arg(short = 'h', long)]
+        help: bool,
+    },
+
+    /// Manage Claude Code plugins
+    #[command(disable_help_flag = true)]
+    Plugin {
+        #[command(subcommand)]
+        command: Option<PluginCommands>,
+
+        #[arg(short = 'h', long)]
+        help: bool,
+    },
+
+    /// Set up a long-lived authentication token
+    #[command(name = "setup-token", disable_help_flag = true)]
+    SetupToken {
+        #[arg(short = 'h', long)]
+        help: bool,
+    },
+
+    /// Check for updates and install if available
+    #[command(disable_help_flag = true)]
+    Update {
+        #[arg(short = 'h', long)]
+        help: bool,
+    },
+}
+
+impl Commands {
+    /// Check if the subcommand wants to display help.
+    pub fn wants_help(&self) -> bool {
+        match self {
+            Commands::Doctor { help } => *help,
+            Commands::Install { help, .. } => *help,
+            Commands::Mcp { help, command } => {
+                *help
+                    || match command {
+                        Some(McpCommands::Add { help, .. }) => *help,
+                        Some(McpCommands::Serve { help, .. }) => *help,
+                        _ => false,
+                    }
+            }
+            Commands::Plugin { help, command } => {
+                *help
+                    || match command {
+                        Some(PluginCommands::Marketplace { help, command }) => {
+                            *help || command.is_none()
+                        }
+                        _ => false,
+                    }
+            }
+            Commands::SetupToken { help } => *help,
+            Commands::Update { help } => *help,
+        }
+    }
+}
+
+/// MCP subcommands.
+#[derive(Subcommand, Debug, Clone)]
+pub enum McpCommands {
+    /// Add an MCP server
+    #[command(disable_help_flag = true)]
+    Add {
+        /// Server name
+        name: Option<String>,
+
+        /// Command or URL
+        command_or_url: Option<String>,
+
+        /// Additional arguments
+        #[arg(trailing_var_arg = true)]
+        args: Vec<String>,
+
+        /// Environment variables
+        #[arg(short = 'e', long)]
+        env: Vec<String>,
+
+        /// WebSocket headers
+        #[arg(short = 'H', long)]
+        header: Vec<String>,
+
+        /// Configuration scope
+        #[arg(short = 's', long)]
+        scope: Option<String>,
+
+        /// Transport type
+        #[arg(short = 't', long)]
+        transport: Option<String>,
+
+        #[arg(short = 'h', long)]
+        help: bool,
+    },
+
+    /// Start the Claude Code MCP server
+    #[command(disable_help_flag = true)]
+    Serve {
+        /// Enable debug mode
+        #[arg(short = 'd', long)]
+        debug: bool,
+
+        /// Override verbose mode
+        #[arg(long)]
+        verbose: bool,
+
+        #[arg(short = 'h', long)]
+        help: bool,
+    },
+}
+
+/// Plugin subcommands.
+#[derive(Subcommand, Debug, Clone)]
+pub enum PluginCommands {
+    /// Manage Claude Code marketplaces
+    #[command(disable_help_flag = true)]
+    Marketplace {
+        #[command(subcommand)]
+        command: Option<MarketplaceCommands>,
+
+        #[arg(short = 'h', long)]
+        help: bool,
+    },
+}
+
+/// Marketplace subcommands.
+#[derive(Subcommand, Debug, Clone)]
+pub enum MarketplaceCommands {
+    /// Add a marketplace
+    Add { source: String },
+    /// List marketplaces
+    List,
+    /// Remove a marketplace
+    Remove { name: String },
+    /// Update marketplaces
+    Update { name: Option<String> },
 }
 
 /// Output format for responses

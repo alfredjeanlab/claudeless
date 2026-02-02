@@ -78,25 +78,25 @@ impl TuiAppState {
             inner.display.pending_assistant_uuid = None;
 
             match perm.dialog.selected {
-                PermissionSelection::Yes => {
-                    // Continue with tool execution (single request)
-                    inner
-                        .display
-                        .response_content
-                        .push_str(&format!("\n[Permission granted for {}]\n", tool_name));
-                }
-                PermissionSelection::YesSession => {
-                    // Store session-level grant
-                    let key = perm.dialog.session_key();
-                    inner.session_grants.insert(key);
+                PermissionSelection::Yes | PermissionSelection::YesSession => {
+                    if matches!(perm.dialog.selected, PermissionSelection::YesSession) {
+                        // Store session-level grant
+                        let key = perm.dialog.session_key();
+                        inner.session_grants.insert(key);
+                    }
 
-                    // Continue with tool execution (session-level grant)
-                    inner.display.response_content.push_str(&format!(
-                        "\n[Permission granted for session: {}]\n",
-                        tool_name
-                    ));
+                    // Use post-grant display if available (shows completed tool result)
+                    if let Some(post_display) = inner.display.pending_post_grant_display.take() {
+                        inner.display.response_content = post_display;
+                    } else {
+                        inner
+                            .display
+                            .response_content
+                            .push_str(&format!("\n[Permission granted for {}]\n", tool_name));
+                    }
                 }
                 PermissionSelection::No => {
+                    inner.display.pending_post_grant_display = None;
                     inner
                         .display
                         .response_content
@@ -201,6 +201,7 @@ impl TuiAppState {
         inner.dialog = DialogState::Permission(PermissionRequest {
             dialog: RichPermissionDialog::new(permission_type),
             tool_use_id,
+            post_grant_display: None,
         });
         inner.mode = AppMode::Permission;
     }

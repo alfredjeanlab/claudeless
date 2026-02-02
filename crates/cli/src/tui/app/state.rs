@@ -3,14 +3,12 @@
 
 //! TUI application state management.
 
-#[path = "dialog_state.rs"]
-mod dialog_state;
 #[path = "display_state.rs"]
 mod display_state;
 #[path = "input_state.rs"]
 mod input_state;
 
-pub use dialog_state::DialogState;
+pub use super::dialogs::DialogState;
 pub use display_state::DisplayState;
 pub use input_state::InputState;
 
@@ -26,7 +24,12 @@ use crate::time::{Clock, ClockHandle};
 use crate::tui::widgets::context::ContextUsage;
 use crate::tui::widgets::permission::{RichPermissionDialog, SessionPermissionKey};
 
-use super::types::{AppMode, ExitReason, RenderState, StatusInfo, TrustPromptState, TuiConfig};
+use crate::tui::widgets::setup::SetupState;
+
+use super::types::{
+    AppMode, BypassChoice, BypassConfirmState, ExitReason, RenderState, StatusInfo,
+    TrustPromptState, TuiConfig,
+};
 
 /// Shared state for the TUI app that can be accessed from outside the component
 #[derive(Clone)]
@@ -99,6 +102,12 @@ pub(super) struct TuiAppStateInner {
 }
 
 impl TuiAppStateInner {
+    /// Mark the app for exit with the given reason.
+    pub fn exit(&mut self, reason: ExitReason) {
+        self.should_exit = true;
+        self.exit_reason = Some(reason);
+    }
+
     /// Dismiss any active dialog and return to input mode.
     pub fn dismiss_dialog(&mut self, name: &str) {
         self.mode = AppMode::Input;
@@ -122,20 +131,30 @@ impl TuiAppState {
         config: TuiConfig,
         runtime: Option<Runtime>,
     ) -> Self {
-        // Determine initial mode based on trust state
-        let initial_mode = if config.trusted {
-            AppMode::Input
+        // Determine initial mode and dialog based on state
+        let (initial_mode, dialog) = if config.bypass_confirmation_needed {
+            // Bypass confirmation takes priority
+            (
+                AppMode::BypassConfirm,
+                DialogState::BypassConfirm(BypassConfirmState {
+                    selected: BypassChoice::No,
+                }),
+            )
+        } else if !config.trusted {
+            (
+                AppMode::Trust,
+                DialogState::Trust(TrustPromptState::new(
+                    config.working_directory.to_string_lossy().to_string(),
+                )),
+            )
+        } else if !config.logged_in {
+            let version = config
+                .clone()
+                .claude_version
+                .unwrap_or_else(|| crate::config::DEFAULT_CLAUDE_VERSION.to_string());
+            (AppMode::Setup, DialogState::Setup(SetupState::new(version)))
         } else {
-            AppMode::Trust
-        };
-
-        // Create trust prompt dialog if not trusted
-        let dialog = if !config.trusted {
-            DialogState::Trust(TrustPromptState::new(
-                config.working_directory.to_string_lossy().to_string(),
-            ))
-        } else {
-            DialogState::None
+            (AppMode::Input, DialogState::None)
         };
 
         Self {
@@ -204,6 +223,10 @@ impl TuiAppState {
             is_compacting: inner.is_compacting,
             spinner_frame: inner.display.spinner_frame,
             spinner_verb: inner.display.spinner_verb.clone(),
+            placeholder: inner.config.placeholder.clone(),
+            provider: inner.config.provider.clone(),
+            show_welcome_back: inner.config.show_welcome_back,
+            welcome_back_right_panel: inner.config.welcome_back_right_panel.clone(),
         }
     }
 
@@ -238,6 +261,11 @@ impl TuiAppState {
     /// Get exit message (e.g., farewell from /exit)
     pub fn exit_message(&self) -> Option<String> {
         self.inner.lock().exit_message.clone()
+    }
+
+    /// Get a clone of the clock handle (useful for tests to advance fake time)
+    pub fn clock(&self) -> ClockHandle {
+        self.inner.lock().clock.clone()
     }
 
     /// Get current mode
@@ -295,7 +323,8 @@ impl TuiAppState {
             if let Some(started) = inner.compacting_started {
                 let delay_ms = inner.config.timeouts.compact_delay_ms;
                 if started.elapsed() >= std::time::Duration::from_millis(delay_ms) {
-                    inner.is_compacting = false;
+                    // Keep is_compacting true for status bar hint;
+                    // content renderer uses is_compacted to distinguish phases
                     inner.compacting_started = None;
                     inner.mode = AppMode::Input;
                     inner.display.is_compacted = true;
@@ -303,8 +332,8 @@ impl TuiAppState {
                     // Build tool summary from session turns
                     let tool_summary = build_tool_summary(&inner.sessions);
 
-                    // Set response with elbow connector format
-                    inner.display.response_content = format!(
+                    // Build command output text
+                    let cmd_output = format!(
                         "Compacted (ctrl+o to see full summary){}",
                         if tool_summary.is_empty() {
                             String::new()
@@ -312,10 +341,16 @@ impl TuiAppState {
                             format!("\n{}", tool_summary)
                         }
                     );
-                    inner.display.is_command_output = true;
 
-                    // Set conversation display to show the /compact command
-                    inner.display.conversation_display = "❯ /compact".to_string();
+                    // Accumulate command output into conversation display
+                    // Extra trailing newline creates blank line before the tip response
+                    inner.display.conversation_display =
+                        format!("❯ /compact\n  \u{23BF}  {}\n", cmd_output);
+
+                    // Show tip as post-compact response with elbow connector
+                    inner.display.response_content =
+                        "Tip: Use /memory to view and manage Claude memory".to_string();
+                    inner.display.is_command_output = true;
                 }
             }
         }
@@ -354,8 +389,11 @@ impl TuiAppState {
         let cells = usage.grid_cells();
         let mut lines = Vec::new();
 
-        // Build grid rows (10 cells per row, 9 rows)
-        for row in 0..9 {
+        // First line: just the title (content renderer adds ⎿ prefix)
+        lines.push("Context Usage".to_string());
+
+        // Build grid rows (10 cells per row, 10 rows)
+        for row in 0..10 {
             let start = row * 10;
             let end = start + 10;
             let row_cells: String = cells[start..end]
@@ -365,50 +403,49 @@ impl TuiAppState {
                 .trim_end()
                 .to_string();
 
-            // Rows have category labels on the right
+            // Labels on the right side of certain rows
             let label = match row {
-                1 => "  Estimated usage by category".to_string(),
-                2 => format!(
-                    "  ⛁ System prompt: {} tokens ({:.1}%)",
+                0 => format!(
+                    "{} \u{00b7} {}/{} tokens ({:.0}%)",
+                    usage.model_name,
+                    ContextUsage::format_tokens_short(usage.total_used()),
+                    ContextUsage::format_tokens_short(usage.total_tokens),
+                    usage.used_percentage()
+                ),
+                2 => "Estimated usage by category".to_string(),
+                3 => format!(
+                    "\u{26C1} System prompt: {} tokens ({:.1}%)",
                     ContextUsage::format_tokens(usage.system_prompt_tokens),
                     usage.percentage(usage.system_prompt_tokens)
                 ),
-                3 => format!(
-                    "  ⛁ System tools: {} tokens ({:.1}%)",
+                4 => format!(
+                    "\u{26C1} System tools: {} tokens ({:.1}%)",
                     ContextUsage::format_tokens(usage.system_tools_tokens),
                     usage.percentage(usage.system_tools_tokens)
                 ),
-                4 => format!(
-                    "  ⛁ Memory files: {} tokens ({:.1}%)",
-                    ContextUsage::format_tokens(usage.memory_files_tokens),
-                    usage.percentage(usage.memory_files_tokens)
-                ),
                 5 => format!(
-                    "  ⛁ Messages: {} tokens ({:.1}%)",
+                    "\u{26C1} Messages: {} tokens ({:.1}%)",
                     ContextUsage::format_tokens(usage.messages_tokens),
                     usage.percentage(usage.messages_tokens)
                 ),
                 6 => format!(
-                    "  ⛶ Free space: {} ({:.1}%)",
+                    "\u{26F6} Free space: {} ({:.1}%)",
                     ContextUsage::format_tokens(usage.free_space_tokens),
                     usage.percentage(usage.free_space_tokens)
                 ),
                 7 => format!(
-                    "  ⛝ Autocompact buffer: {} tokens ({:.1}%)",
+                    "\u{26DD} Autocompact buffer: {} tokens ({:.1}%)",
                     ContextUsage::format_tokens(usage.autocompact_buffer_tokens),
                     usage.percentage(usage.autocompact_buffer_tokens)
                 ),
                 _ => String::new(),
             };
 
-            lines.push(format!("     {}   {}", row_cells, label));
-        }
-
-        // Add memory files section
-        lines.push(String::new());
-        lines.push("     Memory files · /memory".to_string());
-        for file in &usage.memory_files {
-            lines.push(format!("     └ {}: {} tokens", file.path, file.tokens));
+            if label.is_empty() {
+                lines.push(format!("     {}", row_cells));
+            } else {
+                lines.push(format!("     {}   {}", row_cells, label));
+            }
         }
 
         lines.join("\n")

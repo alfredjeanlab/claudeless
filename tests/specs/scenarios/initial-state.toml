@@ -1,0 +1,15 @@
+name = "initial-state"
+
+session_id = "00000000-0000-0000-0000-000000000001"
+project_path = "/test/project"
+launch_timestamp = "2025-01-01T00:00:00Z"
+user_name = "TestUser"
+claude_version = "2.1.29"
+provider = "Claude API"
+default_model = "claude-sonnet-4-5-20250514"
+placeholder = 'Try "fix typecheck errors"'
+
+trusted = true
+
+[default_response]
+text = "I understand. Let me help with that."

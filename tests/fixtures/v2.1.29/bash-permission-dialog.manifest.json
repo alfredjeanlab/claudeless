@@ -1,0 +1,6 @@
+{
+  "script": "bash-permission-dialog",
+  "snapshots": [
+    "bash_permission_dialog"
+  ]
+}

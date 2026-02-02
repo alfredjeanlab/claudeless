@@ -5,23 +5,31 @@
 
 use iocraft::prelude::*;
 
-use crate::tui::separator::make_compact_separator;
 use crate::tui::shortcuts::shortcuts_by_column;
-use crate::tui::slash_menu::COMMANDS;
+use crate::tui::slash_menu::{COMMANDS, MENU_VISIBLE_COUNT};
 use crate::tui::spinner;
 
 use crate::tui::app::types::{AppMode, RenderState};
+
+/// Truncate a string to `max_chars` characters, appending "…" if truncated.
+fn truncate_with_ellipsis(s: &str, max_chars: usize) -> String {
+    if s.chars().count() <= max_chars {
+        return s.to_string();
+    }
+    let truncated: String = s.chars().take(max_chars.saturating_sub(1)).collect();
+    format!("{truncated}\u{2026}")
+}
 
 /// Render the shortcuts panel with 3 columns
 pub(crate) fn render_shortcuts_panel(_width: usize) -> AnyElement<'static> {
     let columns = shortcuts_by_column();
 
     // Fixed column widths matching the Claude Code fixture:
-    // - Left column: 26 chars total (2-space indent + 24 content)
-    // - Center column: 35 chars
+    // - Left column: 23 chars total (2-space indent + 21 content)
+    // - Center column: 31 chars
     // - Right column: remaining space
-    const LEFT_WIDTH: usize = 24; // Content width (after 2-space indent)
-    const CENTER_WIDTH: usize = 35;
+    const LEFT_WIDTH: usize = 21; // Content width (after 2-space indent)
+    const CENTER_WIDTH: usize = 31;
 
     // Build the multi-column layout
     // Each row contains entries from all 3 columns
@@ -63,12 +71,8 @@ pub(crate) fn render_conversation_area(state: &RenderState) -> AnyElement<'stati
 
     // Add compact separator if conversation has been compacted
     if state.display.is_compacted {
-        let compact_text = "Conversation compacted · ctrl+o for history";
-        content.push_str(&make_compact_separator(
-            compact_text,
-            state.display.terminal_width as usize,
-        ));
-        content.push('\n');
+        content.push_str("✻ Conversation compacted (ctrl+o for history)");
+        content.push_str("\n\n\n");
     }
 
     // Add conversation display (includes user prompts and past responses)
@@ -78,14 +82,14 @@ pub(crate) fn render_conversation_area(state: &RenderState) -> AnyElement<'stati
 
     // Add current response if present
     if !state.display.response_content.is_empty() || state.is_compacting {
-        // Check if this is a compacting-in-progress state
-        if state.is_compacting {
+        // Check if this is a compacting-in-progress state (not yet completed)
+        if state.is_compacting && !state.display.is_compacted {
             // During compacting, show animated spinner
             if !content.is_empty() {
                 content.push_str("\n\n");
             }
             content.push_str(&render_spinner(state, "Compacting conversation"));
-            content.push_str(" (ctrl+c to interrupt)");
+            content.push_str("…\n  \u{23BF}  Tip: Use /memory to view and manage Claude memory");
         } else if matches!(state.mode, AppMode::Responding | AppMode::Thinking)
             && !state.display.is_command_output
             && state.display.response_content.is_empty()
@@ -101,12 +105,16 @@ pub(crate) fn render_conversation_area(state: &RenderState) -> AnyElement<'stati
             if !content.is_empty() {
                 content.push('\n');
             }
-            // Format each line with elbow connector (2 spaces + ⎿ + 2 spaces)
+            // First line gets elbow connector; subsequent lines pass through as-is
             for (i, line) in state.display.response_content.lines().enumerate() {
                 if i > 0 {
                     content.push('\n');
                 }
-                content.push_str(&format!("  ⎿  {}", line));
+                if i == 0 {
+                    content.push_str(&format!("  \u{23BF}  {}", line));
+                } else {
+                    content.push_str(line);
+                }
             }
         } else {
             // Normal response with ⏺ prefix
@@ -145,21 +153,19 @@ pub(crate) fn render_slash_menu(state: &RenderState) -> AnyElement<'static> {
         return element! { View {} }.into();
     }
 
-    // Build menu content
-    let max_visible = 10; // Show at most 10 commands
+    // Build menu content - visible items as a list below the input separator
     let mut content = String::new();
+    let visible_end = menu.filtered_commands.len().min(MENU_VISIBLE_COUNT);
+    let width = state.display.terminal_width as usize;
+    // 2-space indent + 24-char command column = 26 chars before description.
+    // Real Claude reserves 2 chars of right margin.
+    let desc_max = width.saturating_sub(28);
 
-    for (i, cmd) in menu.filtered_commands.iter().take(max_visible).enumerate() {
-        let is_selected = i == menu.selected_index;
-        let indicator = if is_selected { " ❯ " } else { "   " };
-
-        // Format: indicator + /command + spaces + description
-        // Use 14 chars for command name (including /) to align descriptions
+    for cmd in menu.filtered_commands[..visible_end].iter() {
+        // Format: 2-space indent + /command padded to 24 chars + description
         let cmd_display = format!("/{}", cmd.name);
-        content.push_str(&format!(
-            "{}{:<14}  {}\n",
-            indicator, cmd_display, cmd.description
-        ));
+        let desc = truncate_with_ellipsis(cmd.description, desc_max);
+        content.push_str(&format!("  {:<24}{}\n", cmd_display, desc));
     }
 
     // Remove trailing newline
@@ -170,7 +176,6 @@ pub(crate) fn render_slash_menu(state: &RenderState) -> AnyElement<'static> {
     element! {
         View(flex_direction: FlexDirection::Column) {
             Text(content: content)
-            Text(content: "")
         }
     }
     .into()
@@ -200,30 +205,26 @@ pub(crate) fn render_stash_indicator(state: &RenderState) -> AnyElement<'static>
     .into()
 }
 
-/// Render argument hint for completed slash commands
-pub(crate) fn render_argument_hint(state: &RenderState) -> AnyElement<'static> {
+/// Get argument hint text for completed slash commands (if any).
+///
+/// Returns the hint string (e.g., "[open]") to be appended inline after the input,
+/// or None if no hint should be shown.
+pub(crate) fn get_argument_hint(state: &RenderState) -> Option<&'static str> {
     // Only show hint when menu is closed and input starts with a completed command
     if state.display.slash_menu.is_some() || !state.input.buffer.starts_with('/') {
-        return element! { View {} }.into();
+        return None;
     }
 
-    // Extract command name (without leading /)
+    // Extract command name (without leading /, trimmed of trailing whitespace/args)
     let cmd_text = state.input.buffer.trim_start_matches('/');
+    let cmd_name = cmd_text.split_whitespace().next().unwrap_or("");
 
     // Find exact match
-    if let Some(cmd) = COMMANDS.iter().find(|c| c.name == cmd_text) {
-        if let Some(hint) = cmd.argument_hint {
-            let hint_text = format!("     {}  {}", " ".repeat(cmd_text.len()), hint);
-            return element! {
-                View(flex_direction: FlexDirection::Column) {
-                    Text(content: hint_text)
-                }
-            }
-            .into();
-        }
+    if let Some(cmd) = COMMANDS.iter().find(|c| c.name == cmd_name) {
+        return cmd.argument_hint;
     }
 
-    element! { View {} }.into()
+    None
 }
 
 /// Render animated spinner with text

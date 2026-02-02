@@ -1,0 +1,6 @@
+{
+  "script": "after-response",
+  "snapshots": [
+    "after_response"
+  ]
+}

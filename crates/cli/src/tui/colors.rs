@@ -43,9 +43,6 @@ pub mod escape {
         format!("\x1b[48;2;{};{};{}m", r, g, b)
     }
 
-    /// Reset foreground color
-    pub const FG_RESET: &str = "\x1b[39m";
-
     /// Reset background color
     pub const BG_RESET: &str = "\x1b[49m";
 
@@ -74,12 +71,15 @@ pub fn styled_logo_line1(product_name: &str, version: &str) -> String {
     let bg_black = escape::bg(LOGO_BG.0, LOGO_BG.1, LOGO_BG.2);
     let fg_gray = escape::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
 
+    // No trailing reset — iocraft inserts \x1b[K (erase-to-EOL) after the
+    // content and a trailing \x1b[0m would get split by that insertion,
+    // leaking a stray 'm' character in certain layouts.
     format!(
-        "{fg_orange} ▐{bg_black}▛███▜{bg_reset}▌{fg_reset}   {bold}{product_name}{reset} {fg_gray}{version}{fg_reset}",
+        "{fg_orange} ▐{bg_black}▛███▜{bg_reset}▌{fg_reset}   {bold}{product_name}{reset} {fg_gray}{version}",
         fg_orange = fg_orange,
         bg_black = bg_black,
         bg_reset = escape::BG_RESET,
-        fg_reset = escape::FG_RESET,
+        fg_reset = escape::RESET,
         bold = escape::BOLD,
         reset = escape::RESET,
         fg_gray = fg_gray,
@@ -96,12 +96,13 @@ pub fn styled_logo_line2(model_str: &str) -> String {
     let fg_gray = escape::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
 
     format!(
-        "{fg_orange}▝▜{bg_black}█████{bg_reset}▛▘{fg_reset}  {fg_gray}{model_str}{fg_reset}",
+        "{fg_orange}▝▜{bg_black}█████{bg_reset}▛▘{fg_reset}  {fg_gray}{model_str}{reset}",
         fg_orange = fg_orange,
         bg_black = bg_black,
         bg_reset = escape::BG_RESET,
-        fg_reset = escape::FG_RESET,
+        fg_reset = escape::RESET,
         fg_gray = fg_gray,
+        reset = escape::RESET,
     )
 }
 
@@ -114,10 +115,11 @@ pub fn styled_logo_line3(path_str: &str) -> String {
     let fg_gray = escape::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
 
     format!(
-        "{fg_orange}  ▘▘ ▝▝  {fg_reset}  {fg_gray}{path_str}{fg_reset}",
+        "{fg_orange}  ▘▘ ▝▝  {fg_reset}  {fg_gray}{path_str}{reset}",
         fg_orange = fg_orange,
-        fg_reset = escape::FG_RESET,
+        fg_reset = escape::RESET,
         fg_gray = fg_gray,
+        reset = escape::RESET,
     )
 }
 
@@ -167,7 +169,7 @@ pub fn styled_placeholder(text: &str) -> String {
     let rest = &text[first_char.len_utf8()..];
 
     format!(
-        "{reset}❯ {inv}{first}{reset_dim}{rest}{reset}",
+        "{reset}❯\u{00A0}{inv}{first}{reset_dim}{rest}{reset}",
         reset = escape::RESET,
         inv = escape::INVERSE,
         first = first_char,
@@ -189,11 +191,11 @@ pub fn styled_bash_placeholder(text: &str) -> String {
     let rest = &text[first_char.len_utf8()..];
 
     format!(
-        "{reset}{fg_pink}! {inv}{fg_reset}{first}{reset_dim}{rest}{reset}",
+        "{reset}{fg_pink}!\u{00A0}{inv}{fg_reset}{first}{reset_dim}{rest}{reset}",
         reset = escape::RESET,
         fg_pink = fg_pink,
         inv = escape::INVERSE,
-        fg_reset = escape::FG_RESET,
+        fg_reset = escape::RESET,
         first = first_char,
         reset_dim = escape::RESET_DIM,
         rest = rest,
@@ -211,7 +213,7 @@ pub fn styled_bash_status() -> String {
         "{reset}  {fg_pink}! for bash mode{fg_reset}",
         reset = escape::RESET,
         fg_pink = fg_pink,
-        fg_reset = escape::FG_RESET,
+        fg_reset = escape::RESET,
     )
 }
 
@@ -227,7 +229,7 @@ pub fn styled_status_text(text: &str) -> String {
     format!(
         "{reset}  {fg_gray}{text}{fg_reset}",
         reset = escape::RESET,
-        fg_reset = escape::FG_RESET,
+        fg_reset = escape::RESET,
     )
 }
 
@@ -250,7 +252,7 @@ pub fn styled_permission_status(mode: &PermissionMode) -> String {
                 escape::RESET,
                 escape::fg(r, g, b),
                 fg_gray,
-                escape::FG_RESET
+                escape::RESET
             )
         }
         PermissionMode::AcceptEdits => {
@@ -260,7 +262,7 @@ pub fn styled_permission_status(mode: &PermissionMode) -> String {
                 escape::RESET,
                 escape::fg(r, g, b),
                 fg_gray,
-                escape::FG_RESET
+                escape::RESET
             )
         }
         PermissionMode::BypassPermissions => {
@@ -270,7 +272,7 @@ pub fn styled_permission_status(mode: &PermissionMode) -> String {
                 escape::RESET,
                 escape::fg(r, g, b),
                 fg_gray,
-                escape::FG_RESET
+                escape::RESET
             )
         }
         // Delegate and DontAsk modes use gray (same as default cycle hint)
@@ -279,7 +281,7 @@ pub fn styled_permission_status(mode: &PermissionMode) -> String {
                 "{}  {}delegate mode (shift+tab to cycle){}",
                 escape::RESET,
                 fg_gray,
-                escape::FG_RESET
+                escape::RESET
             )
         }
         PermissionMode::DontAsk => {
@@ -287,7 +289,7 @@ pub fn styled_permission_status(mode: &PermissionMode) -> String {
                 "{}  {}don't ask mode (shift+tab to cycle){}",
                 escape::RESET,
                 fg_gray,
-                escape::FG_RESET
+                escape::RESET
             )
         }
     }

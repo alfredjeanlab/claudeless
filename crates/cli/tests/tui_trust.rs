@@ -12,7 +12,7 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, TuiTestSession, TUI_READY_PATTERN};
+use common::{TuiTestSession, TUI_READY_PATTERN};
 
 const UNTRUSTED_SCENARIO: &str = r#"
     {
@@ -63,18 +63,4 @@ fn test_trust_prompt_escape_cancels() {
         "After Escape, should exit or return to shell.\nCapture:\n{}",
         capture
     );
-}
-
-/// Compare trust prompt against real Claude fixture
-// FIXME: Fixture is golden capture from real CLI. normalize_tui() doesn't strip
-// shell preamble when capturing. Fixture only contains the trust dialog box,
-// not the full terminal output with shell prompt.
-#[test]
-#[ignore]
-fn test_trust_prompt_matches_fixture() {
-    let tui =
-        TuiTestSession::with_custom_wait("fixture-trust", UNTRUSTED_SCENARIO, 120, 40, "trust");
-    let capture = tui.capture();
-
-    assert_tui_matches_fixture(&capture, "trust_prompt.txt", None);
 }

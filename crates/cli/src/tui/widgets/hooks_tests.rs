@@ -44,7 +44,7 @@ fn hooks_dialog_default_state() {
     assert_eq!(dialog.selected_index(), 0);
     assert_eq!(dialog.view, HooksView::HookList);
     assert_eq!(dialog.selected_hook, None);
-    assert_eq!(dialog.active_hook_count, 4);
+    assert_eq!(dialog.active_hook_count, 5);
 }
 
 #[test]

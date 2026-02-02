@@ -5,7 +5,6 @@
 
 use std::io::{self, Write};
 
-use crate::capture::{CapturedArgs, CapturedOutcome};
 use crate::failure::FailureExecutor;
 use crate::output::{McpServerInfo, OutputWriter};
 use crate::runtime::TurnResult;
@@ -25,28 +24,16 @@ impl Runtime {
             }
         };
 
-        // Build captured args for logging
-        let captured_args = CapturedArgs {
-            prompt: self.cli.prompt.clone(),
-            model: self.cli.model.clone(),
-            output_format: format!("{:?}", self.cli.output.output_format).to_lowercase(),
-            print_mode: self.cli.print,
-            continue_conversation: self.cli.session.continue_conversation,
-            resume: self.cli.session.resume.clone(),
-            allowed_tools: self.cli.allowed_tools.clone(),
-            cwd: self.cli.cwd.clone(),
-        };
-
         // Handle failure injection from CLI flag
         if let Some(ref mode) = self.cli.simulator.failure {
-            return self.handle_failure_injection(mode, &captured_args).await;
+            return self.handle_failure_injection(mode).await;
         }
 
         // Write queue-operation at session start (before any state recording)
         self.write_queue_operation()?;
 
         // Execute the response loop
-        self.execute_response_loop(&prompt, captured_args).await?;
+        self.execute_response_loop(&prompt).await?;
 
         // Shutdown MCP servers gracefully
         self.shutdown_mcp().await;
@@ -58,20 +45,9 @@ impl Runtime {
     async fn handle_failure_injection(
         &self,
         mode: &crate::cli::FailureMode,
-        captured_args: &CapturedArgs,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let spec = FailureExecutor::from_mode(mode);
         let mut stderr = io::stderr();
-
-        if let Some(ref log) = self.capture {
-            log.record(
-                captured_args.clone(),
-                CapturedOutcome::Failure {
-                    failure_type: format!("{:?}", mode),
-                    message: "Injected failure".to_string(),
-                },
-            );
-        }
 
         // Write queue-operation before recording error
         self.write_queue_operation()?;
@@ -85,7 +61,6 @@ impl Runtime {
     async fn execute_response_loop(
         &mut self,
         initial_prompt: &str,
-        captured_args: CapturedArgs,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut current_prompt = initial_prompt.to_string();
 
@@ -95,19 +70,11 @@ impl Runtime {
                 Ok(result) => result,
                 Err(failure_spec) => {
                     // Failure detected - JSONL already recorded by execute()
-                    // Record to capture log
-                    self.record_failure_capture(&captured_args, &failure_spec);
-                    // Write to stderr and exit
                     let mut stderr = io::stderr();
                     FailureExecutor::execute(&failure_spec, &mut stderr).await?;
                     return Err("Scenario failure triggered".into());
                 }
             };
-
-            // Record capture (only on first iteration, not hook continuations)
-            if !result.is_hook_continuation {
-                self.record_capture(&captured_args, &result);
-            }
 
             // Write output
             self.write_turn_result(&result)?;
@@ -125,41 +92,6 @@ impl Runtime {
         }
 
         Ok(())
-    }
-
-    /// Record failure to capture log.
-    fn record_failure_capture(
-        &self,
-        captured_args: &CapturedArgs,
-        failure_spec: &crate::config::FailureSpec,
-    ) {
-        if let Some(ref log) = self.capture {
-            log.record(
-                captured_args.clone(),
-                CapturedOutcome::Failure {
-                    failure_type: format!("{:?}", failure_spec),
-                    message: "Scenario failure".to_string(),
-                },
-            );
-        }
-    }
-
-    /// Record outcome to capture log.
-    fn record_capture(&self, captured_args: &CapturedArgs, result: &TurnResult) {
-        if let Some(ref log) = self.capture {
-            let outcome = if result.response_text().is_empty() {
-                CapturedOutcome::NoMatch {
-                    used_default: false,
-                }
-            } else {
-                CapturedOutcome::Response {
-                    text: result.response_text().to_string(),
-                    matched_rule: Some("matched".to_string()),
-                    delay_ms: result.response.delay_ms().unwrap_or(0),
-                }
-            };
-            log.record(captured_args.clone(), outcome);
-        }
     }
 
     /// Write a turn result to stdout.

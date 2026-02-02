@@ -12,8 +12,20 @@ mod execution;
 mod export;
 mod permission;
 
+/// Resolve a model alias (e.g. "haiku") to the full API model ID.
+/// If the input is already a full model ID, it is returned unchanged.
+fn resolve_model_id(model: &str) -> String {
+    match model.to_lowercase().as_str() {
+        "haiku" | "claude-haiku" => "claude-haiku-4-5-20251001".to_string(),
+        "sonnet" | "claude-sonnet" => "claude-sonnet-4-20250514".to_string(),
+        "opus" | "claude-opus" => "claude-opus-4-5-20251101".to_string(),
+        _ => model.to_string(),
+    }
+}
+
 pub(in crate::tui::app) use export::{do_clipboard_export, do_file_export};
 
+use crate::permission::PermissionMode;
 use crate::tui::widgets::context::ContextUsage;
 use crate::tui::widgets::export::ExportDialog;
 use crate::tui::widgets::help::HelpDialog;
@@ -62,10 +74,41 @@ impl TuiAppState {
 /// Handle slash commands like /compact and /clear
 pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
     let cmd = input.trim().to_lowercase();
+
+    // Accumulate previous response content into conversation history
+    if !inner.display.is_command_output && !inner.display.response_content.is_empty() {
+        let response = inner.display.response_content.clone();
+        if !inner.display.conversation_display.is_empty() {
+            inner.display.conversation_display.push_str("\n\n");
+        }
+        inner
+            .display
+            .conversation_display
+            .push_str(&format!("⏺ {}", response));
+    }
+    if inner.display.is_command_output && !inner.display.response_content.is_empty() {
+        let formatted: String = inner
+            .display
+            .response_content
+            .lines()
+            .map(|line| format!("  ⎿  {}", line))
+            .collect::<Vec<_>>()
+            .join("\n");
+        inner.display.conversation_display.push('\n');
+        inner.display.conversation_display.push_str(&formatted);
+    }
+
     inner.display.is_command_output = true;
+    inner.is_compacting = false;
 
     // Add the command to conversation display
-    inner.display.conversation_display = format!("❯ {}", input.trim());
+    let prompt = format!("❯ {}", input.trim());
+    if inner.display.conversation_display.is_empty() {
+        inner.display.conversation_display = prompt;
+    } else {
+        inner.display.conversation_display.push_str("\n\n");
+        inner.display.conversation_display.push_str(&prompt);
+    }
 
     match cmd.as_str() {
         "/clear" => {
@@ -78,6 +121,9 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
 
             // Clear session-level permission grants
             inner.session_grants.clear();
+
+            // Clear conversation display history, keeping only the /clear command prompt
+            inner.display.conversation_display = format!("❯ {}", input.trim());
 
             // Set response content (will be rendered with elbow connector)
             inner.display.response_content = "(no content)".to_string();
@@ -127,7 +173,13 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
             inner.dialog = DialogState::Help(HelpDialog::new(version));
         }
         "/context" => {
-            let usage = ContextUsage::new();
+            let model = inner.config.model.clone();
+            let usage = if model.is_empty() {
+                ContextUsage::new()
+            } else {
+                let model_id = resolve_model_id(&model);
+                ContextUsage::new_with_model(model_id)
+            };
             inner.display.response_content = TuiAppState::format_context_usage(&usage);
         }
         "/exit" => {
@@ -145,32 +197,33 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
             inner.dialog = DialogState::Tasks(TasksDialog::new());
         }
         "/export" => {
-            // Check if there's a conversation to export
-            let has_conversation = inner
-                .sessions
-                .get_current()
-                .map(|s| !s.turns.is_empty())
-                .unwrap_or(false);
-
-            if has_conversation {
-                inner.mode = AppMode::ExportDialog;
-                inner.dialog = DialogState::Export(ExportDialog::new());
-            } else {
-                inner.display.response_content =
-                    "Failed to export: No conversation to export".to_string();
-            }
+            inner.mode = AppMode::ExportDialog;
+            inner.dialog = DialogState::Export(ExportDialog::new());
         }
         "/hooks" => {
             inner.mode = AppMode::HooksDialog;
-            // For now, hard-code to 4 active hooks as shown in the fixture
-            inner.dialog = DialogState::Hooks(crate::tui::widgets::HooksDialog::new(4));
+            // For now, hard-code to 5 active hooks as shown in the fixture
+            inner.dialog = DialogState::Hooks(crate::tui::widgets::HooksDialog::new(5));
         }
         "/memory" => {
             inner.mode = AppMode::MemoryDialog;
             inner.dialog = DialogState::Memory(crate::tui::widgets::MemoryDialog::new());
+        }
+        "/plan" => {
+            if inner.permission_mode == PermissionMode::Plan {
+                inner.display.response_content =
+                    "Already in plan mode. No plan written yet.".to_string();
+            } else {
+                inner.permission_mode = PermissionMode::Plan;
+                inner.display.response_content = "Enabled plan mode".to_string();
+            }
         }
         _ => {
             inner.display.response_content = format!("Unknown command: {}", input);
         }
     }
 }
+
+#[cfg(test)]
+#[path = "commands_tests.rs"]
+mod tests;

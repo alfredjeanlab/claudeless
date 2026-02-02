@@ -1,15 +1,14 @@
 # Capture Write tool permission dialog.
 # Requires API call - Claude must decide to use Write tool.
-# Note: Requires KEYBOARD_TIMEOUT=120 or longer (API response time varies).
-# Run with: KEYBOARD_TIMEOUT=120 ./tests/capture/capture.sh --script write-permission-dialog
 # Args: --model haiku
+# Timeout: 60
 
 # Handle trust dialog if it appears, then wait for ready state
 if wait "trust this folder" 5s
     send <Enter>
-    wait "for shortcuts" 10s
+    wait "for shortcuts" 3s
 else
-    wait "for shortcuts" 10s
+    wait "for shortcuts" 3s
 end
 
 # Ask Claude to create a new file
@@ -18,8 +17,8 @@ wait 100
 send <Enter>
 
 # Wait for Write permission dialog to appear
-wait "Create file" 120s
-wait "Do you want to create" 10s
+wait "Create file" 30s
+wait "Do you want to create" 3s
 snapshot "write_permission_dialog"
 
 # Cancel and exit cleanly

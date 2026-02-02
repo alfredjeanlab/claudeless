@@ -7,6 +7,9 @@ send "/context"
 wait "/context" 3s
 send <Enter>
 wait "Estimated usage" 10s
+
+# Wait for idle state (ensure no background response is running)
+wait "for shortcuts" 10s
 snapshot "context_usage"
 
 # Exit

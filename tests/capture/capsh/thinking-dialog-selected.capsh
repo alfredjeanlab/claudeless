@@ -2,6 +2,7 @@
 # Opens dialog mid-conversation and navigates to capture both states.
 # Requires API call - Claude must respond to prompt.
 # Args: --model haiku
+# Timeout: 120
 
 wait "for shortcuts" 10s
 

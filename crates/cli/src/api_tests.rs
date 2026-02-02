@@ -84,7 +84,7 @@ fn test_reset() {
 }
 
 #[test]
-fn test_capture_recorded() {
+fn test_interactions_recorded() {
     let sim = SimulatorBuilder::new()
         .respond_to("hello", "Hi!")
         .build_in_process()
@@ -92,9 +92,9 @@ fn test_capture_recorded() {
 
     sim.execute("hello world");
 
-    let interactions = sim.capture().interactions();
+    let interactions = sim.interactions.lock();
     assert_eq!(interactions.len(), 1);
-    assert_eq!(interactions[0].args.prompt, Some("hello world".to_string()));
+    assert_eq!(interactions[0].prompt, "hello world");
 }
 
 #[test]
@@ -106,8 +106,8 @@ fn test_execute_with_args() {
 
     sim.execute_with_args("test", Some("claude-opus"));
 
-    let interactions = sim.capture().interactions();
-    assert_eq!(interactions[0].args.model, "claude-opus");
+    let interactions = sim.interactions.lock();
+    assert_eq!(interactions[0].model, "claude-opus");
 }
 
 #[test]
@@ -119,7 +119,6 @@ fn test_binary_handle_env_vars() {
 
     let vars = handle.env_vars();
     assert!(vars.iter().any(|(k, _)| *k == "CLAUDELESS_SCENARIO"));
-    assert!(vars.iter().any(|(k, _)| *k == "CLAUDELESS_CAPTURE"));
 }
 
 #[test]
@@ -130,7 +129,6 @@ fn test_binary_handle_paths() {
         .unwrap();
 
     assert!(handle.scenario_path().exists());
-    // Capture file may not exist yet
 }
 
 #[test]

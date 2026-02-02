@@ -1,0 +1,12 @@
+# Capture /plan autocomplete showing "open" suggestion.
+# Args: --model haiku
+
+wait "for shortcuts" 5s
+
+send "/plan "
+wait "open" 3s
+snapshot "plan_autocomplete"
+
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

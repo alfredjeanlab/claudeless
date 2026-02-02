@@ -73,6 +73,10 @@ mod status_bar_rendering {
             is_compacting: false,
             spinner_frame: 0,
             spinner_verb: String::new(),
+            placeholder: None,
+            provider: None,
+            show_welcome_back: false,
+            welcome_back_right_panel: None,
         }
     }
 
@@ -100,10 +104,21 @@ mod status_bar_rendering {
     }
 
     #[test]
-    fn status_bar_non_default_mode_has_toggle_hint() {
+    fn status_bar_non_default_mode_no_right_text() {
+        let mut state = create_render_state(120);
+        // AcceptEdits mode shows only the mode text, no right-aligned text
+        state.permission_mode = PermissionMode::AcceptEdits;
+        let bar = format_status_bar(&state, 120);
+        assert!(!bar.contains("Use meta+t to toggle thinking"));
+        assert!(bar.contains("accept edits"));
+    }
+
+    #[test]
+    fn status_bar_plan_mode_no_right_text() {
         let mut state = create_render_state(120);
         state.permission_mode = PermissionMode::Plan;
         let bar = format_status_bar(&state, 120);
-        assert!(bar.contains("Use meta+t to toggle thinking"));
+        assert!(bar.contains("plan mode on"));
+        assert!(!bar.contains("Use meta+t to toggle thinking"));
     }
 }

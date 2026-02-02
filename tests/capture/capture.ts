@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 
 import * as fs from "node:fs";
-import * as path from "node:path";
 import * as os from "node:os";
+import * as path from "node:path";
 
 // --- Colors & constants ---
 const BOLD = "\x1b[1m";
@@ -20,6 +20,41 @@ const DEFAULT_CLAUDE_ARGS = process.env.DEFAULT_CLAUDE_ARGS ?? "--model haiku";
 
 const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname);
 const CAPTURE_DIR = SCRIPT_DIR;
+
+// --- Semaphore for parallel execution ---
+
+class Semaphore {
+  private waiting: (() => void)[] = [];
+  private active = 0;
+
+  constructor(private readonly limit: number) {}
+
+  async run<T>(fn: () => Promise<T>): Promise<T> {
+    await this.acquire();
+    try {
+      return await fn();
+    } finally {
+      this.release();
+    }
+  }
+
+  private acquire(): Promise<void> {
+    if (this.active < this.limit) {
+      this.active++;
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => this.waiting.push(resolve));
+  }
+
+  private release(): void {
+    this.active--;
+    const next = this.waiting.shift();
+    if (next) {
+      this.active++;
+      next();
+    }
+  }
+}
 
 // --- Utility functions ---
 
@@ -114,19 +149,48 @@ function parseWorkspace(script: string): string {
   return "";
 }
 
-function parseConfigMode(script: string): "trusted" | "auth-only" | "empty" {
+function parseConfigMode(script: string): "trusted" | "welcome-back" | "auth-only" | "empty" {
   const content = fs.readFileSync(script, "utf-8");
   const match = content.match(/^# Config:\s*(.*)$/m);
   if (match) {
     const mode = match[1].trim().split(/\s+/)[0];
-    if (mode === "auth-only" || mode === "empty") return mode;
+    if (mode === "welcome-back" || mode === "auth-only" || mode === "empty") return mode;
   }
   return "trusted";
+}
+
+function parseTimeout(script: string): number | null {
+  const content = fs.readFileSync(script, "utf-8");
+  const match = content.match(/^# Timeout:\s*(\d+)/m);
+  if (match) return Number(match[1]);
+  return null;
 }
 
 // --- Config writing ---
 
 function writeClaudeConfig(
+  configDir: string,
+  workspace: string,
+  version: string,
+): void {
+  fs.mkdirSync(configDir, { recursive: true });
+  const config = {
+    hasCompletedOnboarding: true,
+    lastOnboardingVersion: version,
+    projects: {
+      [workspace]: {
+        hasTrustDialogAccepted: true,
+        allowedTools: [],
+      },
+    },
+  };
+  fs.writeFileSync(
+    path.join(configDir, ".claude.json"),
+    JSON.stringify(config, null, 2) + "\n",
+  );
+}
+
+function writeWelcomeBackConfig(
   configDir: string,
   workspace: string,
   version: string,
@@ -169,7 +233,13 @@ function sanitizeState(configDir: string): void {
   function walk(dir: string): string[] {
     const files: string[] = [];
     if (!fs.existsSync(dir)) return files;
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return files;
+    }
+    for (const entry of entries) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         files.push(...walk(full));
@@ -206,11 +276,31 @@ function sanitizeState(configDir: string): void {
   }
 }
 
+function copyDirSync(src: string, dest: string): void {
+  if (!fs.existsSync(src)) return;
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      copyDirSync(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
 function listFiles(dir: string): string[] {
   const files: string[] = [];
   function walk(d: string): void {
     if (!fs.existsSync(d)) return;
-    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(d, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
       const full = path.join(d, entry.name);
       if (entry.isDirectory()) {
         walk(full);
@@ -225,19 +315,19 @@ function listFiles(dir: string): string[] {
 
 // --- Fixture extraction ---
 
-function extractFixtures(framesDir: string, fixturesDir: string): void {
+function extractFixtures(framesDir: string, fixturesDir: string): string[] {
   const recording = path.join(framesDir, "recording.jsonl");
   if (!fs.existsSync(recording)) {
     process.stderr.write(
       `${RED}Error: No recording.jsonl found in ${framesDir}${NC}\n`,
     );
-    return;
+    return [];
   }
 
   fs.mkdirSync(fixturesDir, { recursive: true });
 
   const content = fs.readFileSync(recording, "utf-8");
-  let count = 0;
+  const names: string[] = [];
 
   for (const line of content.split("\n")) {
     const snapshotMatch = line.match(/"snapshot":"(\d+)"/);
@@ -252,8 +342,8 @@ function extractFixtures(framesDir: string, fixturesDir: string): void {
     const ansiFrame = path.join(framesDir, `${frameNum}.ansi.txt`);
 
     if (fs.existsSync(plainFrame)) {
-      fs.copyFileSync(plainFrame, path.join(fixturesDir, `${fixtureName}.txt`));
-      count++;
+      fs.copyFileSync(plainFrame, path.join(fixturesDir, `${fixtureName}.tui.txt`));
+      names.push(fixtureName);
       console.log(`${DIM}  ${fixtureName}${NC}`);
     } else {
       process.stderr.write(
@@ -264,24 +354,27 @@ function extractFixtures(framesDir: string, fixturesDir: string): void {
     if (fs.existsSync(ansiFrame)) {
       fs.copyFileSync(
         ansiFrame,
-        path.join(fixturesDir, `${fixtureName}.ansi.txt`),
+        path.join(fixturesDir, `${fixtureName}.tui.ansi.txt`),
       );
     }
   }
 
-  if (count === 0) {
+  if (names.length === 0) {
     process.stderr.write(`${YELLOW}Warning: No named snapshots found${NC}\n`);
   }
+
+  return names;
 }
 
 // --- Core capture ---
 
-function runCapture(
+async function runCapture(
   script: string,
   rawOutputBase: string,
   fixturesDir: string,
   captureTimeout: number,
-): boolean {
+  parallel: boolean,
+): Promise<boolean> {
   const scriptName = path.basename(script, ".capsh");
   const rawDir = path.join(rawOutputBase, scriptName);
 
@@ -303,6 +396,13 @@ function runCapture(
   switch (configMode) {
     case "trusted":
       writeClaudeConfig(configDir, workspace, VERSION);
+      // CLAUDE.md suppresses the "Welcome back!" splash screen
+      if (!fs.existsSync(path.join(workspace, "CLAUDE.md"))) {
+        fs.writeFileSync(path.join(workspace, "CLAUDE.md"), "");
+      }
+      break;
+    case "welcome-back":
+      writeWelcomeBackConfig(configDir, workspace, VERSION);
       break;
     case "auth-only":
       writeAuthOnlyConfig(configDir, VERSION);
@@ -327,7 +427,7 @@ function runCapture(
   if (claudeArgs) console.log(`  Args: ${CYAN}${claudeArgs}${NC}`);
   if (configMode !== "trusted")
     console.log(`  Config: ${MAGENTA}${configMode}${NC}`);
-  console.log(`  ${DIM}Workspace: ${workspace}${NC}`);
+  if (!parallel) console.log(`  ${DIM}Workspace: ${workspace}${NC}`);
 
   // Build capsh command
   const args = ["capsh", "--frames", rawDir, "--", "claude"];
@@ -345,17 +445,14 @@ function runCapture(
     env.CLAUDE_CODE_OAUTH_TOKEN = "";
   }
 
-  const scriptFile = fs.openSync(script, "r");
-  const proc = Bun.spawnSync(["timeout", String(captureTimeout), ...args], {
+  const proc = Bun.spawn(["timeout", String(captureTimeout), ...args], {
     cwd: workspace,
     env,
-    stdin: scriptFile,
-    stdout: "inherit",
-    stderr: "inherit",
+    stdin: Bun.file(script),
+    stdout: parallel ? "pipe" : "inherit",
+    stderr: parallel ? "pipe" : "inherit",
   });
-  fs.closeSync(scriptFile);
-
-  const exitCode = proc.exitCode ?? 1;
+  const exitCode = await proc.exited;
 
   // Exit codes: 0=success, 143=killed by SIGTERM (expected), 124=timeout
   if (exitCode !== 0 && exitCode !== 143) {
@@ -398,7 +495,31 @@ function runCapture(
   );
 
   // Extract named fixtures
-  extractFixtures(rawDir, fixturesDir);
+  const snapshotNames = extractFixtures(rawDir, fixturesDir);
+
+  // Write manifest of TUI captures
+  if (snapshotNames.length > 0) {
+    const manifest = {
+      script: scriptName,
+      snapshots: snapshotNames,
+    };
+    fs.writeFileSync(
+      path.join(fixturesDir, `${scriptName}.manifest.json`),
+      JSON.stringify(manifest, null, 2) + "\n",
+    );
+  }
+
+  // Copy state diff and state subdirectories to fixtures
+  const diffFile = path.join(rawDir, "state.diff");
+  if (fs.existsSync(diffFile)) {
+    fs.copyFileSync(diffFile, path.join(fixturesDir, `${scriptName}.state.diff`));
+  }
+  for (const subdir of ["projects", "plans", "todos"]) {
+    copyDirSync(
+      path.join(stateDir, subdir),
+      path.join(fixturesDir, `${scriptName}.${subdir}`),
+    );
+  }
 
   return true;
 }
@@ -422,7 +543,9 @@ function shouldRunScript(
     const failures = fs.readFileSync(failuresFile, "utf-8");
     if (failures.split("\n").includes(scriptName)) return true;
   }
-  if (!fs.existsSync(path.join(rawOutput, scriptName, "recording.jsonl"))) {
+  const hasRecording = fs.existsSync(path.join(rawOutput, scriptName, "recording.jsonl"));
+  const hasStdout = fs.existsSync(path.join(rawOutput, scriptName, "stdout.txt"));
+  if (!hasRecording && !hasStdout) {
     return true;
   }
   return false;
@@ -447,6 +570,7 @@ function clearFailure(failuresFile: string, scriptName: string): void {
 let runSkipped = process.env.RUN_SKIPPED === "1";
 let retryMode = false;
 let singleScript = "";
+let jobs = 1;
 
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
@@ -461,6 +585,21 @@ for (let i = 0; i < argv.length; i++) {
         process.exit(1);
       }
       break;
+    case "-j":
+    case "--jobs": {
+      const val = argv[++i];
+      if (!val) {
+        process.stderr.write("Error: --jobs requires a number\n");
+        process.exit(1);
+      }
+      jobs = Number(val);
+      if (!Number.isInteger(jobs) || jobs < 0) {
+        process.stderr.write("Error: --jobs must be a non-negative integer\n");
+        process.exit(1);
+      }
+      if (jobs === 0) jobs = os.cpus().length;
+      break;
+    }
     case "--skip-skipped":
       runSkipped = false;
       break;
@@ -471,11 +610,12 @@ for (let i = 0; i < argv.length; i++) {
     case "--help":
       console.log(`Usage: capture.ts [OPTIONS]
 
-Capture TUI fixtures from real Claude CLI using capsh scripts.
+Capture fixtures from real Claude CLI using capsh, cli, and tmux scripts.
 
 Options:
   --script <name>         Run only the specified script (without .capsh)
   --retry                 Re-run failed scripts or scripts with missing fixtures
+  -j, --jobs <n>          Run up to n captures in parallel (default: 1, 0=ncpus)
   --skip-skipped          Skip skipped scripts (default)
   --run-skipped           Run skipped scripts (may fail)
   -h, --help              Show this help
@@ -507,6 +647,7 @@ if (!VERSION) {
 }
 
 console.log(`${BOLD}Claude CLI version:${NC} ${GREEN}${VERSION}${NC}`);
+if (jobs > 1) console.log(`${BOLD}Parallel jobs:${NC} ${GREEN}${jobs}${NC}`);
 
 // Raw output goes in git-ignored directory
 const RAW_OUTPUT = path.join(SCRIPT_DIR, "output", `v${VERSION}`);
@@ -526,10 +667,32 @@ if (retryMode) {
     console.log(`${DIM}Known failures: ${count}${NC}`);
   }
 } else if (singleScript) {
-  // Single script mode: only clean that script's output
+  // Single script mode: clean that script's output and fixtures
   const scriptDir = path.join(RAW_OUTPUT, singleScript);
   if (fs.existsSync(scriptDir)) {
     fs.rmSync(scriptDir, { recursive: true });
+  }
+  // Clean stale fixture files for this script
+  if (fs.existsSync(FIXTURES_DIR)) {
+    // Read manifest first to find snapshot fixture names (e.g., clear_before.tui.txt)
+    const manifestPath = path.join(FIXTURES_DIR, `${singleScript}.manifest.json`);
+    if (fs.existsSync(manifestPath)) {
+      try {
+        const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+        for (const snap of manifest.snapshots ?? []) {
+          for (const suffix of [".tui.txt", ".tui.ansi.txt"]) {
+            const f = path.join(FIXTURES_DIR, `${snap}${suffix}`);
+            if (fs.existsSync(f)) fs.rmSync(f);
+          }
+        }
+      } catch {}
+    }
+    // Remove script-prefixed files: manifest, state.diff, projects/, plans/, todos/
+    for (const entry of fs.readdirSync(FIXTURES_DIR)) {
+      if (entry.startsWith(`${singleScript}.`)) {
+        fs.rmSync(path.join(FIXTURES_DIR, entry), { recursive: true });
+      }
+    }
   }
 } else {
   // Clean previous output
@@ -544,11 +707,15 @@ let passed = 0;
 let failed = 0;
 let skipped = 0;
 
-function runScript(
+const parallel = jobs > 1;
+const semaphore = new Semaphore(jobs);
+const tasks: (() => Promise<void>)[] = [];
+
+async function runScript(
   script: string,
-  timeout: number,
+  defaultTimeout: number,
   allowFailure = false,
-): void {
+): Promise<void> {
   const scriptName = path.basename(script, ".capsh");
 
   if (!fs.existsSync(script)) return;
@@ -561,7 +728,8 @@ function runScript(
 
   total++;
 
-  if (runCapture(script, RAW_OUTPUT, FIXTURES_DIR, timeout)) {
+  const timeout = parseTimeout(script) ?? defaultTimeout;
+  if (await runCapture(script, RAW_OUTPUT, FIXTURES_DIR, timeout, parallel)) {
     passed++;
     clearFailure(FAILURES_FILE, scriptName);
   } else {
@@ -577,7 +745,74 @@ function runScript(
   }
 }
 
-// Run capsh scripts
+// Collect cli scripts (non-interactive, stdout capture)
+console.log("\n=== Running cli scripts ===");
+const cliDir = path.join(SCRIPT_DIR, "cli");
+if (fs.existsSync(cliDir)) {
+  const scripts = fs
+    .readdirSync(cliDir)
+    .filter((f) => f.endsWith(".cli"))
+    .sort();
+  for (const f of scripts) {
+    const scriptName = path.basename(f, ".cli");
+    if (
+      !shouldRunScript(scriptName, singleScript, retryMode, FAILURES_FILE, RAW_OUTPUT)
+    ) {
+      continue;
+    }
+    total++;
+
+    const scriptFile = path.join(cliDir, f);
+    tasks.push(async () => {
+      const content = fs.readFileSync(scriptFile, "utf-8");
+      const args = content
+        .split("\n")
+        .filter((l) => l.trim() && !l.startsWith("#"))
+        .join(" ")
+        .trim()
+        .split(/\s+/);
+
+      const outDir = path.join(RAW_OUTPUT, scriptName);
+      fs.mkdirSync(outDir, { recursive: true });
+
+      console.log(`Running: ${CYAN}${scriptName}${NC}`);
+      if (!parallel) console.log(`  ${DIM}claude ${args.join(" ")}${NC}`);
+
+      const proc = Bun.spawn(["claude", ...args], {
+        stdout: "pipe",
+        stderr: "pipe",
+        env: process.env as Record<string, string>,
+      });
+      const exitCode = await proc.exited;
+
+      const stdout = await new Response(proc.stdout).text();
+      const stderr = await new Response(proc.stderr).text();
+
+      fs.writeFileSync(path.join(outDir, "stdout.txt"), stdout);
+      if (stderr) {
+        fs.writeFileSync(path.join(outDir, "stderr.txt"), stderr);
+      }
+
+      // Copy stdout as the fixture
+      fs.mkdirSync(FIXTURES_DIR, { recursive: true });
+      fs.writeFileSync(path.join(FIXTURES_DIR, `${scriptName}.cli.txt`), stdout);
+
+      if (exitCode === 0) {
+        passed++;
+        clearFailure(FAILURES_FILE, scriptName);
+      } else {
+        process.stderr.write(
+          `${RED}Error: cli script failed for ${scriptName} (exit ${exitCode})${NC}\n`,
+        );
+        if (stderr) process.stderr.write(`${DIM}${stderr}${NC}\n`);
+        failed++;
+        recordFailure(FAILURES_FILE, scriptName);
+      }
+    });
+  }
+}
+
+// Collect capsh scripts
 console.log("\n=== Running capsh scripts ===");
 const capshDir = path.join(SCRIPT_DIR, "capsh");
 if (fs.existsSync(capshDir)) {
@@ -586,11 +821,12 @@ if (fs.existsSync(capshDir)) {
     .filter((f) => f.endsWith(".capsh"))
     .sort();
   for (const f of scripts) {
-    runScript(path.join(capshDir, f), KEYBOARD_TIMEOUT);
+    const scriptPath = path.join(capshDir, f);
+    tasks.push(() => runScript(scriptPath, KEYBOARD_TIMEOUT));
   }
 }
 
-// Run tmux scripts
+// Collect tmux scripts
 console.log("\n=== Running tmux scripts ===");
 const tmuxDir = path.join(SCRIPT_DIR, "tmux");
 if (fs.existsSync(tmuxDir)) {
@@ -607,37 +843,45 @@ if (fs.existsSync(tmuxDir)) {
     }
     total++;
     const scriptPath = path.join(tmuxDir, f);
-    const result = Bun.spawnSync(["bash", scriptPath], {
-      stdout: "inherit",
-      stderr: "inherit",
-      env: process.env as Record<string, string>,
+    tasks.push(async () => {
+      console.log(`Running: ${CYAN}${scriptName}${NC}`);
+      const proc = Bun.spawn(["bash", scriptPath], {
+        stdout: parallel ? "pipe" : "inherit",
+        stderr: parallel ? "pipe" : "inherit",
+        env: process.env as Record<string, string>,
+      });
+      const exitCode = await proc.exited;
+      if (exitCode === 0) {
+        passed++;
+        clearFailure(FAILURES_FILE, scriptName);
+      } else {
+        failed++;
+        recordFailure(FAILURES_FILE, scriptName);
+      }
     });
-    if (result.exitCode === 0) {
-      passed++;
-      clearFailure(FAILURES_FILE, scriptName);
-    } else {
-      failed++;
-      recordFailure(FAILURES_FILE, scriptName);
-    }
   }
 }
 
-// Run skipped scripts
+// Collect skipped scripts
 if (runSkipped) {
   console.log(`\n${YELLOW}=== Running skipped scripts (may fail) ===${NC}`);
-  const skippedDir = path.join(SCRIPT_DIR, "skipped");
+  const skippedDir = path.join(SCRIPT_DIR, "skip");
   if (fs.existsSync(skippedDir)) {
     const scripts = fs
       .readdirSync(skippedDir)
       .filter((f) => f.endsWith(".capsh"))
       .sort();
     for (const f of scripts) {
-      runScript(path.join(skippedDir, f), THINKING_TIMEOUT, true);
+      const scriptPath = path.join(skippedDir, f);
+      tasks.push(() => runScript(scriptPath, THINKING_TIMEOUT, true));
     }
   }
 } else {
   console.log("\n=== Skipping skipped scripts ===");
 }
+
+// Execute all tasks with semaphore
+await Promise.all(tasks.map((task) => semaphore.run(task)));
 
 // Summary
 console.log("\n=== Summary ===");

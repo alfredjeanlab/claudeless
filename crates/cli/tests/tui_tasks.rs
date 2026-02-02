@@ -17,7 +17,7 @@
 
 mod common;
 
-use common::{assert_tui_matches_fixture, TuiTestSession};
+use common::TuiTestSession;
 
 const JSON_SCENARIO: &str = r#"
     {
@@ -75,26 +75,6 @@ fn test_tasks_dialog_has_controls() {
         "Dialog should show 'Esc to close' in footer.\nCapture:\n{}",
         capture
     );
-}
-
-/// Behavior observed with: claude --version 2.1.14 (Claude Code)
-///
-/// Compare /tasks empty dialog against fixture.
-// FIXME: Fixture is golden capture from real CLI. normalize_tui() doesn't strip
-// shell preamble when capturing mid-session (after sending /tasks command).
-// Fixture only contains the dialog box, not the full TUI with header.
-#[test]
-#[ignore]
-fn test_tasks_empty_matches_fixture() {
-    let tui = TuiTestSession::new("fixture-tasks-empty", JSON_SCENARIO);
-
-    // Execute /tasks
-    tui.send_line("/tasks");
-
-    // Wait for dialog to appear
-    let capture = tui.wait_for("Background tasks");
-
-    assert_tui_matches_fixture(&capture, "tasks_empty_dialog.txt", None);
 }
 
 /// Behavior observed with: claude --version 2.1.14 (Claude Code)

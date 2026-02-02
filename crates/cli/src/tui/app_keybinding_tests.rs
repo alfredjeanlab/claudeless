@@ -317,3 +317,83 @@ fn alt_p_opens_model_picker() {
 
     assert_eq!(state.mode(), AppMode::ModelPicker);
 }
+
+// ========================
+// Escape-then-letter Sequence Tests (PTY Alt/Meta key emulation)
+// ========================
+
+#[test]
+fn escape_then_t_opens_thinking_dialog() {
+    // In PTY environments, Alt+T is sent as Escape followed by 't'
+    let state = create_test_app();
+
+    state.handle_key_event(key_event(KeyCode::Esc, KeyModifiers::NONE));
+    // Immediately send 't' (within escape sequence timeout)
+    state.handle_key_event(key_event(KeyCode::Char('t'), KeyModifiers::NONE));
+
+    assert_eq!(state.mode(), AppMode::ThinkingToggle);
+}
+
+#[test]
+fn escape_then_p_opens_model_picker() {
+    // In PTY environments, Alt+P is sent as Escape followed by 'p'
+    let state = create_test_app();
+
+    state.handle_key_event(key_event(KeyCode::Esc, KeyModifiers::NONE));
+    state.handle_key_event(key_event(KeyCode::Char('p'), KeyModifiers::NONE));
+
+    assert_eq!(state.mode(), AppMode::ModelPicker);
+}
+
+#[test]
+fn stale_escape_does_not_trigger_meta_key() {
+    // If escape was pressed long ago, 't' should type normally
+    let state = create_test_app();
+
+    state.handle_key_event(key_event(KeyCode::Esc, KeyModifiers::NONE));
+
+    // Advance clock past the 100ms escape sequence timeout
+    if let Some(fake) = state.clock().as_fake() {
+        fake.advance_ms(200);
+    }
+
+    state.handle_key_event(key_event(KeyCode::Char('t'), KeyModifiers::NONE));
+
+    // Should be in input mode, not thinking toggle
+    assert_eq!(state.mode(), AppMode::Input);
+    assert_eq!(state.input_buffer(), "t");
+}
+
+// ========================
+// Thinking Dialog Number Key Tests
+// ========================
+
+#[test]
+fn thinking_dialog_key_1_enables_thinking() {
+    let state = create_test_app();
+
+    // Open thinking dialog
+    state.handle_key_event(key_event(KeyCode::Char('t'), KeyModifiers::ALT));
+    assert_eq!(state.mode(), AppMode::ThinkingToggle);
+
+    // Press '1' to select Enabled and confirm
+    state.handle_key_event(key_event(KeyCode::Char('1'), KeyModifiers::NONE));
+
+    assert_eq!(state.mode(), AppMode::Input);
+    assert!(state.render_state().thinking_enabled);
+}
+
+#[test]
+fn thinking_dialog_key_2_disables_thinking() {
+    let state = create_test_app();
+
+    // Open thinking dialog
+    state.handle_key_event(key_event(KeyCode::Char('t'), KeyModifiers::ALT));
+    assert_eq!(state.mode(), AppMode::ThinkingToggle);
+
+    // Press '2' to select Disabled and confirm
+    state.handle_key_event(key_event(KeyCode::Char('2'), KeyModifiers::NONE));
+
+    assert_eq!(state.mode(), AppMode::Input);
+    assert!(!state.render_state().thinking_enabled);
+}

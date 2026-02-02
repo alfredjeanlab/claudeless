@@ -1,0 +1,17 @@
+# Capture status bar showing 'plan mode' active.
+# Permission modes cycle: default -> accept edits -> plan.
+# Use Shift+Tab twice to reach plan mode.
+# Args: --model haiku
+
+wait "for shortcuts" 5s
+
+# Send Shift+Tab (BackTab) escape sequence twice to cycle to plan mode
+send <Esc> "[Z"
+wait "accept edits" 3s
+send <Esc> "[Z"
+wait "plan" 3s
+snapshot "permission_plan"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

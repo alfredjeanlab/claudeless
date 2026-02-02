@@ -1,0 +1,12 @@
+# Capture /hooks autocomplete.
+
+wait "for shortcuts" 5s
+
+send "/hooks"
+wait "Manage hook" 3s
+snapshot "hooks_autocomplete"
+
+# Exit
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

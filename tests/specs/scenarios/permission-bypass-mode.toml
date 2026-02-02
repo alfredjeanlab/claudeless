@@ -1,0 +1,26 @@
+name = "permission-bypass-mode"
+
+session_id = "00000000-0000-0000-0000-000000000001"
+project_path = "/test/project"
+launch_timestamp = "2025-01-01T00:00:00Z"
+user_name = "TestUser"
+claude_version = "2.1.29"
+provider = "Claude API"
+placeholder = 'Try "refactor <filepath>"'
+
+trusted = true
+show_welcome_back = true
+welcome_back_right_panel = [
+    "Recent activity",
+    "No recent activity",
+    "---",
+    "What's new",
+    "Fixed startup performa\u2026",
+    "Added tool call failur\u2026",
+    "Fixed context manageme\u2026",
+    "/release-notes for more",
+    "",
+]
+
+[default_response]
+text = "I understand. Let me help with that."

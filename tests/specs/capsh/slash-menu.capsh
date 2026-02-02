@@ -1,0 +1,15 @@
+# Capture slash command menu and filtering behavior.
+
+wait "for shortcuts" 5s
+
+send "/"
+wait "add-dir" 3s
+snapshot "slash_menu"
+
+send "hel"
+wait "help" 3s
+snapshot "slash_menu_filtered"
+
+send <Esc> 100 <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

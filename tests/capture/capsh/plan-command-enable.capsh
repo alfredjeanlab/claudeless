@@ -16,8 +16,10 @@ wait 1s
 send <Esc> "[Z"
 wait "for shortcuts" 3s
 
-# Now send /plan to enable plan mode
-send "/plan" 100 <Enter>
+# Now send /plan to enable plan mode (wait for autocomplete, then Enter selects+submits)
+send "/plan"
+wait "/plan" 3s
+send <Enter>
 wait "Enabled plan mode" 5s
 snapshot "plan_command_enable"
 

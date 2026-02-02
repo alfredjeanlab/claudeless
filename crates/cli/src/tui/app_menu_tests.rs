@@ -119,8 +119,8 @@ fn test_tab_completes_selected_command() {
     let render = state.render_state();
     // Menu should be closed
     assert!(render.display.slash_menu.is_none());
-    // Input should be completed command
-    assert_eq!(render.input.buffer, "/add-dir");
+    // Input should be completed command with trailing space for argument entry
+    assert_eq!(render.input.buffer, "/add-dir ");
 }
 
 #[test]
@@ -137,8 +137,8 @@ fn test_tab_completes_after_navigation() {
     state.handle_key_event(key_event(KeyCode::Tab, KeyModifiers::empty()));
 
     let render = state.render_state();
-    // Should complete to second command (agents)
-    assert_eq!(render.input.buffer, "/agents");
+    // Should complete to second command (agents) with trailing space
+    assert_eq!(render.input.buffer, "/agents ");
 }
 
 #[test]
