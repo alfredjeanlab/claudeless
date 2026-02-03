@@ -9,18 +9,23 @@ provider = "Claude API"
 
 trusted = true
 
-[default_response]
-text = "I understand. Let me help with that."
-
 [[responses]]
-pattern = { type = "contains", text = "touch /tmp/test_file.txt" }
+pattern = { type = "contains", text = "Use the Bash tool to run: touch /tmp/test_file.txt" }
 
 [responses.response]
 text = ""
 
 [[responses.response.tool_calls]]
 tool = "Bash"
+result = "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed."
 
 [responses.response.tool_calls.input]
 command = "touch /tmp/test_file.txt"
 description = "Create an empty file at /tmp/test_file.txt"
+
+
+[default_response]
+text = "I understand. Let me help with that."
+
+[tool_execution]
+mode = "mock"

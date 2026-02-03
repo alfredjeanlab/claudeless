@@ -1,6 +1,14 @@
 SHELL := /bin/bash
 
-.PHONY: check install license outdated capture capture-retry capture-skipped generate-specs
+.PHONY: check check-fast install license outdated capture capture-retry capture-skipped generate-specs
+
+# Fast validation for oj workspaces (skips audit, publish, deny)
+check-fast:
+	cargo fmt --all
+	cargo clippy --all -- -D warnings
+	quench check --fix
+	cargo test --all
+	cargo build --all
 
 # Run all CI checks
 check:

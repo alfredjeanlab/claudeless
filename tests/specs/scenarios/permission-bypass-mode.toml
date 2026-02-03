@@ -15,11 +15,10 @@ welcome_back_right_panel = [
     "No recent activity",
     "---",
     "What's new",
-    "Fixed startup performa\u2026",
-    "Added tool call failur\u2026",
-    "Fixed context manageme\u2026",
+    "Fixed startup performa…",
+    "Added tool call failur…",
+    "Fixed context manageme…",
     "/release-notes for more",
-    "",
 ]
 
 [default_response]

@@ -1,0 +1,16 @@
+# Capture the settings error dialog shown when a settings file
+# contains invalid configuration (e.g. old hook format).
+# Args: --model haiku
+
+wait "fix manually" 10s
+snapshot "invalid_settings_dialog"
+
+# Select "Continue without these settings" (arrow down then enter)
+send <Down> 200 <Enter>
+wait "for shortcuts" 10s
+snapshot "after_continue"
+
+# Exit cleanly
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

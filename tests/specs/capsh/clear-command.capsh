@@ -10,16 +10,17 @@ wait "for shortcuts" 5s
 send "what is 2 + 2?"
 wait 100
 send <Enter>
-# Wait for thinking spinner to appear then disappear, or for response directly
-if wait "\w+…" 3s
-    wait !"\w+…" 15s
+# Wait for thinking spinner to appear, then disappear (response complete)
+# \w+… matches spinner text like "Thinking…" but not path "/…/"
+if wait "\w+…" 5s
+    wait !"\w+…" 5s
 end
 
 send "and 3 + 3?"
 wait 100
 send <Enter>
-if wait "\w+…" 3s
-    wait !"\w+…" 15s
+if wait "\w+…" 5s
+    wait !"\w+…" 5s
 end
 
 # Snapshot before clear (conversation with responses visible)

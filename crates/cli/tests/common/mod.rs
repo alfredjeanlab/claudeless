@@ -258,6 +258,9 @@ pub struct TuiTestSession {
     session: String,
     #[allow(dead_code)]
     scenario: NamedTempFile,
+    /// Working directory for the TUI process (kept alive by RAII).
+    #[allow(dead_code)]
+    workdir: tempfile::TempDir,
 }
 
 impl TuiTestSession {
@@ -281,8 +284,29 @@ impl TuiTestSession {
     ) -> Self {
         let scenario = write_scenario(scenario_content);
         let session = tmux::unique_session(name);
-        start_tui_ext(&session, &scenario, width, height, wait_for);
-        Self { session, scenario }
+        let workdir = tempfile::tempdir().expect("Failed to create temp workdir");
+
+        // cd into the temp workdir so file operations (e.g. /export) don't
+        // pollute the source tree.
+        let session_ref = session.as_str();
+        tmux::require_tmux();
+        tmux::kill_session(session_ref);
+        tmux::new_session(session_ref, width, height);
+        tmux::send_line(session_ref, &format!("cd {}", workdir.path().display()));
+
+        let cmd = format!(
+            "{} --scenario {}",
+            claudeless_bin(),
+            scenario.path().display()
+        );
+        tmux::send_line(session_ref, &cmd);
+        tmux::wait_for_content(session_ref, wait_for);
+
+        Self {
+            session,
+            scenario,
+            workdir,
+        }
     }
 
     /// Get the tmux session name.

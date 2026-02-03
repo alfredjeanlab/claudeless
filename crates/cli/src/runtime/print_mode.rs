@@ -32,6 +32,9 @@ impl Runtime {
         // Write queue-operation at session start (before any state recording)
         self.write_queue_operation()?;
 
+        // Fire session start hook
+        self.fire_session_start_hook().await;
+
         // Execute the response loop
         self.execute_response_loop(&prompt).await?;
 

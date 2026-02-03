@@ -470,9 +470,49 @@ fn test_claude_settings_merge_hooks() {
 
     base.merge(override_settings);
 
-    // Hooks are replaced, not merged
+    // Same-event hooks are replaced by later source
     assert_eq!(base.hooks.len(), 1);
     assert_eq!(base.hooks[0].hooks[0].command, "echo override");
+}
+
+#[test]
+fn test_claude_settings_merge_hooks_different_events_accumulate() {
+    let mut base = ClaudeSettings {
+        hooks: vec![HookDef {
+            matcher: HookMatcher {
+                event: "Stop".to_string(),
+            },
+            hooks: vec![HookCommand {
+                command_type: "bash".to_string(),
+                command: "echo stop".to_string(),
+                timeout: 60000,
+            }],
+        }],
+        ..Default::default()
+    };
+
+    let override_settings = ClaudeSettings {
+        hooks: vec![HookDef {
+            matcher: HookMatcher {
+                event: "SessionStart".to_string(),
+            },
+            hooks: vec![HookCommand {
+                command_type: "bash".to_string(),
+                command: "echo session-start".to_string(),
+                timeout: 60000,
+            }],
+        }],
+        ..Default::default()
+    };
+
+    base.merge(override_settings);
+
+    // Different-event hooks accumulate
+    assert_eq!(base.hooks.len(), 2);
+    assert_eq!(base.hooks[0].matcher.event, "Stop");
+    assert_eq!(base.hooks[0].hooks[0].command, "echo stop");
+    assert_eq!(base.hooks[1].matcher.event, "SessionStart");
+    assert_eq!(base.hooks[1].hooks[0].command, "echo session-start");
 }
 
 #[test]

@@ -227,6 +227,34 @@ function writeAuthOnlyConfig(configDir: string, version: string): void {
   );
 }
 
+// --- Companion settings files ---
+
+function copyCompanionSettings(script: string, configDir: string, workspace: string): string[] {
+  const scriptDir = path.dirname(script);
+  const scriptName = path.basename(script, ".capsh");
+  const copied: string[] = [];
+
+  // Project settings → workspace/.claude/settings.json, workspace/.claude/settings.local.json
+  for (const suffix of ["settings.json", "settings.local.json"]) {
+    const companion = path.join(scriptDir, `${scriptName}.${suffix}`);
+    if (fs.existsSync(companion)) {
+      const projectClaudeDir = path.join(workspace, ".claude");
+      fs.mkdirSync(projectClaudeDir, { recursive: true });
+      fs.copyFileSync(companion, path.join(projectClaudeDir, suffix));
+      copied.push(suffix);
+    }
+  }
+
+  // Global settings → configDir/settings.json
+  const globalCompanion = path.join(scriptDir, `${scriptName}.settings.global.json`);
+  if (fs.existsSync(globalCompanion)) {
+    fs.copyFileSync(globalCompanion, path.join(configDir, "settings.json"));
+    copied.push("settings.global.json");
+  }
+
+  return copied;
+}
+
 // --- State management ---
 
 function sanitizeState(configDir: string): void {
@@ -415,6 +443,9 @@ async function runCapture(
       break;
   }
 
+  // Copy companion settings files
+  const companionSettings = copyCompanionSettings(script, configDir, workspace);
+
   // Snapshot state before capture (relative paths)
   const stateDir = path.join(rawDir, "state");
   const stateFiles = listFiles(stateDir).map((f) =>
@@ -429,6 +460,8 @@ async function runCapture(
   if (claudeArgs) console.log(`  Args: ${CYAN}${claudeArgs}${NC}`);
   if (configMode !== "trusted")
     console.log(`  Config: ${MAGENTA}${configMode}${NC}`);
+  if (companionSettings.length > 0)
+    console.log(`  Settings: ${MAGENTA}${companionSettings.join(", ")}${NC}`);
   if (!parallel) console.log(`  ${DIM}Workspace: ${workspace}${NC}`);
 
   // Build capsh command

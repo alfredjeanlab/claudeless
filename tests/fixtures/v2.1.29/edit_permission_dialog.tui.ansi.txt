@@ -1,4 +1,4 @@
-[0m[38;2;255;255;255m⏺[0m Done! I've created the file [0m[38;2;177;185;249mtest.txt[0m with the content "Hello World".          [0m
+  working directory.                                                            [0m
                                                                                 [0m
 [0m[38;2;80;80;80;48;2;55;55;55m❯ [0m[38;2;255;255;255;48;2;55;55;55mEdit test.txt and change Hello to Goodbye [0m                                    [0m
                                                                                 [0m

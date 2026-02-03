@@ -2,13 +2,10 @@
 target/
 .build/
 .quench/
+checkout/
 
-# v0 build state
-.v0/
+# Tools
 .wok/
-.worktrees/
-
-# IDE
 .idea/
 .vscode/
 *.swp
@@ -27,8 +24,3 @@ tests/capture/.env
 # OS
 .DS_Store
 Thumbs.db
-
-# Workdir
-checkout/
-
-.v0.profile.rc

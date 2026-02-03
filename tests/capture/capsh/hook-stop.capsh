@@ -1,0 +1,28 @@
+# Capture a conversation with a Stop hook configured.
+# The hook appends a marker on each response completion.
+# Sends two prompts to Haiku to verify the hook fires both times,
+# then asks Claude to read the marker file.
+# Args: --model haiku
+# Timeout: 90
+
+wait "for shortcuts" 10s
+
+# First prompt
+send "What is 2+2? Just give me the number." 500 <Enter>
+
+# Wait for response to complete
+wait !"for shortcuts" 10s
+wait "for shortcuts" 30s
+
+# Second prompt - asks Claude to read the hook log
+send "Read the file .hook-log and show me its exact contents. Nothing else." 500 <Enter>
+
+# Wait for response to complete
+wait !"for shortcuts" 10s
+wait "for shortcuts" 30s
+snapshot "hook_stop_after_response"
+
+# Exit cleanly
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

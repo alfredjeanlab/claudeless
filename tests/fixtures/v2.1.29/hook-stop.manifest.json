@@ -1,0 +1,6 @@
+{
+  "script": "hook-stop",
+  "snapshots": [
+    "hook_stop_after_response"
+  ]
+}

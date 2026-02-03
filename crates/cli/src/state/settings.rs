@@ -197,7 +197,7 @@ impl ClaudeSettings {
     }
 
     /// Merge another settings file on top of this one.
-    /// Later values override earlier ones (array fields are replaced, not merged).
+    /// Later values override earlier ones. Hooks merge by event type.
     pub fn merge(&mut self, other: Self) {
         // Permissions: replace arrays if non-empty in other
         if !other.permissions.allow.is_empty() {
@@ -220,9 +220,18 @@ impl ClaudeSettings {
             self.env.insert(key, value);
         }
 
-        // Hooks: replace if non-empty in other
-        if !other.hooks.is_empty() {
-            self.hooks = other.hooks;
+        // TODO(validate): Confirm real Claude CLI merges hooks by event type across settings files
+        // Hooks: merge by event type (later overrides per-event, different events accumulate)
+        for other_hook in other.hooks {
+            if let Some(existing) = self
+                .hooks
+                .iter_mut()
+                .find(|h| h.matcher.event == other_hook.matcher.event)
+            {
+                *existing = other_hook;
+            } else {
+                self.hooks.push(other_hook);
+            }
         }
 
         // Extra fields: merge maps

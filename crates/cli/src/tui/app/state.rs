@@ -96,6 +96,10 @@ pub(super) struct TuiAppStateInner {
     /// Pending message from stop hook to inject as next prompt
     pub pending_hook_message: Option<String>,
 
+    // Session start hook state
+    /// Whether the session start hook has been fired
+    pub session_start_hook_fired: bool,
+
     // Initial prompt state
     /// Pending initial prompt from CLI positional arg (processed once on startup)
     pub pending_initial_prompt: Option<String>,
@@ -196,6 +200,9 @@ impl TuiAppState {
                 // Stop hook state
                 stop_hook_active: false,
                 pending_hook_message: None,
+
+                // Session start hook state
+                session_start_hook_fired: false,
 
                 // Initial prompt state
                 pending_initial_prompt: config.initial_prompt.clone(),
@@ -343,13 +350,10 @@ impl TuiAppState {
                     );
 
                     // Accumulate command output into conversation display
-                    // Extra trailing newline creates blank line before the tip response
                     inner.display.conversation_display =
-                        format!("❯ /compact\n  \u{23BF}  {}\n", cmd_output);
+                        format!("❯ /compact\n  \u{23BF}  {}", cmd_output);
 
-                    // Show tip as post-compact response with elbow connector
-                    inner.display.response_content =
-                        "Tip: Use /memory to view and manage Claude memory".to_string();
+                    inner.display.response_content.clear();
                     inner.display.is_command_output = true;
                 }
             }
@@ -449,6 +453,41 @@ impl TuiAppState {
         }
 
         lines.join("\n")
+    }
+
+    /// Check if the session start hook needs to fire.
+    ///
+    /// Fires once when the app enters Input mode for the first time.
+    pub fn check_session_start_hook(&self) {
+        let should_fire = {
+            let inner = self.inner.lock();
+            if inner.session_start_hook_fired {
+                return;
+            }
+            if inner.mode != AppMode::Input {
+                return;
+            }
+            inner.runtime.is_some()
+        };
+
+        if !should_fire {
+            return;
+        }
+
+        // Take runtime, fire hook, put it back
+        let runtime = {
+            let mut inner = self.inner.lock();
+            inner.session_start_hook_fired = true;
+            inner.runtime.take()
+        };
+
+        if let Some(rt) = runtime {
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(rt.fire_session_start_hook());
+            });
+            let mut inner = self.inner.lock();
+            inner.runtime = Some(rt);
+        }
     }
 
     /// Check for pending stop hook message and process it.

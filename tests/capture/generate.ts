@@ -112,6 +112,8 @@ function simplifyCapshScript(content: string): string {
   let inConditional = false;
   let inElse = false;
   let inMatch = false;
+  let matchTimeout: string | null = null;
+  let matchFirstArm: { pattern: string; command: string } | null = null;
   let conditionalDepth = 0;
 
   for (const line of lines) {
@@ -153,23 +155,30 @@ function simplifyCapshScript(content: string): string {
       // Fall through to normal processing
     }
 
-    // Handle match/end blocks — strip entirely (match arms are non-deterministic)
+    // Handle match/end blocks — extract first arm's wait pattern + command
     if (trimmed.startsWith("match ")) {
       inMatch = true;
+      matchTimeout = trimmed.match(/^match\s+(\d+(?:ms|s|m)?)$/)?.[1] || null;
+      matchFirstArm = null;
       continue;
     }
     if (trimmed === "end" && inMatch) {
       inMatch = false;
+      // Emit the first arm: wait for the pattern, then run the command
+      if (matchFirstArm) {
+        const waitTimeout = matchTimeout ? ` ${formatDuration(Math.min(parseDuration(matchTimeout), 5000))}` : " 5s";
+        output.push(`wait "${matchFirstArm.pattern}"${waitTimeout}`);
+        output.push(matchFirstArm.command);
+      }
+      matchTimeout = null;
+      matchFirstArm = null;
       continue;
     }
     if (inMatch) {
-      // Inside match block — if this is an arm with a snapshot, extract it
-      const armMatch = trimmed.match(/^"[^"]*"\s*->\s*(.+)$/);
-      if (armMatch) {
-        // Take the first arm's command as the default
-        if (!output.some((l) => l.trim().startsWith("snapshot"))) {
-          output.push(armMatch[1]);
-        }
+      // Inside match block — capture the first arm's pattern and command
+      const armMatch = trimmed.match(/^"([^"]*)"\s*->\s*(.+)$/);
+      if (armMatch && !matchFirstArm) {
+        matchFirstArm = { pattern: armMatch[1], command: armMatch[2] };
       }
       continue;
     }
@@ -180,6 +189,11 @@ function simplifyCapshScript(content: string): string {
       output.push(processed);
       continue;
     }
+
+    // Process bare thinking spinner wait pairs: wrap in conditional
+    // Detect "wait \w+…" followed by "wait !\w+…" and wrap in if/end
+    // (claudeless responds instantly, no spinner appears)
+    // This is handled as a post-processing step below
 
     // Process send commands — clamp inline delays
     if (trimmed.startsWith("send ")) {
@@ -192,7 +206,25 @@ function simplifyCapshScript(content: string): string {
     output.push(trimmed);
   }
 
-  return output.join("\n");
+  // Post-process: wrap bare thinking spinner wait pairs in if/end blocks.
+  // Pattern: `wait "\w+…" Ns` followed by `wait !"\w+…" Ms` → `if wait "\w+…" Ns\n    wait !"\w+…" Ms\nend`
+  // This makes the spinner wait conditional (claudeless responds instantly, no spinner).
+  const final_output: string[] = [];
+  for (let i = 0; i < output.length; i++) {
+    const cur = output[i].trim();
+    const next = i + 1 < output.length ? output[i + 1].trim() : "";
+
+    if (cur.match(/^wait\s+"[^"]*…"/) && next.match(/^wait\s+!"[^"]*…"/)) {
+      final_output.push(`if ${cur}`);
+      final_output.push(`    ${next}`);
+      final_output.push("end");
+      i++; // skip next line (already consumed)
+      continue;
+    }
+    final_output.push(output[i]);
+  }
+
+  return final_output.join("\n");
 }
 
 /**
@@ -261,11 +293,72 @@ function extractPlaceholder(fixturesDir: string, snapshotName: string): string |
   return match ? match[1] : null;
 }
 
+/**
+ * Extract the welcome-back right panel rows from a TUI fixture file.
+ * The right panel is inside the welcome box, after the │ separator.
+ */
+function extractWelcomeBackRightPanel(fixturesDir: string, snapshotName: string): string[] | null {
+  const fixturePath = path.join(fixturesDir, `${snapshotName}.tui.txt`);
+  if (!fs.existsSync(fixturePath)) return null;
+
+  const content = fs.readFileSync(fixturePath, "utf-8");
+  if (!content.includes("Welcome back!")) return null;
+
+  const lines = content.split("\n");
+  const rows: string[] = [];
+
+  for (const line of lines) {
+    // Match lines inside the welcome box with a right panel
+    // Format: │ ... │ Right panel text     │
+    const boxMatch = line.match(/^│.*│\s(.{23,25})\s*│$/);
+    if (!boxMatch) continue;
+
+    const rightText = boxMatch[1].trimEnd();
+
+    if (rightText.match(/^\s*$/)) {
+      rows.push("");
+      continue;
+    }
+
+    if (rightText.match(/^─+$/)) {
+      rows.push("---");
+      continue;
+    }
+
+    rows.push(rightText.trim());
+  }
+
+  if (rows.length === 0) return null;
+
+  // Trim trailing empty rows
+  while (rows.length > 0 && rows[rows.length - 1] === "") {
+    rows.pop();
+  }
+
+  return rows.length > 0 ? rows : null;
+}
+
 // --- Extract conversation turns from session JSONL files ---
 
+interface ExtractedToolCall {
+  toolName: string;
+  toolUseId: string;
+  input: Record<string, any>;
+  result: string | null;
+  isError: boolean;
+  /** True if this is a synthetic context read injected from fixture, not from JSONL. */
+  isContextRead?: boolean;
+}
+
+interface ResponseStep {
+  text: string;
+  toolCalls: ExtractedToolCall[];
+}
+
 interface ConversationTurn {
-  prompt: string;       // user message content (string form)
-  response: string;     // assistant text response
+  prompt: string;
+  steps: ResponseStep[];
+  timestamp: string;
 }
 
 interface JsonlEntry {
@@ -275,17 +368,137 @@ interface JsonlEntry {
   userType?: string;
   isMeta?: boolean;
   isApiErrorMessage?: boolean;
+  isSidechain?: boolean;
+  cwd?: string;
   message?: {
     role: string;
-    content: string | Array<{ type: string; text?: string }>;
+    content: string | Array<{ type: string; text?: string; name?: string; id?: string; input?: any; tool_use_id?: string; content?: string; is_error?: boolean; thinking?: string }>;
   };
   timestamp?: string;
+  toolUseResult?: any;
+}
+
+/** Check if a user message contains tool_result blocks (not a real user prompt). */
+function isToolResultMessage(entry: JsonlEntry): boolean {
+  if (entry.type !== "user") return false;
+  const content = entry.message?.content;
+  if (!Array.isArray(content)) return false;
+  return content.some((b) => b.type === "tool_result");
+}
+
+/**
+ * Attempt to salvage uuid/parentUuid/type from a malformed JSONL line.
+ * Some lines have broken JSON in thinking content. We extract the key fields
+ * so the chain-building logic can still connect parent→child relationships.
+ */
+function salvageMalformedEntry(line: string): JsonlEntry | null {
+  const uuidMatch = line.match(/"uuid"\s*:\s*"([^"]+)"/);
+  const parentMatch = line.match(/"parentUuid"\s*:\s*"([^"]+)"/);
+  const typeMatch = line.match(/"type"\s*:\s*"(user|assistant|progress|file-history-snapshot)"/);
+
+  if (!uuidMatch || !typeMatch) return null;
+
+  return {
+    type: typeMatch[1],
+    uuid: uuidMatch[1],
+    parentUuid: parentMatch ? parentMatch[1] : null,
+    timestamp: (line.match(/"timestamp"\s*:\s*"([^"]+)"/) || [])[1],
+  };
+}
+
+/**
+ * Extract a likely filename from user prompt text.
+ * Matches patterns like "file called X", "file named X", "the file X",
+ * "Read the file X", etc.
+ */
+function extractFilenameFromPrompt(prompt: string): string | null {
+  // Match "file called/named X" or "file X.ext"
+  const patterns = [
+    /file\s+called\s+(\S+)/i,
+    /file\s+named\s+(\S+)/i,
+    /(?:Read|read|Write|write|Edit|edit|Create|create)\s+(?:a\s+)?(?:new\s+)?(?:file\s+)?(?:called\s+)?(\S*\.[\w-]+)/i,
+    /the\s+file\s+(\S*\.[\w-]+)/i,
+  ];
+  for (const pattern of patterns) {
+    const match = prompt.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+/**
+ * Normalize a file path from JSONL tool inputs.
+ * Strips the capture workspace cwd prefix to make paths relative.
+ * If file_path equals cwd exactly (model gave directory as path), tries to
+ * find the actual filename from file-history-snapshots or the user prompt.
+ */
+function normalizeFilePath(filePath: string, cwd: string | null, fileHistoryNames: string[], promptText: string | null): string {
+  if (!cwd) return filePath;
+
+  // Strip cwd prefix + "/" to get relative path
+  const cwdWithSlash = cwd.endsWith("/") ? cwd : cwd + "/";
+  if (filePath.startsWith(cwdWithSlash)) {
+    return filePath.slice(cwdWithSlash.length);
+  }
+
+  // file_path equals cwd exactly — model gave directory as file path
+  if (filePath === cwd) {
+    // Try to find the actual filename from file-history-snapshots
+    if (fileHistoryNames.length > 0) {
+      return fileHistoryNames[fileHistoryNames.length - 1];
+    }
+    // Try to extract from user prompt
+    if (promptText) {
+      const extracted = extractFilenameFromPrompt(promptText);
+      if (extracted) return extracted;
+    }
+    // Can't determine — return as-is
+    return filePath;
+  }
+
+  return filePath;
+}
+
+/**
+ * Normalize file_path values in tool call inputs.
+ */
+function normalizeToolInput(input: Record<string, any>, cwd: string | null, fileHistoryNames: string[], promptText: string | null): Record<string, any> {
+  const result = { ...input };
+  if (typeof result.file_path === "string") {
+    result.file_path = normalizeFilePath(result.file_path, cwd, fileHistoryNames, promptText);
+  }
+  return result;
+}
+
+/** Strip <system-reminder>...</system-reminder> tags from tool result text. */
+function stripSystemReminders(text: string): string {
+  return text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, "").trim();
+}
+
+/** Strip markdown code fences from response text (```...```). */
+function stripCodeFences(text: string): string {
+  // Remove wrapping code fences: ```\ncontent\n```  →  content
+  let result = text.replace(/^```\w*\n([\s\S]*?)\n```$/g, "$1").trim();
+  // Strip Read tool arrow prefixes (→) from lines
+  result = result.replace(/^→/gm, "");
+  return result;
+}
+
+/**
+ * Strip Read tool line-number prefixes from tool result text.
+ * Read results come formatted as "     1→content\n     2→more\n".
+ * Strip the "     N→" prefix from each line to get the raw file content.
+ */
+function stripReadLineNumbers(text: string): string {
+  return text.replace(/^ *\d+\u2192/gm, "");
 }
 
 /**
  * Extract user→assistant conversation turns from session JSONL files.
  * Reads all .jsonl files from {fixturesDir}/{scriptName}.projects/,
  * skipping subagents/, meta messages, errors, commands, and interrupts.
+ *
+ * Extracts full tool-use chains as ResponseStep[] from JSONL data.
  */
 function extractConversationTurns(fixturesDir: string, scriptName: string): ConversationTurn[] {
   const projectsDir = path.join(fixturesDir, `${scriptName}.projects`);
@@ -312,33 +525,40 @@ function extractConversationTurns(fixturesDir: string, scriptName: string): Conv
     const content = fs.readFileSync(file, "utf-8");
     const lines = content.split("\n").filter((l) => l.trim());
 
-    // Parse all entries and build uuid→entry map
+    // Parse all entries
     const entries: JsonlEntry[] = [];
-    const byUuid = new Map<string, JsonlEntry>();
-
     for (const line of lines) {
       try {
         const entry: JsonlEntry = JSON.parse(line);
         entries.push(entry);
-        if (entry.uuid) {
-          byUuid.set(entry.uuid, entry);
-        }
       } catch {
-        // Skip malformed lines
+        // Some JSONL lines have malformed thinking content with unescaped quotes.
+        // Salvage uuid/parentUuid/type so chain-building still works.
+        const salvaged = salvageMalformedEntry(line);
+        if (salvaged) entries.push(salvaged);
       }
     }
 
-    // Collect assistant text responses, keyed by the user message uuid they respond to
-    // Assistant messages come in streaming chunks: thinking first, then text.
-    // The text chunk's parentUuid points to the thinking chunk, which points to the user message.
-    const userTextByUuid = new Map<string, { prompt: string; timestamp: string }>();
-    const responsesByUserUuid = new Map<string, string>();
+    // Build uuid→entry map and extract cwd
+    const byUuid = new Map<string, JsonlEntry>();
+    let sessionCwd: string | null = null;
+    for (const entry of entries) {
+      if (entry.uuid) {
+        byUuid.set(entry.uuid, entry);
+      }
+      if (entry.cwd && !sessionCwd) {
+        sessionCwd = entry.cwd;
+      }
+    }
 
-    // First pass: index user messages
+    // First pass: identify prompt user messages (real user input, not tool results)
+    const promptUuids: string[] = [];
     for (const entry of entries) {
       if (entry.type !== "user" || !entry.uuid) continue;
       if (entry.isMeta) continue;
+      if (entry.isSidechain) continue;
       if (entry.userType && entry.userType !== "external") continue;
+      if (isToolResultMessage(entry)) continue;
 
       const text = extractMessageText(entry.message?.content);
       if (!text) continue;
@@ -346,63 +566,190 @@ function extractConversationTurns(fixturesDir: string, scriptName: string): Conv
       // Skip command messages
       if (text.includes("<command-name>") || text.includes("<local-command-caveat>") || text.includes("<local-command-stdout>")) continue;
       // Skip interrupted messages
-      if (text.includes("[Request interrupted by user]")) continue;
+      if (text.includes("[Request interrupted by user")) continue;
       // Skip compact summaries
       if ((entry as any).isCompactSummary) continue;
       // Skip visible-in-transcript-only messages
       if ((entry as any).isVisibleInTranscriptOnly) continue;
 
-      userTextByUuid.set(entry.uuid, { prompt: text, timestamp: entry.timestamp || "" });
+      promptUuids.push(entry.uuid);
     }
 
-    // Second pass: find assistant text responses and trace back to user messages
-    for (const entry of entries) {
-      if (entry.type !== "assistant") continue;
-      if (entry.isApiErrorMessage) continue;
-      if (!entry.message?.content) continue;
+    // Second pass: for each prompt, build forward chain and extract steps
+    for (const promptUuid of promptUuids) {
+      const promptEntry = byUuid.get(promptUuid)!;
+      const promptText = extractMessageText(promptEntry.message?.content);
+      if (!promptText) continue;
 
-      // Extract text content blocks
-      const text = extractAssistantText(entry.message.content);
-      if (!text) continue;
+      // Build forward chain: all uuids reachable from promptUuid via parentUuid
+      const chainUuids = new Set<string>([promptUuid]);
+      for (const entry of entries) {
+        if (!entry.uuid) continue;
+        if (entry.parentUuid && chainUuids.has(entry.parentUuid)) {
+          chainUuids.add(entry.uuid);
+        }
+      }
 
-      // Trace back through parentUuid chain to find the originating user message
-      const userUuid = traceToUser(entry, byUuid);
-      if (!userUuid) continue;
-      if (!userTextByUuid.has(userUuid)) continue;
+      // Collect chain entries in order (excluding the prompt itself)
+      const chainEntries = entries.filter(
+        (e) => e.uuid && chainUuids.has(e.uuid) && e.uuid !== promptUuid
+      );
 
-      // Store response (last one wins for the same user message)
-      responsesByUserUuid.set(userUuid, text);
+      // Collect file-history-snapshot filenames from ALL entries for path resolution.
+      // File-history-snapshots don't have uuid/parentUuid, so they're not in the chain.
+      const fileHistoryNames: string[] = [];
+      for (const entry of entries) {
+        if (entry.type === "file-history-snapshot") {
+          const snapshot = (entry as any).snapshot;
+          if (snapshot?.trackedFileBackups) {
+            for (const name of Object.keys(snapshot.trackedFileBackups)) {
+              if (!fileHistoryNames.includes(name)) {
+                fileHistoryNames.push(name);
+              }
+            }
+          }
+        }
+      }
+
+      // Walk chain to build ResponseStep[]
+      const steps: ResponseStep[] = [];
+      let currentStep: ResponseStep = { text: "", toolCalls: [] };
+      const toolCallsById = new Map<string, ExtractedToolCall>();
+
+      for (const entry of chainEntries) {
+        if (entry.type === "file-history-snapshot" || entry.type === "progress") continue;
+        if (entry.isSidechain) continue;
+        if (entry.isMeta) continue;
+        if (entry.isApiErrorMessage) continue;
+
+        if (entry.type === "assistant" && entry.message?.content) {
+          const content = entry.message.content;
+          if (typeof content === "string") {
+            if (currentStep.text) currentStep.text += "\n";
+            currentStep.text += content;
+            continue;
+          }
+          if (Array.isArray(content)) {
+            for (const block of content) {
+              if (block.type === "thinking") continue;
+              if (block.type === "text" && block.text) {
+                if (currentStep.text) currentStep.text += "\n";
+                currentStep.text += block.text;
+              }
+              if (block.type === "tool_use" && block.name && block.id) {
+                const tc: ExtractedToolCall = {
+                  toolName: block.name,
+                  toolUseId: block.id,
+                  input: normalizeToolInput(block.input || {}, sessionCwd, fileHistoryNames, promptText),
+                  result: null,
+                  isError: false,
+                };
+                currentStep.toolCalls.push(tc);
+                toolCallsById.set(block.id, tc);
+              }
+            }
+          }
+        }
+
+        if (entry.type === "user" && entry.message?.content) {
+          const content = entry.message.content;
+
+          // String content = real user prompt or meta message — stop chain
+          if (typeof content === "string") {
+            if (entry.isMeta) continue;
+            if (content.includes("<command-name>") || content.includes("<local-command-caveat>") || content.includes("<local-command-stdout>")) continue;
+            if (content.includes("[Request interrupted by user")) continue;
+            // Real user prompt — new turn started, stop here
+            break;
+          }
+
+          if (!Array.isArray(content)) continue;
+
+          // Check for tool_result blocks
+          const hasToolResult = content.some((b) => b.type === "tool_result");
+          if (hasToolResult) {
+            for (const block of content) {
+              if (block.type === "tool_result" && block.tool_use_id) {
+                const tc = toolCallsById.get(block.tool_use_id);
+                if (tc) {
+                  let resultText = block.content ? stripSystemReminders(block.content) : null;
+                  if (resultText && tc.toolName === "Read") {
+                    resultText = stripReadLineNumbers(resultText);
+                  }
+                  // Normalize cwd paths in result text
+                  if (resultText && sessionCwd) {
+                    resultText = resultText.replace(new RegExp(sessionCwd.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "/?", "g"), "");
+                  }
+                  tc.result = resultText;
+                  tc.isError = block.is_error === true;
+                }
+              }
+            }
+            // Push current step and start new one (tool result triggers new API turn)
+            steps.push(currentStep);
+            currentStep = { text: "", toolCalls: [] };
+            continue;
+          }
+
+          // Check for interrupt messages - skip them
+          const text = extractMessageText(content);
+          if (text && text.includes("[Request interrupted by user")) continue;
+          // Skip command messages that appear in the chain
+          if (text && (text.includes("<command-name>") || text.includes("<local-command-caveat>") || text.includes("<local-command-stdout>"))) continue;
+
+          // If this is a real user prompt (not tool_result, not interrupt, not command),
+          // it means a new conversation turn started — stop building steps for this prompt.
+          if (text) break;
+        }
+      }
+
+      // Push final step if non-empty
+      if (currentStep.text || currentStep.toolCalls.length > 0) {
+        steps.push(currentStep);
+      }
+
+      // Collapse: if the last step is text-only (no tool calls) and there are
+      // earlier steps with tool calls, merge the text into the first step.
+      // This matches how Claude responses render: tool calls + final text in one response.
+      if (steps.length >= 2) {
+        const lastStep = steps[steps.length - 1];
+        if (lastStep.text && lastStep.toolCalls.length === 0) {
+          steps[0].text = lastStep.text;
+          steps.pop();
+        }
+      }
+
+      // Strip markdown code fences from response text in steps with tool calls
+      for (const step of steps) {
+        if (step.toolCalls.length > 0 && step.text) {
+          step.text = stripCodeFences(step.text);
+        }
+      }
+
+      // Skip turns with no meaningful content
+      if (steps.length === 0) continue;
+      if (steps.every((s) => !s.text && s.toolCalls.length === 0)) continue;
+
+      const cleaned = cleanPrompt(promptText);
+      if (!cleaned) continue;
+
+      allTurns.push({
+        prompt: cleaned,
+        steps,
+        timestamp: promptEntry.timestamp || "",
+      });
     }
-
-    // Build turns in timestamp order
-    const fileTurns: Array<ConversationTurn & { timestamp: string }> = [];
-    for (const [userUuid, { prompt, timestamp }] of userTextByUuid) {
-      const response = responsesByUserUuid.get(userUuid);
-      if (!response) continue;
-      fileTurns.push({ prompt, response, timestamp });
-    }
-
-    fileTurns.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-    allTurns.push(...fileTurns);
   }
-
-  // Clean up prompts: strip embedded slash commands and control characters
-  for (const turn of allTurns) {
-    turn.prompt = cleanPrompt(turn.prompt);
-  }
-
-  // Filter out turns with empty prompts after cleanup
-  const cleaned = allTurns.filter((t) => t.prompt.length > 0);
 
   // Deduplicate by prompt content (keep last occurrence from retries)
-  const seen = new Map<string, ConversationTurn & { timestamp: string }>();
-  for (const turn of cleaned) {
-    seen.set(turn.prompt, turn as ConversationTurn & { timestamp: string });
+  const seen = new Map<string, ConversationTurn>();
+  for (const turn of allTurns) {
+    seen.set(turn.prompt, turn);
   }
 
   // Sort by timestamp to maintain conversation order
   const result = [...seen.values()];
-  result.sort((a, b) => (a.timestamp || "").localeCompare(b.timestamp || ""));
+  result.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 
   return result;
 }
@@ -417,42 +764,6 @@ function extractMessageText(content: string | Array<{ type: string; text?: strin
       .map((b) => b.text!);
     return texts.length > 0 ? texts.join("\n") : null;
   }
-  return null;
-}
-
-/** Extract text content from assistant message content blocks. */
-function extractAssistantText(content: string | Array<{ type: string; text?: string }>): string | null {
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    const texts = content
-      .filter((b) => b.type === "text" && b.text)
-      .map((b) => b.text!);
-    return texts.length > 0 ? texts.join("\n") : null;
-  }
-  return null;
-}
-
-/** Trace an assistant entry back through parentUuid chain to find the originating user message uuid. */
-function traceToUser(entry: JsonlEntry, byUuid: Map<string, JsonlEntry>): string | null {
-  let current = entry;
-  const visited = new Set<string>();
-
-  for (let i = 0; i < 10; i++) {
-    const parentUuid = current.parentUuid;
-    if (!parentUuid) return null;
-    if (visited.has(parentUuid)) return null; // cycle guard
-    visited.add(parentUuid);
-
-    const parent = byUuid.get(parentUuid);
-    if (!parent) return null;
-
-    if (parent.type === "user" && !parent.isMeta) {
-      return parentUuid;
-    }
-
-    current = parent;
-  }
-
   return null;
 }
 
@@ -484,34 +795,139 @@ function tomlEscape(s: string): string {
     .replace(/\t/g, "\\t");
 }
 
+// --- Detect context reads from fixtures ---
+
+/**
+ * Scan fixture TUI snapshots for context reads ("Reading N file…" or "Read N file")
+ * that appear before permission dialogs. These are Claude Code's internal context
+ * gathering and are NOT logged as tool_use in the JSONL. Returns a map from
+ * turn index to the context read result string to inject.
+ */
+function detectContextReadsFromFixtures(
+  fixturesDir: string,
+  manifest: CapshManifest | null,
+  turns: ConversationTurn[],
+): Map<number, string> {
+  const contextReads = new Map<number, string>();
+  if (!manifest) return contextReads;
+
+  for (const snap of manifest.snapshots) {
+    const fixturePath = path.join(fixturesDir, `${snap}.tui.txt`);
+    if (!fs.existsSync(fixturePath)) continue;
+
+    const content = fs.readFileSync(fixturePath, "utf-8");
+
+    // Look for "⏺ Reading N file…" patterns (context reads in progress)
+    const readingMatch = content.match(/⏺ Reading (\d+ file\S*)/);
+    if (!readingMatch) continue;
+
+    // Find which turn this context read belongs to by checking if the fixture
+    // contains the prompt text for a turn that has tool calls but no Read
+    for (let i = 0; i < turns.length; i++) {
+      const turn = turns[i];
+      const firstStep = turn.steps[0];
+      if (!firstStep || firstStep.toolCalls.length === 0) continue;
+
+      // Check if turn already has a Read tool call
+      const hasRead = firstStep.toolCalls.some((tc) => tc.toolName === "Read");
+      if (hasRead) continue;
+
+      // Check if the fixture contains this turn's prompt
+      if (content.includes(turn.prompt.slice(0, 40))) {
+        // Inject context read result with trailing ellipsis for "Reading" display
+        contextReads.set(i, readingMatch[1]);
+        break;
+      }
+    }
+  }
+
+  return contextReads;
+}
+
 // --- Generate scenario TOML files ---
 
-interface ExistingResponse {
-  patternText: string;
-  response: string;
+/** Check if any step in any turn has tool calls. */
+function turnsHaveToolCalls(turns: ConversationTurn[]): boolean {
+  return turns.some((t) => t.steps.some((s) => s.toolCalls.length > 0));
 }
 
 /**
- * Parse existing [[responses]] from a scenario TOML file.
- * Uses simple regex parsing — no TOML library needed.
+ * Emit a ResponseStep as TOML lines.
+ * `prefix` is the full TOML section prefix (e.g., "responses.response").
+ * `shortKey` is the simple key within the current table context (e.g., "response").
  */
-function parseExistingResponses(scenarioPath: string): ExistingResponse[] {
-  if (!fs.existsSync(scenarioPath)) return [];
+/**
+ * Transform a raw JSONL tool result into the display-format string that
+ * claudeless uses for rendering. Each tool type has its own display format:
+ * - Write: "Wrote N lines to {file_path}"
+ * - Read: "N file" (or "N file (M lines)" for multi-line content)
+ */
+function formatToolResultForDisplay(tc: ExtractedToolCall): string | null {
+  if (tc.result === null) return null;
 
-  const content = fs.readFileSync(scenarioPath, "utf-8");
-  const responses: ExistingResponse[] = [];
+  // Context reads from fixtures already have the display format
+  if (tc.isContextRead) return tc.result;
 
-  // Match [[responses]] blocks: pattern line followed by response line
-  const blockRegex = /\[\[responses\]\]\s*\npattern\s*=\s*\{[^}]*text\s*=\s*"([^"]*)"[^}]*\}\s*\nresponse\s*=\s*"([^"]*)"/g;
-  let match;
-  while ((match = blockRegex.exec(content)) !== null) {
-    responses.push({
-      patternText: match[1].replace(/\\"/g, '"').replace(/\\n/g, "\n").replace(/\\\\/g, "\\"),
-      response: match[2].replace(/\\"/g, '"').replace(/\\n/g, "\n").replace(/\\\\/g, "\\"),
-    });
+  switch (tc.toolName) {
+    case "Write": {
+      const filePath = tc.input.file_path || "unknown";
+      const content = tc.input.content || "";
+      const lineCount = content.split("\n").length;
+      return `Wrote ${lineCount} lines to ${filePath}`;
+    }
+    case "Read": {
+      // Read results show "N file" or "N file (M lines)" in the display
+      return "1 file";
+    }
+    default:
+      return tc.result;
+  }
+}
+
+function emitResponseStep(lines: string[], prefix: string, shortKey: string, step: ResponseStep): void {
+  if (step.toolCalls.length === 0) {
+    lines.push(`${shortKey} = "${tomlEscape(step.text)}"`);
+    return;
   }
 
-  return responses;
+  // Detailed response with tool calls
+  lines.push(`[${prefix}]`);
+  lines.push(`text = "${tomlEscape(step.text)}"`);
+  lines.push("");
+
+  for (const tc of step.toolCalls) {
+    const displayResult = formatToolResultForDisplay(tc);
+
+    lines.push(`[[${prefix}.tool_calls]]`);
+    lines.push(`tool = "${tc.toolName}"`);
+    if (displayResult !== null) {
+      lines.push(`result = "${tomlEscape(displayResult)}"`);
+    }
+    lines.push("");
+
+    lines.push(`[${prefix}.tool_calls.input]`);
+    for (const [key, value] of Object.entries(tc.input)) {
+      lines.push(`${key} = ${tomlValue(value)}`);
+    }
+    lines.push("");
+  }
+}
+
+/** Serialize a JS value as a TOML value. */
+function tomlValue(value: any): string {
+  if (typeof value === "string") return `"${tomlEscape(value)}"`;
+  if (typeof value === "number") return String(value);
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (value === null || value === undefined) return '""';
+  if (Array.isArray(value)) {
+    const items = value.map((v) => tomlValue(v));
+    return `[${items.join(", ")}]`;
+  }
+  if (typeof value === "object") {
+    const pairs = Object.entries(value).map(([k, v]) => `${k} = ${tomlValue(v)}`);
+    return `{ ${pairs.join(", ")} }`;
+  }
+  return `"${tomlEscape(String(value))}"`;
 }
 
 function generateScenario(
@@ -521,7 +937,6 @@ function generateScenario(
   manifest: CapshManifest | null,
   fixturesDir: string,
   turns?: ConversationTurn[],
-  existingResponses?: ExistingResponse[],
 ): string {
   const lines: string[] = [];
 
@@ -534,22 +949,16 @@ function generateScenario(
   lines.push('launch_timestamp = "2025-01-01T00:00:00Z"');
   lines.push('user_name = "TestUser"');
 
-  // Claude version — always match the fixture version
   const versionNum = version.replace(/^v/, "");
   lines.push(`claude_version = "${versionNum}"`);
-
-  // Provider — always "Claude API" (what real Claude shows)
   lines.push('provider = "Claude API"');
 
-  // Default model — only set when no --model in args (i.e., Args: (none))
   if (headers.args === "") {
-    // No CLI args at all — Claude defaults to Sonnet 4.5
     lines.push('default_model = "claude-sonnet-4-5-20250514"');
   }
 
   // Extract placeholder from first snapshot fixture
   if (manifest && manifest.snapshots.length > 0) {
-    // Try ❯-style first, then !-style (bash mode)
     for (const snap of manifest.snapshots) {
       const placeholder = extractPlaceholder(fixturesDir, snap);
       if (placeholder) {
@@ -571,43 +980,110 @@ function generateScenario(
   }
   // empty config = no trust setting (triggers full onboarding)
 
+  // Special fields from config mode
+  if (headers.config === "empty") {
+    lines.push("logged_in = false");
+  }
+
+  // Detect welcome-back from config header OR TUI fixture content
+  let hasWelcomeBack = headers.config === "welcome-back";
+  let rightPanel: string[] | null = null;
+
+  if (manifest && manifest.snapshots.length > 0) {
+    for (const snap of manifest.snapshots) {
+      const panel = extractWelcomeBackRightPanel(fixturesDir, snap);
+      if (panel) {
+        hasWelcomeBack = true;
+        rightPanel = panel;
+        break;
+      }
+    }
+  }
+
+  if (hasWelcomeBack) {
+    lines.push("show_welcome_back = true");
+    if (rightPanel) {
+      lines.push("welcome_back_right_panel = [");
+      for (const row of rightPanel) {
+        lines.push(`    "${tomlEscape(row)}",`);
+      }
+      lines.push("]");
+    }
+  }
+
   lines.push("");
 
-  // Emit [[responses]] from extracted conversation turns (before default_response)
+  // Detect context reads from fixtures (auto-executed reads not in JSONL)
+  const contextReads = turns ? detectContextReadsFromFixtures(fixturesDir, manifest, turns) : new Map();
+
+  // Inject context reads into turns
+  if (turns) {
+    for (const [turnIdx, readResult] of contextReads) {
+      const step = turns[turnIdx].steps[0];
+      if (step) {
+        // Prepend a Read tool call before existing tool calls
+        step.toolCalls.unshift({
+          toolName: "Read",
+          toolUseId: "context_read",
+          input: { file_path: "context" },
+          result: readResult,
+          isError: false,
+          isContextRead: true,
+        });
+      }
+    }
+  }
+
+  // Emit [[responses]] from extracted conversation turns
   if (turns && turns.length > 0) {
     for (const turn of turns) {
-      // Extract a distinctive substring for pattern matching
       const patternText = turn.prompt.length > 80
         ? turn.prompt.slice(0, 80)
         : turn.prompt;
 
+      const hasToolCalls = turn.steps.some((s) => s.toolCalls.length > 0);
+
       lines.push("[[responses]]");
       lines.push(`pattern = { type = "contains", text = "${tomlEscape(patternText)}" }`);
-      lines.push(`response = "${tomlEscape(turn.response)}"`);
-      lines.push("");
-    }
-  }
 
-  // Preserve existing manual [[responses]] that aren't covered by auto-generated ones
-  if (existingResponses) {
-    const autoPatterns = new Set((turns || []).map((t) => {
-      const text = t.prompt.length > 80 ? t.prompt.slice(0, 80) : t.prompt;
-      return text;
-    }));
-
-    for (const existing of existingResponses) {
-      if (!autoPatterns.has(existing.patternText)) {
-        lines.push("[[responses]]");
-        lines.push(`pattern = { type = "contains", text = "${tomlEscape(existing.patternText)}" }`);
-        lines.push(`response = "${tomlEscape(existing.response)}"`);
+      if (!hasToolCalls) {
+        // Simple case: just text response
+        const allText = turn.steps.map((s) => s.text).filter(Boolean).join("\n");
+        lines.push(`response = "${tomlEscape(allText)}"`);
+      } else if (turn.steps.length === 1) {
+        // Single step with tool calls
         lines.push("");
+        emitResponseStep(lines, "responses.response", "response", turn.steps[0]);
+      } else {
+        // Multi-step: first step is the response, rest are turns
+        lines.push("");
+        emitResponseStep(lines, "responses.response", "response", turn.steps[0]);
+
+        for (let i = 1; i < turn.steps.length; i++) {
+          const step = turn.steps[i];
+          if (!step.text && step.toolCalls.length === 0) continue;
+
+          lines.push("[[responses.turns]]");
+          lines.push('expect = { type = "any" }');
+          lines.push("");
+          emitResponseStep(lines, "responses.turns.response", "response", step);
+        }
       }
+
+      lines.push("");
     }
   }
 
   // Default catch-all response
   lines.push('[default_response]');
   lines.push('text = "I understand. Let me help with that."');
+
+  // Tool execution mode
+  if (turns && turnsHaveToolCalls(turns)) {
+    lines.push("");
+    lines.push("[tool_execution]");
+    lines.push('mode = "mock"');
+  }
 
   return lines.join("\n") + "\n";
 }
@@ -644,7 +1120,6 @@ function generateCapshSpecs(
       .map((s) => `"${s}"`)
       .join(", ");
 
-    // Get CLI args for this script
     const argsStr = manifestArgs.get(manifest.script) || "";
     const extraArgs = argsStr
       ? argsStr.split(/\s+/).filter(Boolean).map((a) => `"${a}"`).join(", ")
@@ -663,8 +1138,8 @@ function generateCapshSpecs(
 }
 
 interface TmuxFixture {
-  script: string; // tmux script name (e.g., "ctrl-c-exit-hint")
-  snapshot: string; // fixture snapshot name (e.g., "ctrl_c_exit_hint")
+  script: string;
+  snapshot: string;
 }
 
 function generateTmuxSpecs(
@@ -696,8 +1171,8 @@ function generateTmuxSpecs(
 }
 
 interface CliFixture {
-  name: string; // e.g., "help"
-  args: string[]; // e.g., ["--help"]
+  name: string;
+  args: string[];
 }
 
 function generateCliSpecs(
@@ -780,7 +1255,6 @@ for (const manifest of manifests) {
   const originalContent = fs.readFileSync(sourceScript, "utf-8");
   const headers = parseHeaders(originalContent);
 
-  // Store CLI args for Rust test generation
   manifestArgs.set(scriptName, headers.args);
 
   // Generate simplified capsh script
@@ -793,12 +1267,9 @@ for (const manifest of manifests) {
   // Extract conversation turns from session JSONL
   const turns = extractConversationTurns(fixturesDir, scriptName);
 
-  // Parse existing responses to preserve manual additions
-  const scenarioPath = path.join(SPECS_DIR, "scenarios", `${scriptName}.toml`);
-  const existingResponses = parseExistingResponses(scenarioPath);
-
   // Generate scenario TOML
-  const scenario = generateScenario(scriptName, headers, version, manifest, fixturesDir, turns, existingResponses);
+  const scenarioPath = path.join(SPECS_DIR, "scenarios", `${scriptName}.toml`);
+  const scenario = generateScenario(scriptName, headers, version, manifest, fixturesDir, turns);
   fs.writeFileSync(scenarioPath, scenario);
 
   generatedCapsh++;
@@ -814,11 +1285,8 @@ const tmuxFiles = fs
   .filter((f) => f.endsWith(".tmux.txt"))
   .sort();
 
-// Map tmux fixture snapshot names back to script names
-// Convention: snapshot "ctrl_c_exit_hint" comes from script "ctrl-c-exit-hint"
 for (const f of tmuxFiles) {
   const snapshot = path.basename(f, ".tmux.txt");
-  // Convert snapshot_name back to script-name (underscores to hyphens)
   const script = snapshot.replace(/_/g, "-");
   tmuxFixtures.push({ script, snapshot });
 
@@ -855,7 +1323,6 @@ for (const f of cliFiles) {
       .trim()
       .split(/\s+/);
   } else {
-    // Fallback: guess from name
     if (name === "version") args = ["--version"];
     else if (name === "help") args = ["--help"];
     else args = [name, "--help"];

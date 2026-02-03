@@ -21,6 +21,7 @@ pub fn load_hooks(settings: &ClaudeSettings) -> std::io::Result<HookExecutor> {
             "Stop" => Some(HookEvent::Stop),
             "PreToolUse" => Some(HookEvent::PreToolExecution),
             "PostToolUse" => Some(HookEvent::PostToolExecution),
+            "SessionStart" => Some(HookEvent::SessionStart),
             "Notification" => Some(HookEvent::Notification),
             _ => None,
         };

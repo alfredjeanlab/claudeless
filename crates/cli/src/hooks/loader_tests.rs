@@ -142,3 +142,24 @@ fn test_load_hooks_post_tool_use() {
     let executor = load_hooks(&settings).unwrap();
     assert!(executor.has_hooks(&HookEvent::PostToolExecution));
 }
+
+#[test]
+fn test_load_hooks_session_start() {
+    let settings = ClaudeSettings {
+        hooks: vec![HookDef {
+            matcher: HookMatcher {
+                event: "SessionStart".to_string(),
+            },
+            hooks: vec![HookCommand {
+                command_type: "bash".to_string(),
+                command: "echo session-start".to_string(),
+                timeout: 5000,
+            }],
+        }],
+        ..Default::default()
+    };
+
+    let executor = load_hooks(&settings).unwrap();
+    assert!(executor.has_hooks(&HookEvent::SessionStart));
+    assert_eq!(executor.hook_count(&HookEvent::SessionStart), 1);
+}

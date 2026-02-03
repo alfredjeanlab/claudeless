@@ -9,15 +9,11 @@ provider = "Claude API"
 
 trusted = true
 
-[default_response]
-text = "I understand. Let me help with that."
-
-# First turn: create test.txt (Write auto-approved)
 [[responses]]
-pattern = { type = "contains", text = "test.txt" }
+pattern = { type = "contains", text = "Create a file called test.txt with the content: Hello World" }
 
 [responses.response]
-text = "Done! I've created the file test.txt with the content \"Hello World\"."
+text = "Done! I've created test.txt with the content \"Hello World\" in your current working directory."
 
 [[responses.response.tool_calls]]
 tool = "Write"
@@ -27,27 +23,39 @@ result = "Wrote 1 lines to test.txt"
 file_path = "test.txt"
 content = "Hello World"
 
-# Second turn: edit test.txt (Read auto-allowed, Edit needs permission)
+
+[[responses]]
+pattern = { type = "contains", text = "Edit test.txt and change Hello to Goodbye" }
+
+[responses.response]
+text = ""
+
+[[responses.response.tool_calls]]
+tool = "Read"
+result = "1 file"
+
+[responses.response.tool_calls.input]
+file_path = "test.txt"
+
 [[responses.turns]]
-expect = { type = "contains", text = "Edit" }
+expect = { type = "any" }
 
 [responses.turns.response]
 text = ""
 
 [[responses.turns.response.tool_calls]]
-tool = "Read"
-result = "1 file"
-
-[responses.turns.response.tool_calls.input]
-file_path = "test.txt"
-
-[[responses.turns.response.tool_calls]]
 tool = "Edit"
+result = "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed."
 
 [responses.turns.response.tool_calls.input]
+replace_all = false
 file_path = "test.txt"
 old_string = "Hello World"
 new_string = "Goodbye World"
+
+
+[default_response]
+text = "I understand. Let me help with that."
 
 [tool_execution]
 mode = "mock"

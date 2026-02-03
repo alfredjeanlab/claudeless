@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'session-start' >> .hook-log"
+          }
+        ]
+      }
+    ]
+  }
+}

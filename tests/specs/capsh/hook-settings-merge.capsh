@@ -1,0 +1,22 @@
+# Capture hook merging behavior across settings files.
+# Three SessionStart hooks are configured in project settings.json,
+# project settings.local.json, and global settings.json. Each appends
+# a marker line to .hook-log. After startup, asks Claude to read the
+# file to prove (1) all hooks fired and (2) their execution order.
+# Args: --model haiku
+# Timeout: 60
+
+wait "for shortcuts" 5s
+
+# Ask Claude to read the hook log so its contents appear in the response
+send "Read the file .hook-log and show me its exact contents. Nothing else." 100 <Enter>
+
+# Wait for response to complete
+wait !"for shortcuts" 5s
+wait "for shortcuts" 5s
+snapshot "hook_settings_merge"
+
+# Exit cleanly
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

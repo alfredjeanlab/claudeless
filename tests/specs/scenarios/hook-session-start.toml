@@ -1,0 +1,30 @@
+name = "hook-session-start"
+
+session_id = "00000000-0000-0000-0000-000000000001"
+project_path = "/test/project"
+launch_timestamp = "2025-01-01T00:00:00Z"
+user_name = "TestUser"
+claude_version = "2.1.29"
+provider = "Claude API"
+
+trusted = true
+
+[[responses]]
+pattern = { type = "contains", text = "Read the file .hook-log and show me its exact contents. Nothing else." }
+
+[responses.response]
+text = "session-start\n"
+
+[[responses.response.tool_calls]]
+tool = "Read"
+result = "1 file"
+
+[responses.response.tool_calls.input]
+file_path = ".hook-log"
+
+
+[default_response]
+text = "I understand. Let me help with that."
+
+[tool_execution]
+mode = "mock"

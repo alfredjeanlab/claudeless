@@ -1,0 +1,6 @@
+{
+  "script": "hook-session-start",
+  "snapshots": [
+    "hook_session_start"
+  ]
+}

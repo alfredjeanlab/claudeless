@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "echo 'old-format-hook'"
+      },
+      {
+        "type": "command",
+        "command": "echo 'another-old-format-hook'"
+      }
+    ]
+  }
+}

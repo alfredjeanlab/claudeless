@@ -1,12 +1,12 @@
-1a2,257
-> state/.claude.json.backup.1769991321730
-> state/.claude.json.backup.1769991321739
-> state/.claude.json.backup.1769991321858
-> state/.claude.json.backup.1769991321859
-> state/.claude.json.backup.1769991323151
+1a2,259
+> state/.claude.json.backup.1770009937987
+> state/.claude.json.backup.1770009937988
+> state/.claude.json.backup.1770009938839
+> state/.claude.json.backup.1770009938840
+> state/.claude.json.backup.1770009938993
 > state/cache/changelog.md
-> state/debug/1e3fed90-c205-4e47-af4f-613120297c56.txt
-> state/debug/208f4904-83ec-46da-84e1-f5f059554345.txt
+> state/debug/5bd47723-950c-4c20-917e-77acb15dc4ea.txt
+> state/debug/5c91b750-86c7-44d8-bb93-e5046ff2c302.txt
 > state/history.jsonl
 > state/plugins/known_marketplaces.json
 > state/plugins/marketplaces/claude-plugins-official/.claude-plugin/marketplace.json
@@ -251,7 +251,9 @@
 > state/plugins/marketplaces/claude-plugins-official/plugins/security-guidance/hooks/security_reminder_hook.py
 > state/plugins/marketplaces/claude-plugins-official/plugins/swift-lsp/README.md
 > state/plugins/marketplaces/claude-plugins-official/plugins/typescript-lsp/README.md
-> state/projects/-private-var-folders-t5-6tq8cxtj20z035rv8hsnzwvh0000gn-T-capture-GdfXPc/1e3fed90-c205-4e47-af4f-613120297c56.jsonl
-> state/projects/-private-var-folders-t5-6tq8cxtj20z035rv8hsnzwvh0000gn-T-capture-GdfXPc/208f4904-83ec-46da-84e1-f5f059554345.jsonl
-> state/projects/-private-var-folders-t5-6tq8cxtj20z035rv8hsnzwvh0000gn-T-capture-GdfXPc/sessions-index.json
-> state/todos/208f4904-83ec-46da-84e1-f5f059554345-agent-208f4904-83ec-46da-84e1-f5f059554345.json
+> state/projects/-private-var-folders-t5-6tq8cxtj20z035rv8hsnzwvh0000gn-T-capture-EcDCzn/5bd47723-950c-4c20-917e-77acb15dc4ea.jsonl
+> state/projects/-private-var-folders-t5-6tq8cxtj20z035rv8hsnzwvh0000gn-T-capture-EcDCzn/5bd47723-950c-4c20-917e-77acb15dc4ea/subagents/agent-aprompt_suggestion-0c54a2.jsonl
+> state/projects/-private-var-folders-t5-6tq8cxtj20z035rv8hsnzwvh0000gn-T-capture-EcDCzn/5bd47723-950c-4c20-917e-77acb15dc4ea/subagents/agent-aprompt_suggestion-7e2a96.jsonl
+> state/projects/-private-var-folders-t5-6tq8cxtj20z035rv8hsnzwvh0000gn-T-capture-EcDCzn/5c91b750-86c7-44d8-bb93-e5046ff2c302.jsonl
+> state/projects/-private-var-folders-t5-6tq8cxtj20z035rv8hsnzwvh0000gn-T-capture-EcDCzn/sessions-index.json
+> state/todos/5bd47723-950c-4c20-917e-77acb15dc4ea-agent-5bd47723-950c-4c20-917e-77acb15dc4ea.json

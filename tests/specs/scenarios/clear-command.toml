@@ -10,11 +10,11 @@ provider = "Claude API"
 trusted = true
 
 [[responses]]
-pattern = { type = "contains", text = "2 + 2" }
+pattern = { type = "contains", text = "what is 2 + 2?" }
 response = "2 + 2 = 4"
 
 [[responses]]
-pattern = { type = "contains", text = "3 + 3" }
+pattern = { type = "contains", text = "and 3 + 3?" }
 response = "3 + 3 = 6"
 
 [default_response]

@@ -1,0 +1,20 @@
+# Capture startup with a SessionStart hook configured.
+# The hook writes a marker file; after startup, asks Claude to
+# read it to prove the hook fired.
+# Args: --model haiku
+# Timeout: 60
+
+wait "for shortcuts" 5s
+
+# Ask Claude to verify the hook fired
+send "Read the file .hook-log and show me its exact contents. Nothing else." 100 <Enter>
+
+# Wait for response to complete
+wait !"for shortcuts" 5s
+wait "for shortcuts" 5s
+snapshot "hook_session_start"
+
+# Exit cleanly
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

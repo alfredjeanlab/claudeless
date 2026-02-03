@@ -9,18 +9,23 @@ provider = "Claude API"
 
 trusted = true
 
-[default_response]
-text = "I understand. Let me help with that."
-
 [[responses]]
-pattern = { type = "contains", text = "newfile.txt" }
+pattern = { type = "contains", text = "Create a new file called newfile.txt with the content hello" }
 
 [responses.response]
 text = ""
 
 [[responses.response.tool_calls]]
 tool = "Write"
+result = "Wrote 1 lines to newfile.txt"
 
 [responses.response.tool_calls.input]
 file_path = "newfile.txt"
 content = "hello"
+
+
+[default_response]
+text = "I understand. Let me help with that."
+
+[tool_execution]
+mode = "mock"

@@ -87,6 +87,9 @@ pub fn App(mut hooks: Hooks, props: &AppProps) -> impl Into<AnyElement<'static>>
     state_clone.check_compacting();
     state_clone.check_exit_hint_timeout();
 
+    // Check for session start hook (fires once on first Input mode)
+    state_clone.check_session_start_hook();
+
     // Check for pending stop hook messages
     state_clone.check_pending_hook_message();
 

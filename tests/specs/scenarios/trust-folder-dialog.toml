@@ -9,29 +9,30 @@ provider = "Claude API"
 
 trusted = true
 
-[default_response]
-text = "I understand. Let me help with that."
-
 [[responses]]
-pattern = { type = "contains", text = "Downloads" }
+pattern = { type = "contains", text = "list files in ~/Downloads" }
 
 [responses.response]
 text = ""
 
-# Read tool completes first (auto-allowed), then Bash needs permission
 [[responses.response.tool_calls]]
 tool = "Read"
-result = "1 file\u2026"
+result = "1 file…"
 
 [responses.response.tool_calls.input]
-file_path = "~/Downloads"
+file_path = "context"
 
 [[responses.response.tool_calls]]
 tool = "Bash"
+result = "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed."
 
 [responses.response.tool_calls.input]
 command = "ls -la ~/Downloads"
 description = "List files in Downloads directory"
+
+
+[default_response]
+text = "I understand. Let me help with that."
 
 [tool_execution]
 mode = "mock"

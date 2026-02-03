@@ -11,9 +11,9 @@ send "list files in ~/Downloads"
 wait 100
 send <Enter>
 
-# Wait for permission dialog to appear
-wait "Bash command" 5s
-wait "Do you want to proceed" 3s
+# Wait for permission dialog to appear - could be bash or trust folder
+# Match handles both types of dialogs
+wait "Do you want to proceed" 5s
 snapshot "trust_folder_dialog"
 
 # Cancel and exit cleanly

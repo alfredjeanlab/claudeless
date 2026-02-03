@@ -193,10 +193,13 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> Optio
                 parts.push(format_completed_tool_display(call, result_text));
             }
 
-            // Add response text (if any)
+            // Add response text (if any), word-wrapped at terminal width
             let response_text = result.response_text();
             if !response_text.is_empty() {
-                parts.push(response_text.to_string());
+                parts.push(wrap_response_paragraph(
+                    response_text,
+                    inner.display.terminal_width as usize,
+                ));
             }
 
             // Add pending tool call context display.
@@ -226,7 +229,10 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> Optio
                 pending_result,
             ));
             if !response_text.is_empty() {
-                post_parts.push(response_text.to_string());
+                post_parts.push(wrap_response_paragraph(
+                    response_text,
+                    inner.display.terminal_width as usize,
+                ));
             }
             inner.display.pending_post_grant_display = Some(join_display_parts(&post_parts));
 
@@ -243,14 +249,17 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> Optio
         parts.push(format_completed_tool_display(call, result_text));
     }
 
-    // Add response text
+    // Add response text, word-wrapped at terminal width
     let response_text = if result.response_text().is_empty() && parts.is_empty() {
         "I'm not sure how to help with that.".to_string()
     } else {
         result.response_text().to_string()
     };
     if !response_text.is_empty() {
-        parts.push(response_text);
+        parts.push(wrap_response_paragraph(
+            &response_text,
+            inner.display.terminal_width as usize,
+        ));
     }
 
     // Build display
@@ -344,6 +353,51 @@ fn restore_input_state(inner: &mut TuiAppStateInner) {
 // ============================================================================
 // Tool Call Display Formatting
 // ============================================================================
+
+/// Word-wrap a text paragraph for display after a `⏺ ` prefix.
+///
+/// Real Claude Code wraps response text at the terminal width with a 2-space
+/// continuation indent. The first line has a 2-char prefix (`⏺ `), and
+/// continuation lines use `  ` (2 spaces) indent.
+fn wrap_response_paragraph(text: &str, terminal_width: usize) -> String {
+    // Account for "⏺ " prefix on first line (2 visual columns)
+    let first_line_width = terminal_width.saturating_sub(2);
+    // Continuation indent is "  " (2 spaces)
+    let continuation_width = terminal_width.saturating_sub(2);
+
+    if first_line_width == 0 || text.chars().count() <= first_line_width {
+        return text.to_string();
+    }
+
+    let mut result = String::new();
+    let mut current_line_len = 0;
+    let mut is_first_line = true;
+
+    for word in text.split_whitespace() {
+        let word_len = word.chars().count();
+        let max_width = if is_first_line {
+            first_line_width
+        } else {
+            continuation_width
+        };
+
+        if current_line_len == 0 {
+            result.push_str(word);
+            current_line_len = word_len;
+        } else if current_line_len + 1 + word_len <= max_width {
+            result.push(' ');
+            result.push_str(word);
+            current_line_len += 1 + word_len;
+        } else {
+            result.push_str("\n  ");
+            result.push_str(word);
+            current_line_len = word_len;
+            is_first_line = false;
+        }
+    }
+
+    result
+}
 
 /// Join display parts where the first part is unprefixed (gets ⏺ from display layer)
 /// and subsequent parts get their own ⏺ prefix.

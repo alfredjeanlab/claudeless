@@ -183,44 +183,103 @@ impl Runtime {
             tokio::time::sleep(Duration::from_millis(self.timeouts.response_delay_ms)).await;
         }
 
-        // Match prompt to get response (or failure)
-        let response_spec = match self.match_prompt_for_turn(prompt) {
-            Ok(spec) => spec,
-            Err(failure_spec) => {
-                // Record error to JSONL before returning
-                self.record_failure_to_jsonl(&failure_spec);
-                return Err(failure_spec);
-            }
-        };
+        // Accumulate tool calls and results across auto-continued turns.
+        // When a response step has tool calls that all auto-execute (no permission needed)
+        // and the scenario has pending turns, we continue to the next turn automatically.
+        // This simulates the real Claude agent loop: tool result → next API call → next tool.
+        let mut all_tool_calls: Vec<ToolCallSpec> = Vec::new();
+        let mut all_tool_results: Vec<ToolExecutionResult> = Vec::new();
+        let mut current_prompt = prompt.to_string();
+        let mut final_text;
 
-        // Get response delay from spec if detailed
-        let response_delay = response_spec.as_ref().and_then(|r| r.delay_ms());
-        if let Some(delay) = response_delay {
-            tokio::time::sleep(Duration::from_millis(delay)).await;
+        loop {
+            // Match prompt to get response (or failure)
+            let response_spec = match self.match_prompt_for_turn(&current_prompt) {
+                Ok(spec) => spec,
+                Err(failure_spec) => {
+                    // Record error to JSONL before returning
+                    self.record_failure_to_jsonl(&failure_spec);
+                    return Err(failure_spec);
+                }
+            };
+
+            // Get response delay from spec if detailed
+            let response_delay = response_spec.as_ref().and_then(|r| r.delay_ms());
+            if let Some(delay) = response_delay {
+                tokio::time::sleep(Duration::from_millis(delay)).await;
+            }
+
+            // Get response and tool calls
+            let response = response_spec.unwrap_or(ResponseSpec::Simple(String::new()));
+            let response_text = response.text().to_string();
+            let tool_calls = response.tool_calls().to_vec();
+
+            // Execute tools and collect results
+            let (tool_results, pending_permission) =
+                self.execute_tools_for_turn(&current_prompt, &response_text, &tool_calls);
+
+            // Record the turn to state if no tool calls (tool calls record their own state)
+            if tool_calls.is_empty() {
+                if let Some(ref writer) = self.state {
+                    let _ = writer.write().record_turn(&current_prompt, &response_text);
+                }
+            }
+
+            // Accumulate this step's tool calls and results
+            all_tool_calls.extend(tool_calls);
+            all_tool_results.extend(tool_results);
+            final_text = response_text;
+
+            // If a tool needs permission, stop and return everything accumulated so far
+            if pending_permission.is_some() {
+                let merged = ResponseSpec::Detailed {
+                    text: final_text,
+                    tool_calls: all_tool_calls,
+                    usage: None,
+                    delay_ms: None,
+                };
+                return Ok(TurnResult {
+                    response: merged,
+                    tool_results: all_tool_results,
+                    hook_continuation: None,
+                    is_hook_continuation: self.stop_hook_active,
+                    pending_permission,
+                });
+            }
+
+            // If scenario has active turns, auto-continue with tool results as prompt
+            let has_active_turns = self
+                .scenario
+                .as_ref()
+                .is_some_and(|s| s.has_active_sequence());
+            if has_active_turns {
+                // Build continuation prompt from tool results
+                current_prompt = all_tool_results
+                    .iter()
+                    .filter_map(|r| r.text())
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                continue;
+            }
+
+            // No more turns — build final result
+            break;
         }
 
-        // Get response and tool calls
-        let response = response_spec.unwrap_or(ResponseSpec::Simple(String::new()));
-        let response_text = response.text().to_string();
-        let tool_calls = response.tool_calls().to_vec();
-
-        // Execute tools and collect results
-        let (tool_results, pending_permission) =
-            self.execute_tools_for_turn(prompt, &response_text, &tool_calls);
-
-        // Record the turn to state if no tool calls (tool calls record their own state)
-        if tool_calls.is_empty() {
-            if let Some(ref writer) = self.state {
-                let _ = writer.write().record_turn(prompt, &response_text);
-            }
-        }
-
-        // Skip stop hook when a permission prompt is pending
-        let hook_continuation = if pending_permission.is_some() {
-            None
+        // Build merged response with all accumulated tool calls
+        let response = if all_tool_calls.is_empty() {
+            ResponseSpec::Simple(final_text)
         } else {
-            self.fire_stop_hook().await
+            ResponseSpec::Detailed {
+                text: final_text,
+                tool_calls: all_tool_calls,
+                usage: None,
+                delay_ms: None,
+            }
         };
+
+        // Skip stop hook when a permission prompt is pending (already handled above)
+        let hook_continuation = self.fire_stop_hook().await;
 
         // Capture whether THIS turn was a hook continuation (before updating for next turn)
         let is_hook_continuation = self.stop_hook_active;
@@ -230,10 +289,10 @@ impl Runtime {
 
         Ok(TurnResult {
             response,
-            tool_results,
+            tool_results: all_tool_results,
             hook_continuation,
             is_hook_continuation,
-            pending_permission,
+            pending_permission: None,
         })
     }
 
@@ -392,6 +451,20 @@ impl Runtime {
             }
         }
         None
+    }
+
+    /// Fire SessionStart hook (fire-and-forget notification).
+    pub(crate) async fn fire_session_start_hook(&self) {
+        if let Some(ref executor) = self.hook_executor {
+            if executor.has_hooks(&HookEvent::SessionStart) {
+                let msg = HookMessage::session(
+                    self.context.session_id.to_string(),
+                    HookEvent::SessionStart,
+                    Some(self.context.project_path.to_string_lossy().to_string()),
+                );
+                let _ = executor.execute(&msg).await;
+            }
+        }
     }
 
     /// Shutdown MCP manager gracefully.
