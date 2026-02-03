@@ -12,53 +12,36 @@ Integration tests for Ctrl+_ are marked `#[ignore]` because tmux cannot reliably
 
 **Status:** Behavior implemented; integration tests skipped due to tmux limitation.
 
-## TUI Color Rendering
-
-### ANSI Color Output
-
-Implement ANSI color output in the TUI to match real Claude Code's color scheme.
-
-**Test:** `test_initial_state_ansi_matches_fixture` in `tui_snapshot.rs`.
-
-**Colors to implement** (from `initial_state_ansi.txt` fixture):
-- **Orange** `(215, 119, 87)`: Logo characters
-- **Black** `(0, 0, 0)`: Logo background
-- **Gray** `(153, 153, 153)`: Version, model, path, shortcuts
-- **Dark gray** `(136, 136, 136)`: Separator lines (with dim attribute)
-
-**Key elements to style:**
-- Logo (foreground + background colors)
-- Version text (gray)
-- Model name (gray)
-- Working directory path (gray)
-- Separator lines (dim + dark gray)
-- Status bar shortcuts (gray)
-- Prompt placeholder (dim)
-
-**Location:** `crates/cli/src/tui/app.rs` - Add iocraft styles to components.
-
-### Shell Mode ANSI Colors
-
-Shell mode (! prefix) needs pink/magenta styling to match real Claude Code.
-
-**Test:** `test_bash_mode_pink_colors` in `tui_shell_mode.rs` (currently `#[ignore]`)
-
-## Slash Commands
-
-### Slash Command Search
-
-Implement incremental search/filtering for slash commands by typing `/[key][key][...]`. Includes type-ahead filtering, arrow key navigation, and tab completion.
-
-Follow `docs/prompts/tui-test-capture-guide.md` to capture expected behavior from real Claude Code.
-
 ## Scenario Configuration
 
 ### Subscription Level in Header
 
-Add scenario-level configuration for the subscription text displayed in the header (e.g., "Opus 4.5 · Claude Max").
+Subscription text is configurable via the `provider` field in scenario config (defaults to "Claude Max").
 
 **Fixtures captured:**
 - `Claude Max` - model_haiku.txt, model_sonnet.txt, model_opus.txt
 - `API Usage Billing` - api_usage_billing.txt (v2.1.14)
 
 **Examples to capture:** `Claude Pro`, `Free`, `Enterprise` (or `Team`?)
+
+**Status:** Default implemented; additional fixture variants not yet captured.
+
+## Stream-JSON Output
+
+### System Init Event
+
+The stream-json system init event is missing several fields present in real Claude Code output.
+
+**Missing fields:** `agents`, `apiKeySource`, `claude_code_version`, `cwd`, `output_style`, `permissionMode`, `plugins`, `skills`, `slash_commands`
+
+**Tests:** `test_stream_json_starts_with_system_init` in `stream_json.rs` (`#[ignore]`)
+
+**Status:** Deferred.
+
+## TUI Setup Flow
+
+Setup wizard screens (theme selection, login/logout, connection errors) are not implemented. All 9 setup-related integration tests are `#[ignore]`.
+
+**Tests:** `tui_setup.rs` (9 tests, all `#[ignore]`)
+
+**Status:** Deferred.

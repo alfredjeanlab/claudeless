@@ -55,7 +55,6 @@ Subagent simulation and MCP server execution are planned for future releases.
 
 - Chrome and IDE integrations
 - Settings screens (Status, Config, Usage)
-- TUI colors are not expected to exactly match, though text layout matches exactly
 - Administrative subcommands like `doctor`, `install`, and `update` are not supported
 
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md).

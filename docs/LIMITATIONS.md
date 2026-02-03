@@ -32,40 +32,30 @@ Built-in tools execute in a sandbox and scenarios control responses.
 - **State Directory**: projects, todos, plans, sessions, settings.json
 - **Built-in Tools**: Bash, Read, Write, Edit, Glob, Grep, TodoWrite, ExitPlanMode (sandboxed)
 - **Scenario System**: Pattern matching, multi-turn conversations, failure injection, mock responses
+- **Slash Commands**: 24 commands in menu with fuzzy search filtering (`/clear`, `/compact`, `/config`, `/context`, `/exit`, `/export`, `/fork`, `/help`, `/hooks`, `/init`, `/login`, `/logout`, `/mcp`, `/memory`, `/model`, `/permissions`, `/plan`, `/pr-comments`, `/review`, `/status`, `/tasks`, `/terminal-setup`, `/todos`, `/vim`)
+- **ANSI Colors**: Logo, header, separators, status bar, permission mode indicators, bash mode styling
 
 ## Out of Scope
 
 - **Chrome Integration**: Browser features not simulated
 - **IDE Integration**: `--ide` flag not supported
-- **Settings**: Status, Config, Usage screens
-- **Colors**: TUI colors may not exactly match, however text outputs are expected to match exactly
+- **Settings Screens**: Status, Config, Usage screens
 - **Subcommands**: `doctor`, `install`, `mcp`, `plugin`, `setup-token`, `update`
 
 ## Future Work
 
 - **MCP Resources/Prompts**: Only tools protocol supported; resources and prompts not implemented
-- **Slash Commands**: Basic commands implemented (`/clear`, `/compact`, `/fork`, `/help`, `/context`, `/exit`, `/todos`, `/tasks`, `/export`, `/hooks`, `/memory`); wider support needed
-- **Unimplemented CLI Flags**: See CLI Flags section below
 - **Tools**: `WebSearch`, `WebFetch`, `NotebookEdit`, `AskUserQuestion`, `EnterPlanMode`, `Task`, `KillShell`, `TaskOutput`, `Skill`
 - **Subagents**: Agent spawning and management
 - **TUI Setup Flow**: Theme selection, login flow, logout command, connection error handling
+- **Stream-JSON System Init**: Missing fields (`agents`, `apiKeySource`, `claude_code_version`, `cwd`, `output_style`, `permissionMode`, `plugins`, `skills`, `slash_commands`)
 
 ## Known TODOs
 
-Known divergences with failing tests.
+Known divergences with ignored tests.
 Run: `cargo test -- --ignored`
 
-- [ ] **TUI permission dialogs**: Rich dialogs and ANSI styling not implemented
-  - `test_permission_bash_command_matches_fixture`
-  - `test_permission_edit_file_matches_fixture`
-  - `test_permission_write_file_matches_fixture`
-  - `test_permission_trust_folder_matches_fixture`
-  - `test_status_bar_extended_matches_fixture`
-  - `test_permission_plan_matches_fixture`
-  - `test_permission_plan_ansi_matches_fixture`
-  - `test_permission_accept_edits_ansi_matches_fixture`
-  - `test_permission_bypass_ansi_matches_fixture`
-- [ ] **TUI setup flow**: Theme selection, login, logout, connection errors
+- [ ] **TUI setup flow** (9 tests): Theme selection, login, logout, connection errors
   - `test_tui_setup_theme_selection_dark_mode_default`
   - `test_tui_setup_theme_selection_light_mode`
   - `test_tui_setup_theme_selection_ansi_mode`
@@ -75,66 +65,22 @@ Run: `cargo test -- --ignored`
   - `test_tui_slash_logout_exits_to_shell`
   - `test_tui_failed_to_open_socket_exits`
   - `test_tui_failed_to_open_socket_shows_helpful_message`
-- [ ] **CLI flags**: Missing flags for full compatibility
+- [ ] **Flaky TUI tests** (7 tests): Timing-sensitive tmux tests that fail intermittently on CI
+  - `test_tui_model_picker` (picker render timing)
+  - `test_tui_slash_search` (tmux timing)
+  - `test_tui_suspend` (tmux timing)
+  - `test_tui_fork` (tmux timing)
+  - `test_tui_export` (4 tests, tmux timing)
+- [ ] **Stream-JSON output** (3 tests): System init event and `-p` verbose mode
   - `test_stream_json_starts_with_system_init`
-  - `test_add_dir_flag_should_be_accepted`
-  - `test_json_schema_flag_should_be_accepted`
-  - `test_tools_flag_should_be_accepted`
-  - `test_agent_flag_should_be_accepted`
-  - `test_append_system_prompt_flag_should_be_accepted`
-- [ ] **TUI thinking dialog**: Extra separator lines in rendering
-  - `test_thinking_dialog_matches_fixture`
-  - `test_thinking_dialog_enabled_selected_matches_fixture`
-  - `test_thinking_dialog_disabled_selected_matches_fixture`
-  - `test_thinking_off_status_matches_fixture`
-  - `test_thinking_dialog_mid_conversation_matches_fixture`
-- [ ] **TUI /compact fixture matching**: Fixture tests need tool_calls recorded in session
-  - `test_compact_before_matches_fixture`
-  - `test_compact_during_matches_fixture`
-  - `test_compact_after_matches_fixture`
-- [ ] **TUI interaction**: Status bar visibility and input handling
-  - `test_input_display_matches_fixture`
+  - `test_stream_json_print_requires_verbose` (2 tests)
+- [ ] **TUI interaction** (2 tests): Ctrl+_ undo (tmux cannot send Ctrl+_; unit tests verify behavior)
   - `test_tui_ctrl_underscore_undoes_last_word`
   - `test_tui_ctrl_underscore_clears_all_input`
-- [ ] **TUI trust dialog**: Trust prompt handling
+- [ ] **TUI trust dialog** (1 test)
   - `test_trust_prompt_escape_cancels`
-  - `test_trust_prompt_matches_fixture`
-- [ ] **TUI tasks view**: Empty state rendering
-  - `test_tasks_empty_matches_fixture`
-- [ ] **TUI shell mode**: Bash mode pink styling
-  - `test_tui_shell_prefix_ansi_matches_fixture_v2117`
-- [ ] **TUI export**: Slash command autocomplete
+- [ ] **TUI export autocomplete** (1 test)
   - `test_tui_export_command_shows_autocomplete`
-
----
-
-## CLI Flags
-
-### Partial → Full
-
-| Flag | Status |
-|------|--------|
-| `--mcp-config` | ✓ Full: config parsing + server execution |
-
-### Not Implemented
-
-| Flag | Notes |
-|------|-------|
-| `--add-dir` | Additional directories |
-| `--agent` | Custom agent |
-| `--agents` | Agent definitions JSON |
-| `--append-system-prompt` | Append to system prompt |
-| `--betas` | Beta headers |
-| `--disable-slash-commands` | Disable skills |
-| `--file` | File resources |
-| `--fork-session` | Fork session on resume |
-| `--json-schema` | Structured output schema |
-| `--no-session-persistence` | Disable session persistence |
-| `--plugin-dir` | Plugin directories |
-| `--replay-user-messages` | Replay user messages |
-| `--setting-sources` | Settings sources |
-| `--settings` | Settings file/JSON |
-| `--tools` | Built-in tool list |
 
 ---
 
