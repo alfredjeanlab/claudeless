@@ -52,12 +52,8 @@ Before committing changes:
 
 - [ ] Unit tests in sibling `_tests.rs` files
 - [ ] Run `make check` which will
-  - `make lint` (shellcheck)
-  - `cargo fmt --all -- --check`
-  - `cargo clippy --all-targets --all-features -- -D warnings`
+  - `cargo fmt --all`
+  - `cargo clippy --all -- -D warnings`
   - `quench check --fix`
-  - `cargo test --all`
   - `cargo build --all`
-  - `cargo publish --dry-run` (verify crate packaging)
-  - `cargo audit`
-  - `cargo deny check`
+  - `cargo test --all`

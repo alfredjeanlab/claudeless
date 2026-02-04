@@ -7,6 +7,7 @@
 //! This module provides the type definitions used by app.rs.
 
 pub mod context;
+pub mod elicitation;
 pub mod export;
 pub mod help;
 pub mod hooks;
@@ -19,6 +20,7 @@ pub mod tasks;
 pub mod thinking;
 pub mod trust;
 
+pub use elicitation::ElicitationState;
 pub use hooks::{HookType, HooksDialog, HooksView};
 pub use memory::MemoryDialog;
 pub use model_picker::{ModelChoice, ModelPickerDialog};

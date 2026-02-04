@@ -370,6 +370,35 @@ impl Runtime {
         for (i, call) in tool_calls.iter().enumerate() {
             let tool_use_id = format!("toolu_{:08x}", i);
 
+            // For AskUserQuestion: inject scenario-configured answers or
+            // return as pending for TUI mode interactive dialog
+            let call = if call.tool == "AskUserQuestion" {
+                let has_answers = call.input.get("answers").is_some();
+                if !has_answers && self.cli.should_use_tui() {
+                    // TUI mode without answers — return as pending for interactive dialog
+                    pending_permission = Some(PendingPermission {
+                        tool_call: call.clone(),
+                        tool_use_id,
+                    });
+                    break;
+                }
+                if !has_answers {
+                    // Check scenario for configured answers
+                    if let Some(answers) = self.get_scenario_answers("AskUserQuestion") {
+                        let mut modified = call.clone();
+                        modified.input["answers"] = answers;
+                        std::borrow::Cow::Owned(modified)
+                    } else {
+                        std::borrow::Cow::Borrowed(call)
+                    }
+                } else {
+                    std::borrow::Cow::Borrowed(call)
+                }
+            } else {
+                std::borrow::Cow::Borrowed(call)
+            };
+            let call = call.as_ref();
+
             // Record assistant message with tool_use block
             let assistant_uuid =
                 if let (Some(ref state_writer), Some(ref uuid)) = (&self.state, &user_uuid) {
@@ -426,6 +455,14 @@ impl Runtime {
         }
 
         (results, pending_permission)
+    }
+
+    /// Get pre-configured answers from scenario tool config.
+    fn get_scenario_answers(&self, tool_name: &str) -> Option<serde_json::Value> {
+        let tool_exec = self.scenario.as_ref()?.config().tool_execution.as_ref()?;
+        let tool_config = tool_exec.tools.get(tool_name)?;
+        let answers = tool_config.answers.as_ref()?;
+        Some(serde_json::json!(answers))
     }
 
     /// Fire Stop hook and return continuation prompt if blocked.

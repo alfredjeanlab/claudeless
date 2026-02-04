@@ -25,6 +25,7 @@ pub enum ToolName {
     // Stateful tools
     TodoWrite,
     ExitPlanMode,
+    AskUserQuestion,
 
     // Network tools
     WebFetch,
@@ -47,6 +48,7 @@ impl ToolName {
             Self::Grep => "Grep",
             Self::TodoWrite => "TodoWrite",
             Self::ExitPlanMode => "ExitPlanMode",
+            Self::AskUserQuestion => "AskUserQuestion",
             Self::WebFetch => "WebFetch",
             Self::WebSearch => "WebSearch",
             Self::NotebookEdit => "NotebookEdit",
@@ -65,6 +67,7 @@ impl ToolName {
             "Grep" => Some(Self::Grep),
             "TodoWrite" => Some(Self::TodoWrite),
             "ExitPlanMode" => Some(Self::ExitPlanMode),
+            "AskUserQuestion" => Some(Self::AskUserQuestion),
             "WebFetch" => Some(Self::WebFetch),
             "WebSearch" => Some(Self::WebSearch),
             "NotebookEdit" => Some(Self::NotebookEdit),
@@ -81,7 +84,7 @@ impl ToolName {
             Self::Write | Self::Edit | Self::NotebookEdit => "write",
             Self::WebFetch | Self::WebSearch => "network",
             Self::Task => "delegate",
-            Self::TodoWrite | Self::ExitPlanMode => "state",
+            Self::TodoWrite | Self::ExitPlanMode | Self::AskUserQuestion => "state",
         }
     }
 }

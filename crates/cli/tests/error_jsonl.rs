@@ -6,7 +6,8 @@
 //! Integration tests for error JSONL recording.
 //!
 //! These tests verify that failure modes correctly record error entries
-//! to the session JSONL file, enabling watchers to detect errors.
+//! to the session JSONL file in real Claude Code format: `type: "assistant"`
+//! with `isApiErrorMessage: true`.
 
 use serde_json::Value;
 use std::fs;
@@ -27,18 +28,18 @@ fn write_scenario(content: &str) -> NamedTempFile {
     file
 }
 
-/// Find the error line in a JSONL file.
+/// Find the API error line in a JSONL file.
 ///
-/// Returns the first line with `type: "result"` and `subtype: "error"`.
-fn find_error_line(jsonl_path: &PathBuf) -> Option<Value> {
+/// Returns the first line with `type: "assistant"` and `isApiErrorMessage: true`.
+fn find_api_error_line(jsonl_path: &PathBuf) -> Option<Value> {
     let content = fs::read_to_string(jsonl_path).ok()?;
     for line in content.lines() {
         if line.is_empty() {
             continue;
         }
         if let Ok(json) = serde_json::from_str::<Value>(line) {
-            if json.get("type") == Some(&Value::String("result".to_string()))
-                && json.get("subtype") == Some(&Value::String("error".to_string()))
+            if json.get("type") == Some(&Value::String("assistant".to_string()))
+                && json.get("isApiErrorMessage") == Some(&Value::Bool(true))
             {
                 return Some(json);
             }
@@ -73,11 +74,44 @@ fn find_jsonl_file(state_dir: &TempDir) -> Option<PathBuf> {
     None
 }
 
+/// Assert common fields on an API error line.
+fn assert_api_error_structure(line: &Value, expected_error: &str) {
+    assert_eq!(line["type"], "assistant", "should have type: assistant");
+    assert_eq!(
+        line["isApiErrorMessage"], true,
+        "should have isApiErrorMessage: true"
+    );
+    assert_eq!(
+        line["error"], expected_error,
+        "should have error: {}",
+        expected_error
+    );
+    assert_eq!(
+        line["message"]["model"], "<synthetic>",
+        "should have message.model: <synthetic>"
+    );
+    assert_eq!(
+        line["message"]["stop_reason"], "stop_sequence",
+        "should have message.stop_reason: stop_sequence"
+    );
+    assert_eq!(
+        line["message"]["usage"]["input_tokens"], 0,
+        "should have zero input_tokens"
+    );
+    assert_eq!(
+        line["message"]["content"][0]["type"], "text",
+        "should have text content block"
+    );
+    assert!(line["sessionId"].is_string(), "should have sessionId");
+    assert!(line["uuid"].is_string(), "should have uuid");
+    assert!(line["cwd"].is_string(), "should have cwd");
+}
+
 // =============================================================================
 // Rate Limit Error Tests
 // =============================================================================
 
-/// Test that --failure rate-limit produces JSONL with error entry.
+/// Test that --failure rate-limit produces JSONL with API error entry.
 #[test]
 fn error_jsonl_rate_limit() {
     let state_dir = TempDir::new().unwrap();
@@ -111,55 +145,18 @@ fn error_jsonl_rate_limit() {
         output
     );
 
-    // Find and verify the JSONL file
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
-    let error_line = find_error_line(&jsonl_path).expect("Error line should exist in JSONL");
+    let error_line =
+        find_api_error_line(&jsonl_path).expect("API error line should exist in JSONL");
 
-    // Verify error entry structure
-    assert_eq!(
-        error_line.get("type"),
-        Some(&Value::String("result".to_string())),
-        "Error entry should have type: result"
-    );
-    assert_eq!(
-        error_line.get("subtype"),
-        Some(&Value::String("error".to_string())),
-        "Error entry should have subtype: error"
-    );
-    assert_eq!(
-        error_line.get("isError"),
-        Some(&Value::Bool(true)),
-        "Error entry should have isError: true"
-    );
-    assert_eq!(
-        error_line.get("errorType"),
-        Some(&Value::String("rate_limit_error".to_string())),
-        "Error entry should have errorType: rate_limit_error"
-    );
-    assert_eq!(
-        error_line.get("retryAfter"),
-        Some(&Value::Number(60.into())),
-        "Rate limit error should have retryAfter: 60"
-    );
-    assert!(
-        error_line.get("sessionId").is_some(),
-        "Error entry should have sessionId"
-    );
-    assert!(
-        error_line.get("timestamp").is_some(),
-        "Error entry should have timestamp"
-    );
-    assert!(
-        error_line.get("durationMs").is_some(),
-        "Error entry should have durationMs"
-    );
+    assert_api_error_structure(&error_line, "rate_limit");
 }
 
 // =============================================================================
 // Network Error Tests
 // =============================================================================
 
-/// Test that --failure network-unreachable produces JSONL with error entry.
+/// Test that --failure network-unreachable produces JSONL with API error entry.
 #[test]
 fn error_jsonl_network_unreachable() {
     let state_dir = TempDir::new().unwrap();
@@ -193,47 +190,18 @@ fn error_jsonl_network_unreachable() {
         output
     );
 
-    // Find and verify the JSONL file
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
-    let error_line = find_error_line(&jsonl_path).expect("Error line should exist in JSONL");
+    let error_line =
+        find_api_error_line(&jsonl_path).expect("API error line should exist in JSONL");
 
-    // Verify error entry structure
-    assert_eq!(
-        error_line.get("type"),
-        Some(&Value::String("result".to_string())),
-        "Error entry should have type: result"
-    );
-    assert_eq!(
-        error_line.get("subtype"),
-        Some(&Value::String("error".to_string())),
-        "Error entry should have subtype: error"
-    );
-    assert_eq!(
-        error_line.get("isError"),
-        Some(&Value::Bool(true)),
-        "Error entry should have isError: true"
-    );
-    assert_eq!(
-        error_line.get("errorType"),
-        Some(&Value::String("network_error".to_string())),
-        "Error entry should have errorType: network_error"
-    );
-    assert!(
-        error_line.get("retryAfter").is_none()
-            || error_line.get("retryAfter") == Some(&Value::Null),
-        "Network error should not have retryAfter"
-    );
-    assert!(
-        error_line.get("sessionId").is_some(),
-        "Error entry should have sessionId"
-    );
+    assert_api_error_structure(&error_line, "unknown");
 }
 
 // =============================================================================
 // Scenario-Based Failure Tests
 // =============================================================================
 
-/// Test that scenario-based failures produce JSONL error entries.
+/// Test that scenario-based failures produce JSONL API error entries.
 #[test]
 fn error_jsonl_scenario_failure() {
     let state_dir = TempDir::new().unwrap();
@@ -270,39 +238,14 @@ fn error_jsonl_scenario_failure() {
         output
     );
 
-    // Find and verify the JSONL file
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
-    let error_line = find_error_line(&jsonl_path).expect("Error line should exist in JSONL");
+    let error_line =
+        find_api_error_line(&jsonl_path).expect("API error line should exist in JSONL");
 
-    // Verify error entry structure
-    assert_eq!(
-        error_line.get("type"),
-        Some(&Value::String("result".to_string())),
-        "Error entry should have type: result"
-    );
-    assert_eq!(
-        error_line.get("subtype"),
-        Some(&Value::String("error".to_string())),
-        "Error entry should have subtype: error"
-    );
-    assert_eq!(
-        error_line.get("isError"),
-        Some(&Value::Bool(true)),
-        "Error entry should have isError: true"
-    );
-    assert_eq!(
-        error_line.get("errorType"),
-        Some(&Value::String("rate_limit_error".to_string())),
-        "Scenario rate_limit failure should have errorType: rate_limit_error"
-    );
-    assert_eq!(
-        error_line.get("retryAfter"),
-        Some(&Value::Number(120.into())),
-        "Scenario rate_limit failure should have retryAfter: 120"
-    );
+    assert_api_error_structure(&error_line, "rate_limit");
 }
 
-/// Test that scenario network_unreachable failure produces JSONL error entry.
+/// Test that scenario network_unreachable failure produces JSONL API error entry.
 #[test]
 fn error_jsonl_scenario_network_failure() {
     let state_dir = TempDir::new().unwrap();
@@ -335,22 +278,18 @@ fn error_jsonl_scenario_network_failure() {
         output
     );
 
-    // Find and verify the JSONL file
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
-    let error_line = find_error_line(&jsonl_path).expect("Error line should exist in JSONL");
+    let error_line =
+        find_api_error_line(&jsonl_path).expect("API error line should exist in JSONL");
 
-    assert_eq!(
-        error_line.get("errorType"),
-        Some(&Value::String("network_error".to_string())),
-        "Scenario network failure should have errorType: network_error"
-    );
+    assert_api_error_structure(&error_line, "unknown");
 }
 
 // =============================================================================
 // Other Failure Mode Tests
 // =============================================================================
 
-/// Test that --failure auth-error produces JSONL with error entry.
+/// Test that --failure auth-error produces JSONL with API error entry.
 #[test]
 fn error_jsonl_auth_error() {
     let state_dir = TempDir::new().unwrap();
@@ -385,16 +324,13 @@ fn error_jsonl_auth_error() {
     );
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
-    let error_line = find_error_line(&jsonl_path).expect("Error line should exist in JSONL");
+    let error_line =
+        find_api_error_line(&jsonl_path).expect("API error line should exist in JSONL");
 
-    assert_eq!(
-        error_line.get("errorType"),
-        Some(&Value::String("authentication_error".to_string())),
-        "Auth error should have errorType: authentication_error"
-    );
+    assert_api_error_structure(&error_line, "authentication_failed");
 }
 
-/// Test that --failure out-of-credits produces JSONL with error entry.
+/// Test that --failure out-of-credits produces JSONL with API error entry.
 #[test]
 fn error_jsonl_out_of_credits() {
     let state_dir = TempDir::new().unwrap();
@@ -429,16 +365,13 @@ fn error_jsonl_out_of_credits() {
     );
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
-    let error_line = find_error_line(&jsonl_path).expect("Error line should exist in JSONL");
+    let error_line =
+        find_api_error_line(&jsonl_path).expect("API error line should exist in JSONL");
 
-    assert_eq!(
-        error_line.get("errorType"),
-        Some(&Value::String("billing_error".to_string())),
-        "Out of credits error should have errorType: billing_error"
-    );
+    assert_api_error_structure(&error_line, "billing_error");
 }
 
-/// Test that --failure connection-timeout produces JSONL with error entry.
+/// Test that --failure connection-timeout produces JSONL with API error entry.
 #[test]
 fn error_jsonl_connection_timeout() {
     let state_dir = TempDir::new().unwrap();
@@ -474,16 +407,13 @@ fn error_jsonl_connection_timeout() {
     );
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
-    let error_line = find_error_line(&jsonl_path).expect("Error line should exist in JSONL");
+    let error_line =
+        find_api_error_line(&jsonl_path).expect("API error line should exist in JSONL");
 
-    assert_eq!(
-        error_line.get("errorType"),
-        Some(&Value::String("timeout_error".to_string())),
-        "Connection timeout should have errorType: timeout_error"
-    );
+    assert_api_error_structure(&error_line, "unknown");
 }
 
-/// Test that --failure partial-response produces JSONL with error entry.
+/// Test that --failure partial-response produces JSONL with API error entry.
 #[test]
 fn error_jsonl_partial_response() {
     let state_dir = TempDir::new().unwrap();
@@ -518,13 +448,10 @@ fn error_jsonl_partial_response() {
     );
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
-    let error_line = find_error_line(&jsonl_path).expect("Error line should exist in JSONL");
+    let error_line =
+        find_api_error_line(&jsonl_path).expect("API error line should exist in JSONL");
 
-    assert_eq!(
-        error_line.get("errorType"),
-        Some(&Value::String("partial_response".to_string())),
-        "Partial response should have errorType: partial_response"
-    );
+    assert_api_error_structure(&error_line, "");
 }
 
 // =============================================================================
@@ -609,12 +536,12 @@ fn error_jsonl_malformed_json_no_entry() {
     // Malformed JSON exits with 0
     assert!(output.status.success(), "Expected success: {:?}", output);
 
-    // JSONL file may exist but should not have an error entry
+    // JSONL file may exist but should not have an API error entry
     if let Some(jsonl_path) = find_jsonl_file(&state_dir) {
-        let error_line = find_error_line(&jsonl_path);
+        let error_line = find_api_error_line(&jsonl_path);
         assert!(
             error_line.is_none(),
-            "Malformed JSON should not produce error JSONL entry"
+            "Malformed JSON should not produce API error JSONL entry"
         );
     }
 }

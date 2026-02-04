@@ -17,6 +17,7 @@ use crate::tui::app::state::TuiAppState;
 use crate::tui::app::types::{
     AppMode, BypassChoice, BypassConfirmState, ExitReason, PermissionRequest, TrustPromptState,
 };
+use crate::tui::widgets::elicitation::ElicitationState;
 
 use super::{DialogState, SelectionList};
 
@@ -489,6 +490,76 @@ impl TuiAppState {
                     inner.dialog.dismiss();
                     inner.mode = AppMode::Input;
                 }
+            }
+            _ => {}
+        }
+    }
+}
+
+// ── Elicitation dialog ──────────────────────────────────────────────────
+
+/// Render elicitation dialog (AskUserQuestion)
+pub(crate) fn render_elicitation_dialog(
+    state: &ElicitationState,
+    width: usize,
+) -> AnyElement<'static> {
+    let content = state.render(width);
+
+    element! {
+        View(
+            flex_direction: FlexDirection::Column,
+            width: 100pct,
+        ) {
+            Text(content: content)
+        }
+    }
+    .into()
+}
+
+impl TuiAppState {
+    /// Handle key events in elicitation dialog mode
+    pub(in crate::tui::app) fn handle_elicitation_key(&self, key: KeyEvent) {
+        let mut inner = self.inner.lock();
+
+        match key.code {
+            KeyCode::Up => {
+                if let Some(state) = inner.dialog.as_elicitation_mut() {
+                    state.cursor_up();
+                }
+            }
+            KeyCode::Down => {
+                if let Some(state) = inner.dialog.as_elicitation_mut() {
+                    state.cursor_down();
+                }
+            }
+            KeyCode::Char(' ') => {
+                if let Some(state) = inner.dialog.as_elicitation_mut() {
+                    state.toggle_or_select();
+                }
+            }
+            KeyCode::Tab => {
+                if let Some(state) = inner.dialog.as_elicitation_mut() {
+                    state.next_question();
+                }
+            }
+            KeyCode::BackTab => {
+                if let Some(state) = inner.dialog.as_elicitation_mut() {
+                    state.prev_question();
+                }
+            }
+            KeyCode::Char(c @ '1'..='4') => {
+                if let Some(state) = inner.dialog.as_elicitation_mut() {
+                    let num = (c as u8 - b'0') as usize;
+                    state.select_by_number(num);
+                }
+            }
+            KeyCode::Enter => {
+                drop(inner);
+                self.confirm_elicitation();
+            }
+            KeyCode::Esc => {
+                drop(inner);
+                self.cancel_elicitation();
             }
             _ => {}
         }

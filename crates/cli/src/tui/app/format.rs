@@ -18,8 +18,7 @@ pub(crate) fn format_header_lines(state: &RenderState) -> (String, String, Strin
     let working_dir = std::env::current_dir()
         .map(|p| {
             // Try to convert to ~ format using HOME env var
-            if let Ok(home) = std::env::var("HOME") {
-                let home_path = std::path::PathBuf::from(&home);
+            if let Some(home_path) = crate::env::home() {
                 if let Ok(stripped) = p.strip_prefix(&home_path) {
                     return format!("~/{}", stripped.display());
                 }

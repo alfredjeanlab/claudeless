@@ -46,10 +46,7 @@ pub struct McpServerDef {
 }
 
 fn default_timeout() -> u64 {
-    std::env::var("CLAUDELESS_MCP_TIMEOUT_MS")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(30000)
+    crate::env::mcp_timeout_ms().unwrap_or(30000)
 }
 
 impl Default for McpServerDef {

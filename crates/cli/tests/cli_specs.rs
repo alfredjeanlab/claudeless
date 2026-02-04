@@ -34,7 +34,11 @@ fn cli_help_mcp() {
 
 #[test]
 fn cli_help_plugin_marketplace() {
-    specs::assert_cli_starts_with("v2.1.29", "help-plugin-marketplace", &["plugin", "marketplace", "--help"]);
+    specs::assert_cli_starts_with(
+        "v2.1.29",
+        "help-plugin-marketplace",
+        &["plugin", "marketplace", "--help"],
+    );
 }
 
 #[test]

@@ -5,6 +5,7 @@
 
 use crate::cli::FailureMode;
 use crate::config::FailureSpec;
+use crate::event_types::error_class;
 use crate::output::ResultOutput;
 use crate::state::{to_io_json, StateWriter};
 use parking_lot::RwLock;
@@ -80,53 +81,41 @@ impl FailureExecutor {
             return Ok(());
         }
 
-        let (error, error_type, retry_after, duration) = Self::spec_to_error_params(spec);
+        let (error_text, error_class) = Self::spec_to_error_params(spec);
         state_writer
             .read()
-            .record_error(&error, error_type, retry_after, duration)
+            .record_error(&error_text, error_class, None)
     }
 
     /// Convert a FailureSpec to error parameters for JSONL recording.
-    fn spec_to_error_params(
-        spec: &FailureSpec,
-    ) -> (String, Option<&'static str>, Option<u64>, u64) {
+    fn spec_to_error_params(spec: &FailureSpec) -> (String, &'static str) {
         match spec {
             FailureSpec::NetworkUnreachable => (
                 "Network error: Connection refused".to_string(),
-                Some("network_error"),
-                None,
-                5000u64,
+                error_class::UNKNOWN,
             ),
             FailureSpec::ConnectionTimeout { after_ms } => (
                 format!("Network error: Connection timed out after {}ms", after_ms),
-                Some("timeout_error"),
-                None,
-                *after_ms,
+                error_class::UNKNOWN,
             ),
             FailureSpec::AuthError { message } => {
-                (message.clone(), Some("authentication_error"), None, 100u64)
+                (message.clone(), error_class::AUTHENTICATION_FAILED)
             }
             FailureSpec::RateLimit { retry_after } => (
                 format!("Rate limited. Retry after {} seconds.", retry_after),
-                Some("rate_limit_error"),
-                Some(*retry_after),
-                50u64,
+                error_class::RATE_LIMIT,
             ),
             FailureSpec::OutOfCredits => (
                 "Billing error: No credits remaining".to_string(),
-                Some("billing_error"),
-                None,
-                100u64,
+                error_class::BILLING_ERROR,
             ),
             FailureSpec::PartialResponse { partial_text } => (
                 format!("Partial response: {}", partial_text),
-                Some("partial_response"),
-                None,
-                1000u64,
+                error_class::EMPTY,
             ),
             FailureSpec::MalformedJson { .. } => {
                 // Should not be called for MalformedJson
-                ("".to_string(), None, None, 0u64)
+                (String::new(), error_class::UNKNOWN)
             }
         }
     }

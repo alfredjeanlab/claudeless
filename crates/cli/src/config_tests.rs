@@ -404,3 +404,46 @@ fn test_response_spec_delay_ms_detailed() {
     };
     assert_eq!(spec.delay_ms(), Some(100));
 }
+
+#[test]
+fn test_parse_ask_user_question_tool_config() {
+    let toml_str = r#"
+[tool_execution]
+mode = "live"
+
+[tool_execution.tools.AskUserQuestion]
+auto_approve = true
+
+[tool_execution.tools.AskUserQuestion.answers]
+"What language?" = "Rust"
+"Which sections?" = "Introduction, Conclusion"
+"#;
+    let config: ScenarioConfig = toml::from_str(toml_str).unwrap();
+    let tool_exec = config.tool_execution.unwrap();
+
+    let ask = tool_exec.tools.get("AskUserQuestion").unwrap();
+    assert!(ask.auto_approve);
+    let answers = ask.answers.as_ref().unwrap();
+    assert_eq!(answers.get("What language?").unwrap(), "Rust");
+    assert_eq!(
+        answers.get("Which sections?").unwrap(),
+        "Introduction, Conclusion"
+    );
+}
+
+#[test]
+fn test_parse_tool_config_without_answers() {
+    let toml_str = r#"
+[tool_execution]
+mode = "live"
+
+[tool_execution.tools.Bash]
+auto_approve = true
+"#;
+    let config: ScenarioConfig = toml::from_str(toml_str).unwrap();
+    let tool_exec = config.tool_execution.unwrap();
+
+    let bash = tool_exec.tools.get("Bash").unwrap();
+    assert!(bash.auto_approve);
+    assert!(bash.answers.is_none());
+}

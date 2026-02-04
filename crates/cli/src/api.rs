@@ -261,13 +261,12 @@ impl BinarySimulatorHandle {
 
     /// Get the path to use for the simulator binary
     pub fn binary_path() -> std::path::PathBuf {
-        if let Ok(path) = std::env::var("CARGO_BIN_EXE_claudeless") {
+        if let Some(path) = crate::env::cargo_bin_exe() {
             return std::path::PathBuf::from(path);
         }
 
-        let target_dir = std::env::var("CARGO_TARGET_DIR")
-            .map(std::path::PathBuf::from)
-            .unwrap_or_else(|_| std::path::PathBuf::from("target"));
+        let target_dir =
+            crate::env::cargo_target_dir().unwrap_or_else(|| std::path::PathBuf::from("target"));
 
         let debug_path = target_dir.join("debug/claudeless");
         if debug_path.exists() {

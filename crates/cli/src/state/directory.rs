@@ -59,12 +59,12 @@ impl StateDirectory {
     /// 3. `CLAUDE_CONFIG_DIR` - Standard Claude Code environment variable
     /// 4. Temporary directory (default)
     pub fn resolve() -> std::io::Result<Self> {
-        if let Ok(dir) = std::env::var("CLAUDELESS_CONFIG_DIR") {
-            Ok(Self::new(PathBuf::from(dir)))
-        } else if let Ok(dir) = std::env::var("CLAUDELESS_STATE_DIR") {
-            Ok(Self::new(PathBuf::from(dir)))
-        } else if let Ok(dir) = std::env::var("CLAUDE_CONFIG_DIR") {
-            Ok(Self::new(PathBuf::from(dir)))
+        if let Some(dir) = crate::env::config_dir() {
+            Ok(Self::new(dir))
+        } else if let Some(dir) = crate::env::state_dir() {
+            Ok(Self::new(dir))
+        } else if let Some(dir) = crate::env::claude_config_dir() {
+            Ok(Self::new(dir))
         } else {
             Self::temp()
         }

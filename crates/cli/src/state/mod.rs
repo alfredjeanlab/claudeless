@@ -32,9 +32,9 @@ pub use todos::{TodoItem, TodoStatus};
 pub(crate) use index::{get_git_branch, SessionIndexEntry, SessionsIndex};
 pub(crate) use io::to_io_json;
 pub(crate) use persistence::{
-    append_assistant_message_jsonl, append_error_jsonl, append_result_jsonl, append_turn_jsonl,
-    append_user_message_jsonl, write_queue_operation, AssistantMessageParams, TurnParams,
-    UserMessageContent, UserMessageParams,
+    append_api_error_jsonl, append_assistant_message_jsonl, append_result_jsonl, append_turn_jsonl,
+    append_user_message_jsonl, write_queue_operation, AssistantMessageParams, ErrorMessageParams,
+    TurnParams, UserMessageContent, UserMessageParams,
 };
 pub(crate) use plans::PlansManager;
 pub(crate) use todos::TodoState;
@@ -464,25 +464,38 @@ impl StateWriter {
     }
 
     /// Record an error to the session JSONL file.
+    ///
+    /// Writes an API error message matching real Claude Code's format:
+    /// `type: "assistant"` with `isApiErrorMessage: true`.
     pub fn record_error(
         &self,
-        error: &str,
-        error_type: Option<&str>,
-        retry_after: Option<u64>,
-        duration_ms: u64,
+        error_text: &str,
+        error_class: &str,
+        parent_uuid: Option<&str>,
     ) -> std::io::Result<()> {
         let project_dir = self.project_dir();
         std::fs::create_dir_all(&project_dir)?;
 
-        append_error_jsonl(
-            &self.session_jsonl_path(),
-            &self.session_id,
-            error,
-            error_type,
-            retry_after,
-            duration_ms,
-            Utc::now(),
-        )
+        let git_branch = get_git_branch();
+        let version = env!("CARGO_PKG_VERSION");
+        let uuid = Uuid::new_v4().to_string();
+        let message_id = format!("msg_{}", Uuid::new_v4().simple());
+        let cwd = self.cwd.to_string_lossy().into_owned();
+
+        let params = ErrorMessageParams {
+            session_id: &self.session_id,
+            uuid: &uuid,
+            parent_uuid,
+            message_id: &message_id,
+            error_text,
+            error_class,
+            cwd: &cwd,
+            version,
+            git_branch: &git_branch,
+            timestamp: Utc::now(),
+        };
+
+        append_api_error_jsonl(&self.session_jsonl_path(), &params)
     }
 }
 

@@ -232,6 +232,12 @@ pub struct ToolConfig {
     /// Simulate error for this tool
     #[serde(default)]
     pub error: Option<String>,
+
+    /// Pre-configured answers for AskUserQuestion tool.
+    /// Keys are question text, values are selected option label(s).
+    /// For multi-select, join labels with ", ".
+    #[serde(default)]
+    pub answers: Option<HashMap<String, String>>,
 }
 
 /// Tool execution modes
@@ -434,29 +440,25 @@ impl ResolvedTimeouts {
         Self {
             exit_hint_ms: cfg
                 .exit_hint_ms
-                .or_else(|| Self::env_u64("CLAUDELESS_EXIT_HINT_TIMEOUT_MS"))
+                .or_else(crate::env::exit_hint_timeout_ms)
                 .unwrap_or(Self::DEFAULT_EXIT_HINT_MS),
             compact_delay_ms: cfg
                 .compact_delay_ms
-                .or_else(|| Self::env_u64("CLAUDELESS_COMPACT_DELAY_MS"))
+                .or_else(crate::env::compact_delay_ms)
                 .unwrap_or(Self::DEFAULT_COMPACT_DELAY_MS),
             hook_timeout_ms: cfg
                 .hook_timeout_ms
-                .or_else(|| Self::env_u64("CLAUDELESS_HOOK_TIMEOUT_MS"))
+                .or_else(crate::env::hook_timeout_ms)
                 .unwrap_or(Self::DEFAULT_HOOK_TIMEOUT_MS),
             mcp_timeout_ms: cfg
                 .mcp_timeout_ms
-                .or_else(|| Self::env_u64("CLAUDELESS_MCP_TIMEOUT_MS"))
+                .or_else(crate::env::mcp_timeout_ms)
                 .unwrap_or(Self::DEFAULT_MCP_TIMEOUT_MS),
             response_delay_ms: cfg
                 .response_delay_ms
-                .or_else(|| Self::env_u64("CLAUDELESS_RESPONSE_DELAY_MS"))
+                .or_else(crate::env::response_delay_ms)
                 .unwrap_or(Self::DEFAULT_RESPONSE_DELAY_MS),
         }
-    }
-
-    fn env_u64(name: &str) -> Option<u64> {
-        std::env::var(name).ok().and_then(|v| v.parse().ok())
     }
 }
 

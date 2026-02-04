@@ -130,6 +130,64 @@ pub fn execute_exit_plan_mode(
     }
 }
 
+/// Execute the AskUserQuestion tool.
+///
+/// In mock/print mode: uses pre-configured answers from `call.input["answers"]`
+/// or auto-selects the first option for each question.
+pub fn execute_ask_user_question(call: &ToolCallSpec) -> ToolExecutionResult {
+    let questions = call
+        .input
+        .get("questions")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    // Check if answers are already provided (from scenario config or TUI)
+    let answers = if let Some(ans) = call.input.get("answers") {
+        ans.clone()
+    } else {
+        // Auto-select first option for each question (print mode fallback)
+        auto_select_first_options(&questions)
+    };
+
+    let result_json = serde_json::json!({
+        "questions": questions,
+        "answers": answers,
+    });
+
+    ToolExecutionResult {
+        tool_use_id: String::new(),
+        content: vec![ToolResultContent::Text {
+            text: serde_json::to_string(&result_json).unwrap_or_default(),
+        }],
+        is_error: false,
+        tool_use_result: Some(result_json),
+        needs_prompt: false,
+    }
+}
+
+/// Auto-select the first option for each question.
+fn auto_select_first_options(questions: &[serde_json::Value]) -> serde_json::Value {
+    let mut answers = serde_json::Map::new();
+    for q in questions {
+        if let (Some(question_text), Some(options)) = (
+            q.get("question").and_then(|v| v.as_str()),
+            q.get("options").and_then(|v| v.as_array()),
+        ) {
+            let first_label = options
+                .first()
+                .and_then(|o| o.get("label"))
+                .and_then(|l| l.as_str())
+                .unwrap_or("Unknown");
+            answers.insert(
+                question_text.to_string(),
+                serde_json::Value::String(first_label.to_string()),
+            );
+        }
+    }
+    serde_json::Value::Object(answers)
+}
+
 #[cfg(test)]
 #[path = "stateful_tests.rs"]
 mod tests;

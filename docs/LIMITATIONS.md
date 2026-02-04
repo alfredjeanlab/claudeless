@@ -30,7 +30,7 @@ Built-in tools execute in a sandbox and scenarios control responses.
 - **Permission Modes**: All 6 modes (default, acceptEdits, bypassPermissions, delegate, dontAsk, plan)
 - **MCP Config**: JSON/JSON5 parsing, tool registration, `--mcp-config` / `--strict-mcp-config` / `--mcp-debug`
 - **State Directory**: projects, todos, plans, sessions, settings.json
-- **Built-in Tools**: Bash, Read, Write, Edit, Glob, Grep, TodoWrite, ExitPlanMode (sandboxed)
+- **Built-in Tools**: Bash, Read, Write, Edit, Glob, Grep, TodoWrite, ExitPlanMode, AskUserQuestion (sandboxed)
 - **Scenario System**: Pattern matching, multi-turn conversations, failure injection, mock responses
 - **Slash Commands**: 24 commands in menu with fuzzy search filtering (`/clear`, `/compact`, `/config`, `/context`, `/exit`, `/export`, `/fork`, `/help`, `/hooks`, `/init`, `/login`, `/logout`, `/mcp`, `/memory`, `/model`, `/permissions`, `/plan`, `/pr-comments`, `/review`, `/status`, `/tasks`, `/terminal-setup`, `/todos`, `/vim`)
 - **ANSI Colors**: Logo, header, separators, status bar, permission mode indicators, bash mode styling
@@ -45,7 +45,7 @@ Built-in tools execute in a sandbox and scenarios control responses.
 ## Future Work
 
 - **MCP Resources/Prompts**: Only tools protocol supported; resources and prompts not implemented
-- **Tools**: `WebSearch`, `WebFetch`, `NotebookEdit`, `AskUserQuestion`, `EnterPlanMode`, `Task`, `KillShell`, `TaskOutput`, `Skill`
+- **Tools**: `WebSearch`, `WebFetch`, `NotebookEdit`, `EnterPlanMode`, `Task`, `KillShell`, `TaskOutput`, `Skill`
 - **Subagents**: Agent spawning and management
 - **TUI Setup Flow**: Theme selection, login flow, logout command, connection error handling
 - **Stream-JSON System Init**: Missing fields (`agents`, `apiKeySource`, `claude_code_version`, `cwd`, `output_style`, `permissionMode`, `plugins`, `skills`, `slash_commands`)

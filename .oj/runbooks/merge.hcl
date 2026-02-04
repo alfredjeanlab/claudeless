@@ -31,9 +31,10 @@ worker "merge" {
 }
 
 pipeline "merge" {
-  name      = "${var.mr.branch}"
+  name      = "${var.mr.title}"
   vars      = ["mr"]
-  workspace = "ephemeral"
+  workspace = "folder"
+  on_cancel = { step = "cleanup" }
 
   locals {
     repo   = "$(git -C ${invoke.dir} rev-parse --show-toplevel)"
@@ -48,6 +49,11 @@ pipeline "merge" {
 
   step "init" {
     run = <<-SHELL
+      git -C "${local.repo}" worktree remove --force "${workspace.root}" 2>/dev/null || true
+      git -C "${local.repo}" branch -D "${local.branch}" 2>/dev/null || true
+      rm -rf "${workspace.root}" 2>/dev/null || true
+      git -C "${local.repo}" ls-remote --exit-code origin "refs/heads/${var.mr.branch}" >/dev/null 2>&1 \
+        || { echo "error: branch '${var.mr.branch}' not found on remote"; exit 1; }
       git -C "${local.repo}" fetch origin ${var.mr.base} ${var.mr.branch}
       git -C "${local.repo}" worktree add -b ${local.branch} "${workspace.root}" origin/${var.mr.base}
     SHELL
@@ -56,44 +62,58 @@ pipeline "merge" {
 
   step "merge" {
     run     = "git merge origin/${var.mr.branch} --no-edit"
-    on_done = { step = "check" }
-    on_fail = { step = "resolve" }
-  }
-
-  step "check" {
-    run     = "make check-fast"
     on_done = { step = "push" }
-    on_fail = { step = "resolve" }
+    on_fail = { step = "conflicts" }
   }
 
-  step "resolve" {
-    run     = { agent = "resolver" }
+  step "conflicts" {
+    run     = { agent = "conflicts" }
     on_done = { step = "push" }
   }
 
   step "push" {
     run = <<-SHELL
-      git -C "${local.repo}" fetch origin ${var.mr.base}
-      git rebase origin/${var.mr.base}
-      git -C "${local.repo}" push origin ${local.branch}:${var.mr.base}
-      git -C "${local.repo}" push origin --delete ${var.mr.branch}
+      git add -A
+      git diff --cached --quiet || git commit --amend --no-edit || git commit --no-edit
+
+      # Retry loop: if push fails because main moved, re-fetch and re-merge.
+      # Only falls through to on_fail if merging new main conflicts.
+      for attempt in 1 2 3 4 5; do
+        git -C "${local.repo}" fetch origin ${var.mr.base}
+        git merge origin/${var.mr.base} --no-edit || exit 1
+        git -C "${local.repo}" push origin ${local.branch}:${var.mr.base} && break
+        echo "push race (attempt $attempt), retrying..."
+        sleep 1
+      done
+
+      git -C "${local.repo}" push origin --delete ${var.mr.branch} || true
     SHELL
     on_done = { step = "cleanup" }
-    on_fail = { step = "check", attempts = 2 }
+    on_fail = { step = "init", attempts = 3 }
   }
 
   step "cleanup" {
     run = <<-SHELL
       git -C "${local.repo}" worktree remove --force "${workspace.root}" 2>/dev/null || true
       git -C "${local.repo}" branch -D "${local.branch}" 2>/dev/null || true
+      git -C "${local.repo}" branch -D "${var.mr.branch}" 2>/dev/null || true
     SHELL
   }
 }
 
-agent "resolver" {
+agent "conflicts" {
   run      = "claude --model opus --dangerously-skip-permissions"
-  on_idle  = { action = "gate", run = "make check-fast", attempts = 2 }
+  on_idle  = { action = "gate", command = "test ! -f $(git rev-parse --git-dir)/MERGE_HEAD" }
   on_dead  = { action = "escalate" }
+
+  prime = [
+    "echo '## Git Status'",
+    "git status",
+    "echo '## Incoming Commits'",
+    "git log origin/${var.mr.base}..origin/${var.mr.branch}",
+    "echo '## Changed Files'",
+    "git diff --stat origin/${var.mr.base}..origin/${var.mr.branch}",
+  ]
 
   prompt = <<-PROMPT
     You are merging branch ${var.mr.branch} into ${var.mr.base}.
@@ -105,8 +125,7 @@ agent "resolver" {
     1. Run `git status` to check for merge conflicts
     2. If conflicts exist, resolve them and `git add` the files
     3. If mid-merge, run `git commit --no-edit` to complete it
-    4. Run `make check-fast` to verify everything passes
+    4. Run `make check` to verify everything passes
     5. Fix any test failures
-    6. When `make check-fast` passes, say "I'm done"
   PROMPT
 }

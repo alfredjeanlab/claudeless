@@ -2,7 +2,9 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 use super::*;
-use crate::state::persistence::{append_error_jsonl, write_queue_operation, ErrorLine};
+use crate::state::persistence::{
+    append_api_error_jsonl, write_queue_operation, ErrorMessageParams,
+};
 
 #[test]
 fn test_new_session() {
@@ -173,90 +175,106 @@ fn test_turn_tool_calls() {
 }
 
 // ============================================================================
-// ErrorLine and append_error_jsonl tests
+// ApiErrorMessageLine and append_api_error_jsonl tests
 // ============================================================================
 
 #[test]
-fn test_error_line_serialization() {
-    use chrono::Utc;
-
-    let error = ErrorLine {
-        line_type: "result",
-        subtype: "error".to_string(),
-        is_error: true,
-        session_id: "test-session-123".to_string(),
-        error: "Rate limited. Retry after 60 seconds.".to_string(),
-        error_type: Some("rate_limit_error".to_string()),
-        retry_after: Some(60),
-        duration_ms: 50,
-        timestamp: Utc::now().to_rfc3339(),
-    };
-
-    let json = serde_json::to_string(&error).unwrap();
-    assert!(json.contains(r#""type":"result""#));
-    assert!(json.contains(r#""subtype":"error""#));
-    assert!(json.contains(r#""isError":true"#));
-    assert!(json.contains(r#""errorType":"rate_limit_error""#));
-    assert!(json.contains(r#""retryAfter":60"#));
-}
-
-#[test]
-fn test_error_line_without_optional_fields() {
-    use chrono::Utc;
-
-    let error = ErrorLine {
-        line_type: "result",
-        subtype: "error".to_string(),
-        is_error: true,
-        session_id: "test-session-123".to_string(),
-        error: "Network error: Connection refused".to_string(),
-        error_type: None,
-        retry_after: None,
-        duration_ms: 5000,
-        timestamp: Utc::now().to_rfc3339(),
-    };
-
-    let json = serde_json::to_string(&error).unwrap();
-    assert!(json.contains(r#""error":"Network error: Connection refused""#));
-    // Optional fields should be skipped when None
-    assert!(!json.contains("errorType"));
-    assert!(!json.contains("retryAfter"));
-}
-
-#[test]
-fn test_append_error_jsonl() {
+fn test_api_error_message_line_serialization() {
     use chrono::Utc;
 
     let temp = tempfile::tempdir().unwrap();
     let path = temp.path().join("session.jsonl");
 
-    // Append an error
-    append_error_jsonl(
-        &path,
-        "session-456",
-        "Rate limited. Retry after 30 seconds.",
-        Some("rate_limit_error"),
-        Some(30),
-        100,
-        Utc::now(),
-    )
-    .unwrap();
+    let params = ErrorMessageParams {
+        session_id: "test-session-123",
+        uuid: "uuid-abc",
+        parent_uuid: None,
+        message_id: "msg_def",
+        error_text: "Rate limited. Retry after 60 seconds.",
+        error_class: "rate_limit",
+        cwd: "/tmp",
+        version: "0.1.0",
+        git_branch: "main",
+        timestamp: Utc::now(),
+    };
 
-    // Read and verify content
+    append_api_error_jsonl(&path, &params).unwrap();
     let content = std::fs::read_to_string(&path).unwrap();
     let line: serde_json::Value = serde_json::from_str(content.trim()).unwrap();
 
-    assert_eq!(line["type"], "result");
-    assert_eq!(line["subtype"], "error");
-    assert_eq!(line["isError"], true);
-    assert_eq!(line["sessionId"], "session-456");
-    assert_eq!(line["errorType"], "rate_limit_error");
-    assert_eq!(line["retryAfter"], 30);
-    assert_eq!(line["durationMs"], 100);
+    assert_eq!(line["type"], "assistant");
+    assert_eq!(line["isApiErrorMessage"], true);
+    assert_eq!(line["error"], "rate_limit");
+    assert_eq!(line["message"]["model"], "<synthetic>");
+    assert_eq!(line["message"]["stop_reason"], "stop_sequence");
 }
 
 #[test]
-fn test_append_error_jsonl_appends_to_existing() {
+fn test_api_error_unknown_class() {
+    use chrono::Utc;
+
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("session.jsonl");
+
+    let params = ErrorMessageParams {
+        session_id: "test-session-123",
+        uuid: "uuid-abc",
+        parent_uuid: None,
+        message_id: "msg_def",
+        error_text: "Network error: Connection refused",
+        error_class: "unknown",
+        cwd: "/tmp",
+        version: "0.1.0",
+        git_branch: "main",
+        timestamp: Utc::now(),
+    };
+
+    append_api_error_jsonl(&path, &params).unwrap();
+    let content = std::fs::read_to_string(&path).unwrap();
+    let line: serde_json::Value = serde_json::from_str(content.trim()).unwrap();
+
+    assert_eq!(line["type"], "assistant");
+    assert_eq!(line["error"], "unknown");
+    assert_eq!(line["isApiErrorMessage"], true);
+}
+
+#[test]
+fn test_append_api_error_jsonl() {
+    use chrono::Utc;
+
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("session.jsonl");
+
+    let params = ErrorMessageParams {
+        session_id: "session-456",
+        uuid: "uuid-xyz",
+        parent_uuid: None,
+        message_id: "msg_123",
+        error_text: "Rate limited. Retry after 30 seconds.",
+        error_class: "rate_limit",
+        cwd: "/tmp",
+        version: "0.1.0",
+        git_branch: "main",
+        timestamp: Utc::now(),
+    };
+
+    append_api_error_jsonl(&path, &params).unwrap();
+
+    let content = std::fs::read_to_string(&path).unwrap();
+    let line: serde_json::Value = serde_json::from_str(content.trim()).unwrap();
+
+    assert_eq!(line["type"], "assistant");
+    assert_eq!(line["isApiErrorMessage"], true);
+    assert_eq!(line["sessionId"], "session-456");
+    assert_eq!(line["error"], "rate_limit");
+    assert_eq!(line["message"]["model"], "<synthetic>");
+    assert_eq!(line["message"]["stop_reason"], "stop_sequence");
+    assert_eq!(line["message"]["usage"]["input_tokens"], 0);
+    assert_eq!(line["message"]["content"][0]["type"], "text");
+}
+
+#[test]
+fn test_append_api_error_appends() {
     use chrono::Utc;
 
     let temp = tempfile::tempdir().unwrap();
@@ -266,16 +284,20 @@ fn test_append_error_jsonl_appends_to_existing() {
     write_queue_operation(&path, "session-789", "dequeue", Utc::now()).unwrap();
 
     // Append an error
-    append_error_jsonl(
-        &path,
-        "session-789",
-        "Network error: Connection refused",
-        Some("network_error"),
-        None,
-        5000,
-        Utc::now(),
-    )
-    .unwrap();
+    let params = ErrorMessageParams {
+        session_id: "session-789",
+        uuid: "uuid-err",
+        parent_uuid: None,
+        message_id: "msg_err",
+        error_text: "Network error: Connection refused",
+        error_class: "unknown",
+        cwd: "/tmp",
+        version: "0.1.0",
+        git_branch: "main",
+        timestamp: Utc::now(),
+    };
+
+    append_api_error_jsonl(&path, &params).unwrap();
 
     // Verify both lines exist
     let content = std::fs::read_to_string(&path).unwrap();
@@ -286,6 +308,6 @@ fn test_append_error_jsonl_appends_to_existing() {
     assert_eq!(first["type"], "queue-operation");
 
     let second: serde_json::Value = serde_json::from_str(lines[1]).unwrap();
-    assert_eq!(second["type"], "result");
-    assert_eq!(second["errorType"], "network_error");
+    assert_eq!(second["type"], "assistant");
+    assert_eq!(second["isApiErrorMessage"], true);
 }

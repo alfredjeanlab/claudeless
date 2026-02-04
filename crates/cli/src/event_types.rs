@@ -51,6 +51,16 @@ pub mod user_type {
     pub const EXTERNAL: &str = "external";
 }
 
+/// Error classification constants matching real Claude Code's simplified strings.
+pub mod error_class {
+    pub const RATE_LIMIT: &str = "rate_limit";
+    pub const UNKNOWN: &str = "unknown";
+    pub const AUTHENTICATION_FAILED: &str = "authentication_failed";
+    pub const BILLING_ERROR: &str = "billing_error";
+    pub const INVALID_REQUEST: &str = "invalid_request";
+    pub const EMPTY: &str = "";
+}
+
 /// MCP server status constants.
 pub mod mcp_status {
     pub const CONNECTED: &str = "connected";

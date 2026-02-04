@@ -53,6 +53,7 @@ impl TuiAppState {
             AppMode::HelpDialog => self.handle_help_dialog_key(key),
             AppMode::HooksDialog => self.handle_hooks_dialog_key(key),
             AppMode::MemoryDialog => self.handle_memory_dialog_key(key),
+            AppMode::Elicitation => self.handle_elicitation_key(key),
         }
     }
 
@@ -512,6 +513,12 @@ impl TuiAppState {
                 inner.mode = AppMode::Input;
                 inner.display.response_content = "Memory dialog dismissed".to_string();
                 inner.display.is_command_output = true;
+            }
+            AppMode::Elicitation => {
+                // Cancel elicitation and return to input
+                inner.dialog.dismiss();
+                inner.mode = AppMode::Input;
+                inner.display.response_content = "Elicitation cancelled by user".to_string();
             }
         }
     }

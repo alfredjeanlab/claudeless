@@ -342,6 +342,7 @@ fn test_permission_checker_with_overrides() {
             auto_approve: true,
             result: None,
             error: None,
+            answers: None,
         },
     );
 

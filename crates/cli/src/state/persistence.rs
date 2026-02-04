@@ -6,7 +6,7 @@
 //! This module provides types and functions for reading and writing session data
 //! in JSONL format, matching Claude CLI v2.1.12.
 
-use crate::event_types::{line_type, message_type, role, subtype, user_type};
+use crate::event_types::{line_type, message_type, role, user_type};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
@@ -402,25 +402,74 @@ pub struct AssistantMessageParams<'a> {
     pub timestamp: DateTime<Utc>,
 }
 
-/// Error entry in JSONL format for failure events.
+/// Server tool use counts (zero-valued for synthetic error messages).
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct ServerToolUse {
+    pub web_search_requests: u32,
+    pub web_fetch_requests: u32,
+}
+
+/// All-zero usage matching real Claude error format.
 ///
-/// Uses the result wrapper format with `subtype: "error"` to match
-/// the format expected by watchers that parse JSONL for error fields.
+/// Differs from normal `Usage` by including `server_tool_use` and using
+/// `Option` for `service_tier` (serializes as null when None).
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct SyntheticUsage {
+    pub input_tokens: u32,
+    pub output_tokens: u32,
+    pub cache_creation_input_tokens: u32,
+    pub cache_read_input_tokens: u32,
+    pub server_tool_use: ServerToolUse,
+    pub service_tier: Option<String>,
+    pub cache_creation: CacheCreation,
+}
+
+/// Synthetic assistant message body for API error lines.
+///
+/// Uses `model: "<synthetic>"` and `stop_reason: "stop_sequence"` to match
+/// the format real Claude Code writes for error conditions.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ErrorLine {
+pub struct ApiErrorAssistantMessage {
+    pub id: String,
+    pub container: Option<String>,
+    pub model: String,
+    pub role: &'static str,
+    pub stop_reason: &'static str,
+    pub stop_sequence: String,
     #[serde(rename = "type")]
-    pub line_type: &'static str,
-    pub subtype: String,
-    pub is_error: bool,
-    pub session_id: String,
+    pub message_type: &'static str,
+    pub usage: SyntheticUsage,
+    pub content: Vec<ContentBlock>,
+    pub context_management: Option<String>,
+}
+
+/// Full JSONL line for API error messages.
+///
+/// Matches real Claude Code's error format: `type: "assistant"` with
+/// `isApiErrorMessage: true` and a synthetic assistant message.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiErrorMessageLine {
+    #[serde(flatten)]
+    pub envelope: MessageEnvelope,
+    pub message: ApiErrorAssistantMessage,
     pub error: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub retry_after: Option<u64>,
-    pub duration_ms: u64,
-    pub timestamp: String,
+    pub is_api_error_message: bool,
+}
+
+/// Parameters for writing an API error message JSONL line.
+#[derive(Clone, Debug)]
+pub struct ErrorMessageParams<'a> {
+    pub session_id: &'a str,
+    pub uuid: &'a str,
+    pub parent_uuid: Option<&'a str>,
+    pub message_id: &'a str,
+    pub error_text: &'a str,
+    pub error_class: &'a str,
+    pub cwd: &'a str,
+    pub version: &'a str,
+    pub git_branch: &'a str,
+    pub timestamp: DateTime<Utc>,
 }
 
 /// Append an assistant message to a JSONL file.
@@ -459,33 +508,46 @@ pub fn append_assistant_message_jsonl(
     write_jsonl_line(&mut file, &assistant_line)
 }
 
-/// Append an error entry to a JSONL file.
+/// Append an API error message to a JSONL file.
 ///
-/// Writes an error line in the result wrapper format with `subtype: "error"`.
-pub fn append_error_jsonl(
-    path: &Path,
-    session_id: &str,
-    error: &str,
-    error_type: Option<&str>,
-    retry_after: Option<u64>,
-    duration_ms: u64,
-    timestamp: DateTime<Utc>,
-) -> std::io::Result<()> {
+/// Writes an error line in the real Claude Code format: `type: "assistant"` with
+/// `isApiErrorMessage: true` and a synthetic assistant message body.
+pub fn append_api_error_jsonl(path: &Path, params: &ErrorMessageParams) -> std::io::Result<()> {
     let mut file = open_append(path)?;
+    let timestamp_str = params.timestamp.to_rfc3339();
 
-    let error_line = ErrorLine {
-        line_type: line_type::RESULT,
-        subtype: subtype::ERROR.to_string(),
-        is_error: true,
-        session_id: session_id.to_string(),
-        error: error.to_string(),
-        error_type: error_type.map(String::from),
-        retry_after,
-        duration_ms,
-        timestamp: timestamp.to_rfc3339(),
+    let line = ApiErrorMessageLine {
+        envelope: MessageEnvelope {
+            line_type: line_type::ASSISTANT.to_string(),
+            uuid: params.uuid.to_string(),
+            timestamp: timestamp_str,
+            session_id: params.session_id.to_string(),
+            cwd: params.cwd.to_string(),
+            version: params.version.to_string(),
+            git_branch: params.git_branch.to_string(),
+            parent_uuid: params.parent_uuid.map(String::from),
+            is_sidechain: false,
+            user_type: user_type::EXTERNAL.to_string(),
+        },
+        message: ApiErrorAssistantMessage {
+            id: params.message_id.to_string(),
+            container: None,
+            model: "<synthetic>".to_string(),
+            role: role::ASSISTANT,
+            stop_reason: "stop_sequence",
+            stop_sequence: String::new(),
+            message_type: message_type::MESSAGE,
+            usage: SyntheticUsage::default(),
+            content: vec![ContentBlock::Text {
+                text: params.error_text.to_string(),
+            }],
+            context_management: None,
+        },
+        error: params.error_class.to_string(),
+        is_api_error_message: true,
     };
 
-    write_jsonl_line(&mut file, &error_line)
+    write_jsonl_line(&mut file, &line)
 }
 
 #[cfg(test)]

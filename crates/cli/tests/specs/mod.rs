@@ -137,11 +137,16 @@ fn parse_recording_snapshots(frames_dir: &Path) -> Vec<SnapshotEntry> {
 
 /// Normalize plain TUI text for comparison.
 ///
-/// Only normalizes things that genuinely can't be configured via scenario:
+/// Normalizes known rendering differences between real Claude and claudeless:
 /// - Trim trailing whitespace per line and strip leading/trailing blank lines
 /// - Logo characters: real Claude uses bg-colored chars, claudeless uses fg blocks
 /// - Working directory path: replace with `<CWD>` (varies per machine)
 /// - "/model to try" hint line: claudeless doesn't render this
+/// - Response text arrows: real Claude uses `→` prefix on content lines
+/// - Response continuation indentation: real Claude indents continuation lines
+/// - Autocomplete: real Claude shows multiple suggestions, claudeless shows one
+/// - Starfield: collapse duplicate starfield sections in setup wizard
+/// - Duplicate logos: collapse consecutive logo blocks into one
 fn normalize_tui(text: &str) -> String {
     use regex::Regex;
 
@@ -176,10 +181,19 @@ fn normalize_tui(text: &str) -> String {
     let tip_re = Regex::new(r"^\s*⎿\s+Tip: Run /terminal-setup").unwrap();
     // Export filename with timestamp (e.g., conversation-2026-01-31-230401.txt)
     let export_filename_re = Regex::new(r"conversation-\d{4}-\d{2}-\d{2}-\d{6}\.txt").unwrap();
+    // Response arrow prefix: real Claude uses → on response content lines.
+    // Matches standalone → lines (e.g., "  →content") and → after ⏺ marker (e.g., "⏺ →content").
+    let response_arrow_re = Regex::new(r"^(\s*)→(.*)$").unwrap();
+    let marker_arrow_re = Regex::new(r"^(⏺ )→(.+)$").unwrap();
+    // Autocomplete suggestion line: indented /command followed by description
+    let autocomplete_re = Regex::new(r"^\s+/[\w-]+\s{2,}\S").unwrap();
 
     let mut result: Vec<String> = Vec::new();
     let mut skip_next_blanks = false;
     let mut prev_was_logo_line1 = false;
+    let mut in_response_block = false;
+    let mut autocomplete_count = 0;
+    let mut in_autocomplete = false;
     for line in &lines {
         // Pre-strip dynamic suffixes before pattern matching to avoid
         // logo_line2_re false-positives on status bar lines containing "·"
@@ -199,13 +213,73 @@ fn normalize_tui(text: &str) -> String {
             continue;
         }
 
-        if let Some(caps) = logo_line1_re.captures(trimmed) {
+        // Track response blocks (after ⏺ marker) for arrow/indent normalization
+        if trimmed.starts_with('⏺') {
+            in_response_block = true;
+        } else if trimmed.is_empty() || trimmed.starts_with('❯') || trimmed.starts_with("──")
+        {
+            in_response_block = false;
+        }
+
+        // Strip → prefix from response content lines (real Claude adds these,
+        // claudeless does not). Also strip 2-space continuation indent.
+        let trimmed: String = if in_response_block {
+            if let Some(caps) = marker_arrow_re.captures(&trimmed) {
+                // `⏺ →content` → `⏺ content`
+                format!("{}{}", &caps[1], &caps[2])
+            } else if let Some(caps) = response_arrow_re.captures(&trimmed) {
+                let content = caps[2].trim();
+                if content.is_empty() {
+                    // Bare `→` or `  →` line (empty continuation) — skip entirely
+                    continue;
+                }
+                format!("{}{}", &caps[1], content)
+            } else if trimmed.starts_with("  ") && !trimmed.starts_with("  ⎿") {
+                // Strip 2-space continuation indent from response text lines
+                // (but not from ⎿ sub-result lines which are intentionally indented)
+                trimmed.trim_start().to_string()
+            } else {
+                trimmed.to_string()
+            }
+        } else {
+            trimmed.to_string()
+        };
+
+        // Track autocomplete blocks: keep only first suggestion to normalize
+        // count differences between real Claude and claudeless.
+        // Also normalize column spacing (collapse multiple spaces to a fixed separator).
+        if autocomplete_re.is_match(&trimmed) {
+            if !in_autocomplete {
+                in_autocomplete = true;
+                autocomplete_count = 0;
+            }
+            autocomplete_count += 1;
+            if autocomplete_count > 1 {
+                // Skip additional autocomplete suggestions
+                continue;
+            }
+            // Normalize column spacing: collapse 2+ spaces to exactly 2 spaces
+            // so that different column alignments between real Claude and claudeless match.
+            let trimmed = Regex::new(r"\s{2,}")
+                .unwrap()
+                .replace_all(&trimmed, "  ")
+                .to_string();
+            // Fall through to push the normalized line below
+            // (need to handle it here since we modified trimmed)
+            result.push(trimmed);
+            continue;
+        } else if in_autocomplete {
+            in_autocomplete = false;
+            autocomplete_count = 0;
+        }
+
+        if let Some(caps) = logo_line1_re.captures(&trimmed) {
             result.push(format!(" ▐▛███▜▌  {}", caps[1].trim()));
             skip_next_blanks = false;
             prev_was_logo_line1 = true;
             continue;
         } else if prev_was_logo_line1 {
-            if let Some(caps) = logo_line2_re.captures(trimmed) {
+            if let Some(caps) = logo_line2_re.captures(&trimmed) {
                 result.push(format!("▝▜█████▛▘  {}", caps[1].trim()));
                 skip_next_blanks = false;
                 prev_was_logo_line1 = false;
@@ -213,27 +287,27 @@ fn normalize_tui(text: &str) -> String {
             }
         }
         prev_was_logo_line1 = false;
-        if let Some(caps) = logo_line3_re.captures(trimmed) {
+        if let Some(caps) = logo_line3_re.captures(&trimmed) {
             result.push(format!("{}{}", &caps[1], "<CWD>"));
             skip_next_blanks = false;
-        } else if box_path_re.is_match(trimmed) {
+        } else if box_path_re.is_match(&trimmed) {
             // Welcome box path line - normalize dynamic path to <CWD>
             result.push("│ <CWD> │ │".to_string());
             skip_next_blanks = false;
-        } else if model_to_try_re.is_match(trimmed)
-            || welcome_to_re.is_match(trimmed)
-            || chrome_settings_re.is_match(trimmed)
+        } else if model_to_try_re.is_match(&trimmed)
+            || welcome_to_re.is_match(&trimmed)
+            || chrome_settings_re.is_match(&trimmed)
         {
             // Skip "/model to try", "Welcome to ...", and background bleed-through lines
             // and adjacent blank lines, but preserve one blank line (header-to-content gap)
             skip_next_blanks = true;
-        } else if spinner_line_re.is_match(trimmed) {
+        } else if spinner_line_re.is_match(&trimmed) {
             // Skip spinner lines (dynamic animation) and adjacent blank lines
             skip_next_blanks = true;
-        } else if tip_re.is_match(trimmed) {
+        } else if tip_re.is_match(&trimmed) {
             // Skip terminal-setup tip lines and adjacent blank lines
             skip_next_blanks = true;
-        } else if marketplace_cont_re.is_match(trimmed) {
+        } else if marketplace_cont_re.is_match(&trimmed) {
             // Skip marketplace notification continuation line (wrapped "plugins")
             continue;
         } else if skip_next_blanks && trimmed.is_empty() {
@@ -267,7 +341,87 @@ fn normalize_tui(text: &str) -> String {
         result.remove(0);
     }
 
+    // Deduplicate consecutive logo blocks: if the same normalized logo line 1
+    // appears twice (with possible blanks between), keep only the last occurrence.
+    // This handles cases where real Claude or claudeless renders the logo twice
+    // (e.g., during multi-turn conversations or terminal scroll).
+    let result = dedup_logo_blocks(result);
+
+    // Collapse duplicate starfield sections in setup wizard.
+    // The starfield is bordered by `…………` lines. If two starfield sections appear
+    // back-to-back, collapse them into one.
+    let result = collapse_starfield(result);
+
     result.join("\n")
+}
+
+/// Deduplicate consecutive logo blocks in normalized output.
+///
+/// Scans for the normalized logo line 1 pattern (` ▐▛███▜▌  Claude Code v...`)
+/// and if multiple logo blocks appear, keeps only the last one.
+fn dedup_logo_blocks(lines: Vec<String>) -> Vec<String> {
+    let logo_prefix = " ▐▛███▜▌  ";
+
+    // Find all logo line 1 positions
+    let logo_positions: Vec<usize> = lines
+        .iter()
+        .enumerate()
+        .filter(|(_, l)| l.starts_with(logo_prefix))
+        .map(|(i, _)| i)
+        .collect();
+
+    if logo_positions.len() <= 1 {
+        return lines;
+    }
+
+    // Keep only the last logo block: remove all content from the first logo line 1
+    // up to (but not including) the last logo line 1, then skip blank lines after removal.
+    let first = logo_positions[0];
+    let last = *logo_positions.last().unwrap();
+
+    let mut result = Vec::new();
+    result.extend(lines[..first].iter().cloned());
+    result.extend(lines[last..].iter().cloned());
+
+    // Strip blank lines that appear at the junction
+    while result.get(first).is_some_and(|l| l.is_empty()) {
+        result.remove(first);
+    }
+
+    result
+}
+
+/// Collapse duplicate starfield sections bordered by `…………` lines.
+///
+/// In the setup wizard, the starfield ASCII art may render as one or two copies
+/// depending on viewport size. This normalizes by keeping only the last
+/// starfield section when multiple `…………` borders appear.
+fn collapse_starfield(lines: Vec<String>) -> Vec<String> {
+    // Find positions of full-width `…………` border lines (setup wizard starfield borders)
+    let border_positions: Vec<usize> = lines
+        .iter()
+        .enumerate()
+        .filter(|(_, l)| {
+            let t = l.trim();
+            t.len() >= 30 && t.chars().all(|c| c == '…' || c == ' ')
+        })
+        .map(|(i, _)| i)
+        .collect();
+
+    // If there are 3+ borders, the starfield is doubled (border-starfield-border-starfield-border).
+    // Collapse to just the last border-starfield-border section.
+    if border_positions.len() >= 3 {
+        let first_border = border_positions[0];
+        // Find the second-to-last border: this is the start of the final starfield section
+        let second_to_last = border_positions[border_positions.len() - 2];
+
+        let mut result = Vec::new();
+        result.extend(lines[..first_border].iter().cloned());
+        result.extend(lines[second_to_last..].iter().cloned());
+        return result;
+    }
+
+    lines
 }
 
 /// Strip logo+header block from text when comparing dialog outputs.

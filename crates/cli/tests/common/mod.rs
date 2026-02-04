@@ -287,15 +287,17 @@ impl TuiTestSession {
         let workdir = tempfile::tempdir().expect("Failed to create temp workdir");
 
         // cd into the temp workdir so file operations (e.g. /export) don't
-        // pollute the source tree.
+        // pollute the source tree. Use a combined command to avoid shell prompt
+        // timing issues (complex prompts like starship take time to re-render
+        // after cd, and the next send_line can be interleaved with that rendering).
         let session_ref = session.as_str();
         tmux::require_tmux();
         tmux::kill_session(session_ref);
         tmux::new_session(session_ref, width, height);
-        tmux::send_line(session_ref, &format!("cd {}", workdir.path().display()));
 
         let cmd = format!(
-            "{} --scenario {}",
+            "cd {} && {} --scenario {}",
+            workdir.path().display(),
             claudeless_bin(),
             scenario.path().display()
         );

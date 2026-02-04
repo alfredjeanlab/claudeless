@@ -256,12 +256,7 @@ fn test_state_writer_record_error() {
 
     // Record an error
     writer
-        .record_error(
-            "Rate limited. Retry after 60 seconds.",
-            Some("rate_limit_error"),
-            Some(60),
-            50,
-        )
+        .record_error("Rate limited. Retry after 60 seconds.", "rate_limit", None)
         .unwrap();
 
     // Verify JSONL file exists and contains error
@@ -271,17 +266,18 @@ fn test_state_writer_record_error() {
     let content = std::fs::read_to_string(&jsonl_path).unwrap();
     let line: serde_json::Value = serde_json::from_str(content.trim()).unwrap();
 
-    assert_eq!(line["type"], "result");
-    assert_eq!(line["subtype"], "error");
-    assert_eq!(line["isError"], true);
+    assert_eq!(line["type"], "assistant");
+    assert_eq!(line["isApiErrorMessage"], true);
+    assert_eq!(line["error"], "rate_limit");
     assert_eq!(line["sessionId"], "error-test-session");
-    assert_eq!(line["errorType"], "rate_limit_error");
-    assert_eq!(line["retryAfter"], 60);
-    assert_eq!(line["durationMs"], 50);
+    assert_eq!(line["message"]["model"], "<synthetic>");
+    assert_eq!(line["message"]["stop_reason"], "stop_sequence");
+    assert_eq!(line["message"]["usage"]["input_tokens"], 0);
+    assert_eq!(line["message"]["content"][0]["type"], "text");
 }
 
 #[test]
-fn test_state_writer_record_error_without_optional_fields() {
+fn test_state_writer_record_error_unknown_class() {
     let writer = StateWriter::new(
         "network-error-session",
         "/tmp/network-error-test",
@@ -291,14 +287,9 @@ fn test_state_writer_record_error_without_optional_fields() {
     )
     .unwrap();
 
-    // Record a network error without retry_after
+    // Record a network error with "unknown" class
     writer
-        .record_error(
-            "Network error: Connection refused",
-            Some("network_error"),
-            None,
-            5000,
-        )
+        .record_error("Network error: Connection refused", "unknown", None)
         .unwrap();
 
     // Verify JSONL file content
@@ -306,9 +297,9 @@ fn test_state_writer_record_error_without_optional_fields() {
     let content = std::fs::read_to_string(&jsonl_path).unwrap();
     let line: serde_json::Value = serde_json::from_str(content.trim()).unwrap();
 
-    assert_eq!(line["type"], "result");
-    assert_eq!(line["errorType"], "network_error");
-    assert_eq!(line["durationMs"], 5000);
-    // retryAfter should not be present
-    assert!(line.get("retryAfter").is_none());
+    assert_eq!(line["type"], "assistant");
+    assert_eq!(line["isApiErrorMessage"], true);
+    assert_eq!(line["error"], "unknown");
+    assert_eq!(line["message"]["model"], "<synthetic>");
+    assert_eq!(line["message"]["content"][0]["type"], "text");
 }

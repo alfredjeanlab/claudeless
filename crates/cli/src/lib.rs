@@ -30,6 +30,8 @@ pub mod api;
 pub mod cli;
 #[doc(hidden)]
 pub mod config;
+#[doc(hidden)]
+pub mod env;
 /// Event type string constants for JSONL and stream-json output formats.
 pub mod event_types;
 #[doc(hidden)]

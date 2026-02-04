@@ -39,7 +39,7 @@ pub use edit::EditExecutor;
 pub use glob::GlobExecutor;
 pub use grep::GrepExecutor;
 pub use read::ReadExecutor;
-pub use stateful::{execute_exit_plan_mode, execute_todo_write};
+pub use stateful::{execute_ask_user_question, execute_exit_plan_mode, execute_todo_write};
 pub use write::WriteExecutor;
 
 /// Registry of built-in tool executors.
@@ -92,6 +92,13 @@ impl ToolExecutor for BuiltinExecutor {
         tool_use_id: &str,
         ctx: &ExecutionContext,
     ) -> ToolExecutionResult {
+        // Handle AskUserQuestion (no state writer needed)
+        if ToolName::parse(&call.tool) == Some(ToolName::AskUserQuestion) {
+            let mut result = execute_ask_user_question(call);
+            result.tool_use_id = tool_use_id.to_string();
+            return result;
+        }
+
         // Handle stateful tools FIRST (before mock fallback) - these always write to state dir
         if let Some(ref writer) = self.state_writer {
             if let Some(tool_name) = ToolName::parse(&call.tool) {
@@ -128,7 +135,7 @@ impl ToolExecutor for BuiltinExecutor {
             // Return mock result for unknown stateful tools
             let is_stateful = matches!(
                 ToolName::parse(&call.tool),
-                Some(ToolName::TodoWrite | ToolName::ExitPlanMode)
+                Some(ToolName::TodoWrite | ToolName::ExitPlanMode | ToolName::AskUserQuestion)
             );
             if is_stateful {
                 // No state writer, return success with note

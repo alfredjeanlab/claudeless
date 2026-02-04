@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Features
+
+- **AskUserQuestion Tool**: Simulates the AskUserQuestion tool with pre-configured answers or auto-selection of the first option per question
+- **Elicitation Widget**: TUI rendering for question dialogs with option selection
+
+### Refactored
+
+- **Capture Extraction**: Extracted conversation turn/tool-call parsing from `generate.ts` into `tests/capture/lib/extraction.ts`
+
 ## [0.2.0] - 2026-02-01
 
 ### Features

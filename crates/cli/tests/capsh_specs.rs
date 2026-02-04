@@ -9,117 +9,232 @@ mod specs;
 
 #[test]
 fn capsh_after_response() {
-    specs::run_capsh_spec("v2.1.29", "after-response", &["after_response"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "after-response",
+        &["after_response"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_bash_permission_dialog() {
-    specs::run_capsh_spec("v2.1.29", "bash-permission-dialog", &["bash_permission_dialog"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "bash-permission-dialog",
+        &["bash_permission_dialog"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_clear_command() {
-    specs::run_capsh_spec("v2.1.29", "clear-command", &["clear_before", "clear_after"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "clear-command",
+        &["clear_before", "clear_after"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_compact_command() {
-    specs::run_capsh_spec("v2.1.29", "compact-command", &["compact_before", "compact_during", "compact_after"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "compact-command",
+        &["compact_before", "compact_during", "compact_after"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_context_autocomplete() {
-    specs::run_capsh_spec("v2.1.29", "context-autocomplete", &["context_autocomplete"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "context-autocomplete",
+        &["context_autocomplete"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_context_usage() {
-    specs::run_capsh_spec("v2.1.29", "context-usage", &["context_usage"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "context-usage",
+        &["context_usage"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_ctrl_s_stash_active() {
-    specs::run_capsh_spec("v2.1.29", "ctrl-s-stash-active", &["ctrl_s_stash_active"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "ctrl-s-stash-active",
+        &["ctrl_s_stash_active"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_edit_permission_dialog() {
-    specs::run_capsh_spec("v2.1.29", "edit-permission-dialog", &["edit_permission_dialog"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "edit-permission-dialog",
+        &["edit_permission_dialog"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_escape_clear_hint() {
-    specs::run_capsh_spec("v2.1.29", "escape-clear-hint", &["escape_clear_hint"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "escape-clear-hint",
+        &["escape_clear_hint"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_exit_autocomplete() {
-    specs::run_capsh_spec("v2.1.29", "exit-autocomplete", &["exit_autocomplete"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "exit-autocomplete",
+        &["exit_autocomplete"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_export_autocomplete() {
-    specs::run_capsh_spec("v2.1.29", "export-autocomplete", &["export_autocomplete"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "export-autocomplete",
+        &["export_autocomplete"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_export_filename_dialog() {
-    specs::run_capsh_spec("v2.1.29", "export-filename-dialog", &["export_filename_dialog"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "export-filename-dialog",
+        &["export_filename_dialog"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_export_method_dialog() {
-    specs::run_capsh_spec("v2.1.29", "export-method-dialog", &["export_method_dialog"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "export-method-dialog",
+        &["export_method_dialog"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_fork_no_conversation() {
-    specs::run_capsh_spec("v2.1.29", "fork-no-conversation", &["fork_no_conversation"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "fork-no-conversation",
+        &["fork_no_conversation"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_help_autocomplete() {
-    specs::run_capsh_spec("v2.1.29", "help-autocomplete", &["help_autocomplete"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "help-autocomplete",
+        &["help_autocomplete"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_help_commands_tab() {
-    specs::run_capsh_spec("v2.1.29", "help-commands-tab", &["help_commands_tab"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "help-commands-tab",
+        &["help_commands_tab"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_help_dialog() {
-    specs::run_capsh_spec("v2.1.29", "help-dialog", &["help_response"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "help-dialog",
+        &["help_response"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_hook_session_start() {
-    specs::run_capsh_spec("v2.1.29", "hook-session-start", &["hook_session_start"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "hook-session-start",
+        &["hook_session_start"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_hook_settings_merge() {
-    specs::run_capsh_spec("v2.1.29", "hook-settings-merge", &["hook_settings_merge"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "hook-settings-merge",
+        &["hook_settings_merge"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_hook_stop() {
-    specs::run_capsh_spec("v2.1.29", "hook-stop", &["hook_stop_after_response"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "hook-stop",
+        &["hook_stop_after_response"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_hooks_autocomplete() {
-    specs::run_capsh_spec("v2.1.29", "hooks-autocomplete", &["hooks_autocomplete"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "hooks-autocomplete",
+        &["hooks_autocomplete"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_hooks_dialog() {
-    specs::run_capsh_spec("v2.1.29", "hooks-dialog", &["hooks_dialog"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "hooks-dialog",
+        &["hooks_dialog"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_hooks_matcher_dialog() {
-    specs::run_capsh_spec("v2.1.29", "hooks-matcher-dialog", &["hooks_matcher_dialog"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "hooks-matcher-dialog",
+        &["hooks_matcher_dialog"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
@@ -129,150 +244,303 @@ fn capsh_initial_state() {
 
 #[test]
 fn capsh_model_haiku() {
-    specs::run_capsh_spec("v2.1.29", "model-haiku", &["model_haiku"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "model-haiku",
+        &["model_haiku"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_model_opus() {
-    specs::run_capsh_spec("v2.1.29", "model-opus", &["model_opus"], &["--model", "opus"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "model-opus",
+        &["model_opus"],
+        &["--model", "opus"],
+    );
 }
 
 #[test]
 fn capsh_model_picker() {
-    specs::run_capsh_spec("v2.1.29", "model-picker", &["model_picker"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "model-picker",
+        &["model_picker"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_model_sonnet() {
-    specs::run_capsh_spec("v2.1.29", "model-sonnet", &["model_sonnet"], &["--model", "sonnet"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "model-sonnet",
+        &["model_sonnet"],
+        &["--model", "sonnet"],
+    );
 }
 
 #[test]
 fn capsh_permission_accept_edits() {
-    specs::run_capsh_spec("v2.1.29", "permission-accept-edits", &["permission_accept_edits"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "permission-accept-edits",
+        &["permission_accept_edits"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_permission_bypass_mode() {
-    specs::run_capsh_spec("v2.1.29", "permission-bypass-mode", &["permission_bypass_mode"], &["--model", "haiku", "--dangerously-skip-permissions"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "permission-bypass-mode",
+        &["permission_bypass_mode"],
+        &["--model", "haiku", "--dangerously-skip-permissions"],
+    );
 }
 
 #[test]
 fn capsh_permission_default() {
-    specs::run_capsh_spec("v2.1.29", "permission-default", &["permission_default"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "permission-default",
+        &["permission_default"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_permission_plan() {
-    specs::run_capsh_spec("v2.1.29", "permission-plan", &["permission_plan"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "permission-plan",
+        &["permission_plan"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_plan_autocomplete() {
-    specs::run_capsh_spec("v2.1.29", "plan-autocomplete", &["plan_autocomplete"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "plan-autocomplete",
+        &["plan_autocomplete"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_plan_command_already_active() {
-    specs::run_capsh_spec("v2.1.29", "plan-command-already-active", &["plan_command_already_active"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "plan-command-already-active",
+        &["plan_command_already_active"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_plan_command_enable() {
-    specs::run_capsh_spec("v2.1.29", "plan-command-enable", &["plan_command_enable"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "plan-command-enable",
+        &["plan_command_enable"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_setup_01_select_theme_dark() {
-    specs::run_capsh_spec("v2.1.29", "setup-01-select-theme-dark", &["setup_01_select_theme_dark"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "setup-01-select-theme-dark",
+        &["setup_01_select_theme_dark"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_setup_01_select_theme_light() {
-    specs::run_capsh_spec("v2.1.29", "setup-01-select-theme-light", &["setup_01_select_theme_light"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "setup-01-select-theme-light",
+        &["setup_01_select_theme_light"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_setup_01a_syntax_highlighting_disabled() {
-    specs::run_capsh_spec("v2.1.29", "setup-01a-syntax-highlighting-disabled", &["setup_01a_syntax_highlighting_disabled"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "setup-01a-syntax-highlighting-disabled",
+        &["setup_01a_syntax_highlighting_disabled"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_setup_02_login_method() {
-    specs::run_capsh_spec("v2.1.29", "setup-02-login-method", &["setup_02_login_method"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "setup-02-login-method",
+        &["setup_02_login_method"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_shell_mode() {
-    specs::run_capsh_spec("v2.1.29", "shell-mode", &["shell_mode_prefix", "shell_mode_command"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "shell-mode",
+        &["shell_mode_prefix", "shell_mode_command"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_shortcuts_display() {
-    specs::run_capsh_spec("v2.1.29", "shortcuts-display", &["shortcuts_display"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "shortcuts-display",
+        &["shortcuts_display"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_slash_menu() {
-    specs::run_capsh_spec("v2.1.29", "slash-menu", &["slash_menu", "slash_menu_filtered"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "slash-menu",
+        &["slash_menu", "slash_menu_filtered"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_slash_search_tab_complete() {
-    specs::run_capsh_spec("v2.1.29", "slash-search-tab-complete", &["slash_search_tab_complete"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "slash-search-tab-complete",
+        &["slash_search_tab_complete"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_status_bar_extended() {
-    specs::run_capsh_spec("v2.1.29", "status-bar-extended", &["status_bar_extended"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "status-bar-extended",
+        &["status_bar_extended"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_tasks_empty_dialog() {
-    specs::run_capsh_spec("v2.1.29", "tasks-empty-dialog", &["tasks_empty_dialog"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "tasks-empty-dialog",
+        &["tasks_empty_dialog"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_thinking_dialog_mid_conversation() {
-    specs::run_capsh_spec("v2.1.29", "thinking-dialog-mid-conversation", &["thinking_dialog_mid_conversation"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "thinking-dialog-mid-conversation",
+        &["thinking_dialog_mid_conversation"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_thinking_dialog_selected() {
-    specs::run_capsh_spec("v2.1.29", "thinking-dialog-selected", &["thinking_dialog_disabled_selected", "thinking_dialog_enabled_selected"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "thinking-dialog-selected",
+        &[
+            "thinking_dialog_disabled_selected",
+            "thinking_dialog_enabled_selected",
+        ],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_thinking_dialog() {
-    specs::run_capsh_spec("v2.1.29", "thinking-dialog", &["thinking_dialog"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "thinking-dialog",
+        &["thinking_dialog"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_thinking_off_status() {
-    specs::run_capsh_spec("v2.1.29", "thinking-off-status", &["thinking_off_status"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "thinking-off-status",
+        &["thinking_off_status"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_todos_empty() {
-    specs::run_capsh_spec("v2.1.29", "todos-empty", &["todos_empty"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "todos-empty",
+        &["todos_empty"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_trust_folder_dialog() {
-    specs::run_capsh_spec("v2.1.29", "trust-folder-dialog", &["trust_folder_dialog"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "trust-folder-dialog",
+        &["trust_folder_dialog"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_welcome_back() {
-    specs::run_capsh_spec("v2.1.29", "welcome-back", &["welcome_back"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "welcome-back",
+        &["welcome_back"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_with_input() {
-    specs::run_capsh_spec("v2.1.29", "with-input", &["with_input"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "with-input",
+        &["with_input"],
+        &["--model", "haiku"],
+    );
 }
 
 #[test]
 fn capsh_write_permission_dialog() {
-    specs::run_capsh_spec("v2.1.29", "write-permission-dialog", &["write_permission_dialog"], &["--model", "haiku"]);
+    specs::run_capsh_spec(
+        "v2.1.29",
+        "write-permission-dialog",
+        &["write_permission_dialog"],
+        &["--model", "haiku"],
+    );
 }

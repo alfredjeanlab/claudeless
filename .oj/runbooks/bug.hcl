@@ -10,33 +10,36 @@ command "fix" {
   args = "<description>"
   run  = <<-SHELL
     wok new bug "${args.description}"
-    oj worker start fix
+    oj worker start bug
   SHELL
 }
 
 queue "bugs" {
   type = "external"
-  list = "wok list -t bug -s todo --unassigned -o json"
+  list = "wok list -t bug -s todo --unassigned -p less -o json"
   take = "wok start ${item.id}"
 }
 
-worker "fix" {
+worker "bug" {
   source      = { queue = "bugs" }
-  handler     = { pipeline = "fix" }
+  handler     = { pipeline = "bug" }
   concurrency = 3
 }
 
-pipeline "fix" {
+pipeline "bug" {
   name      = "${var.bug.title}"
   vars      = ["bug"]
-  workspace = "ephemeral"
-  on_cancel = { step = "cancel" }
   on_fail   = { step = "reopen" }
+  on_cancel = { step = "cancel" }
+
+  workspace {
+    git    = "worktree"
+    branch = "fix/${var.bug.id}-${workspace.nonce}"
+  }
 
   locals {
-    repo   = "$(git -C ${invoke.dir} rev-parse --show-toplevel)"
-    branch = "fix/${var.bug.id}-${workspace.nonce}"
-    title  = "fix: ${var.bug.title}"
+    base   = "main"
+    title  = "$(printf 'fix: %.75s' \"${var.bug.title}\")"
   }
 
   notify {
@@ -45,55 +48,42 @@ pipeline "fix" {
     on_fail  = "Fix failed: ${var.bug.title}"
   }
 
-  step "init" {
-    run = "git -C \"${local.repo}\" worktree add -b \"${local.branch}\" \"${workspace.root}\" HEAD"
-    on_done = { step = "fix" }
-  }
-
   step "fix" {
     run     = { agent = "bugs" }
     on_done = { step = "submit" }
   }
 
+  # TODO: hook into merge pipeline to mark issue done instead
   step "submit" {
     run = <<-SHELL
       git add -A
       git diff --cached --quiet || git commit -m "${local.title}"
-      git -C "${local.repo}" push origin "${local.branch}"
-      oj queue push merges --var branch="${local.branch}" --var title="${local.title}"
+      test "$(git rev-list --count HEAD ^origin/${local.base})" -gt 0 || { echo "No changes to submit" >&2; exit 1; }
+      git push origin "${workspace.branch}"
+      cd ${invoke.dir} && wok done ${var.bug.id}
+      oj queue push merges --var branch="${workspace.branch}" --var title="${local.title}"
     SHELL
-    on_done = { step = "done" }
-  }
-
-  step "done" {
-    run     = "cd ${invoke.dir} && wok done ${var.bug.id}"
-    on_done = { step = "cleanup" }
-  }
-
-  step "cancel" {
-    run     = "cd ${invoke.dir} && wok close ${var.bug.id} --reason 'Fix pipeline cancelled'"
-    on_done = { step = "cleanup" }
   }
 
   step "reopen" {
-    run     = "cd ${invoke.dir} && wok reopen ${var.bug.id} --reason 'Fix pipeline failed'"
-    on_done = { step = "cleanup" }
+    run = "cd ${invoke.dir} && wok reopen ${var.bug.id} --reason 'Fix pipeline failed'"
   }
 
-  step "cleanup" {
-    run = "git -C \"${local.repo}\" worktree remove --force \"${workspace.root}\" 2>/dev/null || true"
+  step "cancel" {
+    run = "cd ${invoke.dir} && wok close ${var.bug.id} --reason 'Fix pipeline cancelled'"
   }
 }
 
 agent "bugs" {
-  run      = "claude --model opus --dangerously-skip-permissions --disallowed-tools ExitPlanMode,AskUserQuestion,EnterPlanMode"
-  on_idle  = { action = "nudge", message = "Keep working. Fix the bug, write tests, run make check-fast, and commit." }
-  on_dead  = { action = "gate", run = "make check-fast" }
+  # NOTE: Since bugs should quick and small, prevent unnecessary EnterPlanMode and ExitPlanMode
+  run      = "claude --model opus --dangerously-skip-permissions --disallowed-tools ExitPlanMode,EnterPlanMode"
+  on_idle  = { action = "nudge", message = "Keep working. Fix the bug, write tests, run make check, and commit." }
+  on_dead  = { action = "gate", run = "make check" }
+
+  prime = ["cd ${invoke.dir} && wok show ${var.bug.id}"]
 
   prompt = <<-PROMPT
-    Fix the following bug:
-
-    ${var.bug.title}
+    Fix the following bug: ${var.bug.id} - ${var.bug.title}
 
     ## Steps
 
@@ -101,7 +91,7 @@ agent "bugs" {
     2. Find the relevant code
     3. Implement a fix
     4. Write or update tests
-    5. Run `make check-fast` to verify
+    5. Run `make check` to verify
     6. Commit your changes
   PROMPT
 }

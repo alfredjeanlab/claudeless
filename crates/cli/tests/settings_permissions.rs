@@ -252,6 +252,7 @@ mod permission_checker_integration {
                 auto_approve: true,
                 result: None,
                 error: None,
+                answers: None,
             },
         );
 
@@ -283,6 +284,7 @@ mod permission_checker_integration {
                 auto_approve: false,
                 result: None,
                 error: Some("Simulated failure".to_string()),
+                answers: None,
             },
         );
 
@@ -325,6 +327,7 @@ mod priority_order {
                 auto_approve: false,
                 result: None,
                 error: Some("Error".to_string()),
+                answers: None,
             },
         );
 

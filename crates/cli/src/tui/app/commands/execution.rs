@@ -12,6 +12,7 @@ use crate::config::ToolCallSpec;
 use crate::runtime::TurnResult;
 use crate::tui::spinner;
 use crate::tui::streaming::{StreamingConfig, StreamingResponse};
+use crate::tui::widgets::elicitation::{ElicitationResult, ElicitationState};
 use crate::tui::widgets::permission::{DiffKind, DiffLine, PermissionType};
 
 use super::super::state::TuiAppState;
@@ -93,6 +94,56 @@ impl TuiAppState {
         if let Some(perm) = permission {
             self.show_permission_request(perm);
         }
+    }
+
+    /// Confirm the elicitation dialog and re-execute with answers.
+    pub(in crate::tui::app) fn confirm_elicitation(&self) {
+        let elicitation = {
+            let mut inner = self.inner.lock();
+            if let super::super::state::DialogState::Elicitation(state) =
+                std::mem::take(&mut inner.dialog)
+            {
+                inner.mode = super::super::types::AppMode::Thinking;
+                Some(state)
+            } else {
+                None
+            }
+        };
+
+        if let Some(state) = elicitation {
+            let answers = match state.collect_answers() {
+                ElicitationResult::Answered(answers) => answers,
+                ElicitationResult::Cancelled => {
+                    let mut inner = self.inner.lock();
+                    inner.display.response_content = "Elicitation cancelled".to_string();
+                    restore_input_state(&mut inner);
+                    return;
+                }
+            };
+
+            // Build a modified tool call with answers injected
+            let mut input = state.tool_input.clone();
+            input["answers"] = serde_json::json!(answers);
+
+            // Re-execute via runtime with the answers
+            let prompt = serde_json::to_string(&serde_json::json!({
+                "questions": input.get("questions"),
+                "answers": answers,
+            }))
+            .unwrap_or_default();
+            let permission = self.execute_with_runtime(prompt);
+            if let Some(perm) = permission {
+                self.show_permission_request(perm);
+            }
+        }
+    }
+
+    /// Cancel the elicitation dialog.
+    pub(in crate::tui::app) fn cancel_elicitation(&self) {
+        let mut inner = self.inner.lock();
+        inner.dialog.dismiss();
+        inner.display.response_content = "Elicitation cancelled by user".to_string();
+        restore_input_state(&mut inner);
     }
 
     /// Execute a prompt using the shared Runtime.
@@ -183,6 +234,34 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> Optio
 
     // Check for pending permission before displaying response
     if let Some(ref pending) = result.pending_permission {
+        // AskUserQuestion uses elicitation dialog instead of permission dialog
+        if pending.tool_call.tool == "AskUserQuestion" {
+            let state = ElicitationState::from_tool_input(
+                &pending.tool_call.input,
+                pending.tool_use_id.clone(),
+            );
+            inner.dialog = super::super::state::DialogState::Elicitation(state);
+            inner.mode = super::super::types::AppMode::Elicitation;
+
+            // Build display for completed tool calls before the elicitation
+            let mut parts = Vec::new();
+            for (i, call) in tool_calls.iter().take(completed_count).enumerate() {
+                let result_text = result.tool_results.get(i).and_then(|r| r.text());
+                parts.push(format_completed_tool_display(call, result_text));
+            }
+            let response_text = result.response_text();
+            if !response_text.is_empty() {
+                parts.push(wrap_response_paragraph(
+                    response_text,
+                    inner.display.terminal_width as usize,
+                ));
+            }
+            if !parts.is_empty() {
+                setup_response_display(inner, join_display_parts(&parts));
+            }
+            return None;
+        }
+
         if let Some(perm_type) = tool_call_to_permission_type(&pending.tool_call) {
             // Build display: completed tool calls + pending tool call context
             let mut parts = Vec::new();

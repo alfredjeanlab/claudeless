@@ -227,6 +227,8 @@ pub enum AppMode {
     HooksDialog,
     /// Showing memory management dialog
     MemoryDialog,
+    /// Showing elicitation dialog (AskUserQuestion)
+    Elicitation,
 }
 
 /// Status bar information

@@ -188,6 +188,7 @@ fn test_scenario_override_auto_approve() {
             auto_approve: true,
             result: None,
             error: None,
+            answers: None,
         },
     );
 
@@ -213,6 +214,7 @@ fn test_scenario_override_error() {
             auto_approve: false,
             result: None,
             error: Some("Simulated error".to_string()),
+            answers: None,
         },
     );
 
@@ -245,6 +247,7 @@ fn test_scenario_overrides_beat_settings() {
             auto_approve: true,
             result: None,
             error: None,
+            answers: None,
         },
     );
 
@@ -282,6 +285,7 @@ fn test_bypass_beats_everything() {
             auto_approve: false,
             result: None,
             error: Some("Error".to_string()),
+            answers: None,
         },
     );
 

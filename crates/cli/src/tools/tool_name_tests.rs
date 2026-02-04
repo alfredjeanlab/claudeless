@@ -17,6 +17,7 @@ fn as_str_returns_correct_string() {
     assert_eq!(ToolName::WebSearch.as_str(), "WebSearch");
     assert_eq!(ToolName::NotebookEdit.as_str(), "NotebookEdit");
     assert_eq!(ToolName::Task.as_str(), "Task");
+    assert_eq!(ToolName::AskUserQuestion.as_str(), "AskUserQuestion");
 }
 
 #[test]
@@ -39,6 +40,10 @@ fn parse_parses_valid_names() {
         Some(ToolName::NotebookEdit)
     );
     assert_eq!(ToolName::parse("Task"), Some(ToolName::Task));
+    assert_eq!(
+        ToolName::parse("AskUserQuestion"),
+        Some(ToolName::AskUserQuestion)
+    );
 }
 
 #[test]
@@ -62,6 +67,7 @@ fn action_returns_correct_permission_type() {
     assert_eq!(ToolName::Task.action(), "delegate");
     assert_eq!(ToolName::TodoWrite.action(), "state");
     assert_eq!(ToolName::ExitPlanMode.action(), "state");
+    assert_eq!(ToolName::AskUserQuestion.action(), "state");
 }
 
 #[test]
@@ -85,6 +91,7 @@ fn roundtrip_all_variants() {
         ToolName::WebSearch,
         ToolName::NotebookEdit,
         ToolName::Task,
+        ToolName::AskUserQuestion,
     ];
     for variant in variants {
         let s = variant.as_str();

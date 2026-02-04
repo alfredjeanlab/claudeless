@@ -118,3 +118,124 @@ fn test_execute_exit_plan_mode_no_content() {
     // Should use default content
     assert!(result.text().unwrap().contains("Plan saved as"));
 }
+
+#[test]
+fn test_ask_user_question_with_provided_answers() {
+    let call = ToolCallSpec {
+        tool: "AskUserQuestion".to_string(),
+        input: json!({
+            "questions": [
+                {
+                    "question": "What language?",
+                    "header": "Language",
+                    "options": [
+                        { "label": "Rust", "description": "Systems programming" },
+                        { "label": "Python", "description": "Scripting" }
+                    ],
+                    "multiSelect": false
+                }
+            ],
+            "answers": {
+                "What language?": "Python"
+            }
+        }),
+        result: None,
+    };
+
+    let result = execute_ask_user_question(&call);
+    assert!(!result.is_error);
+
+    let result_json: serde_json::Value = serde_json::from_str(result.text().unwrap()).unwrap();
+    assert_eq!(result_json["answers"]["What language?"], "Python");
+}
+
+#[test]
+fn test_ask_user_question_auto_select_first() {
+    let call = ToolCallSpec {
+        tool: "AskUserQuestion".to_string(),
+        input: json!({
+            "questions": [
+                {
+                    "question": "How should I format the output?",
+                    "header": "Format",
+                    "options": [
+                        { "label": "Summary", "description": "Brief overview" },
+                        { "label": "Detailed", "description": "Full explanation" }
+                    ],
+                    "multiSelect": false
+                }
+            ]
+        }),
+        result: None,
+    };
+
+    let result = execute_ask_user_question(&call);
+    assert!(!result.is_error);
+
+    let result_json: serde_json::Value = serde_json::from_str(result.text().unwrap()).unwrap();
+    assert_eq!(
+        result_json["answers"]["How should I format the output?"],
+        "Summary"
+    );
+}
+
+#[test]
+fn test_ask_user_question_multi_select_auto() {
+    let call = ToolCallSpec {
+        tool: "AskUserQuestion".to_string(),
+        input: json!({
+            "questions": [
+                {
+                    "question": "Which sections?",
+                    "header": "Sections",
+                    "options": [
+                        { "label": "Introduction", "description": "Opening context" },
+                        { "label": "Conclusion", "description": "Final summary" }
+                    ],
+                    "multiSelect": true
+                }
+            ]
+        }),
+        result: None,
+    };
+
+    let result = execute_ask_user_question(&call);
+    assert!(!result.is_error);
+
+    // Auto-select picks the first option
+    let result_json: serde_json::Value = serde_json::from_str(result.text().unwrap()).unwrap();
+    assert_eq!(result_json["answers"]["Which sections?"], "Introduction");
+}
+
+#[test]
+fn test_ask_user_question_empty_questions() {
+    let call = ToolCallSpec {
+        tool: "AskUserQuestion".to_string(),
+        input: json!({
+            "questions": []
+        }),
+        result: None,
+    };
+
+    let result = execute_ask_user_question(&call);
+    assert!(!result.is_error);
+
+    let result_json: serde_json::Value = serde_json::from_str(result.text().unwrap()).unwrap();
+    assert_eq!(result_json["answers"], json!({}));
+}
+
+#[test]
+fn test_ask_user_question_malformed_input() {
+    let call = ToolCallSpec {
+        tool: "AskUserQuestion".to_string(),
+        input: json!({}),
+        result: None,
+    };
+
+    let result = execute_ask_user_question(&call);
+    assert!(!result.is_error);
+
+    let result_json: serde_json::Value = serde_json::from_str(result.text().unwrap()).unwrap();
+    assert_eq!(result_json["answers"], json!({}));
+    assert_eq!(result_json["questions"], json!([]));
+}

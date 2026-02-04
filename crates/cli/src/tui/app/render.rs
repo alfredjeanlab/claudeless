@@ -30,9 +30,10 @@ use crate::tui::colors::{
 use crate::tui::separator::make_separator;
 
 use super::dialogs::{
-    render_bypass_confirm_dialog, render_export_dialog, render_help_dialog, render_hooks_dialog,
-    render_memory_dialog, render_model_picker_dialog, render_permission_dialog,
-    render_setup_wizard, render_tasks_dialog, render_thinking_dialog, render_trust_prompt,
+    render_bypass_confirm_dialog, render_elicitation_dialog, render_export_dialog,
+    render_help_dialog, render_hooks_dialog, render_memory_dialog, render_model_picker_dialog,
+    render_permission_dialog, render_setup_wizard, render_tasks_dialog, render_thinking_dialog,
+    render_trust_prompt,
 };
 use super::types::{AppMode, RenderState};
 
@@ -76,6 +77,10 @@ fn render_active_dialog(state: &RenderState, width: usize) -> Option<AnyElement<
             .dialog
             .as_model_picker()
             .map(|d| render_model_picker_dialog(d, width)),
+        AppMode::Elicitation => state
+            .dialog
+            .as_elicitation()
+            .map(|d| render_elicitation_dialog(d, width)),
         // Permission is rendered inline, not as a full-screen modal
         _ => None,
     }

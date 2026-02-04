@@ -1,30 +1,30 @@
 SHELL := /bin/bash
 
-.PHONY: check check-fast install license outdated capture capture-retry capture-skipped generate-specs
+.PHONY: check ci install license outdated capture capture-retry capture-skipped generate-specs
 
-# Fast validation for oj workspaces (skips audit, publish, deny)
-check-fast:
-	cargo fmt --all
-	cargo clippy --all -- -D warnings
-	quench check --fix
-	cargo test --all
-	cargo build --all
-
-# Run all CI checks
+# Quick checks
+#
+# Excluded:
+#   SKIP `cargo audit`
+#   SKIP `cargo deny`
+#   SKIP `cargo publish --dry-run`
+#
 check:
 	cargo fmt --all
 	cargo clippy --all -- -D warnings
 	quench check --fix
-	cargo test --all
 	cargo build --all
+	cargo test --all
+
+# Full pre-release checks
+ci:
+	cargo fmt --all
+	cargo clippy --all -- -D warnings
+	quench check --fix
+	cargo build --all
+	cargo test --all
 	cargo publish --dry-run --allow-dirty -p claudeless
-	@if [ -n "$$CI" ]; then \
-		mv .cargo/audit.toml .cargo/audit.toml.bak 2>/dev/null || true; \
-		cargo audit; \
-		mv .cargo/audit.toml.bak .cargo/audit.toml 2>/dev/null || true; \
-	else \
-		cargo audit; \
-	fi
+	cargo audit
 	cargo deny check licenses bans sources
 
 # Install to ~/.local/bin
