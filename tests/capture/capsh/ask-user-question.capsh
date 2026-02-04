@@ -1,0 +1,21 @@
+# Capture AskUserQuestion elicitation dialog.
+# Requires API call - Claude must use AskUserQuestion tool.
+# Args: --model haiku
+# Timeout: 60
+
+wait "for shortcuts" 10s
+
+# Ask Claude to use AskUserQuestion to present options
+send "Use the AskUserQuestion tool to ask me what programming language I prefer. Provide two options: Rust and Python." 100 <Enter>
+
+# Wait for the elicitation dialog to appear
+wait "language" 30s
+wait "Rust" 3s
+snapshot "ask_user_question_dialog"
+
+# Cancel and exit cleanly
+send <Esc>
+wait 500
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM
