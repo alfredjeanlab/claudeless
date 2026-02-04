@@ -144,6 +144,17 @@ error = "Permission denied"
 
 The AskUserQuestion tool presents questions with selectable options. In TUI mode, an interactive elicitation dialog is shown. In print mode, pre-configured answers are used or the first option is auto-selected.
 
+**TUI keyboard interaction** (matches real Claude Code):
+
+| Key | Behavior |
+|-----|----------|
+| `↑` / `↓` | Navigate options |
+| `1`–`9` | Select option by number and immediately submit |
+| `Space` | Toggle selection (multi-select) |
+| `Enter` | Submit highlighted option |
+| `Escape` | Cancel — returns `"User declined to answer questions"` |
+| Letters | Ignored (no free-text input in option list) |
+
 ```toml
 [tool_execution.tools.AskUserQuestion]
 auto_approve = true

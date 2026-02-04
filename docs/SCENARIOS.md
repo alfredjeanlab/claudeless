@@ -379,6 +379,23 @@ auto_approve = true
 "Which features?" = "Logging, Testing"  # comma-separated for multi-select
 ```
 
+### AskUserQuestion Tool Result
+
+The tool result contains human-readable summary text in `content` and structured JSON in `toolUseResult`:
+
+```json
+{
+  "type": "tool_result",
+  "content": "User has answered your questions: \"What language?\"=\"Rust\". You can now continue with the user's answers in mind.",
+  "toolUseResult": {
+    "questions": [...],
+    "answers": { "What language?": "Rust" }
+  }
+}
+```
+
+If the user cancels (Escape), the result text is `"User declined to answer questions"`.
+
 ---
 
 ## Validation Rules
