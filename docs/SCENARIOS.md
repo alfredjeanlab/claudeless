@@ -364,6 +364,20 @@ error = "Permission denied"
 | `auto_approve` | bool | Skip permission prompts |
 | `result` | string | Canned result (used in both modes) |
 | `error` | string | Simulate error response |
+| `answers` | object | Pre-configured answers for AskUserQuestion (keys: question text, values: selected label) |
+
+### AskUserQuestion Answers
+
+The `answers` field provides pre-configured responses for the AskUserQuestion tool. In TUI mode, the elicitation dialog is shown but pre-selects matching answers. In print mode, answers are injected automatically. If no answers are configured, the first option for each question is auto-selected.
+
+```toml
+[tool_execution.tools.AskUserQuestion]
+auto_approve = true
+
+[tool_execution.tools.AskUserQuestion.answers]
+"What language?" = "Rust"
+"Which features?" = "Logging, Testing"  # comma-separated for multi-select
+```
 
 ---
 
@@ -467,6 +481,40 @@ failure = { type = "rate_limit", retry_after = 60 }
 [[responses]]
 pattern = { type = "any" }
 response = "Normal response."
+```
+
+### AskUserQuestion
+
+```toml
+name = "ask-user-question"
+session_id = "550e8400-e29b-41d4-a716-446655440001"
+
+[[responses]]
+pattern = { type = "contains", text = "help me" }
+[responses.response]
+text = "Let me ask you a few questions first."
+[[responses.response.tool_calls]]
+tool = "AskUserQuestion"
+[responses.response.tool_calls.input]
+questions = [
+    { question = "What language?", header = "Language", options = [
+        { label = "Rust", description = "Systems programming" },
+        { label = "Python", description = "Scripting" },
+    ], multiSelect = false },
+]
+
+[[responses]]
+pattern = { type = "any" }
+response = "Got it, I'll use the language you selected."
+
+[tool_execution]
+mode = "live"
+
+[tool_execution.tools.AskUserQuestion]
+auto_approve = true
+
+[tool_execution.tools.AskUserQuestion.answers]
+"What language?" = "Rust"
 ```
 
 ### Full-Featured

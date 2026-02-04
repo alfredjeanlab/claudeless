@@ -140,6 +140,18 @@ auto_approve = false
 error = "Permission denied"
 ```
 
+### AskUserQuestion (Elicitation)
+
+The AskUserQuestion tool presents questions with selectable options. In TUI mode, an interactive elicitation dialog is shown. In print mode, pre-configured answers are used or the first option is auto-selected.
+
+```toml
+[tool_execution.tools.AskUserQuestion]
+auto_approve = true
+
+[tool_execution.tools.AskUserQuestion.answers]
+"What language?" = "Rust"
+```
+
 ## Compatible Claude CLI Flags
 
 Claudeless accepts all standard Claude CLI flags for compatibility:

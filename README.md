@@ -14,6 +14,7 @@ Claudeless provides a controllable test double that responds to the same CLI int
 - MCP server simulation
 - Permission mode testing
 - Hook system for test orchestration
+- Elicitation dialogs (AskUserQuestion) with pre-configured answers
 
 ## Installation
 

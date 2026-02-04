@@ -65,22 +65,25 @@ Run: `cargo test -- --ignored`
   - `test_tui_slash_logout_exits_to_shell`
   - `test_tui_failed_to_open_socket_exits`
   - `test_tui_failed_to_open_socket_shows_helpful_message`
-- [ ] **Flaky TUI tests** (7 tests): Timing-sensitive tmux tests that fail intermittently on CI
-  - `test_tui_model_picker` (picker render timing)
-  - `test_tui_slash_search` (tmux timing)
-  - `test_tui_suspend` (tmux timing)
-  - `test_tui_fork` (tmux timing)
-  - `test_tui_export` (4 tests, tmux timing)
+- [ ] **Flaky TUI tests** (9 tests): Timing-sensitive tmux tests that fail intermittently on CI
+  - `test_tui_model_picker_shows_available_models` (picker render timing)
+  - `test_tui_ctrl_z_shows_keybinding_note` (tmux timing)
+  - `test_fork_success_with_conversation` (tmux timing)
+  - `test_tui_export_command_shows_autocomplete` (tmux timing)
+  - `test_tui_export_arrow_navigation` (tmux timing)
+  - `test_tui_export_clipboard_shows_confirmation` (tmux timing)
+  - `test_tui_export_file_shows_filename_dialog` (tmux timing)
+  - `test_tui_export_filename_escape_returns_to_method` (tmux timing)
+  - `test_tui_slash_tab_closes_menu` (tmux timing)
 - [ ] **Stream-JSON output** (3 tests): System init event and `-p` verbose mode
   - `test_stream_json_starts_with_system_init`
-  - `test_stream_json_print_requires_verbose` (2 tests)
+  - `test_stream_json_print_requires_verbose`
+  - `test_init_event_has_extended_fields`
 - [ ] **TUI interaction** (2 tests): Ctrl+_ undo (tmux cannot send Ctrl+_; unit tests verify behavior)
   - `test_tui_ctrl_underscore_undoes_last_word`
   - `test_tui_ctrl_underscore_clears_all_input`
 - [ ] **TUI trust dialog** (1 test)
   - `test_trust_prompt_escape_cancels`
-- [ ] **TUI export autocomplete** (1 test)
-  - `test_tui_export_command_shows_autocomplete`
 
 ---
 

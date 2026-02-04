@@ -32,7 +32,7 @@ fn scenario() -> String {
 ///
 /// Typing /export shows autocomplete dropdown with export description
 #[test]
-#[ignore] // DEFERRED: Requires slash command autocomplete implementation
+#[ignore] // TODO(flaky): Timing-sensitive tmux test that fails intermittently on CI
 fn test_tui_export_command_shows_autocomplete() {
     let tui = TuiTestSession::new("export-autocomplete", &scenario());
     let previous = tui.capture();

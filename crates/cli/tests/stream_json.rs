@@ -58,7 +58,6 @@ fn test_stream_json_print_requires_verbose() {
 ///
 /// With --verbose, stream-json output works correctly with -p.
 #[test]
-#[ignore] // TODO(implement): stream-json with -p should require --verbose
 fn test_stream_json_print_with_verbose_succeeds() {
     let scenario = write_scenario(
         r#"
