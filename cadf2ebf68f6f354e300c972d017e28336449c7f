@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "updated": "2026-02-04T21:22:28.143511Z",
+  "commit": "cadf2eb",
+  "metrics": {
+    "escapes": {
+      "source": {
+        "unsafe": 0,
+        "transmute": 0
+      },
+      "test": {
+        "transmute": 0,
+        "unsafe": 0
+      }
+    }
+  }
+}
