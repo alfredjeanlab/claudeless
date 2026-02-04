@@ -521,6 +521,12 @@ impl TuiAppState {
     pub(in crate::tui::app) fn handle_elicitation_key(&self, key: KeyEvent) {
         let mut inner = self.inner.lock();
 
+        // Check if cursor is on the "Type something." free-text row
+        let on_free_text = inner
+            .dialog
+            .as_elicitation()
+            .map_or(false, |s| s.is_on_free_text());
+
         match key.code {
             KeyCode::Up => {
                 if let Some(state) = inner.dialog.as_elicitation_mut() {
@@ -532,7 +538,7 @@ impl TuiAppState {
                     state.cursor_down();
                 }
             }
-            KeyCode::Char(' ') => {
+            KeyCode::Char(' ') if !on_free_text => {
                 if let Some(state) = inner.dialog.as_elicitation_mut() {
                     state.toggle_or_select();
                 }
@@ -547,7 +553,7 @@ impl TuiAppState {
                     state.prev_question();
                 }
             }
-            KeyCode::Char(c @ '1'..='9') => {
+            KeyCode::Char(c @ '1'..='9') if !on_free_text => {
                 if let Some(state) = inner.dialog.as_elicitation_mut() {
                     let num = (c as u8 - b'0') as usize;
                     state.select_by_number(num);
@@ -555,6 +561,17 @@ impl TuiAppState {
                 // Number keys immediately select and submit (matches real Claude Code)
                 drop(inner);
                 self.confirm_elicitation();
+            }
+            // Free-text input: alphabetic/numeric characters when on "Type something."
+            KeyCode::Char(c) if on_free_text => {
+                if let Some(state) = inner.dialog.as_elicitation_mut() {
+                    state.insert_char(c);
+                }
+            }
+            KeyCode::Backspace if on_free_text => {
+                if let Some(state) = inner.dialog.as_elicitation_mut() {
+                    state.backspace_char();
+                }
             }
             KeyCode::Enter => {
                 drop(inner);

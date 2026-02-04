@@ -148,12 +148,18 @@ The AskUserQuestion tool presents questions with selectable options. In TUI mode
 
 | Key | Behavior |
 |-----|----------|
-| `↑` / `↓` | Navigate options |
-| `1`–`9` | Select option by number and immediately submit |
-| `Space` | Toggle selection (multi-select) |
+| `↑` / `↓` | Navigate options; Up wraps from first option to "Type something."; Down clamps at "Chat about this" |
+| `1`–`9` | Select defined option by number and immediately submit |
+| `Space` | Toggle selection (multi-select); types space on "Type something." row |
 | `Enter` | Submit highlighted option |
 | `Escape` | Cancel — returns `"User declined to answer questions"` |
-| Letters | Ignored (no free-text input in option list) |
+| Letters | Ignored on defined options; types into free-text on "Type something." row |
+| `Backspace` | Deletes last character on "Type something." row |
+
+**Extra options** appended after defined options:
+
+- **Type something.** — Free-text input. Navigate here with arrow keys, then type. Enter submits the typed text as the answer. Enter with empty text cancels.
+- **Chat about this** — Below separator. Sends a clarification rejection asking Claude to reformulate.
 
 ```toml
 [tool_execution.tools.AskUserQuestion]

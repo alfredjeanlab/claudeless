@@ -394,7 +394,11 @@ The tool result contains human-readable summary text in `content` and structured
 }
 ```
 
-If the user cancels (Escape), the result text is `"User declined to answer questions"`.
+Cancel/rejection behaviors (matching real Claude Code):
+
+- **Escape**: `"User declined to answer questions"` (displayed as response text)
+- **Enter on empty "Type something."**: Same as cancel — `"User declined to answer questions"`
+- **"Chat about this"**: Rejection with clarification message asking Claude to reformulate the questions
 
 ---
 

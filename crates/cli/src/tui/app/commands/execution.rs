@@ -119,6 +119,25 @@ impl TuiAppState {
                     restore_input_state(&mut inner);
                     return;
                 }
+                ElicitationResult::ChatAboutThis => {
+                    // Build clarification rejection message matching real Claude Code
+                    let questions_summary: Vec<String> = state
+                        .questions
+                        .iter()
+                        .map(|q| format!("- \"{}\"\n  (No answer provided)", q.question))
+                        .collect();
+                    let mut inner = self.inner.lock();
+                    inner.display.response_content = format!(
+                        "The user wants to clarify these questions.\n    \
+                         This means they may have additional information, context or questions for you.\n    \
+                         Take their response into account and then reformulate the questions if appropriate.\n    \
+                         Start by asking them what they would like to clarify.\n\n    \
+                         Questions asked:\n{}",
+                        questions_summary.join("\n")
+                    );
+                    restore_input_state(&mut inner);
+                    return;
+                }
             };
 
             // Build a modified tool call with answers injected
