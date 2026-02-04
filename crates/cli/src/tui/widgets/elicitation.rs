@@ -157,50 +157,56 @@ impl ElicitationState {
     }
 
     /// Render the current question for display.
+    ///
+    /// Layout matches real Claude Code elicitation dialog:
+    /// ```text
+    /// ────────────────────────────
+    ///  ☐ Header
+    ///
+    /// Question text?
+    ///
+    /// ❯ 1. Label
+    ///      Description
+    ///   2. Label
+    ///      Description
+    /// ────────────────────────────
+    ///
+    /// Enter to select · ↑/↓ to navigate · Esc to cancel
+    /// ```
     pub fn render(&self, width: usize) -> String {
         let sep = "─".repeat(width);
         let mut lines = vec![sep.clone()];
 
-        lines.push("  Clarifying question".to_string());
-        lines.push(String::new());
-
         if let Some(q) = self.questions.get(self.current_question) {
-            if !q.header.is_empty() {
-                lines.push(format!("  {}: {}", q.header, q.question));
+            // Header line: ☐ Header (matches real Claude Code)
+            if q.multi_select {
+                let checked = q.selected.len();
+                let total = q.options.len();
+                if checked == total {
+                    lines.push(format!(" ☑ {}", q.header));
+                } else if checked > 0 {
+                    lines.push(format!(" ☒ {}", q.header));
+                } else {
+                    lines.push(format!(" ☐ {}", q.header));
+                }
             } else {
-                lines.push(format!("  {}", q.question));
+                lines.push(format!(" ☐ {}", q.header));
             }
             lines.push(String::new());
 
+            // Question text
+            lines.push(q.question.clone());
+            lines.push(String::new());
+
+            // Options with cursor indicator
             for (i, opt) in q.options.iter().enumerate() {
                 let cursor = if i == q.cursor { "❯" } else { " " };
-                let check = if q.multi_select {
-                    if q.selected.contains(&i) {
-                        "☑"
-                    } else {
-                        "☐"
-                    }
-                } else if q.selected.contains(&i) {
-                    "●"
-                } else {
-                    "○"
-                };
-
-                if opt.description.is_empty() {
-                    lines.push(format!("  {} {} {}. {}", cursor, check, i + 1, opt.label));
-                } else {
-                    lines.push(format!(
-                        "  {} {} {}. {} — {}",
-                        cursor,
-                        check,
-                        i + 1,
-                        opt.label,
-                        opt.description
-                    ));
+                lines.push(format!("{} {}. {}", cursor, i + 1, opt.label));
+                if !opt.description.is_empty() {
+                    lines.push(format!("     {}", opt.description));
                 }
             }
-
-            lines.push(String::new());
+            lines.push(sep.clone());
 
             // Footer
             let nav = if self.questions.len() > 1 {
@@ -215,12 +221,11 @@ impl ElicitationState {
             let action = if q.multi_select {
                 "Space to toggle · Enter to confirm · Esc to cancel"
             } else {
-                "Enter to confirm · Esc to cancel"
+                "Enter to select · ↑/↓ to navigate · Esc to cancel"
             };
             lines.push(format!("{}{}", nav, action));
         }
 
-        lines.push(sep);
         lines.join("\n")
     }
 }

@@ -518,7 +518,7 @@ impl TuiAppState {
                 // Cancel elicitation and return to input
                 inner.dialog.dismiss();
                 inner.mode = AppMode::Input;
-                inner.display.response_content = "Elicitation cancelled by user".to_string();
+                inner.display.response_content = "User declined to answer questions".to_string();
             }
         }
     }

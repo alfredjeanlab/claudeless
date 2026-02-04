@@ -176,11 +176,14 @@ fn test_render_single_select() {
     let state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
     let rendered = state.render(60);
 
-    assert!(rendered.contains("Clarifying question"));
-    assert!(rendered.contains("Language: What language?"));
-    assert!(rendered.contains("Rust"));
-    assert!(rendered.contains("Python"));
-    assert!(rendered.contains("Enter to confirm"));
+    // Header matches real Claude Code: "☐ Header"
+    assert!(rendered.contains("☐ Language"));
+    assert!(rendered.contains("What language?"));
+    assert!(rendered.contains("❯ 1. Rust"));
+    assert!(rendered.contains("  2. Python"));
+    assert!(rendered.contains("Systems programming"));
+    assert!(rendered.contains("Enter to select"));
+    assert!(rendered.contains("Esc to cancel"));
 }
 
 #[test]
@@ -190,9 +193,20 @@ fn test_render_multi_select() {
     state.toggle_or_select(); // Select first
 
     let rendered = state.render(60);
-    assert!(rendered.contains("☑")); // Selected checkbox
-    assert!(rendered.contains("☐")); // Unselected checkbox
+    assert!(rendered.contains("☒ Features")); // Partially checked header
     assert!(rendered.contains("Space to toggle"));
+}
+
+#[test]
+fn test_render_multi_select_all_checked() {
+    let input = multi_select_input();
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+    state.select_by_number(1);
+    state.select_by_number(2);
+    state.select_by_number(3);
+
+    let rendered = state.render(60);
+    assert!(rendered.contains("☑ Features")); // Fully checked header
 }
 
 #[test]
@@ -230,4 +244,57 @@ fn test_question_navigation() {
     // Can't go before first
     state.prev_question();
     assert_eq!(state.current_question, 0);
+}
+
+#[test]
+fn test_render_option_descriptions_on_separate_lines() {
+    // Real Claude Code renders descriptions indented below the label
+    let input = sample_input();
+    let state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+    let rendered = state.render(60);
+
+    let lines: Vec<&str> = rendered.lines().collect();
+    // Find the Rust option line, description should be on the next line
+    let rust_idx = lines.iter().position(|l| l.contains("1. Rust")).unwrap();
+    assert!(
+        lines[rust_idx + 1].contains("Systems programming"),
+        "Description should be on line after label"
+    );
+}
+
+#[test]
+fn test_number_key_selects_option() {
+    // In real Claude Code, pressing a number key selects that option.
+    // The TUI handler then immediately confirms (tested at handler level).
+    let input = sample_input();
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+
+    // Initially cursor at 0, nothing selected
+    assert_eq!(state.questions[0].cursor, 0);
+    assert!(state.questions[0].selected.is_empty());
+
+    // select_by_number(2) should move cursor to index 1 and select it
+    state.select_by_number(2);
+    assert_eq!(state.questions[0].cursor, 1);
+    assert_eq!(state.questions[0].selected, vec![1]);
+
+    // Collecting answers should give Python
+    let result = state.collect_answers();
+    match result {
+        ElicitationResult::Answered(answers) => {
+            assert_eq!(answers.get("What language?").unwrap(), "Python");
+        }
+        ElicitationResult::Cancelled => panic!("Expected answered"),
+    }
+}
+
+#[test]
+fn test_out_of_range_number_ignored() {
+    let input = sample_input();
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+
+    // Only 2 options; pressing 5 should do nothing
+    state.select_by_number(5);
+    assert_eq!(state.questions[0].cursor, 0);
+    assert!(state.questions[0].selected.is_empty());
 }

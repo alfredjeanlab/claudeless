@@ -115,7 +115,7 @@ impl TuiAppState {
                 ElicitationResult::Answered(answers) => answers,
                 ElicitationResult::Cancelled => {
                     let mut inner = self.inner.lock();
-                    inner.display.response_content = "Elicitation cancelled".to_string();
+                    inner.display.response_content = "User declined to answer questions".to_string();
                     restore_input_state(&mut inner);
                     return;
                 }
@@ -142,7 +142,7 @@ impl TuiAppState {
     pub(in crate::tui::app) fn cancel_elicitation(&self) {
         let mut inner = self.inner.lock();
         inner.dialog.dismiss();
-        inner.display.response_content = "Elicitation cancelled by user".to_string();
+        inner.display.response_content = "User declined to answer questions by user".to_string();
         restore_input_state(&mut inner);
     }
 

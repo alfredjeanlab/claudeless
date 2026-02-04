@@ -547,11 +547,14 @@ impl TuiAppState {
                     state.prev_question();
                 }
             }
-            KeyCode::Char(c @ '1'..='4') => {
+            KeyCode::Char(c @ '1'..='9') => {
                 if let Some(state) = inner.dialog.as_elicitation_mut() {
                     let num = (c as u8 - b'0') as usize;
                     state.select_by_number(num);
                 }
+                // Number keys immediately select and submit (matches real Claude Code)
+                drop(inner);
+                self.confirm_elicitation();
             }
             KeyCode::Enter => {
                 drop(inner);
