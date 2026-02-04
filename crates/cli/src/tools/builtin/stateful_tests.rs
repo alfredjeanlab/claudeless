@@ -145,7 +145,13 @@ fn test_ask_user_question_with_provided_answers() {
     let result = execute_ask_user_question(&call);
     assert!(!result.is_error);
 
-    let result_json: serde_json::Value = serde_json::from_str(result.text().unwrap()).unwrap();
+    // Content text is a human-readable summary (matches real Claude Code format)
+    let text = result.text().unwrap();
+    assert!(text.contains("User has answered your questions:"));
+    assert!(text.contains("\"What language?\"=\"Python\""));
+
+    // tool_use_result has structured data
+    let result_json = result.tool_use_result.unwrap();
     assert_eq!(result_json["answers"]["What language?"], "Python");
 }
 
@@ -172,7 +178,10 @@ fn test_ask_user_question_auto_select_first() {
     let result = execute_ask_user_question(&call);
     assert!(!result.is_error);
 
-    let result_json: serde_json::Value = serde_json::from_str(result.text().unwrap()).unwrap();
+    let text = result.text().unwrap();
+    assert!(text.contains("\"How should I format the output?\"=\"Summary\""));
+
+    let result_json = result.tool_use_result.unwrap();
     assert_eq!(
         result_json["answers"]["How should I format the output?"],
         "Summary"
@@ -203,7 +212,10 @@ fn test_ask_user_question_multi_select_auto() {
     assert!(!result.is_error);
 
     // Auto-select picks the first option
-    let result_json: serde_json::Value = serde_json::from_str(result.text().unwrap()).unwrap();
+    let text = result.text().unwrap();
+    assert!(text.contains("\"Which sections?\"=\"Introduction\""));
+
+    let result_json = result.tool_use_result.unwrap();
     assert_eq!(result_json["answers"]["Which sections?"], "Introduction");
 }
 
@@ -220,7 +232,10 @@ fn test_ask_user_question_empty_questions() {
     let result = execute_ask_user_question(&call);
     assert!(!result.is_error);
 
-    let result_json: serde_json::Value = serde_json::from_str(result.text().unwrap()).unwrap();
+    let text = result.text().unwrap();
+    assert!(text.contains("User has answered your questions"));
+
+    let result_json = result.tool_use_result.unwrap();
     assert_eq!(result_json["answers"], json!({}));
 }
 
@@ -235,7 +250,10 @@ fn test_ask_user_question_malformed_input() {
     let result = execute_ask_user_question(&call);
     assert!(!result.is_error);
 
-    let result_json: serde_json::Value = serde_json::from_str(result.text().unwrap()).unwrap();
+    let text = result.text().unwrap();
+    assert!(text.contains("User has answered your questions"));
+
+    let result_json = result.tool_use_result.unwrap();
     assert_eq!(result_json["answers"], json!({}));
     assert_eq!(result_json["questions"], json!([]));
 }

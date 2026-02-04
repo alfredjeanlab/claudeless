@@ -155,11 +155,24 @@ pub fn execute_ask_user_question(call: &ToolCallSpec) -> ToolExecutionResult {
         "answers": answers,
     });
 
+    // Build human-readable summary matching real Claude Code format
+    let summary = if let Some(answers_obj) = answers.as_object() {
+        let parts: Vec<String> = answers_obj
+            .iter()
+            .map(|(q, a)| format!("\"{}\"=\"{}\"", q, a.as_str().unwrap_or("")))
+            .collect();
+        format!(
+            "User has answered your questions: {}. You can now continue with the user's answers in mind.",
+            parts.join(", ")
+        )
+    } else {
+        "User has answered your questions. You can now continue with the user's answers in mind."
+            .to_string()
+    };
+
     ToolExecutionResult {
         tool_use_id: String::new(),
-        content: vec![ToolResultContent::Text {
-            text: serde_json::to_string(&result_json).unwrap_or_default(),
-        }],
+        content: vec![ToolResultContent::Text { text: summary }],
         is_error: false,
         tool_use_result: Some(result_json),
         needs_prompt: false,
