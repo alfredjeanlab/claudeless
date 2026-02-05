@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "updated": "2026-02-05T03:44:19.855539Z",
+  "commit": "dd2fc95",
+  "metrics": {
+    "escapes": {
+      "source": {
+        "transmute": 0,
+        "unsafe": 4
+      },
+      "test": {
+        "unsafe": 0,
+        "transmute": 0
+      }
+    }
+  }
+}
