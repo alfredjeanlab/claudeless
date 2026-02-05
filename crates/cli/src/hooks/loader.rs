@@ -37,7 +37,9 @@ pub fn load_hooks(settings: &ClaudeSettings) -> std::io::Result<HookExecutor> {
 
             // Create a temporary script file for the command
             let script_path = create_hook_script(&cmd.command)?;
-            let config = HookConfig::new(script_path, cmd.timeout).with_blocking(true);
+            let config = HookConfig::new(script_path, cmd.timeout)
+                .with_blocking(true)
+                .with_matcher(hook_def.matcher.matcher.clone());
             executor.register(event.clone(), config);
         }
     }

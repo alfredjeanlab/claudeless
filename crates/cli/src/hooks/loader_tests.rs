@@ -20,6 +20,7 @@ fn test_load_hooks_with_stop_hook() {
         hooks: vec![HookDef {
             matcher: HookMatcher {
                 event: "Stop".to_string(),
+                matcher: None,
             },
             hooks: vec![HookCommand {
                 command_type: "bash".to_string(),
@@ -41,6 +42,7 @@ fn test_load_hooks_ignores_unknown_events() {
         hooks: vec![HookDef {
             matcher: HookMatcher {
                 event: "UnknownEvent".to_string(),
+                matcher: None,
             },
             hooks: vec![HookCommand {
                 command_type: "bash".to_string(),
@@ -61,6 +63,7 @@ fn test_load_hooks_ignores_non_bash_commands() {
         hooks: vec![HookDef {
             matcher: HookMatcher {
                 event: "Stop".to_string(),
+                matcher: None,
             },
             hooks: vec![HookCommand {
                 command_type: "python".to_string(), // Not bash
@@ -81,6 +84,7 @@ fn test_load_hooks_multiple_commands() {
         hooks: vec![HookDef {
             matcher: HookMatcher {
                 event: "Stop".to_string(),
+                matcher: None,
             },
             hooks: vec![
                 HookCommand {
@@ -109,6 +113,7 @@ fn test_load_hooks_pre_tool_use() {
         hooks: vec![HookDef {
             matcher: HookMatcher {
                 event: "PreToolUse".to_string(),
+                matcher: None,
             },
             hooks: vec![HookCommand {
                 command_type: "bash".to_string(),
@@ -129,6 +134,7 @@ fn test_load_hooks_post_tool_use() {
         hooks: vec![HookDef {
             matcher: HookMatcher {
                 event: "PostToolUse".to_string(),
+                matcher: None,
             },
             hooks: vec![HookCommand {
                 command_type: "bash".to_string(),
@@ -149,6 +155,7 @@ fn test_load_hooks_session_start() {
         hooks: vec![HookDef {
             matcher: HookMatcher {
                 event: "SessionStart".to_string(),
+                matcher: None,
             },
             hooks: vec![HookCommand {
                 command_type: "bash".to_string(),
@@ -162,4 +169,26 @@ fn test_load_hooks_session_start() {
     let executor = load_hooks(&settings).unwrap();
     assert!(executor.has_hooks(&HookEvent::SessionStart));
     assert_eq!(executor.hook_count(&HookEvent::SessionStart), 1);
+}
+
+#[test]
+fn test_load_hooks_notification_with_matcher() {
+    let settings = ClaudeSettings {
+        hooks: vec![HookDef {
+            matcher: HookMatcher {
+                event: "Notification".to_string(),
+                matcher: Some("idle_prompt|permission_prompt".to_string()),
+            },
+            hooks: vec![HookCommand {
+                command_type: "bash".to_string(),
+                command: "echo notify".to_string(),
+                timeout: 5000,
+            }],
+        }],
+        ..Default::default()
+    };
+
+    let executor = load_hooks(&settings).unwrap();
+    assert!(executor.has_hooks(&HookEvent::Notification));
+    assert_eq!(executor.hook_count(&HookEvent::Notification), 1);
 }

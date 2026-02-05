@@ -9,6 +9,17 @@ fn test_hook_config_new() {
     assert_eq!(config.script_path, PathBuf::from("/path/to/script.sh"));
     assert_eq!(config.timeout_ms, 5000);
     assert!(!config.blocking);
+    assert!(config.matcher.is_none());
+}
+
+#[test]
+fn test_hook_config_with_matcher() {
+    let config = HookConfig::new("/path/to/script.sh", 5000)
+        .with_matcher(Some("idle_prompt|permission_prompt".to_string()));
+    assert_eq!(
+        config.matcher,
+        Some("idle_prompt|permission_prompt".to_string())
+    );
 }
 
 #[test]
@@ -70,4 +81,16 @@ async fn test_execute_no_hooks() {
 
     let responses = executor.execute(&message).await.unwrap();
     assert!(responses.is_empty());
+}
+
+#[test]
+fn test_matcher_filtering_no_matcher_registers_for_all() {
+    let mut executor = HookExecutor::new();
+    executor.register(
+        HookEvent::Notification,
+        HookConfig::new("/script.sh", 5000).with_matcher(None),
+    );
+    // Without matcher, the hook is registered for all Notification events
+    assert!(executor.has_hooks(&HookEvent::Notification));
+    assert_eq!(executor.hook_count(&HookEvent::Notification), 1);
 }

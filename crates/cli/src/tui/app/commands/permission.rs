@@ -17,6 +17,8 @@ use crate::tui::widgets::permission::{
     DiffLine, PermissionSelection, PermissionType, RichPermissionDialog,
 };
 
+use crate::hooks::NOTIFICATION_PERMISSION_PROMPT;
+
 use super::super::state::{DialogState, TuiAppState, TuiAppStateInner};
 use super::super::types::{AppMode, PermissionRequest};
 
@@ -204,6 +206,13 @@ impl TuiAppState {
             post_grant_display: None,
         });
         inner.mode = AppMode::Permission;
+        let perm_tool = tool_name.clone();
+        drop(inner);
+        self.fire_notification(
+            NOTIFICATION_PERMISSION_PROMPT,
+            "Permission Required",
+            &perm_tool,
+        );
     }
 
     /// Show a bash command permission request

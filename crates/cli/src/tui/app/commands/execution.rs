@@ -7,6 +7,7 @@
 //! - `execute_shell_command` - Shell command execution via Bash tool
 //! - `process_prompt` - Prompt processing and response generation
 
+use crate::hooks::{NOTIFICATION_ELICITATION_DIALOG, NOTIFICATION_IDLE_PROMPT};
 use crate::runtime::TurnResult;
 use crate::tui::spinner;
 use crate::tui::streaming::{StreamingConfig, StreamingResponse};
@@ -22,6 +23,18 @@ use super::display::{
 use super::super::state::TuiAppState;
 use super::super::state::TuiAppStateInner;
 use super::super::types::AppMode;
+
+/// Result of handling a turn, indicating what side-effect to fire.
+enum TurnAction {
+    /// Normal completion — agent is idle, fire idle_prompt notification.
+    Done,
+    /// A tool needs an interactive permission prompt.
+    Permission(PermissionType),
+    /// Fire a notification hook with the given notification_type.
+    Notify(&'static str),
+    /// Stop hook continuation — stay in responding mode.
+    HookContinuation,
+}
 
 impl TuiAppState {
     /// Execute a shell command via Bash tool
@@ -44,10 +57,7 @@ impl TuiAppState {
 
             // Use shared execute path for consistency (hooks, JSONL recording, etc.)
             drop(inner);
-            let permission = self.execute_with_runtime(command);
-            if let Some(perm) = permission {
-                self.show_permission_request(perm);
-            }
+            self.execute_with_runtime(command);
             return;
         }
 
@@ -94,10 +104,7 @@ impl TuiAppState {
         }
 
         // Use Runtime::execute() for shared agent loop
-        let permission = self.execute_with_runtime(prompt);
-        if let Some(perm) = permission {
-            self.show_permission_request(perm);
-        }
+        self.execute_with_runtime(prompt);
     }
 
     /// Confirm the elicitation dialog and re-execute with answers.
@@ -155,10 +162,7 @@ impl TuiAppState {
                 "answers": answers,
             }))
             .unwrap_or_default();
-            let permission = self.execute_with_runtime(prompt);
-            if let Some(perm) = permission {
-                self.show_permission_request(perm);
-            }
+            self.execute_with_runtime(prompt);
         }
     }
 
@@ -209,10 +213,7 @@ impl TuiAppState {
                         "approval_mode": mode_str,
                     }))
                     .unwrap_or_default();
-                    let permission = self.execute_with_runtime(prompt);
-                    if let Some(perm) = permission {
-                        self.show_permission_request(perm);
-                    }
+                    self.execute_with_runtime(prompt);
                 }
                 PlanApprovalResult::Revised(feedback) => {
                     // Re-execute with feedback
@@ -220,10 +221,7 @@ impl TuiAppState {
                         "plan_feedback": feedback,
                     }))
                     .unwrap_or_default();
-                    let permission = self.execute_with_runtime(prompt);
-                    if let Some(perm) = permission {
-                        self.show_permission_request(perm);
-                    }
+                    self.execute_with_runtime(prompt);
                 }
                 PlanApprovalResult::Cancelled => {
                     let mut inner = self.inner.lock();
@@ -253,17 +251,16 @@ impl TuiAppState {
     /// The lock is dropped during execution so the render thread can observe
     /// intermediate mode changes (e.g., Thinking mode).
     ///
-    /// Returns `Some(PermissionType)` if a tool needs an interactive permission
-    /// prompt. The caller should call `show_permission_request()` with the
-    /// returned type.
-    fn execute_with_runtime(&self, prompt: String) -> Option<PermissionType> {
+    /// Handles all post-turn actions internally: permission prompts,
+    /// notification hooks, and stop hook continuations.
+    fn execute_with_runtime(&self, prompt: String) {
         // Take the runtime out while holding the lock briefly
         let mut runtime = {
             let mut inner = self.inner.lock();
             let Some(runtime) = inner.runtime.take() else {
                 setup_response_display(&mut inner, "Error: Runtime not available".to_string());
                 restore_input_state(&mut inner);
-                return None;
+                return;
             };
             runtime
             // Lock is dropped here - render thread can now see Thinking mode
@@ -281,11 +278,32 @@ impl TuiAppState {
         inner.runtime = Some(runtime);
 
         // Handle the outcome (success or failure)
-        match outcome {
+        let action = match outcome {
             Ok(result) => handle_turn_result(&mut inner, result),
             Err(failure_spec) => {
                 handle_failure(&mut inner, &failure_spec);
-                None
+                TurnAction::Done
+            }
+        };
+        drop(inner);
+
+        // Fire side-effects outside the lock
+        match action {
+            TurnAction::Permission(perm) => {
+                self.show_permission_request(perm);
+            }
+            TurnAction::Done => {
+                self.fire_notification(
+                    NOTIFICATION_IDLE_PROMPT,
+                    "Agent Idle",
+                    "Claude is waiting for input",
+                );
+            }
+            TurnAction::Notify(notification_type) => {
+                self.fire_notification(notification_type, notification_type, "");
+            }
+            TurnAction::HookContinuation => {
+                // No notification needed — stop hook continuation is in progress
             }
         }
     }
@@ -322,8 +340,8 @@ fn handle_failure(inner: &mut TuiAppStateInner, failure_spec: &crate::config::Fa
 
 /// Handle the result of a Runtime::execute() call.
 ///
-/// Returns `Some(PermissionType)` if a tool needs a permission prompt.
-fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> Option<PermissionType> {
+/// Returns a `TurnAction` indicating what side-effect to fire.
+fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> TurnAction {
     // Build display parts from completed tool calls
     let tool_calls = result.response.tool_calls().to_vec();
     let completed_count = result.tool_results.len();
@@ -369,7 +387,7 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> Optio
             if !parts.is_empty() {
                 setup_response_display(inner, join_display_parts(&parts));
             }
-            return None;
+            return TurnAction::Notify(NOTIFICATION_ELICITATION_DIALOG);
         }
 
         // AskUserQuestion uses elicitation dialog instead of permission dialog
@@ -397,7 +415,7 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> Optio
             if !parts.is_empty() {
                 setup_response_display(inner, join_display_parts(&parts));
             }
-            return None;
+            return TurnAction::Notify(NOTIFICATION_ELICITATION_DIALOG);
         }
 
         if let Some(perm_type) = tool_call_to_permission_type(&pending.tool_call) {
@@ -453,7 +471,7 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> Optio
             }
             inner.display.pending_post_grant_display = Some(join_display_parts(&post_parts));
 
-            return Some(perm_type);
+            return TurnAction::Permission(perm_type);
         }
     }
 
@@ -493,12 +511,12 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> Optio
         inner.pending_hook_message = Some(continuation);
         inner.stop_hook_active = true;
         // Stay in responding mode - the render loop will detect pending_hook_message
-        return None;
+        return TurnAction::HookContinuation;
     }
 
     // Normal completion - restore input state
     restore_input_state(inner);
-    None
+    TurnAction::Done
 }
 
 // ============================================================================

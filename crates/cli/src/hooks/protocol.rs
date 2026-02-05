@@ -65,7 +65,7 @@ impl HookMessage {
     /// Create a notification message
     pub fn notification(
         session_id: impl Into<String>,
-        level: NotificationLevel,
+        notification_type: impl Into<String>,
         title: impl Into<String>,
         message: impl Into<String>,
     ) -> Self {
@@ -73,7 +73,7 @@ impl HookMessage {
             event: HookEvent::Notification,
             session_id: session_id.into(),
             payload: HookPayload::Notification {
-                level,
+                notification_type: notification_type.into(),
                 title: title.into(),
                 message: message.into(),
             },
@@ -162,7 +162,7 @@ pub enum HookPayload {
 
     /// Notification content
     Notification {
-        level: NotificationLevel,
+        notification_type: String,
         title: String,
         message: String,
     },
@@ -208,14 +208,14 @@ pub enum CompactionTrigger {
     Auto,
 }
 
-/// Notification severity levels
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum NotificationLevel {
-    Info,
-    Warning,
-    Error,
-}
+/// Notification type: permission prompt is waiting for user input.
+pub const NOTIFICATION_PERMISSION_PROMPT: &str = "permission_prompt";
+/// Notification type: agent is idle, waiting for the next user prompt.
+pub const NOTIFICATION_IDLE_PROMPT: &str = "idle_prompt";
+/// Notification type: an elicitation dialog (AskUserQuestion) is shown.
+pub const NOTIFICATION_ELICITATION_DIALOG: &str = "elicitation_dialog";
+/// Notification type: authentication / trust was successfully granted.
+pub const NOTIFICATION_AUTH_SUCCESS: &str = "auth_success";
 
 /// Hook response from hook script
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -444,6 +444,7 @@ fn test_claude_settings_merge_hooks() {
         hooks: vec![HookDef {
             matcher: HookMatcher {
                 event: "Stop".to_string(),
+                matcher: None,
             },
             hooks: vec![HookCommand {
                 command_type: "bash".to_string(),
@@ -458,6 +459,7 @@ fn test_claude_settings_merge_hooks() {
         hooks: vec![HookDef {
             matcher: HookMatcher {
                 event: "Stop".to_string(),
+                matcher: None,
             },
             hooks: vec![HookCommand {
                 command_type: "bash".to_string(),
@@ -481,6 +483,7 @@ fn test_claude_settings_merge_hooks_different_events_accumulate() {
         hooks: vec![HookDef {
             matcher: HookMatcher {
                 event: "Stop".to_string(),
+                matcher: None,
             },
             hooks: vec![HookCommand {
                 command_type: "bash".to_string(),
@@ -495,6 +498,7 @@ fn test_claude_settings_merge_hooks_different_events_accumulate() {
         hooks: vec![HookDef {
             matcher: HookMatcher {
                 event: "SessionStart".to_string(),
+                matcher: None,
             },
             hooks: vec![HookCommand {
                 command_type: "bash".to_string(),
@@ -521,6 +525,7 @@ fn test_claude_settings_merge_empty_hooks_doesnt_override() {
         hooks: vec![HookDef {
             matcher: HookMatcher {
                 event: "Stop".to_string(),
+                matcher: None,
             },
             hooks: vec![HookCommand {
                 command_type: "bash".to_string(),
@@ -541,4 +546,23 @@ fn test_claude_settings_merge_empty_hooks_doesnt_override() {
     // Hooks should be preserved
     assert_eq!(base.hooks.len(), 1);
     assert_eq!(base.hooks[0].hooks[0].command, "echo keep");
+}
+
+#[test]
+fn test_hook_matcher_with_notification_matcher() {
+    let json = r#"{"event": "Notification", "matcher": "idle_prompt|permission_prompt"}"#;
+    let matcher: HookMatcher = serde_json::from_str(json).unwrap();
+    assert_eq!(matcher.event, "Notification");
+    assert_eq!(
+        matcher.matcher,
+        Some("idle_prompt|permission_prompt".to_string())
+    );
+}
+
+#[test]
+fn test_hook_matcher_without_matcher_field() {
+    let json = r#"{"event": "Stop"}"#;
+    let matcher: HookMatcher = serde_json::from_str(json).unwrap();
+    assert_eq!(matcher.event, "Stop");
+    assert_eq!(matcher.matcher, None);
 }

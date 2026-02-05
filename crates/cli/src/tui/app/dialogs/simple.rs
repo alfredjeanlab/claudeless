@@ -13,6 +13,7 @@ use crate::tui::widgets::thinking::{ThinkingDialog, ThinkingMode};
 use crate::tui::widgets::trust::TrustChoice;
 use crate::tui::widgets::MemoryDialog;
 
+use crate::hooks::NOTIFICATION_AUTH_SUCCESS;
 use crate::tui::app::state::TuiAppState;
 use crate::tui::app::types::{
     AppMode, BypassChoice, BypassConfirmState, ExitReason, PermissionRequest, TrustPromptState,
@@ -65,9 +66,13 @@ pub(crate) fn render_trust_prompt(prompt: &TrustPromptState, width: usize) -> An
 impl TuiAppState {
     /// Grant trust and either advance to setup wizard or dismiss to input.
     ///
-    /// Returns `Some(prompt)` when a pending initial prompt should be processed
-    /// after dropping the lock.
-    fn grant_trust(&self, inner: &mut crate::tui::app::state::TuiAppStateInner) -> Option<String> {
+    /// Returns `(fire_auth, Some(prompt))` where `fire_auth` indicates whether
+    /// to fire the auth_success notification, and the optional prompt should be
+    /// processed after dropping the lock.
+    fn grant_trust(
+        &self,
+        inner: &mut crate::tui::app::state::TuiAppStateInner,
+    ) -> (bool, Option<String>) {
         inner.trust_granted = true;
         if !inner.config.logged_in {
             let version = inner
@@ -77,14 +82,15 @@ impl TuiAppState {
                 .unwrap_or_else(|| crate::config::DEFAULT_CLAUDE_VERSION.to_string());
             inner.dialog = DialogState::Setup(crate::tui::widgets::setup::SetupState::new(version));
             inner.mode = AppMode::Setup;
-            None
+            (false, None)
         } else {
             inner.dialog.dismiss();
             let initial = inner.pending_initial_prompt.take();
             if initial.is_none() {
                 inner.mode = AppMode::Input;
             }
-            initial
+            // Fire auth_success when logged_in && transitioning to Input
+            (true, initial)
         }
     }
 
@@ -107,9 +113,17 @@ impl TuiAppState {
                 if let Some(prompt) = inner.dialog.as_trust() {
                     match prompt.selected {
                         TrustChoice::Yes => {
-                            if let Some(initial) = self.grant_trust(&mut inner) {
-                                drop(inner);
-                                self.process_prompt(initial);
+                            let (fire_auth, initial) = self.grant_trust(&mut inner);
+                            drop(inner);
+                            if fire_auth {
+                                self.fire_notification(
+                                    NOTIFICATION_AUTH_SUCCESS,
+                                    "Auth Success",
+                                    "Trust granted",
+                                );
+                            }
+                            if let Some(prompt) = initial {
+                                self.process_prompt(prompt);
                             }
                         }
                         TrustChoice::No => {
@@ -121,9 +135,17 @@ impl TuiAppState {
 
             // Y/y - Yes (trust)
             KeyCode::Char('y') | KeyCode::Char('Y') => {
-                if let Some(initial) = self.grant_trust(&mut inner) {
-                    drop(inner);
-                    self.process_prompt(initial);
+                let (fire_auth, initial) = self.grant_trust(&mut inner);
+                drop(inner);
+                if fire_auth {
+                    self.fire_notification(
+                        NOTIFICATION_AUTH_SUCCESS,
+                        "Auth Success",
+                        "Trust granted",
+                    );
+                }
+                if let Some(prompt) = initial {
+                    self.process_prompt(prompt);
                 }
             }
 

@@ -3,7 +3,7 @@
 
 //! Hook execution engine.
 
-use super::protocol::{HookEvent, HookMessage, HookResponse};
+use super::protocol::{HookEvent, HookMessage, HookPayload, HookResponse};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -22,6 +22,10 @@ pub struct HookConfig {
 
     /// Whether hook failure should block execution
     pub blocking: bool,
+
+    /// Optional pipe-separated matcher pattern for sub-event filtering.
+    /// For Notification hooks, matches against notification_type.
+    pub matcher: Option<String>,
 }
 
 impl HookConfig {
@@ -31,6 +35,7 @@ impl HookConfig {
             script_path: script_path.into(),
             timeout_ms: default_timeout_ms,
             blocking: false,
+            matcher: None,
         }
     }
 
@@ -43,6 +48,12 @@ impl HookConfig {
     /// Set blocking
     pub fn with_blocking(mut self, blocking: bool) -> Self {
         self.blocking = blocking;
+        self
+    }
+
+    /// Set matcher pattern
+    pub fn with_matcher(mut self, matcher: Option<String>) -> Self {
+        self.matcher = matcher;
         self
     }
 }
@@ -76,6 +87,22 @@ impl HookExecutor {
 
         let mut responses = Vec::new();
         for hook in hooks {
+            // For Notification events, skip hooks whose matcher doesn't match
+            if let Some(ref matcher_pattern) = hook.matcher {
+                if let HookPayload::Notification {
+                    ref notification_type,
+                    ..
+                } = message.payload
+                {
+                    let matches = matcher_pattern
+                        .split('|')
+                        .any(|segment| segment.trim() == notification_type);
+                    if !matches {
+                        continue;
+                    }
+                }
+            }
+
             let response = self.execute_hook(hook, message).await?;
 
             // If blocking hook returns proceed=false, stop processing

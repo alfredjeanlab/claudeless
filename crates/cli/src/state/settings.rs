@@ -123,6 +123,12 @@ pub struct PermissionSettings {
 pub struct HookMatcher {
     /// Event type to match (e.g., "Stop", "PreToolUse", etc.)
     pub event: String,
+
+    /// Optional pipe-separated pattern for sub-event matching.
+    /// For Notification hooks, matches against notification_type
+    /// (e.g., "idle_prompt|permission_prompt").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub matcher: Option<String>,
 }
 
 /// Hook command definition
@@ -221,13 +227,12 @@ impl ClaudeSettings {
         }
 
         // TODO(validate): Confirm real Claude CLI merges hooks by event type across settings files
-        // Hooks: merge by event type (later overrides per-event, different events accumulate)
+        // Hooks: merge by event+matcher (later overrides per-event, different events accumulate)
         for other_hook in other.hooks {
-            if let Some(existing) = self
-                .hooks
-                .iter_mut()
-                .find(|h| h.matcher.event == other_hook.matcher.event)
-            {
+            if let Some(existing) = self.hooks.iter_mut().find(|h| {
+                h.matcher.event == other_hook.matcher.event
+                    && h.matcher.matcher == other_hook.matcher.matcher
+            }) {
                 *existing = other_hook;
             } else {
                 self.hooks.push(other_hook);

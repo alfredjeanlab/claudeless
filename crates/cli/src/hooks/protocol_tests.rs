@@ -34,21 +34,21 @@ fn test_hook_message_tool_execution() {
 fn test_hook_message_notification() {
     let msg = HookMessage::notification(
         "session_123",
-        NotificationLevel::Warning,
-        "Warning",
-        "Something happened",
+        "idle_prompt",
+        "Idle",
+        "Claude is waiting for input",
     );
 
     assert_eq!(msg.event, HookEvent::Notification);
     if let HookPayload::Notification {
-        level,
+        notification_type,
         title,
         message,
     } = &msg.payload
     {
-        assert_eq!(*level, NotificationLevel::Warning);
-        assert_eq!(title, "Warning");
-        assert_eq!(message, "Something happened");
+        assert_eq!(notification_type, "idle_prompt");
+        assert_eq!(title, "Idle");
+        assert_eq!(message, "Claude is waiting for input");
     } else {
         unreachable!("Expected Notification payload");
     }
@@ -116,10 +116,11 @@ fn test_hook_response_default_proceed() {
 }
 
 #[test]
-fn test_notification_level_serialization() {
-    let level = NotificationLevel::Error;
-    let json = serde_json::to_string(&level).unwrap();
-    assert_eq!(json, "\"error\"");
+fn test_notification_type_constants() {
+    assert_eq!(NOTIFICATION_IDLE_PROMPT, "idle_prompt");
+    assert_eq!(NOTIFICATION_PERMISSION_PROMPT, "permission_prompt");
+    assert_eq!(NOTIFICATION_ELICITATION_DIALOG, "elicitation_dialog");
+    assert_eq!(NOTIFICATION_AUTH_SUCCESS, "auth_success");
 }
 
 #[test]
@@ -199,7 +200,7 @@ fn test_hook_response_block_with_error() {
 fn test_notification_payload_has_required_fields() {
     let msg = HookMessage::notification(
         "test-session",
-        NotificationLevel::Info,
+        NOTIFICATION_IDLE_PROMPT,
         "Task Complete",
         "Your code has been generated.",
     );
@@ -207,24 +208,9 @@ fn test_notification_payload_has_required_fields() {
     let json = serde_json::to_value(&msg).unwrap();
 
     assert_eq!(json["event"], "notification");
-    assert_eq!(json["payload"]["level"], "info");
+    assert_eq!(json["payload"]["notification_type"], "idle_prompt");
     assert_eq!(json["payload"]["title"], "Task Complete");
     assert_eq!(json["payload"]["message"], "Your code has been generated.");
-}
-
-#[test]
-fn test_notification_levels() {
-    // Verify all notification levels serialize correctly
-    let levels = [
-        (NotificationLevel::Info, "info"),
-        (NotificationLevel::Warning, "warning"),
-        (NotificationLevel::Error, "error"),
-    ];
-
-    for (level, expected) in levels {
-        let json = serde_json::to_value(&level).unwrap();
-        assert_eq!(json, expected);
-    }
 }
 
 #[test]

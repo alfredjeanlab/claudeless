@@ -500,6 +500,26 @@ impl Runtime {
         None
     }
 
+    /// Fire Notification hook (fire-and-forget).
+    pub(crate) async fn fire_notification_hook(
+        &self,
+        notification_type: &str,
+        title: &str,
+        message: &str,
+    ) {
+        if let Some(ref executor) = self.hook_executor {
+            if executor.has_hooks(&HookEvent::Notification) {
+                let msg = HookMessage::notification(
+                    self.context.session_id.to_string(),
+                    notification_type,
+                    title,
+                    message,
+                );
+                let _ = executor.execute(&msg).await;
+            }
+        }
+    }
+
     /// Fire SessionStart hook (fire-and-forget notification).
     pub(crate) async fn fire_session_start_hook(&self) {
         if let Some(ref executor) = self.hook_executor {

@@ -14,6 +14,7 @@ pub mod registry;
 pub use executor::{HookConfig, HookError, HookExecutor};
 pub use loader::load_hooks;
 pub use protocol::{
-    HookEvent, HookMessage, HookPayload, HookResponse, NotificationLevel, StopHookResponse,
+    HookEvent, HookMessage, HookPayload, HookResponse, StopHookResponse, NOTIFICATION_AUTH_SUCCESS,
+    NOTIFICATION_ELICITATION_DIALOG, NOTIFICATION_IDLE_PROMPT, NOTIFICATION_PERMISSION_PROMPT,
 };
 pub use registry::HookRegistry;

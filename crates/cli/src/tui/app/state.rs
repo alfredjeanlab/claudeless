@@ -455,6 +455,28 @@ impl TuiAppState {
         lines.join("\n")
     }
 
+    /// Fire a notification hook (fire-and-forget).
+    ///
+    /// Takes runtime via take/restore pattern to avoid holding the lock
+    /// across the async hook execution.
+    pub fn fire_notification(&self, notification_type: &str, title: &str, message: &str) {
+        let runtime = {
+            let mut inner = self.inner.lock();
+            inner.runtime.take()
+        };
+
+        if let Some(rt) = runtime {
+            let nt = notification_type.to_string();
+            let t = title.to_string();
+            let m = message.to_string();
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(rt.fire_notification_hook(&nt, &t, &m));
+            });
+            let mut inner = self.inner.lock();
+            inner.runtime = Some(rt);
+        }
+    }
+
     /// Check if the session start hook needs to fire.
     ///
     /// Fires once when the app enters Input mode for the first time.

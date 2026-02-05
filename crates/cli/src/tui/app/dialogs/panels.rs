@@ -14,6 +14,7 @@ use crate::tui::widgets::setup::{
 };
 use crate::tui::widgets::{HookType, HooksDialog, HooksView, ModelChoice, ModelPickerDialog};
 
+use crate::hooks::NOTIFICATION_AUTH_SUCCESS;
 use crate::tui::app::state::TuiAppState;
 use crate::tui::app::types::{AppMode, ExitReason};
 
@@ -393,6 +394,12 @@ impl TuiAppState {
                 (_, KeyCode::Enter) => {
                     inner.dialog.dismiss();
                     inner.mode = AppMode::Input;
+                    drop(inner);
+                    self.fire_notification(
+                        NOTIFICATION_AUTH_SUCCESS,
+                        "Auth Success",
+                        "Login completed",
+                    );
                 }
                 _ => {}
             },
