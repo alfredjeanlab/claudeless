@@ -187,6 +187,8 @@ fn normalize_tui(text: &str) -> String {
     let marker_arrow_re = Regex::new(r"^(⏺ )→(.+)$").unwrap();
     // Autocomplete suggestion line: indented /command followed by description
     let autocomplete_re = Regex::new(r"^\s+/[\w-]+\s{2,}\S").unwrap();
+    // Collapse 2+ spaces to exactly 2 spaces for autocomplete column normalization
+    let multi_space_re = Regex::new(r"\s{2,}").unwrap();
 
     let mut result: Vec<String> = Vec::new();
     let mut skip_next_blanks = false;
@@ -224,10 +226,10 @@ fn normalize_tui(text: &str) -> String {
         // Strip → prefix from response content lines (real Claude adds these,
         // claudeless does not). Also strip 2-space continuation indent.
         let trimmed: String = if in_response_block {
-            if let Some(caps) = marker_arrow_re.captures(&trimmed) {
+            if let Some(caps) = marker_arrow_re.captures(trimmed) {
                 // `⏺ →content` → `⏺ content`
                 format!("{}{}", &caps[1], &caps[2])
-            } else if let Some(caps) = response_arrow_re.captures(&trimmed) {
+            } else if let Some(caps) = response_arrow_re.captures(trimmed) {
                 let content = caps[2].trim();
                 if content.is_empty() {
                     // Bare `→` or `  →` line (empty continuation) — skip entirely
@@ -260,10 +262,7 @@ fn normalize_tui(text: &str) -> String {
             }
             // Normalize column spacing: collapse 2+ spaces to exactly 2 spaces
             // so that different column alignments between real Claude and claudeless match.
-            let trimmed = Regex::new(r"\s{2,}")
-                .unwrap()
-                .replace_all(&trimmed, "  ")
-                .to_string();
+            let trimmed = multi_space_re.replace_all(&trimmed, "  ").to_string();
             // Fall through to push the normalized line below
             // (need to handle it here since we modified trimmed)
             result.push(trimmed);
