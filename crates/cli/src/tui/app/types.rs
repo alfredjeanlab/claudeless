@@ -229,6 +229,8 @@ pub enum AppMode {
     MemoryDialog,
     /// Showing elicitation dialog (AskUserQuestion)
     Elicitation,
+    /// Showing plan approval dialog (ExitPlanMode)
+    PlanApproval,
 }
 
 /// Status bar information

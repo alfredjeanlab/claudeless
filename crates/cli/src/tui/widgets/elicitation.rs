@@ -85,9 +85,9 @@ impl ElicitationState {
 
     /// Whether the cursor is on the "Type something." row.
     pub fn is_on_free_text(&self) -> bool {
-        self.questions.get(self.current_question).map_or(false, |q| {
-            q.cursor == Self::type_something_index(q)
-        })
+        self.questions
+            .get(self.current_question)
+            .is_some_and(|q| q.cursor == Self::type_something_index(q))
     }
 
     /// Move cursor up in current question.

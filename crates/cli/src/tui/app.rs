@@ -317,3 +317,7 @@ mod permission_tests;
 #[cfg(test)]
 #[path = "app_elicitation_tests.rs"]
 mod elicitation_tests;
+
+#[cfg(test)]
+#[path = "app_plan_approval_tests.rs"]
+mod plan_approval_tests;

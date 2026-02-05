@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Stateful tool executors (TodoWrite, ExitPlanMode).
+//! Stateful tool executors (TodoWrite, EnterPlanMode, ExitPlanMode, AskUserQuestion).
 //!
 //! These tools write to the state directory and require a `StateWriter`.
 
@@ -92,32 +92,67 @@ fn rand_id() -> u64 {
     hasher.finish()
 }
 
+/// Execute the EnterPlanMode tool.
+///
+/// Auto-approved, no dialog. Returns instructions text and sets plan mode.
+/// Matches real Claude Code behavior where EnterPlanMode returns immediately
+/// with a long instructions text about plan mode.
+pub fn execute_enter_plan_mode() -> ToolExecutionResult {
+    let instructions = "Entered plan mode. In this mode:\n\
+        - You should explore the codebase and design an implementation approach\n\
+        - Use Read, Glob, Grep, and other tools to understand the code\n\
+        - When ready, use ExitPlanMode with your plan for user approval\n\
+        - Do NOT make any code changes (no Write, Edit, or Bash commands)";
+
+    ToolExecutionResult {
+        tool_use_id: String::new(), // Set by caller
+        content: vec![ToolResultContent::Text {
+            text: instructions.to_string(),
+        }],
+        is_error: false,
+        tool_use_result: Some(serde_json::json!({
+            "message": "Entered plan mode. You are now exploring and designing an implementation approach."
+        })),
+        needs_prompt: false,
+    }
+}
+
 /// Execute the ExitPlanMode tool.
 ///
 /// Creates a plan file in markdown format with word-based naming.
+/// In TUI mode, this returns as a PendingPermission so the TUI can
+/// show a plan approval dialog. In print mode, it auto-approves.
 pub fn execute_exit_plan_mode(
     call: &ToolCallSpec,
     state_writer: &StateWriter,
 ) -> ToolExecutionResult {
     // Try to get plan content from various possible field names
+    // Real Claude Code uses "plan" as the field name
     let content = call
         .input
-        .get("plan_content")
+        .get("plan")
+        .or_else(|| call.input.get("plan_content"))
         .or_else(|| call.input.get("planContent"))
         .or_else(|| call.input.get("content"))
         .and_then(|v| v.as_str())
         .unwrap_or("# Plan\n\nNo content provided.");
 
     match state_writer.create_plan(content) {
-        Ok(name) => ToolExecutionResult {
-            tool_use_id: String::new(), // Set by caller
-            content: vec![ToolResultContent::Text {
-                text: format!("Plan saved as {}.md", name),
-            }],
-            is_error: false,
-            tool_use_result: None,
-            needs_prompt: false,
-        },
+        Ok(name) => {
+            let plan_path = format!("~/.claude/plans/{}.md", name);
+            ToolExecutionResult {
+                tool_use_id: String::new(), // Set by caller
+                content: vec![ToolResultContent::Text {
+                    text: format!("Plan saved as {}.md", name),
+                }],
+                is_error: false,
+                tool_use_result: Some(serde_json::json!({
+                    "plan_name": name,
+                    "plan_path": plan_path,
+                })),
+                needs_prompt: false,
+            }
+        }
         Err(e) => ToolExecutionResult {
             tool_use_id: String::new(),
             content: vec![ToolResultContent::Text {

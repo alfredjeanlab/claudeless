@@ -370,6 +370,16 @@ impl Runtime {
         for (i, call) in tool_calls.iter().enumerate() {
             let tool_use_id = format!("toolu_{:08x}", i);
 
+            // For ExitPlanMode: return as pending for TUI mode interactive dialog
+            if call.tool == "ExitPlanMode" && self.cli.should_use_tui() {
+                // TUI mode — return as pending for plan approval dialog
+                pending_permission = Some(PendingPermission {
+                    tool_call: call.clone(),
+                    tool_use_id,
+                });
+                break;
+            }
+
             // For AskUserQuestion: inject scenario-configured answers or
             // return as pending for TUI mode interactive dialog
             let call = if call.tool == "AskUserQuestion" {

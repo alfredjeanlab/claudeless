@@ -24,6 +24,7 @@ pub enum ToolName {
 
     // Stateful tools
     TodoWrite,
+    EnterPlanMode,
     ExitPlanMode,
     AskUserQuestion,
 
@@ -47,6 +48,7 @@ impl ToolName {
             Self::Glob => "Glob",
             Self::Grep => "Grep",
             Self::TodoWrite => "TodoWrite",
+            Self::EnterPlanMode => "EnterPlanMode",
             Self::ExitPlanMode => "ExitPlanMode",
             Self::AskUserQuestion => "AskUserQuestion",
             Self::WebFetch => "WebFetch",
@@ -66,6 +68,7 @@ impl ToolName {
             "Glob" => Some(Self::Glob),
             "Grep" => Some(Self::Grep),
             "TodoWrite" => Some(Self::TodoWrite),
+            "EnterPlanMode" => Some(Self::EnterPlanMode),
             "ExitPlanMode" => Some(Self::ExitPlanMode),
             "AskUserQuestion" => Some(Self::AskUserQuestion),
             "WebFetch" => Some(Self::WebFetch),
@@ -84,7 +87,9 @@ impl ToolName {
             Self::Write | Self::Edit | Self::NotebookEdit => "write",
             Self::WebFetch | Self::WebSearch => "network",
             Self::Task => "delegate",
-            Self::TodoWrite | Self::ExitPlanMode | Self::AskUserQuestion => "state",
+            Self::TodoWrite | Self::EnterPlanMode | Self::ExitPlanMode | Self::AskUserQuestion => {
+                "state"
+            }
         }
     }
 }

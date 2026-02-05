@@ -54,6 +54,7 @@ impl TuiAppState {
             AppMode::HooksDialog => self.handle_hooks_dialog_key(key),
             AppMode::MemoryDialog => self.handle_memory_dialog_key(key),
             AppMode::Elicitation => self.handle_elicitation_key(key),
+            AppMode::PlanApproval => self.handle_plan_approval_key(key),
         }
     }
 
@@ -519,6 +520,12 @@ impl TuiAppState {
                 inner.dialog.dismiss();
                 inner.mode = AppMode::Input;
                 inner.display.response_content = "User declined to answer questions".to_string();
+            }
+            AppMode::PlanApproval => {
+                // Cancel plan approval and return to input
+                inner.dialog.dismiss();
+                inner.mode = AppMode::Input;
+                inner.display.response_content = "User rejected tool use".to_string();
             }
         }
     }

@@ -257,3 +257,72 @@ fn test_ask_user_question_malformed_input() {
     assert_eq!(result_json["answers"], json!({}));
     assert_eq!(result_json["questions"], json!([]));
 }
+
+// =========================================================================
+// EnterPlanMode
+// =========================================================================
+
+#[test]
+fn test_execute_enter_plan_mode() {
+    let result = execute_enter_plan_mode();
+    assert!(!result.is_error);
+
+    let text = result.text().unwrap();
+    assert!(text.contains("Entered plan mode"));
+    assert!(text.contains("ExitPlanMode"));
+
+    // tool_use_result has structured message
+    let result_json = result.tool_use_result.unwrap();
+    assert!(result_json["message"]
+        .as_str()
+        .unwrap()
+        .contains("plan mode"));
+}
+
+// =========================================================================
+// ExitPlanMode with "plan" field
+// =========================================================================
+
+#[test]
+fn test_execute_exit_plan_mode_plan_field() {
+    let writer = create_test_state_writer();
+    let call = ToolCallSpec {
+        tool: "ExitPlanMode".to_string(),
+        input: json!({
+            "plan": "# My Plan\n\n1. Step one\n2. Step two"
+        }),
+        result: None,
+    };
+
+    let result = execute_exit_plan_mode(&call, &writer);
+    assert!(!result.is_error);
+    assert!(result.text().unwrap().contains("Plan saved as"));
+
+    // tool_use_result has plan metadata
+    let result_json = result.tool_use_result.unwrap();
+    assert!(result_json["plan_name"].as_str().is_some());
+    assert!(result_json["plan_path"]
+        .as_str()
+        .unwrap()
+        .contains("~/.claude/plans/"));
+}
+
+#[test]
+fn test_execute_exit_plan_mode_prefers_plan_field() {
+    let writer = create_test_state_writer();
+    let call = ToolCallSpec {
+        tool: "ExitPlanMode".to_string(),
+        input: json!({
+            "plan": "# Real Plan",
+            "plan_content": "# Old Field",
+        }),
+        result: None,
+    };
+
+    let result = execute_exit_plan_mode(&call, &writer);
+    assert!(!result.is_error);
+
+    // The "plan" field should take priority
+    let result_json = result.tool_use_result.unwrap();
+    assert!(result_json["plan_name"].as_str().is_some());
+}

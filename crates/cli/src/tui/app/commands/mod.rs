@@ -8,6 +8,7 @@
 //! - `handle_command_inner` - Slash command dispatch
 //! - Submodules for execution, permission handling, and export
 
+mod display;
 mod execution;
 mod export;
 mod permission;

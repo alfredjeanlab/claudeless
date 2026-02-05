@@ -6,14 +6,18 @@
 //! Contains:
 //! - `execute_shell_command` - Shell command execution via Bash tool
 //! - `process_prompt` - Prompt processing and response generation
-//! - `tool_call_to_permission_type` - Converts tool calls to permission dialogs
 
-use crate::config::ToolCallSpec;
 use crate::runtime::TurnResult;
 use crate::tui::spinner;
 use crate::tui::streaming::{StreamingConfig, StreamingResponse};
 use crate::tui::widgets::elicitation::{ElicitationResult, ElicitationState};
-use crate::tui::widgets::permission::{DiffKind, DiffLine, PermissionType};
+use crate::tui::widgets::permission::PermissionType;
+use crate::tui::widgets::plan_approval::{PlanApprovalResult, PlanApprovalState};
+
+use super::display::{
+    format_completed_tool_display, format_tool_call_display, join_display_parts,
+    tool_call_to_permission_type, wrap_response_paragraph,
+};
 
 use super::super::state::TuiAppState;
 use super::super::state::TuiAppStateInner;
@@ -115,7 +119,8 @@ impl TuiAppState {
                 ElicitationResult::Answered(answers) => answers,
                 ElicitationResult::Cancelled => {
                     let mut inner = self.inner.lock();
-                    inner.display.response_content = "User declined to answer questions".to_string();
+                    inner.display.response_content =
+                        "User declined to answer questions".to_string();
                     restore_input_state(&mut inner);
                     return;
                 }
@@ -162,6 +167,78 @@ impl TuiAppState {
         let mut inner = self.inner.lock();
         inner.dialog.dismiss();
         inner.display.response_content = "User declined to answer questions".to_string();
+        restore_input_state(&mut inner);
+    }
+
+    /// Confirm the plan approval dialog and re-execute with approval.
+    pub(in crate::tui::app) fn confirm_plan_approval(&self) {
+        let plan_approval = {
+            let mut inner = self.inner.lock();
+            if let super::super::state::DialogState::PlanApproval(state) =
+                std::mem::take(&mut inner.dialog)
+            {
+                inner.mode = super::super::types::AppMode::Thinking;
+                Some(state)
+            } else {
+                None
+            }
+        };
+
+        if let Some(state) = plan_approval {
+            match state.collect_result() {
+                PlanApprovalResult::Approved(mode) => {
+                    // Build approval message for the tool result
+                    let mode_str = match mode {
+                        crate::tui::widgets::plan_approval::ApprovalMode::ClearContext => {
+                            "clear_context_auto_accept"
+                        }
+                        crate::tui::widgets::plan_approval::ApprovalMode::AutoAccept => {
+                            "auto_accept"
+                        }
+                        crate::tui::widgets::plan_approval::ApprovalMode::ManualApprove => {
+                            "manual_approve"
+                        }
+                    };
+
+                    // Re-execute with approval injected
+                    let mut input = state.tool_input.clone();
+                    input["approval"] = serde_json::json!(mode_str);
+
+                    let prompt = serde_json::to_string(&serde_json::json!({
+                        "plan_approved": true,
+                        "approval_mode": mode_str,
+                    }))
+                    .unwrap_or_default();
+                    let permission = self.execute_with_runtime(prompt);
+                    if let Some(perm) = permission {
+                        self.show_permission_request(perm);
+                    }
+                }
+                PlanApprovalResult::Revised(feedback) => {
+                    // Re-execute with feedback
+                    let prompt = serde_json::to_string(&serde_json::json!({
+                        "plan_feedback": feedback,
+                    }))
+                    .unwrap_or_default();
+                    let permission = self.execute_with_runtime(prompt);
+                    if let Some(perm) = permission {
+                        self.show_permission_request(perm);
+                    }
+                }
+                PlanApprovalResult::Cancelled => {
+                    let mut inner = self.inner.lock();
+                    inner.display.response_content = "User rejected tool use".to_string();
+                    restore_input_state(&mut inner);
+                }
+            }
+        }
+    }
+
+    /// Cancel the plan approval dialog.
+    pub(in crate::tui::app) fn cancel_plan_approval(&self) {
+        let mut inner = self.inner.lock();
+        inner.dialog.dismiss();
+        inner.display.response_content = "User rejected tool use".to_string();
         restore_input_state(&mut inner);
     }
 
@@ -253,6 +330,48 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> Optio
 
     // Check for pending permission before displaying response
     if let Some(ref pending) = result.pending_permission {
+        // ExitPlanMode uses plan approval dialog
+        if pending.tool_call.tool == "ExitPlanMode" {
+            // Extract plan file path from the tool call's pre-configured result
+            // or generate a placeholder path
+            let plan_file_path = pending
+                .tool_call
+                .result
+                .as_deref()
+                .and_then(|r| {
+                    // Try to parse as "Plan saved as X.md" to extract path
+                    r.strip_prefix("Plan saved as ")
+                        .map(|name| format!("~/.claude/plans/{}", name))
+                })
+                .unwrap_or_else(|| "~/.claude/plans/plan.md".to_string());
+
+            let state = PlanApprovalState::from_tool_input(
+                &pending.tool_call.input,
+                pending.tool_use_id.clone(),
+                plan_file_path,
+            );
+            inner.dialog = super::super::state::DialogState::PlanApproval(state);
+            inner.mode = super::super::types::AppMode::PlanApproval;
+
+            // Build display for completed tool calls before the plan approval
+            let mut parts = Vec::new();
+            for (i, call) in tool_calls.iter().take(completed_count).enumerate() {
+                let result_text = result.tool_results.get(i).and_then(|r| r.text());
+                parts.push(format_completed_tool_display(call, result_text));
+            }
+            let response_text = result.response_text();
+            if !response_text.is_empty() {
+                parts.push(wrap_response_paragraph(
+                    response_text,
+                    inner.display.terminal_width as usize,
+                ));
+            }
+            if !parts.is_empty() {
+                setup_response_display(inner, join_display_parts(&parts));
+            }
+            return None;
+        }
+
         // AskUserQuestion uses elicitation dialog instead of permission dialog
         if pending.tool_call.tool == "AskUserQuestion" {
             let state = ElicitationState::from_tool_input(
@@ -445,253 +564,6 @@ fn restore_input_state(inner: &mut TuiAppStateInner) {
         inner.input.buffer = stashed;
         inner.input.cursor_pos = inner.input.buffer.len();
         inner.input.show_stash_indicator = false;
-    }
-}
-
-// ============================================================================
-// Tool Call Display Formatting
-// ============================================================================
-
-/// Word-wrap a text paragraph for display after a `⏺ ` prefix.
-///
-/// Real Claude Code wraps response text at the terminal width with a 2-space
-/// continuation indent. The first line has a 2-char prefix (`⏺ `), and
-/// continuation lines use `  ` (2 spaces) indent.
-fn wrap_response_paragraph(text: &str, terminal_width: usize) -> String {
-    // Account for "⏺ " prefix on first line (2 visual columns)
-    let first_line_width = terminal_width.saturating_sub(2);
-    // Continuation indent is "  " (2 spaces)
-    let continuation_width = terminal_width.saturating_sub(2);
-
-    if first_line_width == 0 || text.chars().count() <= first_line_width {
-        return text.to_string();
-    }
-
-    let mut result = String::new();
-    let mut current_line_len = 0;
-    let mut is_first_line = true;
-
-    for word in text.split_whitespace() {
-        let word_len = word.chars().count();
-        let max_width = if is_first_line {
-            first_line_width
-        } else {
-            continuation_width
-        };
-
-        if current_line_len == 0 {
-            result.push_str(word);
-            current_line_len = word_len;
-        } else if current_line_len + 1 + word_len <= max_width {
-            result.push(' ');
-            result.push_str(word);
-            current_line_len += 1 + word_len;
-        } else {
-            result.push_str("\n  ");
-            result.push_str(word);
-            current_line_len = word_len;
-            is_first_line = false;
-        }
-    }
-
-    result
-}
-
-/// Join display parts where the first part is unprefixed (gets ⏺ from display layer)
-/// and subsequent parts get their own ⏺ prefix.
-fn join_display_parts(parts: &[String]) -> String {
-    let mut result = String::new();
-    for (i, part) in parts.iter().enumerate() {
-        if i == 0 {
-            result.push_str(part);
-        } else {
-            result.push_str("\n\n⏺ ");
-            result.push_str(part);
-        }
-    }
-    result
-}
-
-/// Format a completed tool call with its result for display.
-fn format_completed_tool_display(call: &ToolCallSpec, result_text: Option<&str>) -> String {
-    match call.tool.as_str() {
-        "Write" => {
-            let file_path = call
-                .input
-                .get("file_path")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let mut display = format!("Write({})", file_path);
-            if let Some(result) = result_text {
-                display.push_str(&format!("\n  \u{23bf} \u{a0}{}", result));
-                // Show content lines indented under the result
-                if let Some(content) = call.input.get("content").and_then(|v| v.as_str()) {
-                    for (i, line) in content.split('\n').enumerate() {
-                        display.push_str(&format!("\n      {} {}", i + 1, line));
-                    }
-                }
-            }
-            display
-        }
-        "Read" => {
-            if let Some(result) = result_text {
-                // Results ending with "…" indicate a streaming/in-progress read
-                if result.ends_with('\u{2026}') {
-                    format!("Reading {} (ctrl+o to expand)", result)
-                } else {
-                    format!("Read {} (ctrl+o to expand)", result)
-                }
-            } else {
-                "Read (ctrl+o to expand)".to_string()
-            }
-        }
-        "Bash" => {
-            let command = call
-                .input
-                .get("command")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let mut display = format!("Bash({})", command);
-            if let Some(result) = result_text {
-                display.push_str(&format!("\n  \u{23bf} \u{a0}{}", result));
-            }
-            display
-        }
-        _ => {
-            if let Some(result) = result_text {
-                result.to_string()
-            } else {
-                call.tool.clone()
-            }
-        }
-    }
-}
-
-/// Format a tool call for display above the permission dialog.
-fn format_tool_call_display(call: &ToolCallSpec) -> String {
-    match call.tool.as_str() {
-        "Bash" => {
-            let command = call
-                .input
-                .get("command")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            format!("Bash({})\n  \u{23bf} \u{a0}Running\u{2026}", command)
-        }
-        "Edit" => {
-            let file_path = call
-                .input
-                .get("file_path")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            format!("Update({})", file_path)
-        }
-        "Write" => {
-            let file_path = call
-                .input
-                .get("file_path")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            format!("Write({})", file_path)
-        }
-        _ => call.tool.clone(),
-    }
-}
-
-// ============================================================================
-// Tool Call → Permission Type Conversion
-// ============================================================================
-
-/// Convert a `ToolCallSpec` into a `PermissionType` for the TUI permission dialog.
-///
-/// Returns `None` for unknown tool names (e.g., MCP tools that don't have
-/// a corresponding permission dialog).
-pub(crate) fn tool_call_to_permission_type(call: &ToolCallSpec) -> Option<PermissionType> {
-    match call.tool.as_str() {
-        "Bash" => {
-            let command = call.input.get("command")?.as_str()?.to_string();
-            let description = call
-                .input
-                .get("description")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
-            Some(PermissionType::Bash {
-                command,
-                description,
-            })
-        }
-        "Write" => {
-            let file_path = call.input.get("file_path")?.as_str()?.to_string();
-            let content = call
-                .input
-                .get("content")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let content_lines = content.split('\n').map(|s| s.to_string()).collect();
-            Some(PermissionType::Write {
-                file_path,
-                content_lines,
-            })
-        }
-        "Edit" => {
-            let file_path = call.input.get("file_path")?.as_str()?.to_string();
-            let old_string = call
-                .input
-                .get("old_string")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let new_string = call
-                .input
-                .get("new_string")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-
-            let mut diff_lines = Vec::new();
-            let mut line_num: u32 = 1;
-
-            // Removed lines
-            for line in old_string.lines() {
-                diff_lines.push(DiffLine {
-                    line_num: Some(line_num),
-                    kind: DiffKind::Removed,
-                    content: line.to_string(),
-                });
-                line_num += 1;
-            }
-            // NoNewline marker after removed lines if old_string doesn't end with newline
-            if !old_string.is_empty() && !old_string.ends_with('\n') {
-                diff_lines.push(DiffLine {
-                    line_num: Some(line_num - 1),
-                    kind: DiffKind::NoNewline,
-                    content: "No newline at end of file".to_string(),
-                });
-            }
-
-            // Added lines (line numbering continues from removed)
-            let added_start = line_num;
-            for (i, line) in new_string.lines().enumerate() {
-                diff_lines.push(DiffLine {
-                    line_num: Some(added_start + i as u32),
-                    kind: DiffKind::Added,
-                    content: line.to_string(),
-                });
-            }
-            // NoNewline marker after added lines
-            let added_count = new_string.lines().count();
-            if !new_string.is_empty() && !new_string.ends_with('\n') {
-                diff_lines.push(DiffLine {
-                    line_num: Some(added_start + added_count as u32),
-                    kind: DiffKind::NoNewline,
-                    content: "No newline at end of file".to_string(),
-                });
-            }
-
-            Some(PermissionType::Edit {
-                file_path,
-                diff_lines,
-            })
-        }
-        _ => None,
     }
 }
 
