@@ -7,10 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-02-05
+
 ### Features
 
 - **AskUserQuestion Tool**: Simulates the AskUserQuestion tool with pre-configured answers or auto-selection of the first option per question
 - **Elicitation Widget**: TUI rendering for question dialogs with option selection
+- **EnterPlanMode Tool**: Simulates the EnterPlanMode tool and ExitPlanMode plan approval dialog
+- **Elicitation Options**: Added "Type something." and "Chat about this" elicitation options
+- **Environment Module**: Env module for environment variable management
+- **Hooks Support**: Auto-continuation runtime and improved fixture generation
+
+### Fixed
+
+- Match real Claude Code elicitation dialog behavior
+- Match real Claude Code tool_result format for AskUserQuestion
+- Error JSONL recording fixes
 
 ### Refactored
 
