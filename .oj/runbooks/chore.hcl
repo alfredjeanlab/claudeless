@@ -16,7 +16,7 @@ command "chore" {
 
 queue "chores" {
   type = "external"
-  list = "wok list -t chore -s todo --unassigned -p less -o json"
+  list = "wok ready -t chore -p less -o json"
   take = "wok start ${item.id}"
 }
 
@@ -58,19 +58,25 @@ job "chore" {
     run = <<-SHELL
       git add -A
       git diff --cached --quiet || git commit -m "${local.title}"
-      test "$(git rev-list --count HEAD ^origin/${local.base})" -gt 0 || { echo "No changes to submit" >&2; exit 1; }
-      git push origin "${workspace.branch}"
-      cd ${invoke.dir} && wok done ${var.task.id}
-      oj queue push merges --var branch="${workspace.branch}" --var title="${local.title}"
+      if test "$(git rev-list --count HEAD ^origin/${local.base})" -gt 0; then
+        git push origin "${workspace.branch}"
+        wok done ${var.task.id}
+        oj queue push merges --var branch="${workspace.branch}" --var title="${local.title}"
+      elif wok show ${var.task.id} -o json | grep -q '"status":"done"'; then
+        echo "Issue already resolved, no changes needed"
+      else
+        echo "No changes to submit" >&2
+        exit 1
+      fi
     SHELL
   }
 
   step "reopen" {
-    run = "cd ${invoke.dir} && wok reopen ${var.task.id} --reason 'Chore job failed'"
+    run = "wok reopen ${var.task.id} --reason 'Chore job failed'"
   }
 
   step "cancel" {
-    run = "cd ${invoke.dir} && wok close ${var.task.id} --reason 'Chore job cancelled'"
+    run = "wok close ${var.task.id} --reason 'Chore job cancelled'"
   }
 }
 
@@ -80,7 +86,7 @@ agent "chores" {
   on_idle  = { action = "nudge", message = "Keep working. Complete the task, write tests, run make check, and commit." }
   on_dead  = { action = "gate", run = "make check" }
 
-  prime = ["cd ${invoke.dir} && wok show ${var.task.id}"]
+  prime = ["wok show ${var.task.id}"]
 
   prompt = <<-PROMPT
     Complete the following task: ${var.task.id} - ${var.task.title}
@@ -93,5 +99,8 @@ agent "chores" {
     4. Write or update tests
     5. Run `make check` to verify
     6. Commit your changes
+    7. Mark the issue as done: `wok done ${var.task.id}`
+
+    If the task is already completed (e.g. by a prior commit), skip to step 7.
   PROMPT
 }
