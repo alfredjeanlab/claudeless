@@ -1,4 +1,4 @@
-# File a bug and dispatch it to a fix worker.
+# File a wok bug and dispatch it to a fix worker.
 #
 # Worker pulls bugs from wok, fixes them, and submits to the merge queue.
 #
@@ -18,6 +18,7 @@ queue "bugs" {
   type = "external"
   list = "wok ready -t bug -p less -o json"
   take = "wok start ${item.id}"
+  poll = "30s"
 }
 
 worker "bug" {

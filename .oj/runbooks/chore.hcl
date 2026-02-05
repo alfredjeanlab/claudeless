@@ -1,4 +1,4 @@
-# File a chore and dispatch it to a worker.
+# File a wok chore and dispatch it to a worker.
 #
 # Worker pulls chores from wok, completes them, and submits to the merge queue.
 #
@@ -18,6 +18,7 @@ queue "chores" {
   type = "external"
   list = "wok ready -t chore -p less -o json"
   take = "wok start ${item.id}"
+  poll = "30s"
 }
 
 worker "chore" {

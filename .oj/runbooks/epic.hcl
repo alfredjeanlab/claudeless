@@ -1,13 +1,14 @@
-# Plan and implement a large feature using two-phase worker queues.
+# Plan and implement a large 'epic' wok issues with the 'plan:needed' and 'build:needed' labels.
 #
 # Creates an epic issue, then workers handle planning and implementation:
 # 1. Plan worker explores codebase and writes plan to issue notes
 # 2. Epic worker implements the plan and submits to merge queue
+
+# Create a new wok epic with 'plan:needed' and 'build:needed'.
 #
 # Examples:
 #   oj run epic "Add MCP tool simulation support"
 #   oj run epic "Implement streaming response playback"
-
 command "epic" {
   args = "<description>"
   run  = <<-SHELL
@@ -17,7 +18,19 @@ command "epic" {
   SHELL
 }
 
-# Queue existing issues for planning.
+# Create a new wok epic with 'plan:needed' only.
+#
+# Examples:
+#   oj run idea "Explore better hook event simulation"
+command "idea" {
+  args = "<description>"
+  run  = <<-SHELL
+    wok new epic "${args.description}" -l plan:needed
+    oj worker start plan
+  SHELL
+}
+
+# Queue existing feature/epic for planning, adding the 'plan:needed' label.
 #
 # Examples:
 #   oj run plan less-abc123
@@ -31,7 +44,7 @@ command "plan" {
   SHELL
 }
 
-# Queue planned issues for implementation.
+# Queue existing feature/epic for planning, adding the 'build:needed' label.
 #
 # Examples:
 #   oj run build less-abc123
@@ -49,6 +62,7 @@ queue "plans" {
   type = "external"
   list = "wok ready -t epic,feature -l plan:needed -p less -o json"
   take = "wok start ${item.id}"
+  poll = "30s"
 }
 
 worker "plan" {
@@ -63,16 +77,17 @@ job "plan" {
   on_fail   = { step = "reopen" }
   on_cancel = { step = "cancel" }
 
-  step "plan" {
+  step "think" {
     run     = { agent = "plan" }
-    on_done = { step = "mark-ready" }
+    on_done = { step = "planned" }
   }
 
-  step "mark-ready" {
+  step "planned" {
     run = <<-SHELL
       wok unlabel ${var.epic.id} plan:needed
       wok label ${var.epic.id} plan:ready
       wok reopen ${var.epic.id}
+      oj worker start epic
     SHELL
   }
 
@@ -94,6 +109,7 @@ queue "epics" {
   type = "external"
   list = "wok ready -t epic,feature -l build:needed -l plan:ready -p less -o json"
   take = "wok start ${item.id}"
+  poll = "30s"
 }
 
 worker "epic" {
@@ -156,12 +172,7 @@ job "epic" {
 # ------------------------------------------------------------------------------
 
 agent "plan" {
-  run = <<-CMD
-    claude --model opus \
-      --dangerously-skip-permissions \
-      --disallowed-tools EnterPlanMode,ExitPlanMode,Write,Edit,NotebookEdit,TodoWrite,TodoRead
-  CMD
-
+  run = "claude --model opus --dangerously-skip-permissions --disallowed-tools EnterPlanMode,ExitPlanMode"
   on_dead = { action = "gate", run = "wok show ${var.epic.id} -o json | jq -e '.notes | length > 0'" }
 
   session "tmux" {
