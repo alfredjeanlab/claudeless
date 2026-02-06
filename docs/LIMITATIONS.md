@@ -32,7 +32,7 @@ Built-in tools execute in a sandbox and scenarios control responses.
 - **State Directory**: projects, todos, plans, sessions, settings.json
 - **Built-in Tools**: Bash, Read, Write, Edit, Glob, Grep, TodoWrite, EnterPlanMode, ExitPlanMode, AskUserQuestion (sandboxed, with TUI dialogs for elicitation and plan approval)
 - **Scenario System**: Pattern matching, multi-turn conversations, failure injection, mock responses
-- **Slash Commands**: 24 commands in menu with fuzzy search filtering (`/clear`, `/compact`, `/config`, `/context`, `/exit`, `/export`, `/fork`, `/help`, `/hooks`, `/init`, `/login`, `/logout`, `/mcp`, `/memory`, `/model`, `/permissions`, `/plan`, `/pr-comments`, `/review`, `/status`, `/tasks`, `/terminal-setup`, `/todos`, `/vim`)
+- **Slash Commands**: 27 commands in menu with fuzzy search filtering (`/add-dir`, `/agents`, `/chrome`, `/clear`, `/compact`, `/config`, `/context`, `/exit`, `/export`, `/fork`, `/help`, `/hooks`, `/init`, `/login`, `/logout`, `/mcp`, `/memory`, `/model`, `/permissions`, `/plan`, `/pr-comments`, `/review`, `/status`, `/tasks`, `/terminal-setup`, `/todos`, `/vim`)
 - **ANSI Colors**: Logo, header, separators, status bar, permission mode indicators, bash mode styling
 
 ## Out of Scope

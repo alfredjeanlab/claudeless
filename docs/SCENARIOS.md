@@ -55,6 +55,10 @@ response = "Hello from Claudeless!"
 | `user_name` | string | `"Alfred"` | User display name |
 | `session_id` | string | (random) | Fixed UUID for deterministic tests |
 | `project_path` | string | (cwd) | Override project path |
+| `placeholder` | string | (default) | Placeholder text for input prompt |
+| `provider` | string | `"Claude Max"` | Provider name shown in header |
+| `show_welcome_back` | bool | `false` | Show "Welcome back!" splash instead of normal header |
+| `welcome_back_right_panel` | array | (default) | Right panel rows for welcome back box |
 
 ### Timing
 
@@ -83,7 +87,7 @@ All timeouts can also be set via environment variables:
 | `compact_delay_ms` | `CLAUDELESS_COMPACT_DELAY_MS` | 20 |
 | `hook_timeout_ms` | `CLAUDELESS_HOOK_TIMEOUT_MS` | 5000 |
 | `mcp_timeout_ms` | `CLAUDELESS_MCP_TIMEOUT_MS` | 30000 |
-| `response_delay_ms` | `CLAUDELESS_RESPONSE_DELAY_MS` | 0 |
+| `response_delay_ms` | `CLAUDELESS_RESPONSE_DELAY_MS` | 20 |
 
 **Precedence:** scenario config > environment variable > default
 
@@ -93,6 +97,7 @@ All timeouts can also be set via environment variables:
 |-------|------|---------|-------------|
 | `working_directory` | string | (cwd) | Simulated working directory |
 | `trusted` | bool | `true` | Whether directory is trusted |
+| `logged_in` | bool | `true` | Whether user is logged in (shows setup wizard when false) |
 | `permission_mode` | string | `"default"` | Permission mode override |
 
 **Permission Mode Values:**

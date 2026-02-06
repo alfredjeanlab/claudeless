@@ -21,8 +21,8 @@ These flags and environment variables are unique to claudeless (not in the real 
 | Flag | Env Variable | Description |
 |------|--------------|-------------|
 | `--scenario <FILE>` | `CLAUDELESS_SCENARIO` | Scenario file (TOML/JSON) |
-| `--capture <FILE>` | `CLAUDELESS_CAPTURE` | Log all interactions to file |
 | `--failure <MODE>` | `CLAUDELESS_FAILURE` | Inject failure (see below) |
+| `--claude-version <VER>` | `CLAUDELESS_CLAUDE_VERSION` | Claude version to simulate |
 
 ### Environment Variables
 
@@ -30,8 +30,9 @@ These flags and environment variables are unique to claudeless (not in the real 
 |----------|-------------|
 | `CLAUDELESS_CONFIG_DIR` | State directory override (highest priority) |
 | `CLAUDE_CONFIG_DIR` | State directory (standard Claude Code variable) |
+| `CLAUDELESS_CLAUDE_VERSION` | Claude version to simulate |
 
-If neither is set, a temporary directory is used to avoid touching real `~/.claude`.
+If neither config dir variable is set, a temporary directory is used to avoid touching real `~/.claude`.
 
 ### Failure Modes
 
