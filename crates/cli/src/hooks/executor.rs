@@ -87,16 +87,22 @@ impl HookExecutor {
 
         let mut responses = Vec::new();
         for hook in hooks {
-            // For Notification events, skip hooks whose matcher doesn't match
+            // Matcher filtering: skip hooks whose pattern doesn't match the sub-event
             if let Some(ref matcher_pattern) = hook.matcher {
-                if let HookPayload::Notification {
-                    ref notification_type,
-                    ..
-                } = message.payload
-                {
+                let subject = match &message.payload {
+                    // For Notification events, match against notification_type
+                    HookPayload::Notification {
+                        ref notification_type,
+                        ..
+                    } => Some(notification_type.as_str()),
+                    // For tool events, match against tool_name
+                    HookPayload::ToolExecution { ref tool_name, .. } => Some(tool_name.as_str()),
+                    _ => None,
+                };
+                if let Some(subject) = subject {
                     let matches = matcher_pattern
                         .split('|')
-                        .any(|segment| segment.trim() == notification_type);
+                        .any(|segment| segment.trim() == subject);
                     if !matches {
                         continue;
                     }
@@ -123,8 +129,8 @@ impl HookExecutor {
         config: &HookConfig,
         message: &HookMessage,
     ) -> Result<HookResponse, HookError> {
-        let message_json =
-            serde_json::to_string(message).map_err(|e| HookError::Serialization(e.to_string()))?;
+        // Use flat wire format matching real Claude Code protocol
+        let message_json = message.to_wire_json().to_string();
 
         let mut child = Command::new("/bin/bash")
             .arg(&config.script_path)
@@ -158,6 +164,10 @@ impl HookExecutor {
         // Check exit status
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
+            // Exit code 2 means "block/deny" — return a block response instead of error
+            if output.status.code() == Some(2) {
+                return Ok(HookResponse::block(stderr.trim().to_string()));
+            }
             return Err(HookError::NonZeroExit {
                 code: output.status.code(),
                 stderr: stderr.to_string(),

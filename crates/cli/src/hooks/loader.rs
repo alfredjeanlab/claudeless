@@ -12,12 +12,12 @@ use crate::state::ClaudeSettings;
 /// Load hooks from settings into an executor.
 ///
 /// Parses hook definitions from ClaudeSettings and registers them with a HookExecutor.
-/// Currently supports Stop hooks with bash commands.
+/// Supports the map-keyed format: `{"PreToolUse": [{"matcher": "Bash", "hooks": [...]}]}`.
 pub fn load_hooks(settings: &ClaudeSettings) -> std::io::Result<HookExecutor> {
     let mut executor = HookExecutor::new();
 
-    for hook_def in &settings.hooks {
-        let event = match hook_def.matcher.event.as_str() {
+    for (event_name, entries) in &settings.hooks {
+        let event = match event_name.as_str() {
             "Stop" => Some(HookEvent::Stop),
             "PreToolUse" => Some(HookEvent::PreToolExecution),
             "PostToolUse" => Some(HookEvent::PostToolExecution),
@@ -30,17 +30,19 @@ pub fn load_hooks(settings: &ClaudeSettings) -> std::io::Result<HookExecutor> {
             continue;
         };
 
-        for cmd in &hook_def.hooks {
-            if cmd.command_type != "bash" {
-                continue;
-            }
+        for entry in entries {
+            for cmd in &entry.hooks {
+                if !matches!(cmd.command_type.as_str(), "bash" | "command") {
+                    continue;
+                }
 
-            // Create a temporary script file for the command
-            let script_path = create_hook_script(&cmd.command)?;
-            let config = HookConfig::new(script_path, cmd.timeout)
-                .with_blocking(true)
-                .with_matcher(hook_def.matcher.matcher.clone());
-            executor.register(event.clone(), config);
+                // Create a temporary script file for the command
+                let script_path = create_hook_script(&cmd.command)?;
+                let config = HookConfig::new(script_path, cmd.timeout)
+                    .with_blocking(true)
+                    .with_matcher(entry.matcher.clone());
+                executor.register(event.clone(), config);
+            }
         }
     }
 

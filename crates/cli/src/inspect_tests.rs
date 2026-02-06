@@ -66,6 +66,7 @@ fn test_hook_assertions() {
             tool_name: "Bash".to_string(),
             tool_input: serde_json::json!({"command": "ls"}),
             tool_output: None,
+            tool_use_id: None,
         },
     });
     inspector.record_hook(HookMessage {
@@ -75,6 +76,7 @@ fn test_hook_assertions() {
             tool_name: "Bash".to_string(),
             tool_input: serde_json::json!({"command": "ls"}),
             tool_output: Some("file1\nfile2".to_string()),
+            tool_use_id: None,
         },
     });
 
@@ -94,12 +96,14 @@ fn test_hook_invocations() {
         "Read",
         serde_json::json!({"file": "test.txt"}),
         None,
+        None,
     ));
     inspector.record_hook(HookMessage::tool_execution(
         "session",
         HookEvent::PreToolExecution,
         "Write",
         serde_json::json!({"file": "out.txt"}),
+        None,
         None,
     ));
 

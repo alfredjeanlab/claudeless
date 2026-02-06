@@ -282,6 +282,7 @@ fn test_hook_message_matches_spec() {
         "Bash",
         serde_json::json!({"command": "ls -la"}),
         None,
+        None,
     );
 
     let json = serde_json::to_value(&msg).unwrap();

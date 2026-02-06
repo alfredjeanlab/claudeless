@@ -215,8 +215,9 @@ impl Runtime {
             let tool_calls = response.tool_calls().to_vec();
 
             // Execute tools and collect results
-            let (tool_results, pending_permission) =
-                self.execute_tools_for_turn(&current_prompt, &response_text, &tool_calls);
+            let (tool_results, pending_permission) = self
+                .execute_tools_for_turn(&current_prompt, &response_text, &tool_calls)
+                .await;
 
             // Record the turn to state if no tool calls (tool calls record their own state)
             if tool_calls.is_empty() {
@@ -332,7 +333,9 @@ impl Runtime {
     /// `PendingPermission` is returned so the caller can show an interactive
     /// permission dialog. The tool result is *not* recorded to JSONL because
     /// the tool hasn't actually executed yet.
-    fn execute_tools_for_turn(
+    ///
+    /// Fires PreToolUse hooks before each tool execution and PostToolUse hooks after.
+    async fn execute_tools_for_turn(
         &mut self,
         prompt: &str,
         response_text: &str,
@@ -425,6 +428,38 @@ impl Runtime {
                     None
                 };
 
+            // Fire PreToolUse hook before tool execution
+            if let Some(ref hook_executor) = self.hook_executor {
+                if hook_executor.has_hooks(&HookEvent::PreToolExecution) {
+                    let pre_msg = HookMessage::tool_execution(
+                        self.context.session_id.to_string(),
+                        HookEvent::PreToolExecution,
+                        &call.tool,
+                        call.input.clone(),
+                        None,
+                        Some(tool_use_id.clone()),
+                    );
+                    match hook_executor.execute(&pre_msg).await {
+                        Ok(responses) => {
+                            // If any blocking hook returns proceed=false, skip tool execution
+                            if responses.iter().any(|r| !r.proceed) {
+                                let error_msg = responses
+                                    .iter()
+                                    .find(|r| !r.proceed)
+                                    .and_then(|r| r.error.as_deref())
+                                    .unwrap_or("Blocked by PreToolUse hook");
+                                results.push(ToolExecutionResult::error(&tool_use_id, error_msg));
+                                continue;
+                            }
+                        }
+                        Err(e) => {
+                            // Log warning but proceed with execution (fail-safe)
+                            eprintln!("PreToolUse hook error: {e}");
+                        }
+                    }
+                }
+            }
+
             // Execute tool
             let result = self.executor.execute(call, &tool_use_id, &ctx);
 
@@ -448,6 +483,23 @@ impl Runtime {
                     asst_uuid,
                     tool_use_result,
                 );
+            }
+
+            // Fire PostToolUse hook after tool execution (fire-and-forget)
+            if let Some(ref hook_executor) = self.hook_executor {
+                if hook_executor.has_hooks(&HookEvent::PostToolExecution) {
+                    let post_msg = HookMessage::tool_execution(
+                        self.context.session_id.to_string(),
+                        HookEvent::PostToolExecution,
+                        &call.tool,
+                        call.input.clone(),
+                        result.text().map(|s| s.to_string()),
+                        Some(tool_use_id.clone()),
+                    );
+                    if let Err(e) = hook_executor.execute(&post_msg).await {
+                        eprintln!("PostToolUse hook error: {e}");
+                    }
+                }
             }
 
             results.push(result);

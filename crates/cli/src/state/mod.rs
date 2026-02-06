@@ -23,7 +23,7 @@ pub(crate) mod plans;
 pub use directory::{StateDirectory, StateError};
 pub use persistence::ContentBlock;
 pub use settings::{
-    ClaudeSettings, HookCommand, HookDef, HookMatcher, PermissionSettings, Settings,
+    ClaudeSettings, HookCommand, HookDef, HookDefEntry, HookMatcher, PermissionSettings, Settings,
 };
 pub use settings_loader::{SettingsLoader, SettingsPaths};
 pub use settings_source::SettingSource;

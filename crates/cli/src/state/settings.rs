@@ -117,7 +117,7 @@ pub struct PermissionSettings {
     pub additional_directories: Vec<String>,
 }
 
-/// Hook matcher configuration
+/// Hook matcher configuration (legacy array format)
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct HookMatcher {
@@ -125,8 +125,6 @@ pub struct HookMatcher {
     pub event: String,
 
     /// Optional pipe-separated pattern for sub-event matching.
-    /// For Notification hooks, matches against notification_type
-    /// (e.g., "idle_prompt|permission_prompt").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub matcher: Option<String>,
 }
@@ -135,7 +133,7 @@ pub struct HookMatcher {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct HookCommand {
-    /// Command type (e.g., "bash")
+    /// Command type (e.g., "bash" or "command")
     #[serde(rename = "type")]
     pub command_type: String,
 
@@ -151,12 +149,28 @@ fn default_hook_timeout() -> u64 {
     60000
 }
 
-/// Hook definition
+/// Hook definition (legacy array format)
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct HookDef {
     /// Matcher for when to trigger the hook
     pub matcher: HookMatcher,
+
+    /// Commands to execute when triggered
+    pub hooks: Vec<HookCommand>,
+}
+
+/// Hook definition entry (real Claude Code map format).
+///
+/// In real Claude Code settings, hooks are keyed by event name:
+/// ```json
+/// {"hooks": {"PreToolUse": [{"matcher": "Bash|Read", "hooks": [{"type": "command", "command": "..."}]}]}}
+/// ```
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct HookDefEntry {
+    /// Optional pipe-separated tool name pattern for sub-event matching.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub matcher: Option<String>,
 
     /// Commands to execute when triggered
     pub hooks: Vec<HookCommand>,
@@ -181,9 +195,13 @@ pub struct ClaudeSettings {
     #[serde(default)]
     pub env: HashMap<String, String>,
 
-    /// Hook configurations
-    #[serde(default)]
-    pub hooks: Vec<HookDef>,
+    /// Hook configurations keyed by event name (e.g., "PreToolUse", "Stop").
+    ///
+    /// Accepts both formats:
+    /// - Map format (real Claude Code): `{"PreToolUse": [{"matcher": "Bash", "hooks": [...]}]}`
+    /// - Legacy array format: `[{"matcher": {"event": "Stop"}, "hooks": [...]}]`
+    #[serde(default, deserialize_with = "deserialize_hooks")]
+    pub hooks: HashMap<String, Vec<HookDefEntry>>,
 
     /// Capture unknown fields for forward compatibility
     #[serde(flatten)]
@@ -203,7 +221,7 @@ impl ClaudeSettings {
     }
 
     /// Merge another settings file on top of this one.
-    /// Later values override earlier ones. Hooks merge by event type.
+    /// Later values override earlier ones. Hooks merge by event key.
     pub fn merge(&mut self, other: Self) {
         // Permissions: replace arrays if non-empty in other
         if !other.permissions.allow.is_empty() {
@@ -226,16 +244,18 @@ impl ClaudeSettings {
             self.env.insert(key, value);
         }
 
-        // TODO(validate): Confirm real Claude CLI merges hooks by event type across settings files
-        // Hooks: merge by event+matcher (later overrides per-event, different events accumulate)
-        for other_hook in other.hooks {
-            if let Some(existing) = self.hooks.iter_mut().find(|h| {
-                h.matcher.event == other_hook.matcher.event
-                    && h.matcher.matcher == other_hook.matcher.matcher
-            }) {
-                *existing = other_hook;
-            } else {
-                self.hooks.push(other_hook);
+        // Hooks: merge by event key, then by matcher within each event
+        for (event, other_entries) in other.hooks {
+            let entries = self.hooks.entry(event).or_default();
+            for other_entry in other_entries {
+                if let Some(existing) = entries
+                    .iter_mut()
+                    .find(|e| e.matcher == other_entry.matcher)
+                {
+                    *existing = other_entry;
+                } else {
+                    entries.push(other_entry);
+                }
             }
         }
 
@@ -243,6 +263,48 @@ impl ClaudeSettings {
         for (key, value) in other.extra {
             self.extra.insert(key, value);
         }
+    }
+}
+
+/// Custom deserializer for hooks that accepts both map and legacy array formats.
+fn deserialize_hooks<'de, D>(
+    deserializer: D,
+) -> Result<HashMap<String, Vec<HookDefEntry>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error;
+
+    let value = serde_json::Value::deserialize(deserializer)?;
+    match value {
+        serde_json::Value::Object(map) => {
+            // New map format: {"PreToolUse": [{...}], "Stop": [{...}]}
+            let mut result = HashMap::new();
+            for (key, entries) in map {
+                let entries: Vec<HookDefEntry> =
+                    serde_json::from_value(entries).map_err(D::Error::custom)?;
+                result.insert(key, entries);
+            }
+            Ok(result)
+        }
+        serde_json::Value::Array(arr) => {
+            // Legacy array format: [{"matcher": {"event": "Stop"}, "hooks": [...]}]
+            let mut result: HashMap<String, Vec<HookDefEntry>> = HashMap::new();
+            for item in arr {
+                let hook_def: HookDef = serde_json::from_value(item).map_err(D::Error::custom)?;
+                let entry = HookDefEntry {
+                    matcher: hook_def.matcher.matcher,
+                    hooks: hook_def.hooks,
+                };
+                result
+                    .entry(hook_def.matcher.event)
+                    .or_default()
+                    .push(entry);
+            }
+            Ok(result)
+        }
+        serde_json::Value::Null => Ok(HashMap::new()),
+        _ => Err(D::Error::custom("hooks must be an object or array")),
     }
 }
 

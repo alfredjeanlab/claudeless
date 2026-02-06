@@ -3,7 +3,8 @@
 
 use super::*;
 use crate::mcp::config::McpServerDef;
-use crate::state::settings::{HookCommand, HookDef, HookMatcher};
+use crate::state::settings::{HookCommand, HookDef, HookDefEntry, HookMatcher};
+use std::collections::HashMap;
 
 #[test]
 fn test_new_settings() {
@@ -370,7 +371,7 @@ fn test_load_settings_input_nonexistent_file() {
     assert!(result.is_err());
 }
 
-// Hook configuration tests
+// Hook configuration tests — legacy format types
 
 #[test]
 fn test_hook_matcher_parse() {
@@ -413,8 +414,48 @@ fn test_hook_def_parse() {
     assert_eq!(def.hooks[0].command, "echo hello");
 }
 
+// Hook configuration tests — map format (real Claude Code)
+
 #[test]
-fn test_claude_settings_parse_hooks() {
+fn test_claude_settings_parse_hooks_map_format() {
+    let json = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "AskUserQuestion|ExitPlanMode",
+                    "hooks": [{"type": "command", "command": "echo pre-tool"}]
+                }
+            ],
+            "Stop": [
+                {
+                    "hooks": [{"type": "bash", "command": "echo stop", "timeout": 10000}]
+                }
+            ]
+        }
+    }"#;
+
+    let settings: ClaudeSettings = serde_json::from_str(json).unwrap();
+    assert!(settings.hooks.contains_key("PreToolUse"));
+    assert!(settings.hooks.contains_key("Stop"));
+
+    let pre_tool = &settings.hooks["PreToolUse"];
+    assert_eq!(pre_tool.len(), 1);
+    assert_eq!(
+        pre_tool[0].matcher,
+        Some("AskUserQuestion|ExitPlanMode".to_string())
+    );
+    assert_eq!(pre_tool[0].hooks[0].command_type, "command");
+    assert_eq!(pre_tool[0].hooks[0].command, "echo pre-tool");
+
+    let stop = &settings.hooks["Stop"];
+    assert_eq!(stop.len(), 1);
+    assert_eq!(stop[0].matcher, None);
+    assert_eq!(stop[0].hooks[0].command, "echo stop");
+    assert_eq!(stop[0].hooks[0].timeout, 10000);
+}
+
+#[test]
+fn test_claude_settings_parse_hooks_legacy_array_format() {
     let json = r#"{
         "hooks": [
             {
@@ -426,10 +467,11 @@ fn test_claude_settings_parse_hooks() {
         ]
     }"#;
     let settings: ClaudeSettings = serde_json::from_str(json).unwrap();
-    assert_eq!(settings.hooks.len(), 1);
-    assert_eq!(settings.hooks[0].matcher.event, "Stop");
-    assert_eq!(settings.hooks[0].hooks[0].command, "echo blocked");
-    assert_eq!(settings.hooks[0].hooks[0].timeout, 10000);
+    assert!(settings.hooks.contains_key("Stop"));
+    let stop = &settings.hooks["Stop"];
+    assert_eq!(stop.len(), 1);
+    assert_eq!(stop[0].hooks[0].command, "echo blocked");
+    assert_eq!(stop[0].hooks[0].timeout, 10000);
 }
 
 #[test]
@@ -439,113 +481,115 @@ fn test_claude_settings_default_has_empty_hooks() {
 }
 
 #[test]
-fn test_claude_settings_merge_hooks() {
+fn test_claude_settings_merge_hooks_map_format() {
     let mut base = ClaudeSettings {
-        hooks: vec![HookDef {
-            matcher: HookMatcher {
-                event: "Stop".to_string(),
+        hooks: HashMap::from([(
+            "Stop".to_string(),
+            vec![HookDefEntry {
                 matcher: None,
-            },
-            hooks: vec![HookCommand {
-                command_type: "bash".to_string(),
-                command: "echo base".to_string(),
-                timeout: 60000,
+                hooks: vec![HookCommand {
+                    command_type: "bash".to_string(),
+                    command: "echo base".to_string(),
+                    timeout: 60000,
+                }],
             }],
-        }],
+        )]),
         ..Default::default()
     };
 
     let override_settings = ClaudeSettings {
-        hooks: vec![HookDef {
-            matcher: HookMatcher {
-                event: "Stop".to_string(),
+        hooks: HashMap::from([(
+            "Stop".to_string(),
+            vec![HookDefEntry {
                 matcher: None,
-            },
-            hooks: vec![HookCommand {
-                command_type: "bash".to_string(),
-                command: "echo override".to_string(),
-                timeout: 60000,
+                hooks: vec![HookCommand {
+                    command_type: "bash".to_string(),
+                    command: "echo override".to_string(),
+                    timeout: 60000,
+                }],
             }],
-        }],
+        )]),
         ..Default::default()
     };
 
     base.merge(override_settings);
 
-    // Same-event hooks are replaced by later source
-    assert_eq!(base.hooks.len(), 1);
-    assert_eq!(base.hooks[0].hooks[0].command, "echo override");
+    // Same-event, same-matcher hooks are replaced by later source
+    let stop = &base.hooks["Stop"];
+    assert_eq!(stop.len(), 1);
+    assert_eq!(stop[0].hooks[0].command, "echo override");
 }
 
 #[test]
 fn test_claude_settings_merge_hooks_different_events_accumulate() {
     let mut base = ClaudeSettings {
-        hooks: vec![HookDef {
-            matcher: HookMatcher {
-                event: "Stop".to_string(),
+        hooks: HashMap::from([(
+            "Stop".to_string(),
+            vec![HookDefEntry {
                 matcher: None,
-            },
-            hooks: vec![HookCommand {
-                command_type: "bash".to_string(),
-                command: "echo stop".to_string(),
-                timeout: 60000,
+                hooks: vec![HookCommand {
+                    command_type: "bash".to_string(),
+                    command: "echo stop".to_string(),
+                    timeout: 60000,
+                }],
             }],
-        }],
+        )]),
         ..Default::default()
     };
 
     let override_settings = ClaudeSettings {
-        hooks: vec![HookDef {
-            matcher: HookMatcher {
-                event: "SessionStart".to_string(),
+        hooks: HashMap::from([(
+            "SessionStart".to_string(),
+            vec![HookDefEntry {
                 matcher: None,
-            },
-            hooks: vec![HookCommand {
-                command_type: "bash".to_string(),
-                command: "echo session-start".to_string(),
-                timeout: 60000,
+                hooks: vec![HookCommand {
+                    command_type: "bash".to_string(),
+                    command: "echo session-start".to_string(),
+                    timeout: 60000,
+                }],
             }],
-        }],
+        )]),
         ..Default::default()
     };
 
     base.merge(override_settings);
 
     // Different-event hooks accumulate
-    assert_eq!(base.hooks.len(), 2);
-    assert_eq!(base.hooks[0].matcher.event, "Stop");
-    assert_eq!(base.hooks[0].hooks[0].command, "echo stop");
-    assert_eq!(base.hooks[1].matcher.event, "SessionStart");
-    assert_eq!(base.hooks[1].hooks[0].command, "echo session-start");
+    assert!(base.hooks.contains_key("Stop"));
+    assert!(base.hooks.contains_key("SessionStart"));
+    assert_eq!(base.hooks["Stop"][0].hooks[0].command, "echo stop");
+    assert_eq!(
+        base.hooks["SessionStart"][0].hooks[0].command,
+        "echo session-start"
+    );
 }
 
 #[test]
 fn test_claude_settings_merge_empty_hooks_doesnt_override() {
     let mut base = ClaudeSettings {
-        hooks: vec![HookDef {
-            matcher: HookMatcher {
-                event: "Stop".to_string(),
+        hooks: HashMap::from([(
+            "Stop".to_string(),
+            vec![HookDefEntry {
                 matcher: None,
-            },
-            hooks: vec![HookCommand {
-                command_type: "bash".to_string(),
-                command: "echo keep".to_string(),
-                timeout: 60000,
+                hooks: vec![HookCommand {
+                    command_type: "bash".to_string(),
+                    command: "echo keep".to_string(),
+                    timeout: 60000,
+                }],
             }],
-        }],
+        )]),
         ..Default::default()
     };
 
     let override_settings = ClaudeSettings {
-        hooks: vec![], // Empty - should not override
+        hooks: HashMap::new(), // Empty - should not override
         ..Default::default()
     };
 
     base.merge(override_settings);
 
     // Hooks should be preserved
-    assert_eq!(base.hooks.len(), 1);
-    assert_eq!(base.hooks[0].hooks[0].command, "echo keep");
+    assert_eq!(base.hooks["Stop"][0].hooks[0].command, "echo keep");
 }
 
 #[test]
@@ -565,4 +609,52 @@ fn test_hook_matcher_without_matcher_field() {
     let matcher: HookMatcher = serde_json::from_str(json).unwrap();
     assert_eq!(matcher.event, "Stop");
     assert_eq!(matcher.matcher, None);
+}
+
+#[test]
+fn test_hook_command_type_command_accepted() {
+    let json = r#"{"type": "command", "command": "echo test"}"#;
+    let cmd: HookCommand = serde_json::from_str(json).unwrap();
+    assert_eq!(cmd.command_type, "command");
+    assert_eq!(cmd.command, "echo test");
+}
+
+#[test]
+fn test_hook_def_entry_parse() {
+    let json = r#"{
+        "matcher": "Bash|Read",
+        "hooks": [{"type": "command", "command": "echo hook"}]
+    }"#;
+    let entry: HookDefEntry = serde_json::from_str(json).unwrap();
+    assert_eq!(entry.matcher, Some("Bash|Read".to_string()));
+    assert_eq!(entry.hooks.len(), 1);
+    assert_eq!(entry.hooks[0].command, "echo hook");
+}
+
+#[test]
+fn test_hook_def_entry_no_matcher() {
+    let json = r#"{
+        "hooks": [{"type": "bash", "command": "echo hook"}]
+    }"#;
+    let entry: HookDefEntry = serde_json::from_str(json).unwrap();
+    assert_eq!(entry.matcher, None);
+}
+
+#[test]
+fn test_claude_settings_parse_hooks_legacy_with_matcher() {
+    let json = r#"{
+        "hooks": [
+            {
+                "matcher": {"event": "Notification", "matcher": "idle_prompt|permission_prompt"},
+                "hooks": [{"type": "bash", "command": "echo notify"}]
+            }
+        ]
+    }"#;
+    let settings: ClaudeSettings = serde_json::from_str(json).unwrap();
+    let notif = &settings.hooks["Notification"];
+    assert_eq!(notif.len(), 1);
+    assert_eq!(
+        notif[0].matcher,
+        Some("idle_prompt|permission_prompt".to_string())
+    );
 }

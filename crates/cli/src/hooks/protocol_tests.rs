@@ -14,12 +14,29 @@ fn test_hook_event_serialization() {
 }
 
 #[test]
+fn test_hook_event_wire_names() {
+    assert_eq!(HookEvent::PreToolExecution.wire_name(), "PreToolUse");
+    assert_eq!(HookEvent::PostToolExecution.wire_name(), "PostToolUse");
+    assert_eq!(HookEvent::Notification.wire_name(), "Notification");
+    assert_eq!(HookEvent::Stop.wire_name(), "Stop");
+    assert_eq!(HookEvent::SessionStart.wire_name(), "SessionStart");
+    assert_eq!(HookEvent::SessionEnd.wire_name(), "SessionEnd");
+    assert_eq!(HookEvent::PromptSubmit.wire_name(), "PromptSubmit");
+    assert_eq!(HookEvent::PreCompact.wire_name(), "PreCompact");
+    assert_eq!(
+        HookEvent::PermissionRequest.wire_name(),
+        "PermissionRequest"
+    );
+}
+
+#[test]
 fn test_hook_message_tool_execution() {
     let msg = HookMessage::tool_execution(
         "session_123",
         HookEvent::PreToolExecution,
         "Bash",
         serde_json::json!({"command": "ls -la"}),
+        None,
         None,
     );
 
@@ -28,6 +45,24 @@ fn test_hook_message_tool_execution() {
 
     let json = serde_json::to_string(&msg).unwrap();
     assert!(json.contains("\"tool_name\":\"Bash\""));
+}
+
+#[test]
+fn test_hook_message_tool_execution_with_tool_use_id() {
+    let msg = HookMessage::tool_execution(
+        "session_123",
+        HookEvent::PreToolExecution,
+        "Bash",
+        serde_json::json!({"command": "ls -la"}),
+        None,
+        Some("toolu_00000001".to_string()),
+    );
+
+    if let HookPayload::ToolExecution { tool_use_id, .. } = &msg.payload {
+        assert_eq!(*tool_use_id, Some("toolu_00000001".to_string()));
+    } else {
+        unreachable!("Expected ToolExecution payload");
+    }
 }
 
 #[test]
@@ -129,6 +164,7 @@ fn test_hook_payload_serialization() {
         tool_name: "Read".to_string(),
         tool_input: serde_json::json!({"file_path": "/test.txt"}),
         tool_output: Some("content".to_string()),
+        tool_use_id: None,
     };
 
     let json = serde_json::to_string(&payload).unwrap();
@@ -148,6 +184,7 @@ fn test_pre_tool_execution_payload_matches_spec() {
         HookEvent::PreToolExecution,
         "Bash",
         serde_json::json!({"command": "ls -la"}),
+        None,
         None,
     );
 
@@ -170,6 +207,7 @@ fn test_post_tool_execution_includes_output() {
         "Bash",
         serde_json::json!({"command": "ls"}),
         Some("file1\nfile2".to_string()),
+        None,
     );
 
     let json = serde_json::to_value(&msg).unwrap();
@@ -261,6 +299,7 @@ fn test_hook_message_full_serialization() {
             "old_string": "foo",
             "new_string": "bar"
         }),
+        None,
         None,
     );
 
@@ -503,4 +542,100 @@ fn test_stop_hook_response_serialization() {
     let json = serde_json::to_value(&resp).unwrap();
     assert_eq!(json["decision"], "block");
     assert_eq!(json["reason"], "test reason");
+}
+
+// =========================================================================
+// Wire Format Tests
+// =========================================================================
+
+#[test]
+fn test_hook_message_wire_format_pretooluse() {
+    let msg = HookMessage::tool_execution(
+        "session-abc",
+        HookEvent::PreToolExecution,
+        "Bash",
+        serde_json::json!({"command": "ls -la"}),
+        None,
+        Some("toolu_00000001".to_string()),
+    );
+
+    let wire = msg.to_wire_json();
+
+    assert_eq!(wire["hook_event_name"], "PreToolUse");
+    assert_eq!(wire["session_id"], "session-abc");
+    assert_eq!(wire["tool_name"], "Bash");
+    assert_eq!(wire["tool_input"]["command"], "ls -la");
+    assert_eq!(wire["tool_use_id"], "toolu_00000001");
+    // tool_output should not be present when None
+    assert!(wire.get("tool_output").is_none());
+}
+
+#[test]
+fn test_hook_message_wire_format_posttooluse() {
+    let msg = HookMessage::tool_execution(
+        "session-abc",
+        HookEvent::PostToolExecution,
+        "Read",
+        serde_json::json!({"file_path": "/test.txt"}),
+        Some("file content here".to_string()),
+        Some("toolu_00000002".to_string()),
+    );
+
+    let wire = msg.to_wire_json();
+
+    assert_eq!(wire["hook_event_name"], "PostToolUse");
+    assert_eq!(wire["tool_name"], "Read");
+    assert_eq!(wire["tool_output"], "file content here");
+    assert_eq!(wire["tool_use_id"], "toolu_00000002");
+}
+
+#[test]
+fn test_hook_message_wire_format_stop() {
+    let msg = HookMessage::stop("session-abc", false);
+    let wire = msg.to_wire_json();
+
+    assert_eq!(wire["hook_event_name"], "Stop");
+    assert_eq!(wire["session_id"], "session-abc");
+    assert_eq!(wire["stop_hook_active"], false);
+}
+
+#[test]
+fn test_hook_message_wire_format_notification() {
+    let msg = HookMessage::notification("session-abc", "idle_prompt", "Title", "Message body");
+    let wire = msg.to_wire_json();
+
+    assert_eq!(wire["hook_event_name"], "Notification");
+    assert_eq!(wire["notification_type"], "idle_prompt");
+    assert_eq!(wire["title"], "Title");
+    assert_eq!(wire["message"], "Message body");
+}
+
+#[test]
+fn test_hook_message_wire_format_session_start() {
+    let msg = HookMessage::session(
+        "session-abc",
+        HookEvent::SessionStart,
+        Some("/project".to_string()),
+    );
+    let wire = msg.to_wire_json();
+
+    assert_eq!(wire["hook_event_name"], "SessionStart");
+    assert_eq!(wire["project_path"], "/project");
+}
+
+#[test]
+fn test_hook_message_wire_format_no_tool_use_id() {
+    let msg = HookMessage::tool_execution(
+        "session-abc",
+        HookEvent::PreToolExecution,
+        "Bash",
+        serde_json::json!({}),
+        None,
+        None,
+    );
+
+    let wire = msg.to_wire_json();
+
+    // tool_use_id should not be present when None
+    assert!(wire.get("tool_use_id").is_none());
 }

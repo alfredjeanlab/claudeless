@@ -25,6 +25,7 @@ async fn test_register_passthrough() {
         "Bash",
         serde_json::json!({"command": "ls"}),
         None,
+        None,
     );
 
     let responses = registry.executor().execute(&message).await.unwrap();
@@ -44,6 +45,7 @@ async fn test_register_blocking() {
         HookEvent::PreToolExecution,
         "Bash",
         serde_json::json!({"command": "rm -rf /"}),
+        None,
         None,
     );
 
@@ -84,7 +86,7 @@ async fn test_register_logger() {
 
     // Check that log file was written
     let log_content = std::fs::read_to_string(&log_path).unwrap();
-    assert!(log_content.contains("session_start"));
+    assert!(log_content.contains("SessionStart"));
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -103,6 +105,7 @@ async fn test_register_inline() {
         HookEvent::PreToolExecution,
         "Test",
         serde_json::json!({}),
+        None,
         None,
     );
 
@@ -146,6 +149,7 @@ async fn test_multiple_hooks_same_event() {
         "Test",
         serde_json::json!({}),
         None,
+        None,
     );
 
     let responses = registry.executor().execute(&message).await.unwrap();
@@ -170,6 +174,7 @@ async fn test_blocking_stops_processing() {
         HookEvent::PreToolExecution,
         "Test",
         serde_json::json!({}),
+        None,
         None,
     );
 

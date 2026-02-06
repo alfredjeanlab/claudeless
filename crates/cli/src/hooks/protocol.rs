@@ -29,6 +29,23 @@ pub enum HookEvent {
     Stop,
 }
 
+impl HookEvent {
+    /// Get the wire-format event name matching real Claude Code's protocol.
+    pub fn wire_name(&self) -> &'static str {
+        match self {
+            HookEvent::PreToolExecution => "PreToolUse",
+            HookEvent::PostToolExecution => "PostToolUse",
+            HookEvent::Notification => "Notification",
+            HookEvent::PermissionRequest => "PermissionRequest",
+            HookEvent::SessionStart => "SessionStart",
+            HookEvent::SessionEnd => "SessionEnd",
+            HookEvent::PromptSubmit => "PromptSubmit",
+            HookEvent::PreCompact => "PreCompact",
+            HookEvent::Stop => "Stop",
+        }
+    }
+}
+
 /// Hook message sent to hook script
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HookMessage {
@@ -50,6 +67,7 @@ impl HookMessage {
         tool_name: impl Into<String>,
         tool_input: serde_json::Value,
         tool_output: Option<String>,
+        tool_use_id: Option<String>,
     ) -> Self {
         Self {
             event,
@@ -58,6 +76,7 @@ impl HookMessage {
                 tool_name: tool_name.into(),
                 tool_input,
                 tool_output,
+                tool_use_id,
             },
         }
     }
@@ -146,6 +165,122 @@ impl HookMessage {
             payload: HookPayload::Stop { stop_hook_active },
         }
     }
+
+    /// Produce flat wire-format JSON matching real Claude Code's hook protocol.
+    ///
+    /// Real Claude Code sends flat JSON to hooks with `hook_event_name` at top level,
+    /// rather than nested `event`/`payload` structure. Example:
+    /// ```json
+    /// {"hook_event_name": "PreToolUse", "session_id": "...", "tool_name": "Bash", "tool_input": {...}}
+    /// ```
+    pub fn to_wire_json(&self) -> serde_json::Value {
+        let mut obj = serde_json::Map::new();
+        obj.insert(
+            "hook_event_name".to_string(),
+            serde_json::Value::String(self.event.wire_name().to_string()),
+        );
+        obj.insert(
+            "session_id".to_string(),
+            serde_json::Value::String(self.session_id.clone()),
+        );
+
+        match &self.payload {
+            HookPayload::ToolExecution {
+                tool_name,
+                tool_input,
+                tool_output,
+                tool_use_id,
+            } => {
+                obj.insert(
+                    "tool_name".to_string(),
+                    serde_json::Value::String(tool_name.clone()),
+                );
+                obj.insert("tool_input".to_string(), tool_input.clone());
+                if let Some(output) = tool_output {
+                    obj.insert(
+                        "tool_output".to_string(),
+                        serde_json::Value::String(output.clone()),
+                    );
+                }
+                if let Some(id) = tool_use_id {
+                    obj.insert(
+                        "tool_use_id".to_string(),
+                        serde_json::Value::String(id.clone()),
+                    );
+                }
+            }
+            HookPayload::Notification {
+                notification_type,
+                title,
+                message,
+            } => {
+                obj.insert(
+                    "notification_type".to_string(),
+                    serde_json::Value::String(notification_type.clone()),
+                );
+                obj.insert(
+                    "title".to_string(),
+                    serde_json::Value::String(title.clone()),
+                );
+                obj.insert(
+                    "message".to_string(),
+                    serde_json::Value::String(message.clone()),
+                );
+            }
+            HookPayload::Permission {
+                tool_name,
+                action,
+                context,
+            } => {
+                obj.insert(
+                    "tool_name".to_string(),
+                    serde_json::Value::String(tool_name.clone()),
+                );
+                obj.insert(
+                    "action".to_string(),
+                    serde_json::Value::String(action.clone()),
+                );
+                obj.insert("context".to_string(), context.clone());
+            }
+            HookPayload::Session { project_path } => {
+                if let Some(path) = project_path {
+                    obj.insert(
+                        "project_path".to_string(),
+                        serde_json::Value::String(path.clone()),
+                    );
+                }
+            }
+            HookPayload::Prompt { prompt } => {
+                obj.insert(
+                    "prompt".to_string(),
+                    serde_json::Value::String(prompt.clone()),
+                );
+            }
+            HookPayload::Compaction {
+                trigger,
+                custom_instructions,
+            } => {
+                obj.insert(
+                    "trigger".to_string(),
+                    serde_json::to_value(trigger).unwrap_or_default(),
+                );
+                if let Some(instructions) = custom_instructions {
+                    obj.insert(
+                        "custom_instructions".to_string(),
+                        serde_json::Value::String(instructions.clone()),
+                    );
+                }
+            }
+            HookPayload::Stop { stop_hook_active } => {
+                obj.insert(
+                    "stop_hook_active".to_string(),
+                    serde_json::Value::Bool(*stop_hook_active),
+                );
+            }
+        }
+
+        serde_json::Value::Object(obj)
+    }
 }
 
 /// Hook payload variants
@@ -158,6 +293,8 @@ pub enum HookPayload {
         tool_input: serde_json::Value,
         #[serde(skip_serializing_if = "Option::is_none")]
         tool_output: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        tool_use_id: Option<String>,
     },
 
     /// Notification content
