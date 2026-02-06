@@ -238,8 +238,20 @@ impl RuntimeBuilder {
             None
         };
 
-        // Load hook executor from settings
-        let hook_executor = load_hooks(&settings).ok();
+        // Load hook executor from settings, injecting common context fields
+        let hook_executor = load_hooks(&settings).ok().map(|executor| {
+            let cwd = Some(runtime_ctx.working_directory.to_string_lossy().into_owned());
+            let transcript_path = state_writer.as_ref().map(|sw| {
+                sw.read()
+                    .session_jsonl_path()
+                    .to_string_lossy()
+                    .into_owned()
+            });
+            let permission_mode = serde_json::to_value(&runtime_ctx.permission_mode)
+                .ok()
+                .and_then(|v| v.as_str().map(String::from));
+            executor.with_context(cwd, transcript_path, permission_mode)
+        });
 
         // Get execution mode from scenario (defaults to Live)
         let execution_mode = self

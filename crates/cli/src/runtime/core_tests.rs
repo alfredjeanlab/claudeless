@@ -68,10 +68,7 @@ async fn pre_tool_use_hook_fires_for_exit_plan_mode_in_tui() {
     let marker = tmp.path().join("hook_fired");
 
     let mut hook_executor = HookExecutor::new();
-    hook_executor.register(
-        HookEvent::PreToolExecution,
-        HookConfig::new(&script, 5000),
-    );
+    hook_executor.register(HookEvent::PreToolExecution, HookConfig::new(&script, 5000));
 
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
     let mut runtime = build_test_runtime(Some(hook_executor), cli);
@@ -92,10 +89,16 @@ async fn pre_tool_use_hook_fires_for_exit_plan_mode_in_tui() {
     FORCE_TUI.set(None);
 
     // Hook should have fired
-    assert!(marker.exists(), "PreToolUse hook should fire for ExitPlanMode in TUI mode");
+    assert!(
+        marker.exists(),
+        "PreToolUse hook should fire for ExitPlanMode in TUI mode"
+    );
 
     // TUI mode should set pending_permission (early return)
-    assert!(pending.is_some(), "ExitPlanMode in TUI mode should return pending_permission");
+    assert!(
+        pending.is_some(),
+        "ExitPlanMode in TUI mode should return pending_permission"
+    );
 
     // No tool results since the tool wasn't executed (pending permission)
     assert!(results.is_empty());
@@ -108,10 +111,7 @@ async fn pre_tool_use_hook_fires_for_ask_user_question_in_tui() {
     let marker = tmp.path().join("hook_fired");
 
     let mut hook_executor = HookExecutor::new();
-    hook_executor.register(
-        HookEvent::PreToolExecution,
-        HookConfig::new(&script, 5000),
-    );
+    hook_executor.register(HookEvent::PreToolExecution, HookConfig::new(&script, 5000));
 
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
     let mut runtime = build_test_runtime(Some(hook_executor), cli);
@@ -132,10 +132,16 @@ async fn pre_tool_use_hook_fires_for_ask_user_question_in_tui() {
     FORCE_TUI.set(None);
 
     // Hook should have fired
-    assert!(marker.exists(), "PreToolUse hook should fire for AskUserQuestion in TUI mode");
+    assert!(
+        marker.exists(),
+        "PreToolUse hook should fire for AskUserQuestion in TUI mode"
+    );
 
     // TUI mode should set pending_permission (early return)
-    assert!(pending.is_some(), "AskUserQuestion in TUI mode should return pending_permission");
+    assert!(
+        pending.is_some(),
+        "AskUserQuestion in TUI mode should return pending_permission"
+    );
 
     // No tool results since the tool wasn't executed (pending permission)
     assert!(results.is_empty());
@@ -171,7 +177,10 @@ async fn pre_tool_use_hook_blocking_prevents_tui_pending_permission() {
     FORCE_TUI.set(None);
 
     // Blocking hook should prevent the TUI early return — tool gets error result instead
-    assert!(pending.is_none(), "Blocking hook should prevent pending_permission");
+    assert!(
+        pending.is_none(),
+        "Blocking hook should prevent pending_permission"
+    );
     assert_eq!(results.len(), 1);
     assert!(results[0].is_error);
 }
@@ -183,10 +192,7 @@ async fn pre_tool_use_hook_fires_for_regular_tools() {
     let marker = tmp.path().join("hook_fired");
 
     let mut hook_executor = HookExecutor::new();
-    hook_executor.register(
-        HookEvent::PreToolExecution,
-        HookConfig::new(&script, 5000),
-    );
+    hook_executor.register(HookEvent::PreToolExecution, HookConfig::new(&script, 5000));
 
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
     let mut runtime = build_test_runtime(Some(hook_executor), cli);
@@ -202,7 +208,10 @@ async fn pre_tool_use_hook_fires_for_regular_tools() {
         .await;
 
     // Hook should have fired
-    assert!(marker.exists(), "PreToolUse hook should fire for regular tools");
+    assert!(
+        marker.exists(),
+        "PreToolUse hook should fire for regular tools"
+    );
 
     // Regular tools execute normally
     assert!(pending.is_none());

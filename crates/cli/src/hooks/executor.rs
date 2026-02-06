@@ -63,6 +63,12 @@ impl HookConfig {
 pub struct HookExecutor {
     /// Registered hooks by event
     hooks: HashMap<HookEvent, Vec<HookConfig>>,
+    /// Working directory (common hook field)
+    cwd: Option<String>,
+    /// Transcript JSONL path (common hook field)
+    transcript_path: Option<String>,
+    /// Permission mode (common hook field)
+    permission_mode: Option<String>,
 }
 
 impl HookExecutor {
@@ -70,7 +76,23 @@ impl HookExecutor {
     pub fn new() -> Self {
         Self {
             hooks: HashMap::new(),
+            cwd: None,
+            transcript_path: None,
+            permission_mode: None,
         }
+    }
+
+    /// Set common context fields injected into every hook payload.
+    pub fn with_context(
+        mut self,
+        cwd: Option<String>,
+        transcript_path: Option<String>,
+        permission_mode: Option<String>,
+    ) -> Self {
+        self.cwd = cwd;
+        self.transcript_path = transcript_path;
+        self.permission_mode = permission_mode;
+        self
     }
 
     /// Register a hook for an event
@@ -130,7 +152,25 @@ impl HookExecutor {
         message: &HookMessage,
     ) -> Result<HookResponse, HookError> {
         // Use flat wire format matching real Claude Code protocol
-        let message_json = message.to_wire_json().to_string();
+        let mut wire = message.to_wire_json();
+        if let Some(obj) = wire.as_object_mut() {
+            if let Some(ref cwd) = self.cwd {
+                obj.insert("cwd".to_string(), serde_json::Value::String(cwd.clone()));
+            }
+            if let Some(ref tp) = self.transcript_path {
+                obj.insert(
+                    "transcript_path".to_string(),
+                    serde_json::Value::String(tp.clone()),
+                );
+            }
+            if let Some(ref pm) = self.permission_mode {
+                obj.insert(
+                    "permission_mode".to_string(),
+                    serde_json::Value::String(pm.clone()),
+                );
+            }
+        }
+        let message_json = wire.to_string();
 
         let mut child = Command::new("/bin/bash")
             .arg(&config.script_path)
