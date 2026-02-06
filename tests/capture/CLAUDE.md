@@ -326,7 +326,7 @@ Agent teams are an experimental Claude Code feature that spawns multiple teammat
 - `# Timeout: 300` — teams take longer to spawn and work
 
 Key UI interactions for in-process mode:
-- `Shift+Down` / `Shift+Up` — select a teammate
+- `Ctrl+T` — toggle teammate panel (shows team-lead, @teammate entries with status)
+- `Shift+Up` / `Shift+Down` — navigate teammate panel selection
 - `Enter` — view selected teammate's session
-- `Escape` — return to lead view
-- `Ctrl+T` — toggle shared task list
+- `Escape` — interrupts current teammate (does NOT return to lead; use Shift+Up to team-lead then Enter)

@@ -4,20 +4,26 @@
 # Env: CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 # Timeout: 300
 
-wait "for shortcuts" 10s
+# Accept the bypass confirmation dialog (select "Yes, I accept")
+wait "No, exit" 10s
+send <Down>
+wait 100
+send <Enter>
+
+wait "bypass permissions on" 10s
 
 # Ask Claude to create a small team
-send "Create an agent team with 2 teammates to research the pros and cons of SQLite vs PostgreSQL for a CLI tool. One teammate for SQLite, one for PostgreSQL." 100 <Enter>
+send "Create an agent team with 2 members to research SQLite vs PostgreSQL for a CLI tool." 200 <Enter>
 
-# Wait for teammate spawn indicators
-wait "teammate" 120s
+# Wait for team to spawn — "agents launched" appears in lead output
+wait "agents launched" 120s
 wait 5s
 snapshot "agent_team_spawned"
 
-# Let teammates work briefly
+# Let teammates work briefly, then snapshot the inline task progress
 wait 30s
 snapshot "agent_team_working"
 
-send <C-u> 100 "/exit" 100 <Enter>
+send <C-u> 200 "/exit" 200 <Enter>
 wait 500
 kill TERM

@@ -1,21 +1,32 @@
 # Capture teammate navigation in an agent team.
-# Uses Shift+Down to select teammate, Enter to view, Escape to return.
+# Uses Shift+Up to select teammate in panel, Enter to view session,
+# then Shift+Up back to team-lead and Enter to return.
 # Args: --model haiku --teammate-mode in-process --dangerously-skip-permissions
 # Env: CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 # Timeout: 300
 
-wait "for shortcuts" 10s
+# Accept the bypass confirmation dialog (select "Yes, I accept")
+wait "No, exit" 10s
+send <Down>
+wait 100
+send <Enter>
+
+wait "bypass permissions on" 10s
 
 # Ask Claude to create a team
-send "Create an agent team with 2 teammates to brainstorm names for a CLI tool. One teammate for short names, one for descriptive names." 100 <Enter>
+send "Create an agent team with 2 members to brainstorm names for a CLI tool." 200 <Enter>
 
-# Wait for team to be set up
-wait "teammate" 120s
+# Wait for team to spawn
+wait "agents launched" 120s
 wait 10s
+
+# Expand teammate panel
+send <C-t>
+wait 2s
 snapshot "agent_team_lead_view"
 
-# Navigate to first teammate with Shift+Down
-send <S-Down>
+# Select a teammate with Shift+Up (navigates up from bottom "hide" entry)
+send <S-Up>
 wait 2s
 snapshot "agent_team_teammate_selected"
 
@@ -24,11 +35,15 @@ send <Enter>
 wait 3s
 snapshot "agent_team_teammate_session"
 
-# Return to lead with Escape
-send <Esc>
+# Navigate back: Shift+Up to team-lead, then Enter to view lead
+send <S-Up>
+wait 500
+send <S-Up>
+wait 500
+send <Enter>
 wait 2s
 snapshot "agent_team_returned_to_lead"
 
-send <C-u> 100 "/exit" 100 <Enter>
+send <C-u> 200 "/exit" 200 <Enter>
 wait 500
 kill TERM

@@ -1,28 +1,34 @@
-# Capture shared task list view in an agent team.
-# Requires API call - Claude spawns teammates and creates tasks.
+# Capture teammate panel toggle (ctrl+t) in an agent team.
+# Shows the expandable teammate list with status and token counts.
 # Args: --model haiku --teammate-mode in-process --dangerously-skip-permissions
 # Env: CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 # Timeout: 300
 
-wait "for shortcuts" 10s
+# Accept the bypass confirmation dialog (select "Yes, I accept")
+wait "No, exit" 10s
+send <Down>
+wait 100
+send <Enter>
 
-# Ask Claude to create a team with tasks
-send "Create an agent team with 2 teammates. One should research Rust error handling patterns, the other should research Rust async patterns. Create tasks for each." 100 <Enter>
+wait "bypass permissions on" 10s
 
-# Wait for team to be set up
-wait "teammate" 120s
+# Ask Claude to create a team
+send "Create an agent team with 2 members to research Rust error handling vs async patterns." 200 <Enter>
+
+# Wait for team to spawn
+wait "agents launched" 120s
 wait 10s
 
-# Toggle shared task list with Ctrl+T
+# Toggle teammate panel with Ctrl+T — shows team-lead, @teammate entries
 send <C-t>
 wait 3s
-snapshot "agent_team_task_list"
+snapshot "agent_team_panel_shown"
 
-# Close task list
+# Toggle teammate panel off
 send <C-t>
 wait 1s
-snapshot "agent_team_task_list_closed"
+snapshot "agent_team_panel_hidden"
 
-send <C-u> 100 "/exit" 100 <Enter>
+send <C-u> 200 "/exit" 200 <Enter>
 wait 500
 kill TERM
