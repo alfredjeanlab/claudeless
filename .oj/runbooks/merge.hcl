@@ -26,7 +26,7 @@ queue "merges" {
   defaults = { base = "main" }
 }
 
-queue "merge-conflict" {
+queue "merge-conflicts" {
   type     = "persisted"
   vars     = ["branch", "title", "base"]
   defaults = { base = "main" }
@@ -39,7 +39,7 @@ worker "merge" {
 }
 
 worker "merge-conflict" {
-  source      = { queue = "merge-conflict" }
+  source      = { queue = "merge-conflicts" }
   handler     = { job = "merge-conflict" }
   concurrency = 1
 }
@@ -84,7 +84,7 @@ job "merge" {
   step "queue-conflicts" {
     run = <<-SHELL
       git merge --abort 2>/dev/null || true
-      oj queue push merge-conflict --var branch="${var.mr.branch}" --var title="${var.mr.title}" --var base="${var.mr.base}"
+      oj queue push merge-conflicts --var branch="${var.mr.branch}" --var title="${var.mr.title}" --var base="${var.mr.base}"
     SHELL
     on_done = { step = "cleanup" }
   }
@@ -228,5 +228,18 @@ agent "conflicts" {
     3. Run `git commit --no-edit` to complete the merge
     4. Run `make check` to verify everything passes
     5. Fix any issues
+
+    ## Conflict resolution strategy
+
+    When one side refactored (e.g., split a file into submodules) and the other
+    side modified the original file:
+
+    - Keep the refactored structure — never collapse submodules back into a
+      monolithic file.
+    - Identify only the semantic delta from the incoming branch (new methods,
+      changed signatures, added fields).
+    - Apply those changes to the appropriate submodule files.
+    - Write the conflicted file clean (no conflict markers) using the refactored
+      layout, then `git add` it.
   PROMPT
 }
