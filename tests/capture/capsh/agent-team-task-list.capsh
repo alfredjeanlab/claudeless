@@ -1,0 +1,28 @@
+# Capture shared task list view in an agent team.
+# Requires API call - Claude spawns teammates and creates tasks.
+# Args: --model haiku --teammate-mode in-process --dangerously-skip-permissions
+# Env: CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+# Timeout: 300
+
+wait "for shortcuts" 10s
+
+# Ask Claude to create a team with tasks
+send "Create an agent team with 2 teammates. One should research Rust error handling patterns, the other should research Rust async patterns. Create tasks for each." 100 <Enter>
+
+# Wait for team to be set up
+wait "teammate" 120s
+wait 10s
+
+# Toggle shared task list with Ctrl+T
+send <C-t>
+wait 3s
+snapshot "agent_team_task_list"
+
+# Close task list
+send <C-t>
+wait 1s
+snapshot "agent_team_task_list_closed"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

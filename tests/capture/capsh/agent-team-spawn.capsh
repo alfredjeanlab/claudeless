@@ -1,0 +1,23 @@
+# Capture agent team creation and teammate spawn.
+# Requires API call - Claude spawns teammate instances.
+# Args: --model haiku --teammate-mode in-process --dangerously-skip-permissions
+# Env: CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+# Timeout: 300
+
+wait "for shortcuts" 10s
+
+# Ask Claude to create a small team
+send "Create an agent team with 2 teammates to research the pros and cons of SQLite vs PostgreSQL for a CLI tool. One teammate for SQLite, one for PostgreSQL." 100 <Enter>
+
+# Wait for teammate spawn indicators
+wait "teammate" 120s
+wait 5s
+snapshot "agent_team_spawned"
+
+# Let teammates work briefly
+wait 30s
+snapshot "agent_team_working"
+
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

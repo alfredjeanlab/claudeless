@@ -161,6 +161,19 @@ function parseConfigMode(script: string): "trusted" | "welcome-back" | "auth-onl
   return "trusted";
 }
 
+function parseEnv(script: string): Record<string, string> {
+  const content = fs.readFileSync(script, "utf-8");
+  const match = content.match(/^# Env:\s*(.*)$/m);
+  if (!match) return {};
+  const env: Record<string, string> = {};
+  for (const pair of match[1].trim().split(/\s+/)) {
+    const eqIdx = pair.indexOf("=");
+    if (eqIdx === -1) continue;
+    env[pair.slice(0, eqIdx)] = pair.slice(eqIdx + 1);
+  }
+  return env;
+}
+
 function parseTimeout(script: string): number | null {
   const content = fs.readFileSync(script, "utf-8");
   const match = content.match(/^# Timeout:\s*(\d+)/m);
@@ -412,6 +425,7 @@ async function runCapture(
   fs.mkdirSync(fixturesDir, { recursive: true });
 
   const claudeArgs = parseClaudeArgs(script);
+  const scriptEnv = parseEnv(script);
   let workspace = parseWorkspace(script);
   if (!workspace) {
     workspace = fs.mkdtempSync(path.join(os.tmpdir(), "capture-"));
@@ -462,6 +476,9 @@ async function runCapture(
     console.log(`  Config: ${MAGENTA}${configMode}${NC}`);
   if (companionSettings.length > 0)
     console.log(`  Settings: ${MAGENTA}${companionSettings.join(", ")}${NC}`);
+  const envKeys = Object.keys(scriptEnv);
+  if (envKeys.length > 0)
+    console.log(`  Env: ${CYAN}${envKeys.map((k) => `${k}=${scriptEnv[k]}`).join(" ")}${NC}`);
   if (!parallel) console.log(`  ${DIM}Workspace: ${workspace}${NC}`);
 
   // Build capsh command
@@ -472,6 +489,7 @@ async function runCapture(
 
   const env: Record<string, string> = {
     ...process.env as Record<string, string>,
+    ...scriptEnv,
     CLAUDE_CONFIG_DIR: configDir,
   };
   if (useOauthToken) {

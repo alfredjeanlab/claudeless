@@ -202,6 +202,8 @@ See [docs/CAPSH.md](../../docs/CAPSH.md) for full DSL reference.
 # Args: --model haiku
 # Workspace: (temp)
 # Config: trusted|auth-only|empty
+# Env: KEY=VALUE
+# Timeout: 120
 ```
 
 | Header | Default | Description |
@@ -209,6 +211,8 @@ See [docs/CAPSH.md](../../docs/CAPSH.md) for full DSL reference.
 | `Args` | `--model haiku` | Claude CLI arguments |
 | `Workspace` | `(temp)` | Working directory (temp or path) |
 | `Config` | `trusted` | Config scenario (see above) |
+| `Env` | (none) | Space-separated `KEY=VALUE` pairs merged into capture process environment |
+| `Timeout` | `30` (capsh) / `300` (skip) | Max capture duration in seconds |
 
 ### Script structure
 
@@ -311,3 +315,18 @@ To run tmux scripts individually:
 ```
 
 Tmux scripts directly control a tmux session and capture pane output to fixtures.
+
+### Agent team captures
+
+Agent teams are an experimental Claude Code feature that spawns multiple teammate sessions. Capture scripts for agent teams use:
+
+- `--teammate-mode in-process` — all teammates render in one terminal (capturable by capsh)
+- `--dangerously-skip-permissions` — prevents interactive permission prompts during unattended capture
+- `# Env: CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` — enables the feature
+- `# Timeout: 300` — teams take longer to spawn and work
+
+Key UI interactions for in-process mode:
+- `Shift+Down` / `Shift+Up` — select a teammate
+- `Enter` — view selected teammate's session
+- `Escape` — return to lead view
+- `Ctrl+T` — toggle shared task list
