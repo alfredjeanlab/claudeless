@@ -291,9 +291,19 @@ pub struct SimulatorOptions {
     pub claude_version: Option<String>,
 }
 
+// Thread-local override for `should_use_tui()` in tests.
+#[cfg(test)]
+thread_local! {
+    pub(crate) static FORCE_TUI: std::cell::Cell<Option<bool>> = const { std::cell::Cell::new(None) };
+}
+
 impl Cli {
     /// Determine if TUI mode should be used
     pub fn should_use_tui(&self) -> bool {
+        #[cfg(test)]
+        if let Some(force) = FORCE_TUI.get() {
+            return force;
+        }
         use std::io::IsTerminal;
         !self.print && std::io::stdin().is_terminal()
     }
