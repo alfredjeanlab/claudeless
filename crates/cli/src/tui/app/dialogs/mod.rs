@@ -10,15 +10,16 @@ mod boxed;
 mod help;
 mod panels;
 mod simple;
+mod tool_dialogs;
 
 pub(crate) use boxed::{render_export_dialog, render_tasks_dialog};
 pub(crate) use help::render_help_dialog;
 pub(crate) use panels::{render_hooks_dialog, render_model_picker_dialog, render_setup_wizard};
 pub(crate) use simple::{
-    render_bypass_confirm_dialog, render_elicitation_dialog, render_memory_dialog,
-    render_permission_dialog, render_plan_approval_dialog, render_thinking_dialog,
-    render_trust_prompt,
+    render_bypass_confirm_dialog, render_memory_dialog, render_permission_dialog,
+    render_thinking_dialog, render_trust_prompt,
 };
+pub(crate) use tool_dialogs::{render_elicitation_dialog, render_plan_approval_dialog};
 
 use crate::tui::widgets::elicitation::ElicitationState;
 use crate::tui::widgets::export::ExportDialog;

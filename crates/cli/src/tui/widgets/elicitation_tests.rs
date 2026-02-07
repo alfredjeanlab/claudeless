@@ -37,6 +37,49 @@ fn multi_select_input() -> serde_json::Value {
     })
 }
 
+fn multi_question_input() -> serde_json::Value {
+    json!({
+        "questions": [
+            {
+                "question": "What language?",
+                "header": "Language",
+                "options": [
+                    { "label": "Rust", "description": "Systems programming" },
+                    { "label": "Python", "description": "Scripting" }
+                ],
+                "multiSelect": false
+            },
+            {
+                "question": "What type of project?",
+                "header": "Project",
+                "options": [
+                    { "label": "CLI", "description": "Command-line tool" },
+                    { "label": "Web", "description": "Web application" }
+                ],
+                "multiSelect": false
+            },
+            {
+                "question": "Which CI/CD?",
+                "header": "CI/CD",
+                "options": [
+                    { "label": "GitHub Actions", "description": "GitHub native" },
+                    { "label": "None", "description": "No CI/CD" }
+                ],
+                "multiSelect": false
+            },
+            {
+                "question": "Which license?",
+                "header": "License",
+                "options": [
+                    { "label": "MIT", "description": "Permissive" },
+                    { "label": "Apache", "description": "Patent grant" }
+                ],
+                "multiSelect": false
+            }
+        ]
+    })
+}
+
 #[test]
 fn test_from_tool_input_parses_questions() {
     let input = sample_input();
@@ -218,6 +261,20 @@ fn test_render_single_select() {
     assert!(rendered.contains("4. Chat about this"));
     assert!(rendered.contains("Enter to select"));
     assert!(rendered.contains("Esc to cancel"));
+    // Single question: no tab bar
+    assert!(!rendered.contains("←"));
+    assert!(!rendered.contains("Submit"));
+}
+
+#[test]
+fn test_render_single_select_footer() {
+    let input = sample_input();
+    let state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+    let rendered = state.render(60);
+
+    // Updated footer format (no Question N/M)
+    assert!(rendered.contains("Enter to select · Tab/Arrow keys to navigate · Esc to cancel"));
+    assert!(!rendered.contains("Question 1/1"));
 }
 
 #[test]
@@ -264,12 +321,23 @@ fn test_question_navigation() {
     let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
 
     assert_eq!(state.current_question, 0);
+    assert!(!state.on_submit_tab);
 
     state.next_question();
     assert_eq!(state.current_question, 1);
+    assert!(!state.on_submit_tab);
 
-    // Can't go past last
+    // Next from last question → submit tab
     state.next_question();
+    assert!(state.on_submit_tab);
+
+    // Next from submit tab → stays on submit tab
+    state.next_question();
+    assert!(state.on_submit_tab);
+
+    // Prev from submit tab → back to last question
+    state.prev_question();
+    assert!(!state.on_submit_tab);
     assert_eq!(state.current_question, 1);
 
     state.prev_question();
@@ -299,7 +367,6 @@ fn test_render_option_descriptions_on_separate_lines() {
 #[test]
 fn test_number_key_selects_option() {
     // In real Claude Code, pressing a number key selects that option.
-    // The TUI handler then immediately confirms (tested at handler level).
     let input = sample_input();
     let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
 
@@ -497,4 +564,269 @@ fn test_render_chat_about_this_cursor() {
 
     let rendered = state.render(60);
     assert!(rendered.contains("❯ 4. Chat about this"));
+}
+
+// =========================================================================
+// is_question_answered helper
+// =========================================================================
+
+#[test]
+fn test_is_question_answered_empty() {
+    let input = sample_input();
+    let state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+    assert!(!state.is_question_answered(0));
+}
+
+#[test]
+fn test_is_question_answered_with_selection() {
+    let input = sample_input();
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+    state.toggle_or_select(); // Select Rust
+    assert!(state.is_question_answered(0));
+}
+
+#[test]
+fn test_is_question_answered_with_free_text() {
+    let input = sample_input();
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+    // Navigate to "Type something." and type
+    state.cursor_down();
+    state.cursor_down();
+    state.insert_char('X');
+    assert!(state.is_question_answered(0));
+}
+
+#[test]
+fn test_is_question_answered_out_of_range() {
+    let input = sample_input();
+    let state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+    assert!(!state.is_question_answered(99));
+}
+
+// =========================================================================
+// Auto-advance on select (select_and_advance)
+// =========================================================================
+
+#[test]
+fn test_select_and_advance_single_select() {
+    let input = multi_question_input();
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+
+    assert_eq!(state.current_question, 0);
+    assert!(!state.on_submit_tab);
+
+    // Select at cursor (Rust) and advance
+    state.select_and_advance();
+    assert_eq!(state.questions[0].selected, vec![0]);
+    assert_eq!(state.current_question, 1);
+    assert!(!state.on_submit_tab);
+}
+
+#[test]
+fn test_select_and_advance_last_question_goes_to_submit() {
+    let input = json!({
+        "questions": [{
+            "question": "Q1?", "header": "H1",
+            "options": [{ "label": "A", "description": "" }],
+            "multiSelect": false
+        }]
+    });
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+
+    state.select_and_advance();
+    assert!(state.on_submit_tab);
+    assert_eq!(state.questions[0].selected, vec![0]);
+}
+
+#[test]
+fn test_select_and_advance_multi_select_is_noop() {
+    let input = multi_select_input();
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+
+    state.select_and_advance(); // Should not advance (multi-select)
+    assert_eq!(state.current_question, 0);
+    // Should not change selected either
+    assert!(state.questions[0].selected.is_empty());
+}
+
+// =========================================================================
+// Submit tab
+// =========================================================================
+
+#[test]
+fn test_submit_tab_cursor_navigation() {
+    let input = sample_input();
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+    state.on_submit_tab = true;
+
+    assert_eq!(state.submit_cursor, 0);
+
+    state.submit_cursor_down();
+    assert_eq!(state.submit_cursor, 1);
+
+    // Clamp at 1
+    state.submit_cursor_down();
+    assert_eq!(state.submit_cursor, 1);
+
+    state.submit_cursor_up();
+    assert_eq!(state.submit_cursor, 0);
+
+    // Clamp at 0
+    state.submit_cursor_up();
+    assert_eq!(state.submit_cursor, 0);
+}
+
+#[test]
+fn test_submit_tab_render_all_answered() {
+    let input = multi_question_input();
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+
+    // Answer all questions
+    state.select_and_advance(); // Q1: Rust → Q2
+    state.select_and_advance(); // Q2: CLI → Q3
+    state.select_and_advance(); // Q3: GitHub Actions → Q4
+    state.select_and_advance(); // Q4: MIT → Submit tab
+    assert!(state.on_submit_tab);
+
+    let rendered = state.render(60);
+    assert!(rendered.contains("Review your answers"));
+    assert!(rendered.contains("→ Rust"));
+    assert!(rendered.contains("→ CLI"));
+    assert!(rendered.contains("→ GitHub Actions"));
+    assert!(rendered.contains("→ MIT"));
+    assert!(rendered.contains("❯ 1. Submit answers"));
+    assert!(rendered.contains("  2. Cancel"));
+    // No warning when all answered
+    assert!(!rendered.contains("⚠"));
+    // Tab bar present
+    assert!(rendered.contains("[✔ Submit]"));
+}
+
+#[test]
+fn test_submit_tab_render_partially_answered() {
+    let input = multi_question_input();
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+
+    // Answer only first question
+    state.select_and_advance(); // Q1: Rust → Q2
+                                // Skip to submit tab
+    state.on_submit_tab = true;
+
+    let rendered = state.render(60);
+    assert!(rendered.contains("Review your answers"));
+    assert!(rendered.contains("→ Rust"));
+    assert!(rendered.contains("(no answer)"));
+    assert!(rendered.contains("⚠ You have not answered all questions"));
+}
+
+#[test]
+fn test_submit_tab_render_with_free_text_answer() {
+    let input = sample_input();
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+
+    // Navigate to "Type something." and type
+    state.cursor_down();
+    state.cursor_down();
+    for c in "Go".chars() {
+        state.insert_char(c);
+    }
+    state.on_submit_tab = true;
+
+    let rendered = state.render(60);
+    assert!(rendered.contains("→ Go"));
+}
+
+// =========================================================================
+// Tab bar rendering
+// =========================================================================
+
+#[test]
+fn test_tab_bar_not_shown_for_single_question() {
+    let input = sample_input();
+    let state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+    let rendered = state.render(60);
+
+    assert!(!rendered.contains("←"));
+    assert!(!rendered.contains("Submit"));
+}
+
+#[test]
+fn test_tab_bar_shown_for_multi_question() {
+    let input = multi_question_input();
+    let state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+    let rendered = state.render(60);
+
+    assert!(rendered.contains("←"));
+    assert!(rendered.contains("→"));
+    // Current question is bracketed
+    assert!(rendered.contains("[☐ Language]"));
+    // Other questions not bracketed
+    assert!(rendered.contains("☐ Project"));
+    assert!(rendered.contains("☐ CI/CD"));
+    assert!(rendered.contains("☐ License"));
+    assert!(rendered.contains("✔ Submit"));
+}
+
+#[test]
+fn test_tab_bar_shows_answered_state() {
+    let input = multi_question_input();
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+
+    // Answer first question and advance
+    state.select_and_advance(); // Q1 answered, now on Q2
+    let rendered = state.render(60);
+
+    // First question should show ☒ (answered)
+    assert!(rendered.contains("☒ Language"));
+    // Current question (Q2) bracketed
+    assert!(rendered.contains("[☐ Project]"));
+}
+
+// =========================================================================
+// Selected option indicators (✔)
+// =========================================================================
+
+#[test]
+fn test_render_selected_option_check() {
+    let input = multi_question_input();
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+
+    // Answer first question and go back to see the ✔
+    state.select_and_advance(); // Select Rust, advance to Q2
+    state.prev_question(); // Back to Q1
+
+    let rendered = state.render(60);
+    assert!(rendered.contains("1. Rust ✔"));
+    assert!(!rendered.contains("2. Python ✔"));
+}
+
+#[test]
+fn test_render_single_select_header_checked_when_answered() {
+    let input = sample_input();
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+
+    state.toggle_or_select(); // Select Rust
+    let rendered = state.render(60);
+
+    // Single-select with selection shows ☒ header
+    assert!(rendered.contains("☒ Language"));
+}
+
+// =========================================================================
+// is_on_free_text returns false on submit tab
+// =========================================================================
+
+#[test]
+fn test_is_on_free_text_false_on_submit_tab() {
+    let input = sample_input();
+    let mut state = ElicitationState::from_tool_input(&input, "toolu_001".to_string());
+
+    // Navigate to free text row
+    state.cursor_down();
+    state.cursor_down();
+    assert!(state.is_on_free_text());
+
+    // Switch to submit tab
+    state.on_submit_tab = true;
+    assert!(!state.is_on_free_text());
 }

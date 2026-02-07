@@ -159,33 +159,33 @@ fn test_escape_cancels_elicitation() {
 // =========================================================================
 
 #[test]
-fn test_number_key_selects_option() {
+fn test_number_key_selects_and_advances_to_submit() {
     let state = create_test_app();
     setup_elicitation(&state);
 
-    // Press '2' — should select Python (index 1) and move cursor there
-    // Note: confirm_elicitation requires runtime, so without runtime the
-    // dialog gets taken but execution is a no-op. We verify the selection
-    // happened by checking the dialog was consumed (taken from state).
+    // Press '2' — should select Python (index 1) and advance to submit tab
+    // (single question → directly to submit tab)
     state.handle_elicitation_key(key_event(KeyCode::Char('2'), KeyModifiers::NONE));
 
     let inner = state.inner.lock();
-    // Dialog was consumed by confirm_elicitation (even without runtime)
-    assert!(!inner.dialog.is_active());
+    let elicitation = inner.dialog.as_elicitation().unwrap();
+    assert_eq!(elicitation.questions[0].selected, vec![1]);
+    assert!(elicitation.on_submit_tab);
 }
 
 #[test]
-fn test_out_of_range_number_keeps_dialog() {
+fn test_out_of_range_number_advances_to_submit() {
     let state = create_test_app();
     setup_elicitation(&state);
 
-    // Press '9' — out of range for 3 options, selection unchanged
-    // But the handler still calls confirm_elicitation after select_by_number
+    // Press '9' — out of range for 3 options, selection unchanged but still advances
     state.handle_elicitation_key(key_event(KeyCode::Char('9'), KeyModifiers::NONE));
 
-    // Dialog is consumed by confirm_elicitation (submits default first option)
+    // Dialog still active, advanced to submit tab (single question)
     let inner = state.inner.lock();
-    assert!(!inner.dialog.is_active());
+    let elicitation = inner.dialog.as_elicitation().unwrap();
+    assert!(elicitation.questions[0].selected.is_empty());
+    assert!(elicitation.on_submit_tab);
 }
 
 // =========================================================================

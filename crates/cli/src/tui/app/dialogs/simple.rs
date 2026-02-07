@@ -13,15 +13,12 @@ use crate::tui::widgets::thinking::{ThinkingDialog, ThinkingMode};
 use crate::tui::widgets::trust::TrustChoice;
 use crate::tui::widgets::MemoryDialog;
 
+use super::{DialogState, SelectionList};
 use crate::hooks::NOTIFICATION_AUTH_SUCCESS;
 use crate::tui::app::state::TuiAppState;
 use crate::tui::app::types::{
     AppMode, BypassChoice, BypassConfirmState, ExitReason, PermissionRequest, TrustPromptState,
 };
-use crate::tui::widgets::elicitation::ElicitationState;
-use crate::tui::widgets::plan_approval::PlanApprovalState;
-
-use super::{DialogState, SelectionList};
 
 // ── Trust prompt ─────────────────────────────────────────────────────────
 
@@ -513,177 +510,6 @@ impl TuiAppState {
                     inner.dialog.dismiss();
                     inner.mode = AppMode::Input;
                 }
-            }
-            _ => {}
-        }
-    }
-}
-
-// ── Elicitation dialog ──────────────────────────────────────────────────
-
-/// Render elicitation dialog (AskUserQuestion)
-pub(crate) fn render_elicitation_dialog(
-    state: &ElicitationState,
-    width: usize,
-) -> AnyElement<'static> {
-    let content = state.render(width);
-
-    element! {
-        View(
-            flex_direction: FlexDirection::Column,
-            width: 100pct,
-        ) {
-            Text(content: content)
-        }
-    }
-    .into()
-}
-
-impl TuiAppState {
-    /// Handle key events in elicitation dialog mode
-    pub(in crate::tui::app) fn handle_elicitation_key(&self, key: KeyEvent) {
-        let mut inner = self.inner.lock();
-
-        // Check if cursor is on the "Type something." free-text row
-        let on_free_text = inner
-            .dialog
-            .as_elicitation()
-            .is_some_and(|s| s.is_on_free_text());
-
-        match key.code {
-            KeyCode::Up => {
-                if let Some(state) = inner.dialog.as_elicitation_mut() {
-                    state.cursor_up();
-                }
-            }
-            KeyCode::Down => {
-                if let Some(state) = inner.dialog.as_elicitation_mut() {
-                    state.cursor_down();
-                }
-            }
-            KeyCode::Char(' ') if !on_free_text => {
-                if let Some(state) = inner.dialog.as_elicitation_mut() {
-                    state.toggle_or_select();
-                }
-            }
-            KeyCode::Tab => {
-                if let Some(state) = inner.dialog.as_elicitation_mut() {
-                    state.next_question();
-                }
-            }
-            KeyCode::BackTab => {
-                if let Some(state) = inner.dialog.as_elicitation_mut() {
-                    state.prev_question();
-                }
-            }
-            KeyCode::Char(c @ '1'..='9') if !on_free_text => {
-                if let Some(state) = inner.dialog.as_elicitation_mut() {
-                    let num = (c as u8 - b'0') as usize;
-                    state.select_by_number(num);
-                }
-                // Number keys immediately select and submit (matches real Claude Code)
-                drop(inner);
-                self.confirm_elicitation();
-            }
-            // Free-text input: alphabetic/numeric characters when on "Type something."
-            KeyCode::Char(c) if on_free_text => {
-                if let Some(state) = inner.dialog.as_elicitation_mut() {
-                    state.insert_char(c);
-                }
-            }
-            KeyCode::Backspace if on_free_text => {
-                if let Some(state) = inner.dialog.as_elicitation_mut() {
-                    state.backspace_char();
-                }
-            }
-            KeyCode::Enter => {
-                drop(inner);
-                self.confirm_elicitation();
-            }
-            KeyCode::Esc => {
-                drop(inner);
-                self.cancel_elicitation();
-            }
-            _ => {}
-        }
-    }
-}
-
-// ── Plan approval dialog ────────────────────────────────────────────────
-
-/// Render plan approval dialog (ExitPlanMode)
-pub(crate) fn render_plan_approval_dialog(
-    state: &PlanApprovalState,
-    width: usize,
-) -> AnyElement<'static> {
-    let content = state.render(width);
-
-    element! {
-        View(
-            flex_direction: FlexDirection::Column,
-            width: 100pct,
-        ) {
-            Text(content: content)
-        }
-    }
-    .into()
-}
-
-impl TuiAppState {
-    /// Handle key events in plan approval dialog mode
-    pub(in crate::tui::app) fn handle_plan_approval_key(&self, key: KeyEvent) {
-        // Handle Ctrl+C before taking the lock (cancel_plan_approval takes its own lock)
-        if matches!(key.code, KeyCode::Char('c')) && key.modifiers.contains(KeyModifiers::CONTROL) {
-            self.cancel_plan_approval();
-            return;
-        }
-
-        let mut inner = self.inner.lock();
-
-        // Check if cursor is on the free-text row
-        let on_free_text = inner
-            .dialog
-            .as_plan_approval()
-            .is_some_and(|s| s.is_on_free_text());
-
-        match key.code {
-            KeyCode::Up => {
-                if let Some(state) = inner.dialog.as_plan_approval_mut() {
-                    state.cursor_up();
-                }
-            }
-            KeyCode::Down => {
-                if let Some(state) = inner.dialog.as_plan_approval_mut() {
-                    state.cursor_down();
-                }
-            }
-            KeyCode::Char(c @ '1'..='3') if !on_free_text => {
-                if let Some(state) = inner.dialog.as_plan_approval_mut() {
-                    let num = (c as u8 - b'0') as usize;
-                    state.select_by_number(num);
-                }
-                // Number keys immediately select and submit
-                drop(inner);
-                self.confirm_plan_approval();
-            }
-            // Free-text input: characters when on "Type here..." option
-            KeyCode::Char(c) if on_free_text => {
-                if let Some(state) = inner.dialog.as_plan_approval_mut() {
-                    state.insert_char(c);
-                }
-            }
-            KeyCode::Backspace if on_free_text => {
-                if let Some(state) = inner.dialog.as_plan_approval_mut() {
-                    state.backspace_char();
-                }
-            }
-            KeyCode::Enter => {
-                drop(inner);
-                self.confirm_plan_approval();
-            }
-            KeyCode::Esc => {
-                drop(inner);
-                self.cancel_plan_approval();
             }
             _ => {}
         }

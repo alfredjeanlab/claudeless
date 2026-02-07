@@ -1,0 +1,52 @@
+# Capture multi-question AskUserQuestion elicitation dialog with tab bar.
+# Requires API call - Claude must use AskUserQuestion tool with 4 questions.
+# Args: --model haiku
+# Timeout: 60
+
+wait "for shortcuts" 10s
+
+# Ask Claude to use AskUserQuestion with 4 questions
+send "Use the AskUserQuestion tool to ask me 4 questions: programming language (Rust/Python), project type (CLI/Web), CI/CD (GitHub Actions/None), and license (MIT/Apache). Use separate questions, not multi-select." 100 <Enter>
+
+# Wait for the elicitation dialog with tab bar
+wait "Language" 30s
+wait "Rust" 3s
+snapshot "multi_question_dialog_q1"
+
+# Select Rust (press 1) - should auto-advance to Q2
+send "1"
+wait "project" 5s
+snapshot "multi_question_dialog_q2"
+
+# Select CLI (press 1) - should auto-advance to Q3
+send "1"
+wait "CI/CD" 5s
+snapshot "multi_question_dialog_q3"
+
+# Navigate back to Q1 to see ✔ indicator
+send <BackTab>
+send <BackTab>
+wait 500
+snapshot "multi_question_revisit_q1"
+
+# Navigate forward to Q3 and select
+send <Tab>
+send <Tab>
+send "1"
+wait "license" 5s
+snapshot "multi_question_dialog_q4"
+
+# Select MIT - should go to submit tab
+send "1"
+wait "Review" 5s
+snapshot "multi_question_submit_tab"
+
+# Submit answers
+send <Enter>
+wait 3s
+snapshot "multi_question_after_submit"
+
+# Exit cleanly
+send <C-u> 100 "/exit" 100 <Enter>
+wait 500
+kill TERM

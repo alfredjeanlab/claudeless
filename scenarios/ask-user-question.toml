@@ -1,5 +1,5 @@
 # AskUserQuestion scenario
-# Demonstrates the elicitation tool with pre-configured answers
+# Demonstrates the elicitation tool with multi-question interview and tab bar
 
 name = "ask-user-question"
 session_id = "550e8400-e29b-41d4-a716-446655440001"
@@ -7,20 +7,34 @@ session_id = "550e8400-e29b-41d4-a716-446655440001"
 [[responses]]
 pattern = { type = "contains", text = "help me" }
 [responses.response]
-text = "Let me ask you a few questions first."
+text = "Let me ask you a few questions to get started."
 [[responses.response.tool_calls]]
 tool = "AskUserQuestion"
 [responses.response.tool_calls.input]
 questions = [
-    { question = "What language?", header = "Language", options = [
-        { label = "Rust", description = "Systems programming" },
-        { label = "Python", description = "Scripting" },
+    { question = "Which programming language would you like to use?", header = "Language", options = [
+        { label = "Rust", description = "Systems programming language" },
+        { label = "Python", description = "General-purpose scripting" },
+        { label = "TypeScript", description = "Typed JavaScript" },
+    ], multiSelect = false },
+    { question = "What type of project are you building?", header = "Project", options = [
+        { label = "CLI", description = "Command-line tool" },
+        { label = "Web", description = "Web application" },
+        { label = "Library", description = "Reusable library" },
+    ], multiSelect = false },
+    { question = "Which CI/CD platform?", header = "CI/CD", options = [
+        { label = "GitHub Actions", description = "GitHub native CI" },
+        { label = "None", description = "No CI/CD for now" },
+    ], multiSelect = false },
+    { question = "Which license?", header = "License", options = [
+        { label = "MIT", description = "Permissive license" },
+        { label = "Apache 2.0", description = "Permissive with patent grant" },
     ], multiSelect = false },
 ]
 
 [[responses]]
 pattern = { type = "any" }
-response = "Got it, I'll use the language you selected."
+response = "Got it, I'll set up your project with those choices."
 
 [tool_execution]
 mode = "live"
@@ -29,4 +43,7 @@ mode = "live"
 auto_approve = true
 
 [tool_execution.tools.AskUserQuestion.answers]
-"What language?" = "Rust"
+"Which programming language would you like to use?" = "Rust"
+"What type of project are you building?" = "CLI"
+"Which CI/CD platform?" = "GitHub Actions"
+"Which license?" = "MIT"
