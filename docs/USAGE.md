@@ -179,14 +179,47 @@ Claudeless accepts all standard Claude CLI flags for compatibility:
 --model <MODEL>                Model name (ignored, for compatibility)
 --output-format <FORMAT>       text | json | stream-json
 --permission-mode <MODE>       default | plan | bypass-permissions | ...
---continue-conversation, -c    Continue previous conversation
+--continue, -c                 Continue previous conversation
 --resume, -r <ID>              Resume specific conversation
 --session-id <UUID>            Use specific session ID
+--no-session-persistence       Disable session persistence (print mode only)
 --cwd <DIR>                    Working directory
 --system-prompt <TEXT>         System prompt
+--append-system-prompt <TEXT>  Append to default system prompt
 --allowedTools <TOOL>          Allow specific tools
 --disallowedTools <TOOL>       Disallow specific tools
+--input-file <FILE>            Read prompt from file
+--input-format <FORMAT>        Input format (text | stream-json)
+--verbose                      Verbose output mode
+-d, --debug [FILTER]           Debug mode with optional filter
 --mcp-config <CONFIG>          MCP server configuration
+--strict-mcp-config            Only use servers from --mcp-config
+--mcp-debug                    Enable MCP debug output
+--settings <FILE_OR_JSON>      Load settings from file or inline JSON
+--setting-sources <SOURCES>    Comma-separated setting sources (user, project, local)
+--max-budget-usd <AMOUNT>      Maximum budget in USD
+--fallback-model <MODEL>       Fallback model on overload
+```
+
+Additional compatibility flags (accepted, ignored):
+
+```example
+--add-dir <DIR>                Additional directories for tool access
+--agent <AGENT>                Agent for the session
+--agents <JSON>                Custom agent definitions
+--betas <BETA>                 Beta headers
+--chrome / --no-chrome         Chrome integration
+--debug-file <PATH>            Debug log file path
+--disable-slash-commands       Disable all skills
+--file <FILE>                  File resources to download
+--fork-session                 Create new session ID on resume
+--from-pr [PR]                 Resume session linked to a PR
+--ide                          IDE integration
+--json-schema <SCHEMA>         Structured output validation
+--plugin-dir <DIR>             Plugin directories
+--replay-user-messages         Re-emit user messages on stdout
+--tools <TOOL>                 Specify available built-in tools
+--include-partial-messages     Include partial chunks (stream-json)
 ```
 
 ## Examples
@@ -202,11 +235,6 @@ claudeless --scenario ci-review.toml \
 **Error handling test:**
 ```bash
 claudeless --failure rate-limit -p "test" || echo "Handled rate limit"
-```
-
-**Capture interactions:**
-```bash
-claudeless --scenario test.toml --capture /tmp/log.jsonl -p "hello"
 ```
 
 **Live tool execution:**

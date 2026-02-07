@@ -45,7 +45,7 @@ Built-in tools execute in a sandbox and scenarios control responses.
 ## Future Work
 
 - **MCP Resources/Prompts**: Only tools protocol supported; resources and prompts not implemented
-- **Tools**: `WebSearch`, `WebFetch`, `NotebookEdit`, `Task`, `KillShell`, `TaskOutput`, `Skill`
+- **Tools**: `WebSearch`, `WebFetch`, `NotebookEdit`, `Task`, `TaskCreate`, `TaskUpdate`, `TaskList`, `TaskGet`, `TaskOutput`, `TaskStop`, `KillShell`, `Skill`
 - **Subagents**: Agent spawning and management
 - **TUI Setup Flow**: Theme selection, login flow, logout command, connection error handling
 - **Stream-JSON System Init**: Missing fields (`agents`, `apiKeySource`, `claude_code_version`, `cwd`, `output_style`, `permissionMode`, `plugins`, `skills`, `slash_commands`)

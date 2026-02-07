@@ -108,7 +108,7 @@ All timeouts can also be set via environment variables:
 | `plan` | Show plan before executing |
 | `bypass-permissions` | Skip all permission checks |
 | `accept-edits` | Auto-accept edit permissions |
-| `dont-ask` | Auto-approve all permissions |
+| `dont-ask` | Deny operations that would require permission |
 | `delegate` | Delegate to higher authority |
 
 ### Response Configuration
