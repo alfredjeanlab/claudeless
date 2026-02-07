@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-02-07
+
+### Features
+
+- **Elicitation**: Add tab bar, submit tab, and auto-advance to match real Claude Code
+- **Hooks**: Add `cwd`, `transcript_path`, `permission_mode` to hook wire format
+- **Hooks**: Add PreToolUse and PostToolUse hook support
+- **Hooks**: Add Notification hook support with matcher filtering
+- **Capture**: Add Env header and agent team capture scripts
+
+### Fixed
+
+- Fire PreToolUse hooks before TUI early returns
+- Correct agent team capture scripts based on real UI testing
+
+### Documentation
+
+- Update LIMITATIONS, SCENARIOS, and USAGE docs to match codebase
+
 ## [0.2.1] - 2026-02-05
 
 ### Features
