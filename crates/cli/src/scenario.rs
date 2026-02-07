@@ -100,7 +100,7 @@ impl Scenario {
     /// Supports file references in tool call inputs using the `$file` key:
     /// ```toml
     /// [default_response.tool_calls.input]
-    /// plan_content = { "$file" = "plan.md" }
+    /// plan = { "$file" = "plan.md" }
     /// ```
     ///
     /// File paths are resolved relative to the scenario file's directory.

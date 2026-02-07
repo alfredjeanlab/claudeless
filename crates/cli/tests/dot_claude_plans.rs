@@ -32,7 +32,7 @@ fn create_plan_scenario(dir: &TempDir) -> PathBuf {
                 {
                     "tool": "ExitPlanMode",
                     "input": {
-                        "plan_content": "# Test Plan\n\n## Overview\n\nThis is a test plan for the feature.\n\n## Steps\n\n1. First step\n2. Second step\n3. Third step"
+                        "plan": "# Test Plan\n\n## Overview\n\nThis is a test plan for the feature.\n\n## Steps\n\n1. First step\n2. Second step\n3. Third step"
                     }
                 }
             ]

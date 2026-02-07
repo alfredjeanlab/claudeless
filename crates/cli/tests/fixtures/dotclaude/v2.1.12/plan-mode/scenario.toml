@@ -9,7 +9,7 @@ tool = "ExitPlanMode"
 
 [default_response.tool_calls.input]
 # Load plan content from the captured fixture file
-plan_content = { "$file" = "plan.md" }
+plan = { "$file" = "plan.md" }
 
 permission_mode = "plan"
 

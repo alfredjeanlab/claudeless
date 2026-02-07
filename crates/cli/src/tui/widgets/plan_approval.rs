@@ -60,9 +60,6 @@ impl PlanApprovalState {
     ) -> Self {
         let plan_content = input
             .get("plan")
-            .or_else(|| input.get("plan_content"))
-            .or_else(|| input.get("planContent"))
-            .or_else(|| input.get("content"))
             .and_then(|v| v.as_str())
             .unwrap_or("# Plan\n\nNo content provided.")
             .to_string();

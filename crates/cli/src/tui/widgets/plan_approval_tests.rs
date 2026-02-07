@@ -26,20 +26,6 @@ fn test_from_tool_input_parses_plan_field() {
 }
 
 #[test]
-fn test_from_tool_input_parses_plan_content_field() {
-    let input = json!({
-        "plan_content": "# Plan\n\nDo something."
-    });
-    let state = PlanApprovalState::from_tool_input(
-        &input,
-        "toolu_001".to_string(),
-        "~/.claude/plans/test.md".to_string(),
-    );
-
-    assert!(state.plan_content.contains("Do something."));
-}
-
-#[test]
 fn test_from_tool_input_default_content() {
     let input = json!({});
     let state = PlanApprovalState::from_tool_input(

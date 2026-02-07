@@ -126,14 +126,10 @@ pub fn execute_exit_plan_mode(
     call: &ToolCallSpec,
     state_writer: &StateWriter,
 ) -> ToolExecutionResult {
-    // Try to get plan content from various possible field names
-    // Real Claude Code uses "plan" as the field name
+    // Real Claude Code always uses "plan" as the field name
     let content = call
         .input
         .get("plan")
-        .or_else(|| call.input.get("plan_content"))
-        .or_else(|| call.input.get("planContent"))
-        .or_else(|| call.input.get("content"))
         .and_then(|v| v.as_str())
         .unwrap_or("# Plan\n\nNo content provided.");
 

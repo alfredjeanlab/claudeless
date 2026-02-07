@@ -93,7 +93,7 @@ fn test_execute_exit_plan_mode() {
     let call = ToolCallSpec {
         tool: "ExitPlanMode".to_string(),
         input: json!({
-            "plan_content": "# My Plan\n\n## Steps\n\n1. Do this\n2. Do that"
+            "plan": "# My Plan\n\n## Steps\n\n1. Do this\n2. Do that"
         }),
         result: None,
     };
@@ -305,24 +305,4 @@ fn test_execute_exit_plan_mode_plan_field() {
         .as_str()
         .unwrap()
         .contains("~/.claude/plans/"));
-}
-
-#[test]
-fn test_execute_exit_plan_mode_prefers_plan_field() {
-    let writer = create_test_state_writer();
-    let call = ToolCallSpec {
-        tool: "ExitPlanMode".to_string(),
-        input: json!({
-            "plan": "# Real Plan",
-            "plan_content": "# Old Field",
-        }),
-        result: None,
-    };
-
-    let result = execute_exit_plan_mode(&call, &writer);
-    assert!(!result.is_error);
-
-    // The "plan" field should take priority
-    let result_json = result.tool_use_result.unwrap();
-    assert!(result_json["plan_name"].as_str().is_some());
 }
