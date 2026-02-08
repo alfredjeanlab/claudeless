@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-02-08
+
+### Features
+
+- **Hooks**: Support PostToolUse and PostToolUseFailure hook events
+
+### Fixed
+
+- **Plan Mode**: Use 'plan' field name for ExitPlanMode tool input
+- **Packaging**: Restore doc symlinks for crates.io publish compatibility
+
+### Documentation
+
+- Fix inaccuracies and add missing CLI flags to documentation
+
+### Chores
+
+- Replace runbooks with library imports
+
 ## [0.2.2] - 2026-02-07
 
 ### Features
