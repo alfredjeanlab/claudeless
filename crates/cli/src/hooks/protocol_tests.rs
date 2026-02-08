@@ -17,6 +17,10 @@ fn test_hook_event_serialization() {
 fn test_hook_event_wire_names() {
     assert_eq!(HookEvent::PreToolExecution.wire_name(), "PreToolUse");
     assert_eq!(HookEvent::PostToolExecution.wire_name(), "PostToolUse");
+    assert_eq!(
+        HookEvent::PostToolExecutionFailure.wire_name(),
+        "PostToolUseFailure"
+    );
     assert_eq!(HookEvent::Notification.wire_name(), "Notification");
     assert_eq!(HookEvent::Stop.wire_name(), "Stop");
     assert_eq!(HookEvent::SessionStart.wire_name(), "SessionStart");
@@ -163,7 +167,7 @@ fn test_hook_payload_serialization() {
     let payload = HookPayload::ToolExecution {
         tool_name: "Read".to_string(),
         tool_input: serde_json::json!({"file_path": "/test.txt"}),
-        tool_output: Some("content".to_string()),
+        tool_response: Some(serde_json::Value::String("content".to_string())),
         tool_use_id: None,
     };
 
@@ -195,25 +199,25 @@ fn test_pre_tool_execution_payload_matches_spec() {
     assert!(json["session_id"].is_string());
     assert_eq!(json["payload"]["tool_name"], "Bash");
     assert!(json["payload"]["tool_input"].is_object());
-    // tool_output should not be serialized when None
-    assert!(json["payload"].get("tool_output").is_none());
+    // tool_response should not be serialized when None
+    assert!(json["payload"].get("tool_response").is_none());
 }
 
 #[test]
-fn test_post_tool_execution_includes_output() {
+fn test_post_tool_execution_includes_response() {
     let msg = HookMessage::tool_execution(
         "test-session",
         HookEvent::PostToolExecution,
         "Bash",
         serde_json::json!({"command": "ls"}),
-        Some("file1\nfile2".to_string()),
+        Some(serde_json::Value::String("file1\nfile2".to_string())),
         None,
     );
 
     let json = serde_json::to_value(&msg).unwrap();
 
     assert_eq!(json["event"], "post_tool_execution");
-    assert_eq!(json["payload"]["tool_output"], "file1\nfile2");
+    assert_eq!(json["payload"]["tool_response"], "file1\nfile2");
 }
 
 #[test]
@@ -566,8 +570,8 @@ fn test_hook_message_wire_format_pretooluse() {
     assert_eq!(wire["tool_name"], "Bash");
     assert_eq!(wire["tool_input"]["command"], "ls -la");
     assert_eq!(wire["tool_use_id"], "toolu_00000001");
-    // tool_output should not be present when None
-    assert!(wire.get("tool_output").is_none());
+    // tool_response should not be present when None
+    assert!(wire.get("tool_response").is_none());
 }
 
 #[test]
@@ -577,7 +581,7 @@ fn test_hook_message_wire_format_posttooluse() {
         HookEvent::PostToolExecution,
         "Read",
         serde_json::json!({"file_path": "/test.txt"}),
-        Some("file content here".to_string()),
+        Some(serde_json::json!({"filePath": "/test.txt", "success": true})),
         Some("toolu_00000002".to_string()),
     );
 
@@ -585,8 +589,68 @@ fn test_hook_message_wire_format_posttooluse() {
 
     assert_eq!(wire["hook_event_name"], "PostToolUse");
     assert_eq!(wire["tool_name"], "Read");
-    assert_eq!(wire["tool_output"], "file content here");
+    assert_eq!(wire["tool_response"]["success"], true);
     assert_eq!(wire["tool_use_id"], "toolu_00000002");
+}
+
+#[test]
+fn test_hook_message_wire_format_posttoolusefailure() {
+    let msg = HookMessage::tool_execution_failure(
+        "session-abc",
+        "Bash",
+        serde_json::json!({"command": "npm test"}),
+        Some("toolu_00000003".to_string()),
+        "Command exited with non-zero status code 1",
+        Some(false),
+    );
+
+    let wire = msg.to_wire_json();
+
+    assert_eq!(wire["hook_event_name"], "PostToolUseFailure");
+    assert_eq!(wire["tool_name"], "Bash");
+    assert_eq!(wire["tool_input"]["command"], "npm test");
+    assert_eq!(wire["tool_use_id"], "toolu_00000003");
+    assert_eq!(wire["error"], "Command exited with non-zero status code 1");
+    assert_eq!(wire["is_interrupt"], false);
+}
+
+#[test]
+fn test_hook_message_tool_execution_failure_constructor() {
+    let msg = HookMessage::tool_execution_failure(
+        "session_123",
+        "Bash",
+        serde_json::json!({"command": "fail"}),
+        Some("toolu_00000001".to_string()),
+        "error message",
+        None,
+    );
+
+    assert_eq!(msg.event, HookEvent::PostToolExecutionFailure);
+    assert_eq!(msg.session_id, "session_123");
+
+    if let HookPayload::ToolExecutionFailure {
+        tool_name,
+        error,
+        is_interrupt,
+        ..
+    } = &msg.payload
+    {
+        assert_eq!(tool_name, "Bash");
+        assert_eq!(error, "error message");
+        assert!(is_interrupt.is_none());
+    } else {
+        unreachable!("Expected ToolExecutionFailure payload");
+    }
+}
+
+#[test]
+fn test_post_tool_execution_failure_event_serialization() {
+    let event = HookEvent::PostToolExecutionFailure;
+    let json = serde_json::to_string(&event).unwrap();
+    assert_eq!(json, "\"post_tool_execution_failure\"");
+
+    let parsed: HookEvent = serde_json::from_str(&json).unwrap();
+    assert_eq!(parsed, event);
 }
 
 #[test]

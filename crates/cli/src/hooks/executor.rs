@@ -119,6 +119,9 @@ impl HookExecutor {
                     } => Some(notification_type.as_str()),
                     // For tool events, match against tool_name
                     HookPayload::ToolExecution { ref tool_name, .. } => Some(tool_name.as_str()),
+                    HookPayload::ToolExecutionFailure { ref tool_name, .. } => {
+                        Some(tool_name.as_str())
+                    }
                     _ => None,
                 };
                 if let Some(subject) = subject {

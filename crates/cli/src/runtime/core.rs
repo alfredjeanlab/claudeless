@@ -484,19 +484,39 @@ impl Runtime {
                 );
             }
 
-            // Fire PostToolUse hook after tool execution (fire-and-forget)
+            // Fire PostToolUse or PostToolUseFailure hook after tool execution (fire-and-forget)
             if let Some(ref hook_executor) = self.hook_executor {
-                if hook_executor.has_hooks(&HookEvent::PostToolExecution) {
-                    let post_msg = HookMessage::tool_execution(
-                        self.context.session_id.to_string(),
-                        HookEvent::PostToolExecution,
-                        &call.tool,
-                        call.input.clone(),
-                        result.text().map(|s| s.to_string()),
-                        Some(tool_use_id.clone()),
-                    );
-                    if let Err(e) = hook_executor.execute(&post_msg).await {
-                        eprintln!("PostToolUse hook error: {e}");
+                if result.is_error {
+                    // Tool failed — fire PostToolUseFailure
+                    if hook_executor.has_hooks(&HookEvent::PostToolExecutionFailure) {
+                        let post_msg = HookMessage::tool_execution_failure(
+                            self.context.session_id.to_string(),
+                            &call.tool,
+                            call.input.clone(),
+                            Some(tool_use_id.clone()),
+                            result.text().unwrap_or("Unknown error"),
+                            None,
+                        );
+                        if let Err(e) = hook_executor.execute(&post_msg).await {
+                            eprintln!("PostToolUseFailure hook error: {e}");
+                        }
+                    }
+                } else {
+                    // Tool succeeded — fire PostToolUse
+                    if hook_executor.has_hooks(&HookEvent::PostToolExecution) {
+                        let post_msg = HookMessage::tool_execution(
+                            self.context.session_id.to_string(),
+                            HookEvent::PostToolExecution,
+                            &call.tool,
+                            call.input.clone(),
+                            result
+                                .text()
+                                .map(|s| serde_json::Value::String(s.to_string())),
+                            Some(tool_use_id.clone()),
+                        );
+                        if let Err(e) = hook_executor.execute(&post_msg).await {
+                            eprintln!("PostToolUse hook error: {e}");
+                        }
                     }
                 }
             }

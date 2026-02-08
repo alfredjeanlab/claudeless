@@ -11,8 +11,10 @@ use serde::{Deserialize, Serialize};
 pub enum HookEvent {
     /// Before tool execution
     PreToolExecution,
-    /// After tool execution
+    /// After tool execution (success)
     PostToolExecution,
+    /// After tool execution (failure)
+    PostToolExecutionFailure,
     /// Notification to user
     Notification,
     /// Permission request
@@ -35,6 +37,7 @@ impl HookEvent {
         match self {
             HookEvent::PreToolExecution => "PreToolUse",
             HookEvent::PostToolExecution => "PostToolUse",
+            HookEvent::PostToolExecutionFailure => "PostToolUseFailure",
             HookEvent::Notification => "Notification",
             HookEvent::PermissionRequest => "PermissionRequest",
             HookEvent::SessionStart => "SessionStart",
@@ -66,7 +69,7 @@ impl HookMessage {
         event: HookEvent,
         tool_name: impl Into<String>,
         tool_input: serde_json::Value,
-        tool_output: Option<String>,
+        tool_response: Option<serde_json::Value>,
         tool_use_id: Option<String>,
     ) -> Self {
         Self {
@@ -75,8 +78,30 @@ impl HookMessage {
             payload: HookPayload::ToolExecution {
                 tool_name: tool_name.into(),
                 tool_input,
-                tool_output,
+                tool_response,
                 tool_use_id,
+            },
+        }
+    }
+
+    /// Create a tool execution failure message
+    pub fn tool_execution_failure(
+        session_id: impl Into<String>,
+        tool_name: impl Into<String>,
+        tool_input: serde_json::Value,
+        tool_use_id: Option<String>,
+        error: impl Into<String>,
+        is_interrupt: Option<bool>,
+    ) -> Self {
+        Self {
+            event: HookEvent::PostToolExecutionFailure,
+            session_id: session_id.into(),
+            payload: HookPayload::ToolExecutionFailure {
+                tool_name: tool_name.into(),
+                tool_input,
+                tool_use_id,
+                error: error.into(),
+                is_interrupt,
             },
         }
     }
@@ -188,7 +213,7 @@ impl HookMessage {
             HookPayload::ToolExecution {
                 tool_name,
                 tool_input,
-                tool_output,
+                tool_response,
                 tool_use_id,
             } => {
                 obj.insert(
@@ -196,16 +221,42 @@ impl HookMessage {
                     serde_json::Value::String(tool_name.clone()),
                 );
                 obj.insert("tool_input".to_string(), tool_input.clone());
-                if let Some(output) = tool_output {
-                    obj.insert(
-                        "tool_output".to_string(),
-                        serde_json::Value::String(output.clone()),
-                    );
+                if let Some(response) = tool_response {
+                    obj.insert("tool_response".to_string(), response.clone());
                 }
                 if let Some(id) = tool_use_id {
                     obj.insert(
                         "tool_use_id".to_string(),
                         serde_json::Value::String(id.clone()),
+                    );
+                }
+            }
+            HookPayload::ToolExecutionFailure {
+                tool_name,
+                tool_input,
+                tool_use_id,
+                error,
+                is_interrupt,
+            } => {
+                obj.insert(
+                    "tool_name".to_string(),
+                    serde_json::Value::String(tool_name.clone()),
+                );
+                obj.insert("tool_input".to_string(), tool_input.clone());
+                if let Some(id) = tool_use_id {
+                    obj.insert(
+                        "tool_use_id".to_string(),
+                        serde_json::Value::String(id.clone()),
+                    );
+                }
+                obj.insert(
+                    "error".to_string(),
+                    serde_json::Value::String(error.clone()),
+                );
+                if let Some(interrupt) = is_interrupt {
+                    obj.insert(
+                        "is_interrupt".to_string(),
+                        serde_json::Value::Bool(*interrupt),
                     );
                 }
             }
@@ -287,14 +338,25 @@ impl HookMessage {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum HookPayload {
-    /// Tool execution context
+    /// Tool execution context (success)
     ToolExecution {
         tool_name: String,
         tool_input: serde_json::Value,
         #[serde(skip_serializing_if = "Option::is_none")]
-        tool_output: Option<String>,
+        tool_response: Option<serde_json::Value>,
         #[serde(skip_serializing_if = "Option::is_none")]
         tool_use_id: Option<String>,
+    },
+
+    /// Tool execution failure context
+    ToolExecutionFailure {
+        tool_name: String,
+        tool_input: serde_json::Value,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        tool_use_id: Option<String>,
+        error: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        is_interrupt: Option<bool>,
     },
 
     /// Notification content

@@ -237,3 +237,47 @@ fn test_load_hooks_pretooluse_with_matcher() {
     assert!(executor.has_hooks(&HookEvent::PreToolExecution));
     assert_eq!(executor.hook_count(&HookEvent::PreToolExecution), 1);
 }
+
+#[test]
+fn test_load_hooks_post_tool_use_failure() {
+    let settings = ClaudeSettings {
+        hooks: HashMap::from([(
+            "PostToolUseFailure".to_string(),
+            vec![HookDefEntry {
+                matcher: None,
+                hooks: vec![HookCommand {
+                    command_type: "bash".to_string(),
+                    command: "echo post-tool-failure".to_string(),
+                    timeout: 5000,
+                }],
+            }],
+        )]),
+        ..Default::default()
+    };
+
+    let executor = load_hooks(&settings).unwrap();
+    assert!(executor.has_hooks(&HookEvent::PostToolExecutionFailure));
+    assert_eq!(executor.hook_count(&HookEvent::PostToolExecutionFailure), 1);
+}
+
+#[test]
+fn test_load_hooks_post_tool_use_failure_with_matcher() {
+    let settings = ClaudeSettings {
+        hooks: HashMap::from([(
+            "PostToolUseFailure".to_string(),
+            vec![HookDefEntry {
+                matcher: Some("Bash|Write".to_string()),
+                hooks: vec![HookCommand {
+                    command_type: "bash".to_string(),
+                    command: "echo failure".to_string(),
+                    timeout: 5000,
+                }],
+            }],
+        )]),
+        ..Default::default()
+    };
+
+    let executor = load_hooks(&settings).unwrap();
+    assert!(executor.has_hooks(&HookEvent::PostToolExecutionFailure));
+    assert_eq!(executor.hook_count(&HookEvent::PostToolExecutionFailure), 1);
+}

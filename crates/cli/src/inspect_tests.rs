@@ -65,7 +65,7 @@ fn test_hook_assertions() {
         payload: HookPayload::ToolExecution {
             tool_name: "Bash".to_string(),
             tool_input: serde_json::json!({"command": "ls"}),
-            tool_output: None,
+            tool_response: None,
             tool_use_id: None,
         },
     });
@@ -75,7 +75,7 @@ fn test_hook_assertions() {
         payload: HookPayload::ToolExecution {
             tool_name: "Bash".to_string(),
             tool_input: serde_json::json!({"command": "ls"}),
-            tool_output: Some("file1\nfile2".to_string()),
+            tool_response: Some(serde_json::Value::String("file1\nfile2".to_string())),
             tool_use_id: None,
         },
     });

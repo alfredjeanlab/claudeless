@@ -218,3 +218,187 @@ async fn pre_tool_use_hook_fires_for_regular_tools() {
     assert_eq!(results.len(), 1);
     assert!(!results[0].is_error);
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn post_tool_use_hook_fires_on_success() {
+    let tmp = tempfile::tempdir().unwrap();
+    let marker = tmp.path().join("post_hook_fired");
+    let script = tmp.path().join("post_hook.sh");
+    std::fs::write(
+        &script,
+        format!(
+            "#!/bin/bash\necho \"fired\" >> {}\n",
+            marker.to_string_lossy()
+        ),
+    )
+    .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    let mut hook_executor = HookExecutor::new();
+    hook_executor.register(HookEvent::PostToolExecution, HookConfig::new(&script, 5000));
+
+    let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
+    let mut runtime = build_test_runtime(Some(hook_executor), cli);
+
+    let tool_calls = vec![ToolCallSpec {
+        tool: "Read".to_string(),
+        input: serde_json::json!({"file_path": "/dev/null"}),
+        result: Some("file content".to_string()),
+    }];
+
+    let (results, _) = runtime
+        .execute_tools_for_turn("test", "", &tool_calls)
+        .await;
+
+    // PostToolUse should fire for successful tool execution
+    assert!(
+        marker.exists(),
+        "PostToolUse hook should fire for successful tools"
+    );
+    assert_eq!(results.len(), 1);
+    assert!(!results[0].is_error);
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn post_tool_use_hook_does_not_fire_on_error() {
+    let tmp = tempfile::tempdir().unwrap();
+    let marker = tmp.path().join("post_hook_fired");
+    let script = tmp.path().join("post_hook.sh");
+    std::fs::write(
+        &script,
+        format!(
+            "#!/bin/bash\necho \"fired\" >> {}\n",
+            marker.to_string_lossy()
+        ),
+    )
+    .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    let mut hook_executor = HookExecutor::new();
+    hook_executor.register(HookEvent::PostToolExecution, HookConfig::new(&script, 5000));
+
+    let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
+    let mut runtime = build_test_runtime(Some(hook_executor), cli);
+
+    // Tool with no result configured => MockExecutor returns error
+    let tool_calls = vec![ToolCallSpec {
+        tool: "Read".to_string(),
+        input: serde_json::json!({"file_path": "/dev/null"}),
+        result: None,
+    }];
+
+    let (results, _) = runtime
+        .execute_tools_for_turn("test", "", &tool_calls)
+        .await;
+
+    // PostToolUse should NOT fire for error tool execution
+    assert!(
+        !marker.exists(),
+        "PostToolUse hook should not fire for error tools"
+    );
+    assert_eq!(results.len(), 1);
+    assert!(results[0].is_error);
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn post_tool_use_failure_hook_fires_on_error() {
+    let tmp = tempfile::tempdir().unwrap();
+    let marker = tmp.path().join("failure_hook_fired");
+    let script = tmp.path().join("failure_hook.sh");
+    std::fs::write(
+        &script,
+        format!(
+            "#!/bin/bash\necho \"fired\" >> {}\n",
+            marker.to_string_lossy()
+        ),
+    )
+    .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    let mut hook_executor = HookExecutor::new();
+    hook_executor.register(
+        HookEvent::PostToolExecutionFailure,
+        HookConfig::new(&script, 5000),
+    );
+
+    let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
+    let mut runtime = build_test_runtime(Some(hook_executor), cli);
+
+    // Tool with no result configured => MockExecutor returns error
+    let tool_calls = vec![ToolCallSpec {
+        tool: "Read".to_string(),
+        input: serde_json::json!({"file_path": "/dev/null"}),
+        result: None,
+    }];
+
+    let (results, _) = runtime
+        .execute_tools_for_turn("test", "", &tool_calls)
+        .await;
+
+    // PostToolUseFailure should fire for error tool execution
+    assert!(
+        marker.exists(),
+        "PostToolUseFailure hook should fire for error tools"
+    );
+    assert_eq!(results.len(), 1);
+    assert!(results[0].is_error);
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn post_tool_use_failure_hook_does_not_fire_on_success() {
+    let tmp = tempfile::tempdir().unwrap();
+    let marker = tmp.path().join("failure_hook_fired");
+    let script = tmp.path().join("failure_hook.sh");
+    std::fs::write(
+        &script,
+        format!(
+            "#!/bin/bash\necho \"fired\" >> {}\n",
+            marker.to_string_lossy()
+        ),
+    )
+    .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    let mut hook_executor = HookExecutor::new();
+    hook_executor.register(
+        HookEvent::PostToolExecutionFailure,
+        HookConfig::new(&script, 5000),
+    );
+
+    let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
+    let mut runtime = build_test_runtime(Some(hook_executor), cli);
+
+    let tool_calls = vec![ToolCallSpec {
+        tool: "Read".to_string(),
+        input: serde_json::json!({"file_path": "/dev/null"}),
+        result: Some("file content".to_string()),
+    }];
+
+    let (results, _) = runtime
+        .execute_tools_for_turn("test", "", &tool_calls)
+        .await;
+
+    // PostToolUseFailure should NOT fire for successful tool execution
+    assert!(
+        !marker.exists(),
+        "PostToolUseFailure hook should not fire for successful tools"
+    );
+    assert_eq!(results.len(), 1);
+    assert!(!results[0].is_error);
+}
