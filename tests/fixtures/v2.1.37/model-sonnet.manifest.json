@@ -1,0 +1,6 @@
+{
+  "script": "model-sonnet",
+  "snapshots": [
+    "model_sonnet"
+  ]
+}

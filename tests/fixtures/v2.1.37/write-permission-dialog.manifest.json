@@ -1,0 +1,6 @@
+{
+  "script": "write-permission-dialog",
+  "snapshots": [
+    "write_permission_dialog"
+  ]
+}

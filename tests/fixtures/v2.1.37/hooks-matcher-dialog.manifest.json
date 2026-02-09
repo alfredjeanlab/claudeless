@@ -1,0 +1,6 @@
+{
+  "script": "hooks-matcher-dialog",
+  "snapshots": [
+    "hooks_matcher_dialog"
+  ]
+}

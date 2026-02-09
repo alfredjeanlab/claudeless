@@ -1,0 +1,23 @@
+
+▗ ▗   ▖ ▖  Claude Code v2.1.37
+           Haiku 4.5 · Claude API
+  ▘▘ ▝▝    /…/var/folders/t5/6tq8cxtj20z035rv8hsnzwvh0000gn/T/capture-TbNH7o
+
+  /model to try Opus 4.6
+
+❯ Use the AskUserQuestion tool to ask me 4 questions: programming language
+  (Rust/Python), project type (CLI/Web), CI/CD (GitHub Actions/None), and
+────────────────────────────────────────────────────────────────────────────────
+←  ☒ Language  ☒ Project Type  ☒ CI/CD  ☐ License  ✔ Submit  →
+
+Which software license would you like to use?
+
+❯ 1. MIT
+     Permissive license allowing commercial use
+  2. Apache
+     Permissive license with explicit patent grant
+  3. Type something.
+────────────────────────────────────────────────────────────────────────────────
+  4. Chat about this
+
+Enter to select · Tab/Arrow keys to navigate · Esc to cancel

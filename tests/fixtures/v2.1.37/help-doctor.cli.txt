@@ -1,0 +1,6 @@
+Usage: claude doctor [options]
+
+Check the health of your Claude Code auto-updater
+
+Options:
+  -h, --help  Display help for command

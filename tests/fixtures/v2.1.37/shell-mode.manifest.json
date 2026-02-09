@@ -1,0 +1,7 @@
+{
+  "script": "shell-mode",
+  "snapshots": [
+    "shell_mode_prefix",
+    "shell_mode_command"
+  ]
+}

@@ -1,0 +1,23 @@
+2,6c2,6
+< state/.claude.json.backup.1770661366557
+< state/.claude.json.backup.1770661366569
+< state/.claude.json.backup.1770661366570
+< state/.claude.json.backup.1770661366645
+< state/.claude.json.backup.1770661395327
+---
+> state/.claude.json.backup.1770661442514
+> state/.claude.json.backup.1770661442516
+> state/.claude.json.backup.1770661442531
+> state/.claude.json.backup.1770661442532
+> state/.claude.json.backup.1770661447920
+8a9
+> state/debug/4fa1da9c-7d85-41f0-9c47-9f9ca314093d.txt
+9a11
+> state/history.jsonl
+11a14
+> state/plugins/marketplaces/claude-plugins-official/.git/FETCH_HEAD
+12a16
+> state/plugins/marketplaces/claude-plugins-official/.git/ORIG_HEAD
+252a257,258
+> state/projects/-private-var-folders-t5-6tq8cxtj20z035rv8hsnzwvh0000gn-T-capture-RONnbG/4fa1da9c-7d85-41f0-9c47-9f9ca314093d.jsonl
+> state/todos/4fa1da9c-7d85-41f0-9c47-9f9ca314093d-agent-4fa1da9c-7d85-41f0-9c47-9f9ca314093d.json

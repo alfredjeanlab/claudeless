@@ -13,7 +13,7 @@ send <Enter>
 wait "bypass permissions on" 10s
 
 # Ask Claude to create a small team
-send "Create an agent team with 2 members to research SQLite vs PostgreSQL for a CLI tool." 200 <Enter>
+send "Create an agent team with 2 members to research SQLite vs PostgreSQL for a CLI tool." 300 <Enter>
 
 # Wait for team to spawn — "agents launched" appears in lead output
 wait "agents launched" 120s

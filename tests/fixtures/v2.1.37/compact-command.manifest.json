@@ -1,0 +1,8 @@
+{
+  "script": "compact-command",
+  "snapshots": [
+    "compact_before",
+    "compact_during",
+    "compact_after"
+  ]
+}

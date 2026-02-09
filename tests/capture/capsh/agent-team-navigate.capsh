@@ -14,7 +14,7 @@ send <Enter>
 wait "bypass permissions on" 10s
 
 # Ask Claude to create a team
-send "Create an agent team with 2 members to brainstorm names for a CLI tool." 200 <Enter>
+send "Create an agent team with 2 members to brainstorm names for a CLI tool." 300 <Enter>
 
 # Wait for team to spawn
 wait "agents launched" 120s

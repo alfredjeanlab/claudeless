@@ -1,0 +1,7 @@
+{
+  "script": "invalid-settings-dialog",
+  "snapshots": [
+    "invalid_settings_dialog",
+    "after_continue"
+  ]
+}

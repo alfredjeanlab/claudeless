@@ -1,0 +1,6 @@
+{
+  "script": "hook-settings-merge",
+  "snapshots": [
+    "hook_settings_merge"
+  ]
+}

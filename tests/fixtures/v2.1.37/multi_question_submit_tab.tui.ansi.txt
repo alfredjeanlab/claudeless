@@ -1,0 +1,24 @@
+[0m[38;2;80;80;80;48;2;55;55;55m❯ [0m[38;2;255;255;255;48;2;55;55;55mUse the AskUserQuestion tool to ask me 4 questions: programming language  [0m    [0m
+[0m[38;2;255;255;255;48;2;55;55;55m  (Rust/Python), project type (CLI/Web), CI/CD (GitHub Actions/None), and   [0m    [0m
+[0m[2;38;2;153;153;153m────────────────────────────────────────────────────────────────────────────────[0m
+                                                                                [0m
+[0m[2;38;2;153;153;153m────────────────────────────────────────────────────────────────────────────────[0m
+                                                                                [0m
+←  ☒ Language  ☒ Project Type  ☒ CI/CD  ☒ License [0m[38;2;0;0;0;48;2;177;185;249m ✔ Submit [0m[38;2;153;153;153m →[0m                  [0m
+                                                                                [0m
+[0m[1;38;2;255;255;255mReview your answers[0m                                                             [0m
+                                                                                [0m
+ ● Which programming language would you like to use?                            [0m
+   [0m[38;2;78;186;101m→ Rust[0m                                                                       [0m
+ ● What type of project are you building?                                       [0m
+   [0m[38;2;78;186;101m→ CLI[0m                                                                        [0m
+ ● What CI/CD solution would you prefer?                                        [0m
+   [0m[38;2;78;186;101m→ GitHub Actions[0m                                                             [0m
+ ● Which software license would you like to use?                                [0m
+   [0m[38;2;78;186;101m→[0m [0m[38;2;78;186;101mMIT[0m                                                                        [0m
+                                                                                [0m
+[0m[38;2;153;153;153mReady[0m [0m[38;2;153;153;153mto[0m [0m[38;2;153;153;153msubmit[0m [0m[38;2;153;153;153myour[0m [0m[38;2;153;153;153manswers?[0m                                                   [0m
+                                                                                [0m
+[0m[38;2;177;185;249m❯[0m [0m[38;2;153;153;153m1.[0m [0m[38;2;177;185;249mSubmit[0m [0m[38;2;177;185;249manswers[0m                                                             [0m
+  [0m[38;2;153;153;153m2.[0m Cancel                                                                     [0m
+                                                                                [0m

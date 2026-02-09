@@ -1,0 +1,12 @@
+{
+  "script": "ask-user-question-multi",
+  "snapshots": [
+    "multi_question_dialog_q1",
+    "multi_question_dialog_q2",
+    "multi_question_dialog_q3",
+    "multi_question_revisit_q1",
+    "multi_question_dialog_q4",
+    "multi_question_submit_tab",
+    "multi_question_after_submit"
+  ]
+}

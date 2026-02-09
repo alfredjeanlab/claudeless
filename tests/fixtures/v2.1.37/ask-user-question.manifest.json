@@ -1,0 +1,6 @@
+{
+  "script": "ask-user-question",
+  "snapshots": [
+    "ask_user_question_dialog"
+  ]
+}

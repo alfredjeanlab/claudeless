@@ -1,0 +1,7 @@
+{
+  "script": "clear-command",
+  "snapshots": [
+    "clear_before",
+    "clear_after"
+  ]
+}

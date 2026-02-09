@@ -1,0 +1,6 @@
+{
+  "script": "export-filename-dialog",
+  "snapshots": [
+    "export_filename_dialog"
+  ]
+}

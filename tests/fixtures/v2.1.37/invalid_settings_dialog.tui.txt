@@ -1,0 +1,24 @@
+────────────────────────────────────────────────────────────────────────────────
+ Settings Error
+
+ /private/var/folders/t5/6tq8cxtj20z035rv8hsnzwvh0000gn/T/capture-DUrQ7d/.claud
+ e/settings.json
+  └ hooks
+    └ SessionStart
+      ├ 0
+      │ └ hooks: Expected array, but received undefined
+      └ 1
+        └ hooks: Expected array, but received undefined
+
+ Hooks use a new format with matchers. Example: {"PostToolUse": [{"matcher":
+ {"tools": ["BashTool"]}, "hooks": [{"type": "command", "command": "echo
+ Done"}]}]}
+ Learn more: https://code.claude.com/docs/en/hooks
+
+
+ Files with errors are skipped entirely, not just the invalid settings.
+
+ ❯ 1. Exit and fix manually
+   2. Continue without these settings
+
+ Enter to confirm · Esc to cancel
