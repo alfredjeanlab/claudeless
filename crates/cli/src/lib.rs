@@ -12,12 +12,12 @@
 //!
 //! For scenario authoring, see the **[Scenario Reference](crate::docs::scenarios)** for complete scenario file documentation.
 //!
-#![doc = include_str!("../docs/USAGE.md")]
+#![doc = include_str!("../../../docs/USAGE.md")]
 
 /// Documentation modules for docs.rs
 pub mod docs {
     /// Scenario file reference - patterns, responses, failures, and tool execution.
-    #[doc = include_str!("../docs/SCENARIOS.md")]
+    #[doc = include_str!("../../../docs/SCENARIOS.md")]
     pub mod scenarios {}
 }
 

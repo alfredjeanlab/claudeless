@@ -343,7 +343,7 @@ fn build_test_runtime_with_scenario(
     cli: Cli,
 ) -> Runtime {
     let config = ScenarioConfig {
-        tools: Some(ToolsConfig { mode: ToolExecutionMode::Mock, tools: tool_configs }),
+        tools: Some(ToolsConfig { mode: ToolExecutionMode::Mock, per_tool: tool_configs }),
         ..Default::default()
     };
     let scenario = Scenario::from_config(config).unwrap();

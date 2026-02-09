@@ -50,7 +50,7 @@ Claudeless simulates the Claude CLI by emulating its TUI layout, CLI interface, 
 
 The core CLI experience is well-supported, including output formats, permission modes, and the hooks protocol. Ongoing work is focused on improving JSON output fidelity and TUI rendering accuracy.
 
-Subagent simulation and MCP server execution are planned for future releases.
+Subagent simulation is planned for a future release.
 
 ### Out of Scope
 

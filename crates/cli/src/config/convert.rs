@@ -91,7 +91,7 @@ fn convert_tool_call(spec: v1::ToolCallSpec) -> ToolCall {
 fn convert_tool_execution(te: v1::ToolExecutionConfig) -> ToolsConfig {
     ToolsConfig {
         mode: te.mode,
-        tools: te.tools.into_iter().map(|(k, v)| (k, convert_tool_config(v))).collect(),
+        per_tool: te.tools.into_iter().map(|(k, v)| (k, convert_tool_config(v))).collect(),
     }
 }
 

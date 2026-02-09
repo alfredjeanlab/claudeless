@@ -125,7 +125,7 @@ pub struct ToolCall {
 #[derive(Clone, Debug, Default)]
 pub struct ToolsConfig {
     pub mode: ToolExecutionMode,
-    pub tools: HashMap<String, ToolConfig>,
+    pub per_tool: HashMap<String, ToolConfig>,
 }
 
 /// Per-tool configuration.

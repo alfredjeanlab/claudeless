@@ -53,39 +53,42 @@ Scenarios control simulator responses. Use TOML (preferred) or JSON.
 ### Minimal Example
 
 ```toml
-name = "minimal"
-
 [[responses]]
-pattern = { type = "any" }
-response = "Hello from Claudeless!"
+on = "*"
+say = "Hello from Claudeless!"
 ```
 
 ### Pattern Types
 
+Bare strings are glob patterns (default). Use object form for `contains` and `regexp`.
+
 | Type | Example | Description |
 |------|---------|-------------|
-| `exact` | `{ type = "exact", text = "hello" }` | Exact match |
-| `contains` | `{ type = "contains", text = "error" }` | Substring match |
-| `regex` | `{ type = "regex", pattern = "(?i)fix.*bug" }` | Regex match |
-| `glob` | `{ type = "glob", pattern = "*.txt" }` | Shell wildcards |
-| `any` | `{ type = "any" }` | Catch-all |
+| glob | `"*"`, `"hello"`, `"*.txt"` | Shell wildcards, exact match, catch-all (default) |
+| contains | `{ contains = "error" }` | Substring match |
+| regexp | `{ regexp = "(?i)fix.*bug" }` | Regex match |
 
-### Response Types
+### Response Rules
+
+Response fields are specified directly on the rule alongside the pattern.
 
 **Simple:**
 ```toml
-response = "Plain text response"
+[[responses]]
+on = { contains = "hello" }
+say = "Plain text response"
 ```
 
-**Detailed:**
+**With tool calls:**
 ```toml
-[responses.response]
-text = "Response with metadata"
+[[responses]]
+on = { contains = "hello" }
+say = "Response with metadata"
 delay_ms = 100
 usage = { input_tokens = 100, output_tokens = 50 }
 
-[[responses.response.tool_calls]]
-tool = "Read"
+[[responses.tools]]
+call = "Read"
 input = { file_path = "/src/main.rs" }
 result = "fn main() { ... }"
 ```
@@ -94,8 +97,7 @@ result = "fn main() { ... }"
 
 ```toml
 [[responses]]
-pattern = { type = "contains", text = "timeout" }
-response = ""
+on = { contains = "timeout" }
 failure = { type = "connection_timeout", after_ms = 5000 }
 ```
 
@@ -103,25 +105,26 @@ failure = { type = "connection_timeout", after_ms = 5000 }
 
 ```toml
 [[responses]]
-pattern = { type = "contains", text = "help" }
-response = "What do you need?"
-turns = [
-    { expect = { type = "contains", text = "debug" }, response = "Starting debugger..." },
-    { expect = { type = "any" }, response = "I'll look into that." }
+on = { contains = "help" }
+say = "What do you need?"
+then = [
+    { on = { contains = "debug" }, say = "Starting debugger..." },
+    { on = "*", say = "I'll look into that." }
 ]
 ```
 
 ### Deterministic Testing
 
 ```toml
+[claude]
 session_id = "550e8400-e29b-41d4-a716-446655440000"
 launch_timestamp = "2025-01-15T10:30:00Z"
-user_name = "TestUser"
+username = "TestUser"
 ```
 
 ### Tool Execution Config
 
-Tool execution mode is configured in the scenario file's `[tool_execution]` section.
+Tool execution mode is configured in the scenario file's `[tools]` section.
 The default mode is `live` (execute tools directly).
 
 | Mode | Description |
@@ -130,14 +133,14 @@ The default mode is `live` (execute tools directly).
 | `live` | Execute built-in tools directly (default) |
 
 ```toml
-[tool_execution]
+[tools]
 mode = "mock"  # or "live" (default)
 
-[tool_execution.tools.Bash]
-auto_approve = true
+[tools.Bash]
+approve = true
 
-[tool_execution.tools.Write]
-auto_approve = false
+[tools.Write]
+approve = false
 error = "Permission denied"
 ```
 
@@ -163,10 +166,10 @@ The AskUserQuestion tool presents questions with selectable options. In TUI mode
 - **Chat about this** — Below separator. Sends a clarification rejection asking Claude to reformulate.
 
 ```toml
-[tool_execution.tools.AskUserQuestion]
-auto_approve = true
+[tools.AskUserQuestion]
+approve = true
 
-[tool_execution.tools.AskUserQuestion.answers]
+[tools.AskUserQuestion.answers]
 "What language?" = "Rust"
 ```
 
@@ -179,6 +182,8 @@ Claudeless accepts all standard Claude CLI flags for compatibility:
 --model <MODEL>                Model name (ignored, for compatibility)
 --output-format <FORMAT>       text | json | stream-json
 --permission-mode <MODE>       default | plan | bypass-permissions | ...
+--allow-dangerously-skip-permissions  Enable bypass option
+--dangerously-skip-permissions        Bypass all permission checks
 --continue, -c                 Continue previous conversation
 --resume, -r <ID>              Resume specific conversation
 --session-id <UUID>            Use specific session ID

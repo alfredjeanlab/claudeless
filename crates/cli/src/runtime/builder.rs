@@ -260,7 +260,7 @@ impl RuntimeBuilder {
             .scenario
             .as_ref()
             .and_then(|s| s.config().tools.as_ref())
-            .map(|t| t.tools.clone())
+            .map(|t| t.per_tool.clone())
             .unwrap_or_default();
         let checker = runtime_ctx.permission_checker_with_overrides(bypass, scenario_tools);
 

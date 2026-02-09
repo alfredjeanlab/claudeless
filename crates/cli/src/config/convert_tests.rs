@@ -208,7 +208,7 @@ fn convert_tool_execution_maps_mode_and_tools() {
     });
 
     assert_eq!(te.mode, ToolExecutionMode::Mock);
-    assert!(te.tools.get("Bash").unwrap().approve);
+    assert!(te.per_tool.get("Bash").unwrap().approve);
 }
 
 // =========================================================================
@@ -332,5 +332,5 @@ fn convert_full_scenario_tool_execution() {
 
     let tools = config.tools.unwrap();
     assert_eq!(tools.mode, ToolExecutionMode::Mock);
-    assert!(tools.tools.get("Read").unwrap().approve);
+    assert!(tools.per_tool.get("Read").unwrap().approve);
 }

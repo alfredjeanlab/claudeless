@@ -543,7 +543,7 @@ impl Runtime {
     /// Get pre-configured answers from scenario tool config.
     fn get_scenario_answers(&self, tool_name: &str) -> Option<serde_json::Value> {
         let tools_cfg = self.scenario.as_ref()?.config().tools.as_ref()?;
-        let tool_config = tools_cfg.tools.get(tool_name)?;
+        let tool_config = tools_cfg.per_tool.get(tool_name)?;
         let answers = tool_config.answers.as_ref()?;
         Some(serde_json::json!(answers))
     }
@@ -551,7 +551,7 @@ impl Runtime {
     /// Get per-tool scenario config (canned result, error, etc.).
     fn get_scenario_tool_config(&self, tool_name: &str) -> Option<&crate::config::ToolConfig> {
         let tools_cfg = self.scenario.as_ref()?.config().tools.as_ref()?;
-        tools_cfg.tools.get(tool_name)
+        tools_cfg.per_tool.get(tool_name)
     }
 
     /// Fire Stop hook and return continuation prompt if blocked.

@@ -61,7 +61,7 @@ fn tools_config_defaults() {
     let config = ToolsConfig::default();
 
     assert_eq!(config.mode, ToolExecutionMode::Live);
-    assert!(config.tools.is_empty());
+    assert!(config.per_tool.is_empty());
 }
 
 #[test]

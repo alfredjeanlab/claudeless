@@ -7,9 +7,9 @@ Scenarios define how the Claudeless simulator responds to prompts. They are TOML
 - [File Format](#file-format)
 - [Top-Level Fields](#top-level-fields)
 - [Pattern Specifications](#pattern-specifications)
-- [Response Specifications](#response-specifications)
+- [Response Rules](#response-rules)
 - [Failure Injection](#failure-injection)
-- [Turn Sequences](#turn-sequences)
+- [Follow-Up Turns](#follow-up-turns)
 - [Tool Execution](#tool-execution)
 - [Validation Rules](#validation-rules)
 - [Examples](#examples)
@@ -29,49 +29,39 @@ Supported formats: **TOML** (preferred) and **JSON**.
 ### Minimal Example
 
 ```toml
-name = "minimal"
-
 [[responses]]
-pattern = { type = "any" }
-response = "Hello from Claudeless!"
+on = "*"
+say = "Hello from Claudeless!"
 ```
 
 ---
 
 ## Top-Level Fields
 
-### Identity
+### Claude Configuration
+
+Configure simulator identity and environment in the `[claude]` section:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `name` | string | `""` | Scenario name for logging/debugging |
-
-### Session Identity
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `default_model` | string | `"claude-opus-4-5-20251101"` | Model to report (overridden by `--model` CLI flag) |
-| `claude_version` | string | `"2.1.12"` | Claude version string |
-| `user_name` | string | `"Alfred"` | User display name |
-| `session_id` | string | (random) | Fixed UUID for deterministic tests |
-| `project_path` | string | (cwd) | Override project path |
-| `placeholder` | string | (default) | Placeholder text for input prompt |
-| `provider` | string | `"Claude Max"` | Provider name shown in header |
-| `show_welcome_back` | bool | `false` | Show "Welcome back!" splash instead of normal header |
-| `welcome_back_right_panel` | array | (default) | Right panel rows for welcome back box |
-
-### Timing
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `launch_timestamp` | string | (now) | Fixed timestamp in ISO 8601 with timezone (e.g., `"2025-01-15T10:30:00Z"`) |
+| `claude.model` | string | `"claude-opus-4-5-20251101"` | Model to report (overridden by `--model` CLI flag) |
+| `claude.version` | string | `"2.1.12"` | Claude version string |
+| `claude.username` | string | `"Alfred"` | User display name |
+| `claude.session_id` | string | (random) | Fixed UUID for deterministic tests |
+| `claude.project_path` | string | (cwd) | Override project path |
+| `claude.launch_timestamp` | string | (now) | Fixed timestamp in ISO 8601 with timezone (e.g., `"2025-01-15T10:30:00Z"`) |
+| `claude.placeholder` | string | (default) | Placeholder text for input prompt |
+| `claude.provider` | string | `"Claude Max"` | Provider name shown in header |
+| `claude.working_directory` | string | (cwd) | Simulated working directory |
+| `claude.show_welcome_back` | bool | `false` | Show "Welcome back!" splash instead of normal header |
+| `claude.welcome_back_right_panel` | array | (default) | Right panel rows for welcome back box |
 
 ### Timeouts
 
-Configure various timeout values in the `[timeouts]` section:
+Configure various timeout values in the `[claude.timeouts]` section:
 
 ```toml
-[timeouts]
+[claude.timeouts]
 exit_hint_ms = 2000      # "Press Ctrl-C again" hint duration
 compact_delay_ms = 20    # /compact spinner delay
 hook_timeout_ms = 5000   # Hook script execution limit
@@ -95,7 +85,6 @@ All timeouts can also be set via environment variables:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `working_directory` | string | (cwd) | Simulated working directory |
 | `trusted` | bool | `true` | Whether directory is trusted |
 | `logged_in` | bool | `true` | Whether user is logged in (shows setup wizard when false) |
 | `permission_mode` | string | `"default"` | Permission mode override |
@@ -116,102 +105,90 @@ All timeouts can also be set via environment variables:
 | Field | Type | Description |
 |-------|------|-------------|
 | `responses` | array | Response rules (evaluated in order) |
-| `default_response` | object | Fallback when no pattern matches |
-| `tool_execution` | object | Tool execution configuration |
+| `default` | object | Fallback when no pattern matches |
+| `tools` | object | Tool execution configuration |
 
 ---
 
 ## Pattern Specifications
 
-All patterns use a `pattern` field with a `type` discriminator. Rules are evaluated in order; first match wins.
+Patterns are specified with the `on` field. Rules are evaluated in order; first match wins.
 
-### Exact Match
+### Glob (default)
 
-Case-sensitive exact string match.
+A bare string is a glob pattern. Supports shell-style wildcards (`*`, `?`, `[...]`), exact match (literal text), and catch-all (`*`).
 
 ```toml
-pattern = { type = "exact", text = "hello" }
+on = "*.txt"       # shell wildcards
+on = "hello"       # exact match
+on = "*"           # match any
 ```
 
-### Regex Match
+### Contains
 
-Full Rust regex syntax.
+Case-sensitive substring match. Requires explicit object form.
 
 ```toml
-pattern = { type = "regex", pattern = "(?i)fix.*bug" }
+on = { contains = "error" }
 ```
 
-### Glob Match
+### Regexp
 
-Shell-style wildcards (`*`, `?`, `[...]`).
-
-```toml
-pattern = { type = "glob", pattern = "*.txt" }
-```
-
-### Contains Match
-
-Case-sensitive substring match.
+Full Rust regex syntax. Requires explicit object form.
 
 ```toml
-pattern = { type = "contains", text = "error" }
-```
-
-### Any Match
-
-Catch-all pattern; matches any input.
-
-```toml
-pattern = { type = "any" }
+on = { regexp = "(?i)fix.*bug" }
 ```
 
 ---
 
-## Response Specifications
+## Response Rules
 
-Responses can be simple strings or detailed objects.
+Response fields are specified directly on the rule alongside the pattern.
 
-> **Note:** For top-level response rules, the `response` field is optional when `failure` is set (failures don't produce responses). For turn sequences, `response` is always required (can be empty string `""`).
+> **Note:** The `say` field is optional when `failure` is set (failures don't produce responses). For follow-up turns, `say` is always required (can be empty string `""`).
 
 ### Simple Response
 
 ```toml
 [[responses]]
-pattern = { type = "contains", text = "hello" }
-response = "Hello back!"
+on = { contains = "hello" }
+say = "Hello back!"
 ```
 
-### Detailed Response
+### Response with Metadata
 
 ```toml
 [[responses]]
-pattern = { type = "contains", text = "hello" }
-
-[responses.response]
-text = "Hello back!"
+on = { contains = "hello" }
+say = "Hello back!"
 delay_ms = 100
 usage = { input_tokens = 100, output_tokens = 50 }
 
-[[responses.response.tool_calls]]
-tool = "Read"
+[[responses.tools]]
+call = "Read"
 input = { file_path = "/src/main.rs" }
 result = "fn main() { ... }"
 ```
 
-### Response Fields
+### Response Rule Fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `text` | string | Response text |
-| `delay_ms` | int | Response delay in milliseconds |
-| `tool_calls` | array | Simulated tool calls |
+| `on` | pattern | Pattern to match against prompt |
+| `say` | string | Response text |
+| `tools` | array | Simulated tool calls |
 | `usage` | object | Token usage (`input_tokens`, `output_tokens`) |
+| `delay_ms` | int | Response delay in milliseconds |
+| `failure` | object | Failure to inject (see below) |
+| `max` | int | Maximum number of times this rule can match |
+| `then` | array | Follow-up turns (see below) |
 
 ### Tool Call Fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `tool` | string | Tool name (e.g., `"Read"`, `"Bash"`, `"Write"`) |
+| `call` | string | Tool name (e.g., `"Read"`, `"Bash"`, `"Write"`) |
 | `input` | object | Tool input parameters |
 | `result` | string | Canned result (optional) |
 
@@ -220,8 +197,8 @@ result = "fn main() { ... }"
 Reference external files using the `$file` key (resolved relative to scenario file). The file contents replace the `$file` object:
 
 ```toml
-[[responses.response.tool_calls]]
-tool = "Write"
+[[responses.tools]]
+call = "Write"
 input = { file_path = "/tmp/plan.md", content = { "$file" = "fixtures/plan.md" } }
 ```
 
@@ -233,9 +210,9 @@ Limit how many times a rule can match:
 
 ```toml
 [[responses]]
-pattern = { type = "contains", text = "hello" }
-response = "First hello only!"
-max_matches = 1
+on = { contains = "hello" }
+say = "First hello only!"
+max = 1
 ```
 
 ### Default Response
@@ -243,8 +220,8 @@ max_matches = 1
 Fallback when no pattern matches:
 
 ```toml
-[default_response]
-text = "I'm not sure how to help with that."
+[default]
+say = "I'm not sure how to help with that."
 delay_ms = 100
 ```
 
@@ -270,45 +247,45 @@ Inject failures instead of normal responses for error handling tests.
 
 ```toml
 [[responses]]
-pattern = { type = "contains", text = "timeout" }
+on = { contains = "timeout" }
 failure = { type = "connection_timeout", after_ms = 100 }
 
 [[responses]]
-pattern = { type = "contains", text = "auth" }
+on = { contains = "auth" }
 failure = { type = "auth_error", message = "API key expired" }
 
 [[responses]]
-pattern = { type = "contains", text = "rate" }
+on = { contains = "rate" }
 failure = { type = "rate_limit", retry_after = 30 }
 
 [[responses]]
-pattern = { type = "contains", text = "partial" }
+on = { contains = "partial" }
 failure = { type = "partial_response", partial_text = "I was about to..." }
 ```
 
 ---
 
-## Turn Sequences
+## Follow-Up Turns
 
-Response rules can have follow-up `turns` for multi-step interactions.
+Response rules can have follow-up `then` turns for multi-step interactions.
 
 ### Basic Turn Sequence
 
 ```toml
 [[responses]]
-pattern = { type = "contains", text = "login" }
-response = "Enter username:"
-turns = [
-    { expect = { type = "any" }, response = "Enter password:" },
-    { expect = { type = "any" }, response = "Login successful!" }
+on = { contains = "login" }
+say = "Enter username:"
+then = [
+    { on = "*", say = "Enter password:" },
+    { on = "*", say = "Login successful!" }
 ]
 ```
 
 ### How Turn Sequences Work
 
-1. When `pattern` matches, return `response` and activate the turn sequence
-2. Subsequent prompts match against the current turn's `expect` pattern
-3. If turn matches, return its `response` and advance to next turn
+1. When `on` matches, return `say` and activate the turn sequence
+2. Subsequent prompts match against the current turn's `on` pattern
+3. If turn matches, return its `say` and advance to next turn
 4. When all turns complete, sequence deactivates
 5. If a turn doesn't match, sequence deactivates and normal matching resumes
 
@@ -316,18 +293,21 @@ turns = [
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `expect` | pattern | Pattern to match for this turn |
-| `response` | string/object | Response for this turn |
+| `on` | pattern | Pattern to match for this turn |
+| `say` | string | Response text for this turn |
+| `tools` | array | Simulated tool calls |
+| `usage` | object | Token usage |
+| `delay_ms` | int | Response delay |
 | `failure` | object | Optional failure for this turn |
 
 ### Turns with Failures
 
 ```toml
 [[responses]]
-pattern = { type = "contains", text = "auth" }
-response = "Authenticating..."
-turns = [
-    { expect = { type = "any" }, response = "", failure = { type = "auth_error", message = "Invalid token" } }
+on = { contains = "auth" }
+say = "Authenticating..."
+then = [
+    { on = "*", say = "", failure = { type = "auth_error", message = "Invalid token" } }
 ]
 ```
 
@@ -335,7 +315,7 @@ turns = [
 
 ## Tool Execution
 
-Configure how tools are executed during simulation.
+Configure how tools are executed during simulation in the `[tools]` section.
 
 ### Execution Modes
 
@@ -347,18 +327,18 @@ Configure how tools are executed during simulation.
 ### Configuration
 
 ```toml
-[tool_execution]
+[tools]
 mode = "live"
 
-[tool_execution.tools.Bash]
-auto_approve = true
+[tools.Bash]
+approve = true
 
-[tool_execution.tools.Read]
-auto_approve = true
+[tools.Read]
+approve = true
 result = "canned file contents"
 
-[tool_execution.tools.Write]
-auto_approve = false
+[tools.Write]
+approve = false
 error = "Permission denied"
 ```
 
@@ -366,7 +346,7 @@ error = "Permission denied"
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `auto_approve` | bool | Skip permission prompts |
+| `approve` | bool | Skip permission prompts |
 | `result` | string | Canned result (used in both modes) |
 | `error` | string | Simulate error response |
 | `answers` | object | Pre-configured answers for AskUserQuestion (keys: question text, values: selected label) |
@@ -376,10 +356,10 @@ error = "Permission denied"
 The `answers` field provides pre-configured responses for the AskUserQuestion tool. In TUI mode, the elicitation dialog is shown but pre-selects matching answers. In print mode, answers are injected automatically. If no answers are configured, the first option for each question is auto-selected.
 
 ```toml
-[tool_execution.tools.AskUserQuestion]
-auto_approve = true
+[tools.AskUserQuestion]
+approve = true
 
-[tool_execution.tools.AskUserQuestion.answers]
+[tools.AskUserQuestion.answers]
 "What language?" = "Rust"
 "Which features?" = "Logging, Testing"  # comma-separated for multi-select
 ```
@@ -447,8 +427,8 @@ Error:   Invalid permission_mode 'invalid-mode': must be one of [...]
 Typos in field names are rejected:
 
 ```example
-Invalid: defualt_model, moode, auto_aprove
-Error:   unknown field `defualt_model`
+Invalid: aprove, moode
+Error:   unknown field `aprove`
 ```
 
 ---
@@ -458,124 +438,114 @@ Error:   unknown field `defualt_model`
 ### Simple Responses
 
 ```toml
-name = "simple"
+[[responses]]
+on = { contains = "hello" }
+say = "Hello! How can I help?"
 
 [[responses]]
-pattern = { type = "contains", text = "hello" }
-response = "Hello! How can I help?"
+on = { regexp = "(?i)fix.*bug" }
+say = "I'll help fix that bug."
 
 [[responses]]
-pattern = { type = "regex", pattern = "(?i)fix.*bug" }
-response = "I'll help fix that bug."
-
-[[responses]]
-pattern = { type = "any" }
-response = "I'm not sure what you mean."
+on = "*"
+say = "I'm not sure what you mean."
 ```
 
 ### Deterministic Testing
 
 ```toml
-name = "deterministic"
-session_id = "550e8400-e29b-41d4-a716-446655440000"
-launch_timestamp = "2025-01-15T10:30:00Z"
-user_name = "TestUser"
 trusted = true
 
+[claude]
+session_id = "550e8400-e29b-41d4-a716-446655440000"
+launch_timestamp = "2025-01-15T10:30:00Z"
+username = "TestUser"
+
 [[responses]]
-pattern = { type = "any" }
-response = "Deterministic response."
+on = "*"
+say = "Deterministic response."
 ```
 
 ### Failure Injection
 
 ```toml
-name = "failures"
-
 [[responses]]
-pattern = { type = "contains", text = "network" }
+on = { contains = "network" }
 failure = { type = "network_unreachable" }
 
 [[responses]]
-pattern = { type = "contains", text = "timeout" }
+on = { contains = "timeout" }
 failure = { type = "connection_timeout", after_ms = 5000 }
 
 [[responses]]
-pattern = { type = "contains", text = "rate" }
+on = { contains = "rate" }
 failure = { type = "rate_limit", retry_after = 60 }
 
 [[responses]]
-pattern = { type = "any" }
-response = "Normal response."
+on = "*"
+say = "Normal response."
 ```
 
 ### AskUserQuestion
 
 ```toml
-name = "ask-user-question"
+[claude]
 session_id = "550e8400-e29b-41d4-a716-446655440001"
 
 [[responses]]
-pattern = { type = "contains", text = "help me" }
-[responses.response]
-text = "Let me ask you a few questions first."
-[[responses.response.tool_calls]]
-tool = "AskUserQuestion"
-[responses.response.tool_calls.input]
-questions = [
-    { question = "What language?", header = "Language", options = [
-        { label = "Rust", description = "Systems programming" },
-        { label = "Python", description = "Scripting" },
-    ], multiSelect = false },
-]
+on = { contains = "help me" }
+say = "Let me ask you a few questions first."
+
+[[responses.tools]]
+call = "AskUserQuestion"
+input = { questions = [{ question = "What language?", header = "Language", options = [{ label = "Rust", description = "Systems programming" }, { label = "Python", description = "Scripting" }], multiSelect = false }] }
 
 [[responses]]
-pattern = { type = "any" }
-response = "Got it, I'll use the language you selected."
+on = "*"
+say = "Got it, I'll use the language you selected."
 
-[tool_execution]
+[tools]
 mode = "live"
 
-[tool_execution.tools.AskUserQuestion]
-auto_approve = true
+[tools.AskUserQuestion]
+approve = true
 
-[tool_execution.tools.AskUserQuestion.answers]
+[tools.AskUserQuestion.answers]
 "What language?" = "Rust"
 ```
 
 ### Full-Featured
 
 ```toml
-name = "full-featured"
-default_model = "claude-opus-4-5-20251101"
-claude_version = "2.1.12"
-user_name = "Developer"
-session_id = "550e8400-e29b-41d4-a716-446655440000"
-launch_timestamp = "2025-01-15T10:30:00Z"
-working_directory = "/Users/test/project"
 trusted = true
 permission_mode = "accept-edits"
 
-[[responses]]
-pattern = { type = "contains", text = "read file" }
+[claude]
+model = "claude-opus-4-5-20251101"
+version = "2.1.12"
+username = "Developer"
+session_id = "550e8400-e29b-41d4-a716-446655440000"
+launch_timestamp = "2025-01-15T10:30:00Z"
+working_directory = "/Users/test/project"
 
-[responses.response]
-text = "Here's the file content:"
+[[responses]]
+on = { contains = "read file" }
+say = "Here's the file content:"
 delay_ms = 50
 
-[[responses.response.tool_calls]]
-tool = "Read"
+[[responses.tools]]
+call = "Read"
 input = { file_path = "/src/main.rs" }
 result = "fn main() { println!(\"Hello\"); }"
 
-[default_response]
-text = "I can help with that."
+[default]
+say = "I can help with that."
 
-[tool_execution]
+[tools]
 mode = "mock"
 
-[tool_execution.tools.Read]
-auto_approve = true
+[tools.Read]
+approve = true
 ```
 
 ---
@@ -585,5 +555,5 @@ auto_approve = true
 | Path | Description |
 |------|-------------|
 | `scenarios/` | Example scenario files |
-| `crates/cli/src/config.rs` | Configuration type definitions |
+| `crates/cli/src/config/` | Configuration type definitions |
 | `crates/cli/src/scenario.rs` | Scenario loading and execution |
