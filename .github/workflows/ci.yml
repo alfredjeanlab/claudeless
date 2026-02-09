@@ -37,6 +37,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Fetch quench ratchet notes
+        run: git fetch origin refs/notes/quench:refs/notes/quench || true
       - name: Install quench
         run: curl -fsSL https://github.com/alfredjeanlab/quench/releases/latest/download/install.sh | bash
       - run: quench check --ci
