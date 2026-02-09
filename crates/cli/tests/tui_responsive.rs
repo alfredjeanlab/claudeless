@@ -15,9 +15,7 @@ use common::TuiTestSession;
 
 /// Helper to find separator lines in output
 fn find_separator_line(capture: &str) -> Option<&str> {
-    capture
-        .lines()
-        .find(|line| line.chars().all(|c| c == '─') && line.chars().count() > 50)
+    capture.lines().find(|line| line.chars().all(|c| c == '─') && line.chars().count() > 50)
 }
 
 const JSON_SCENARIO: &str = r#"{ "default_response": "ok", "trusted": true }"#;

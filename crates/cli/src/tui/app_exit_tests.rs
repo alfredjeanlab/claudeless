@@ -79,10 +79,7 @@ fn ctrl_c_hint_times_out() {
     // First Ctrl+C
     state.handle_key_event(key_event(KeyCode::Char('c'), KeyModifiers::CONTROL));
 
-    assert_eq!(
-        state.render_state().display.exit_hint,
-        Some(ExitHint::CtrlC)
-    );
+    assert_eq!(state.render_state().display.exit_hint, Some(ExitHint::CtrlC));
 
     // Advance time past timeout
     clock.advance_ms(2100);
@@ -148,10 +145,7 @@ fn typing_clears_exit_hint() {
     // First Ctrl+C to show hint
     state.handle_key_event(key_event(KeyCode::Char('c'), KeyModifiers::CONTROL));
 
-    assert_eq!(
-        state.render_state().display.exit_hint,
-        Some(ExitHint::CtrlC)
-    );
+    assert_eq!(state.render_state().display.exit_hint, Some(ExitHint::CtrlC));
 
     // Type a character
     state.handle_key_event(key_event(KeyCode::Char('a'), KeyModifiers::empty()));
@@ -177,10 +171,7 @@ fn ctrl_c_after_timeout_shows_new_hint() {
     state.handle_key_event(key_event(KeyCode::Char('c'), KeyModifiers::CONTROL));
 
     assert!(!state.should_exit());
-    assert_eq!(
-        state.render_state().display.exit_hint,
-        Some(ExitHint::CtrlC)
-    );
+    assert_eq!(state.render_state().display.exit_hint, Some(ExitHint::CtrlC));
 }
 
 #[test]
@@ -236,10 +227,7 @@ fn header_shows_claude_code_when_version_specified() {
     use crate::config::{ClaudeConfig, ScenarioConfig};
 
     let config = ScenarioConfig {
-        claude: ClaudeConfig {
-            version: Some("2.1.12".to_string()),
-            ..Default::default()
-        },
+        claude: ClaudeConfig { version: Some("2.1.12".to_string()), ..Default::default() },
         ..Default::default()
     };
     let sessions = SessionManager::new();
@@ -272,10 +260,7 @@ fn cli_version_overrides_scenario() {
     use crate::config::{ClaudeConfig, ScenarioConfig};
 
     let scenario_config = ScenarioConfig {
-        claude: ClaudeConfig {
-            version: Some("1.0.0".to_string()),
-            ..Default::default()
-        },
+        claude: ClaudeConfig { version: Some("1.0.0".to_string()), ..Default::default() },
         ..Default::default()
     };
 
@@ -349,10 +334,7 @@ fn escape_clear_hint_times_out() {
     state.handle_key_event(key_event(KeyCode::Char('x'), KeyModifiers::empty()));
     state.handle_key_event(key_event(KeyCode::Esc, KeyModifiers::empty()));
 
-    assert_eq!(
-        state.render_state().display.exit_hint,
-        Some(ExitHint::Escape)
-    );
+    assert_eq!(state.render_state().display.exit_hint, Some(ExitHint::Escape));
 
     // Advance time past timeout
     clock.advance_ms(2100);

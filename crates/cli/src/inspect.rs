@@ -36,12 +36,7 @@ impl StateInspector {
         sessions: Arc<Mutex<SessionManager>>,
         todos: Arc<Mutex<TodoState>>,
     ) -> Self {
-        Self {
-            state_dir,
-            sessions,
-            todos,
-            hook_history: Arc::new(Mutex::new(Vec::new())),
-        }
+        Self { state_dir, sessions, todos, hook_history: Arc::new(Mutex::new(Vec::new())) }
     }
 
     /// Create a state inspector with new instances of each component
@@ -83,11 +78,7 @@ impl StateInspector {
 
     /// Check if a todo exists with given content substring
     pub fn todo_exists(&self, content: &str) -> bool {
-        self.todos
-            .lock()
-            .items
-            .iter()
-            .any(|t| t.content.contains(content))
+        self.todos.lock().items.iter().any(|t| t.content.contains(content))
     }
 
     /// Get todo status by content substring
@@ -105,50 +96,30 @@ impl StateInspector {
     /// Assert todo count
     pub fn assert_todo_count(&self, expected: usize) {
         let actual = self.todo_count();
-        assert_eq!(
-            actual, expected,
-            "Expected {} todos, got {}",
-            expected, actual
-        );
+        assert_eq!(actual, expected, "Expected {} todos, got {}", expected, actual);
     }
 
     /// Assert pending todo count
     pub fn assert_pending_count(&self, expected: usize) {
         let actual = self.pending_count();
-        assert_eq!(
-            actual, expected,
-            "Expected {} pending todos, got {}",
-            expected, actual
-        );
+        assert_eq!(actual, expected, "Expected {} pending todos, got {}", expected, actual);
     }
 
     /// Assert in-progress todo count
     pub fn assert_in_progress_count(&self, expected: usize) {
         let actual = self.in_progress_count();
-        assert_eq!(
-            actual, expected,
-            "Expected {} in-progress todos, got {}",
-            expected, actual
-        );
+        assert_eq!(actual, expected, "Expected {} in-progress todos, got {}", expected, actual);
     }
 
     /// Assert completed todo count
     pub fn assert_completed_count(&self, expected: usize) {
         let actual = self.completed_count();
-        assert_eq!(
-            actual, expected,
-            "Expected {} completed todos, got {}",
-            expected, actual
-        );
+        assert_eq!(actual, expected, "Expected {} completed todos, got {}", expected, actual);
     }
 
     /// Assert a todo exists with given content
     pub fn assert_todo_exists(&self, content: &str) {
-        assert!(
-            self.todo_exists(content),
-            "Expected todo containing '{}' but none found",
-            content
-        );
+        assert!(self.todo_exists(content), "Expected todo containing '{}' but none found", content);
     }
 
     /// Assert a todo does not exist with given content
@@ -186,29 +157,17 @@ impl StateInspector {
 
     /// Get turn count for current session
     pub fn turn_count(&self) -> usize {
-        self.sessions
-            .lock()
-            .get_current()
-            .map(|s| s.turn_count())
-            .unwrap_or(0)
+        self.sessions.lock().get_current().map(|s| s.turn_count()).unwrap_or(0)
     }
 
     /// Get last prompt in current session
     pub fn last_prompt(&self) -> Option<String> {
-        self.sessions
-            .lock()
-            .get_current()
-            .and_then(|s| s.last_turn())
-            .map(|t| t.prompt.clone())
+        self.sessions.lock().get_current().and_then(|s| s.last_turn()).map(|t| t.prompt.clone())
     }
 
     /// Get last response in current session
     pub fn last_response(&self) -> Option<String> {
-        self.sessions
-            .lock()
-            .get_current()
-            .and_then(|s| s.last_turn())
-            .map(|t| t.response.clone())
+        self.sessions.lock().get_current().and_then(|s| s.last_turn()).map(|t| t.response.clone())
     }
 
     // ---- Session Assertions ----
@@ -216,21 +175,13 @@ impl StateInspector {
     /// Assert session count
     pub fn assert_session_count(&self, expected: usize) {
         let actual = self.session_count();
-        assert_eq!(
-            actual, expected,
-            "Expected {} sessions, got {}",
-            expected, actual
-        );
+        assert_eq!(actual, expected, "Expected {} sessions, got {}", expected, actual);
     }
 
     /// Assert current session has N turns
     pub fn assert_turn_count(&self, expected: usize) {
         let actual = self.turn_count();
-        assert_eq!(
-            actual, expected,
-            "Expected {} turns, got {}",
-            expected, actual
-        );
+        assert_eq!(actual, expected, "Expected {} turns, got {}", expected, actual);
     }
 
     /// Assert last prompt in current session contains text
@@ -273,11 +224,7 @@ impl StateInspector {
 
     /// Get hook invocation count for a specific event
     pub fn hook_count_for(&self, event: &HookEvent) -> usize {
-        self.hook_history
-            .lock()
-            .iter()
-            .filter(|m| &m.event == event)
-            .count()
+        self.hook_history.lock().iter().filter(|m| &m.event == event).count()
     }
 
     /// Check if a hook was invoked
@@ -287,32 +234,19 @@ impl StateInspector {
 
     /// Get hook invocations for an event
     pub fn hook_invocations(&self, event: &HookEvent) -> Vec<HookMessage> {
-        self.hook_history
-            .lock()
-            .iter()
-            .filter(|m| &m.event == event)
-            .cloned()
-            .collect()
+        self.hook_history.lock().iter().filter(|m| &m.event == event).cloned().collect()
     }
 
     // ---- Hook Assertions ----
 
     /// Assert hook was invoked
     pub fn assert_hook_invoked(&self, event: &HookEvent) {
-        assert!(
-            self.hook_invoked(event),
-            "Expected hook event {:?} to be invoked",
-            event
-        );
+        assert!(self.hook_invoked(event), "Expected hook event {:?} to be invoked", event);
     }
 
     /// Assert hook was not invoked
     pub fn assert_hook_not_invoked(&self, event: &HookEvent) {
-        assert!(
-            !self.hook_invoked(event),
-            "Expected hook event {:?} not to be invoked",
-            event
-        );
+        assert!(!self.hook_invoked(event), "Expected hook event {:?} not to be invoked", event);
     }
 
     /// Assert hook count for event
@@ -348,22 +282,10 @@ impl StateInspector {
     pub fn assert_initialized(&self) {
         let state_dir = self.state_dir.lock();
         assert!(state_dir.root().exists(), "State directory not created");
-        assert!(
-            state_dir.todos_dir().exists(),
-            "Todos directory not created"
-        );
-        assert!(
-            state_dir.projects_dir().exists(),
-            "Projects directory not created"
-        );
-        assert!(
-            state_dir.plans_dir().exists(),
-            "Plans directory not created"
-        );
-        assert!(
-            state_dir.sessions_dir().exists(),
-            "Sessions directory not created"
-        );
+        assert!(state_dir.todos_dir().exists(), "Todos directory not created");
+        assert!(state_dir.projects_dir().exists(), "Projects directory not created");
+        assert!(state_dir.plans_dir().exists(), "Plans directory not created");
+        assert!(state_dir.sessions_dir().exists(), "Sessions directory not created");
     }
 
     /// Assert project directory exists

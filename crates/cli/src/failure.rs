@@ -82,18 +82,15 @@ impl FailureExecutor {
         }
 
         let (error_text, error_class) = Self::spec_to_error_params(spec);
-        state_writer
-            .read()
-            .record_error(&error_text, error_class, None)
+        state_writer.read().record_error(&error_text, error_class, None)
     }
 
     /// Convert a FailureSpec to error parameters for JSONL recording.
     fn spec_to_error_params(spec: &FailureSpec) -> (String, &'static str) {
         match spec {
-            FailureSpec::NetworkUnreachable => (
-                "Network error: Connection refused".to_string(),
-                error_class::UNKNOWN,
-            ),
+            FailureSpec::NetworkUnreachable => {
+                ("Network error: Connection refused".to_string(), error_class::UNKNOWN)
+            }
             FailureSpec::ConnectionTimeout { after_ms } => (
                 format!("Network error: Connection timed out after {}ms", after_ms),
                 error_class::UNKNOWN,
@@ -105,14 +102,12 @@ impl FailureExecutor {
                 format!("Rate limited. Retry after {} seconds.", retry_after),
                 error_class::RATE_LIMIT,
             ),
-            FailureSpec::OutOfCredits => (
-                "Billing error: No credits remaining".to_string(),
-                error_class::BILLING_ERROR,
-            ),
-            FailureSpec::PartialResponse { partial_text } => (
-                format!("Partial response: {}", partial_text),
-                error_class::EMPTY,
-            ),
+            FailureSpec::OutOfCredits => {
+                ("Billing error: No credits remaining".to_string(), error_class::BILLING_ERROR)
+            }
+            FailureSpec::PartialResponse { partial_text } => {
+                (format!("Partial response: {}", partial_text), error_class::EMPTY)
+            }
             FailureSpec::MalformedJson { .. } => {
                 // Should not be called for MalformedJson
                 (String::new(), error_class::UNKNOWN)
@@ -125,25 +120,22 @@ impl FailureExecutor {
         match mode {
             FailureMode::NetworkUnreachable => FailureSpec::NetworkUnreachable,
             FailureMode::ConnectionTimeout => FailureSpec::ConnectionTimeout { after_ms: 5000 },
-            FailureMode::AuthError => FailureSpec::AuthError {
-                message: "Invalid API key".to_string(),
-            },
+            FailureMode::AuthError => {
+                FailureSpec::AuthError { message: "Invalid API key".to_string() }
+            }
             FailureMode::RateLimit => FailureSpec::RateLimit { retry_after: 60 },
             FailureMode::OutOfCredits => FailureSpec::OutOfCredits,
-            FailureMode::PartialResponse => FailureSpec::PartialResponse {
-                partial_text: "I was going to say...".to_string(),
-            },
-            FailureMode::MalformedJson => FailureSpec::MalformedJson {
-                raw: r#"{"type":"message","content":[{"#.to_string(),
-            },
+            FailureMode::PartialResponse => {
+                FailureSpec::PartialResponse { partial_text: "I was going to say...".to_string() }
+            }
+            FailureMode::MalformedJson => {
+                FailureSpec::MalformedJson { raw: r#"{"type":"message","content":[{"#.to_string() }
+            }
         }
     }
 
     fn network_unreachable<W: Write>(writer: &mut W) -> Result<(), std::io::Error> {
-        writeln!(
-            writer,
-            "Error: Failed to connect to Claude API: Network is unreachable"
-        )?;
+        writeln!(writer, "Error: Failed to connect to Claude API: Network is unreachable")?;
         std::process::exit(1);
     }
 
@@ -152,11 +144,7 @@ impl FailureExecutor {
         writer: &mut W,
     ) -> Result<(), std::io::Error> {
         sleep(Duration::from_millis(after_ms)).await;
-        writeln!(
-            writer,
-            "Error: Connection to Claude API timed out after {}ms",
-            after_ms
-        )?;
+        writeln!(writer, "Error: Connection to Claude API timed out after {}ms", after_ms)?;
         std::process::exit(1);
     }
 

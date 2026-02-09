@@ -40,19 +40,10 @@ fn test_path_methods() {
     let dir = StateDirectory::new("/home/user/.claude");
 
     assert_eq!(dir.todos_dir(), PathBuf::from("/home/user/.claude/todos"));
-    assert_eq!(
-        dir.projects_dir(),
-        PathBuf::from("/home/user/.claude/projects")
-    );
+    assert_eq!(dir.projects_dir(), PathBuf::from("/home/user/.claude/projects"));
     assert_eq!(dir.plans_dir(), PathBuf::from("/home/user/.claude/plans"));
-    assert_eq!(
-        dir.sessions_dir(),
-        PathBuf::from("/home/user/.claude/sessions")
-    );
-    assert_eq!(
-        dir.settings_path(),
-        PathBuf::from("/home/user/.claude/settings.json")
-    );
+    assert_eq!(dir.sessions_dir(), PathBuf::from("/home/user/.claude/sessions"));
+    assert_eq!(dir.settings_path(), PathBuf::from("/home/user/.claude/settings.json"));
 }
 
 #[test]
@@ -109,10 +100,7 @@ fn test_normalize_project_path_deep_nesting() {
 #[test]
 fn test_normalize_project_path_relative() {
     // Relative paths don't start with /
-    assert_eq!(
-        normalize_project_path(Path::new("relative/path")),
-        "relative-path"
-    );
+    assert_eq!(normalize_project_path(Path::new("relative/path")), "relative-path");
 }
 
 #[test]
@@ -133,19 +121,13 @@ fn test_normalize_project_path_with_dots() {
 #[test]
 fn test_normalize_project_path_with_hyphens() {
     // Existing hyphens should be preserved
-    assert_eq!(
-        normalize_project_path(Path::new("/my-project/sub-dir")),
-        "-my-project-sub-dir"
-    );
+    assert_eq!(normalize_project_path(Path::new("/my-project/sub-dir")), "-my-project-sub-dir");
 }
 
 #[test]
 fn test_normalize_project_path_trailing_slash() {
     // Trailing slash becomes trailing hyphen
-    assert_eq!(
-        normalize_project_path(Path::new("/path/to/dir/")),
-        "-path-to-dir-"
-    );
+    assert_eq!(normalize_project_path(Path::new("/path/to/dir/")), "-path-to-dir-");
 }
 
 #[test]
@@ -159,10 +141,7 @@ fn test_normalize_project_path_multiple_slashes() {
 #[test]
 fn test_normalize_project_path_unicode() {
     // Unicode characters should be preserved
-    assert_eq!(
-        normalize_project_path(Path::new("/home/用户/项目")),
-        "-home-用户-项目"
-    );
+    assert_eq!(normalize_project_path(Path::new("/home/用户/项目")), "-home-用户-项目");
 }
 
 #[test]
@@ -194,10 +173,7 @@ fn test_project_dir_uses_normalized_name() {
     let project = dir.project_dir(Path::new("/Users/test/myproject"));
 
     // The full path should be: base/projects/normalized_name
-    assert_eq!(
-        project,
-        PathBuf::from("/home/user/.claude/projects/-Users-test-myproject")
-    );
+    assert_eq!(project, PathBuf::from("/home/user/.claude/projects/-Users-test-myproject"));
 }
 
 #[test]
@@ -212,10 +188,7 @@ fn test_session_path() {
 #[test]
 fn test_todo_path() {
     let dir = StateDirectory::new("/home/user/.claude");
-    assert_eq!(
-        dir.todo_path("default"),
-        PathBuf::from("/home/user/.claude/todos/default.json")
-    );
+    assert_eq!(dir.todo_path("default"), PathBuf::from("/home/user/.claude/todos/default.json"));
 }
 
 #[test]
@@ -297,11 +270,7 @@ fn test_resolve_defaults_to_temp_directory_not_home() {
     let is_temp_path =
         root_str.contains("tmp") || root_str.contains("temp") || root_str.contains("var/folders"); // macOS temp location
 
-    assert!(
-        is_temp_path,
-        "Expected resolve() to return a temp directory path, got: {}",
-        root_str
-    );
+    assert!(is_temp_path, "Expected resolve() to return a temp directory path, got: {}", root_str);
 }
 
 #[test]
@@ -454,11 +423,7 @@ fn test_validate_structure_after_init() {
     dir.initialize().unwrap();
 
     let warnings = dir.validate_structure().unwrap();
-    assert!(
-        warnings.is_empty(),
-        "Initialized directory should have no warnings: {:?}",
-        warnings
-    );
+    assert!(warnings.is_empty(), "Initialized directory should have no warnings: {:?}", warnings);
 }
 
 #[test]
@@ -493,9 +458,7 @@ fn test_validate_structure_project_without_settings() {
     fs::create_dir_all(&project_dir).unwrap();
 
     let warnings = dir.validate_structure().unwrap();
-    assert!(warnings
-        .iter()
-        .any(|w| w.contains("Project") && w.contains("missing settings.json")));
+    assert!(warnings.iter().any(|w| w.contains("Project") && w.contains("missing settings.json")));
 }
 
 #[test]

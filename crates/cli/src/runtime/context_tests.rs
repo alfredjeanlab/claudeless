@@ -82,10 +82,7 @@ fn test_scenario_overrides_defaults() {
     assert_eq!(ctx.model, "custom-model");
     assert_eq!(ctx.claude_version, "3.0.0");
     assert_eq!(ctx.user_name, "TestUser");
-    assert_eq!(
-        ctx.session_id.to_string(),
-        "550e8400-e29b-41d4-a716-446655440000"
-    );
+    assert_eq!(ctx.session_id.to_string(), "550e8400-e29b-41d4-a716-446655440000");
     assert!(!ctx.trusted);
     assert_eq!(ctx.permission_mode, PermissionMode::Plan);
 }
@@ -112,10 +109,7 @@ fn test_cli_overrides_scenario() {
     // CLI should win
     assert_eq!(ctx.model, "cli-model");
     assert_eq!(ctx.working_directory, PathBuf::from("/cli/path"));
-    assert_eq!(
-        ctx.session_id.to_string(),
-        "12345678-1234-1234-1234-123456789012"
-    );
+    assert_eq!(ctx.session_id.to_string(), "12345678-1234-1234-1234-123456789012");
 }
 
 #[test]
@@ -169,26 +163,14 @@ fn test_project_path_override() {
 
 #[test]
 fn test_permission_mode_parsing() {
-    assert_eq!(
-        parse_permission_mode("default"),
-        Some(PermissionMode::Default)
-    );
-    assert_eq!(
-        parse_permission_mode("accept-edits"),
-        Some(PermissionMode::AcceptEdits)
-    );
+    assert_eq!(parse_permission_mode("default"), Some(PermissionMode::Default));
+    assert_eq!(parse_permission_mode("accept-edits"), Some(PermissionMode::AcceptEdits));
     assert_eq!(
         parse_permission_mode("bypass-permissions"),
         Some(PermissionMode::BypassPermissions)
     );
-    assert_eq!(
-        parse_permission_mode("delegate"),
-        Some(PermissionMode::Delegate)
-    );
-    assert_eq!(
-        parse_permission_mode("dont-ask"),
-        Some(PermissionMode::DontAsk)
-    );
+    assert_eq!(parse_permission_mode("delegate"), Some(PermissionMode::Delegate));
+    assert_eq!(parse_permission_mode("dont-ask"), Some(PermissionMode::DontAsk));
     assert_eq!(parse_permission_mode("plan"), Some(PermissionMode::Plan));
     assert_eq!(parse_permission_mode("invalid"), None);
 }
@@ -254,9 +236,7 @@ fn test_permission_patterns_from_settings() {
     // Patterns should be compiled from settings
     assert!(ctx.permission_patterns().is_allowed("Read", None));
     assert!(ctx.permission_patterns().is_allowed("Glob", None));
-    assert!(ctx
-        .permission_patterns()
-        .is_denied("Bash", Some("rm -rf /")));
+    assert!(ctx.permission_patterns().is_denied("Bash", Some("rm -rf /")));
     assert!(!ctx.permission_patterns().is_denied("Bash", Some("ls")));
 }
 
@@ -315,12 +295,7 @@ fn test_permission_checker_with_overrides() {
     let mut overrides = HashMap::new();
     overrides.insert(
         "Bash".to_string(),
-        ToolConfig {
-            approve: true,
-            result: None,
-            error: None,
-            answers: None,
-        },
+        ToolConfig { approve: true, result: None, error: None, answers: None },
     );
 
     let checker = ctx.permission_checker_with_overrides(PermissionBypass::default(), overrides);
@@ -339,11 +314,8 @@ fn test_build_with_state_loads_settings() {
     // Create project settings file
     let claude_dir = work_dir.path().join(".claude");
     fs::create_dir_all(&claude_dir).unwrap();
-    fs::write(
-        claude_dir.join("settings.json"),
-        r#"{"permissions": {"allow": ["TestTool"]}}"#,
-    )
-    .unwrap();
+    fs::write(claude_dir.join("settings.json"), r#"{"permissions": {"allow": ["TestTool"]}}"#)
+        .unwrap();
 
     let mut cli = default_cli();
     cli.cwd = Some(work_dir.path().to_string_lossy().to_string());
@@ -368,10 +340,7 @@ fn test_resume_session_id_priority() {
     let ctx = RuntimeContext::build(None, &cli);
 
     // --resume wins
-    assert_eq!(
-        ctx.session_id.to_string(),
-        "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-    );
+    assert_eq!(ctx.session_id.to_string(), "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
 }
 
 #[test]
@@ -390,10 +359,7 @@ fn test_resume_overrides_scenario() {
     let ctx = RuntimeContext::build(Some(&scenario), &cli);
 
     // --resume wins over scenario
-    assert_eq!(
-        ctx.session_id.to_string(),
-        "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-    );
+    assert_eq!(ctx.session_id.to_string(), "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
 }
 
 #[test]
@@ -406,8 +372,5 @@ fn test_resume_invalid_uuid_ignored() {
     let ctx = RuntimeContext::build(None, &cli);
 
     // Falls back to session_id since resume is invalid
-    assert_eq!(
-        ctx.session_id.to_string(),
-        "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
-    );
+    assert_eq!(ctx.session_id.to_string(), "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 }

@@ -30,11 +30,7 @@ impl From<v1::ScenarioConfig> for ScenarioConfig {
             logged_in: v1.environment.logged_in,
             permission_mode: v1.environment.permission_mode,
             default: v1.default_response.map(convert_response_spec),
-            responses: v1
-                .responses
-                .into_iter()
-                .map(convert_response_rule)
-                .collect(),
+            responses: v1.responses.into_iter().map(convert_response_rule).collect(),
             tools: v1.tool_execution.map(convert_tool_execution),
         }
     }
@@ -52,16 +48,8 @@ fn convert_pattern(spec: v1::PatternSpec) -> Pattern {
 
 fn convert_response_spec(spec: v1::ResponseSpec) -> Response {
     match spec {
-        v1::ResponseSpec::Simple(s) => Response {
-            say: Some(s),
-            ..Default::default()
-        },
-        v1::ResponseSpec::Detailed {
-            text,
-            tool_calls,
-            usage,
-            delay_ms,
-        } => Response {
+        v1::ResponseSpec::Simple(s) => Response { say: Some(s), ..Default::default() },
+        v1::ResponseSpec::Detailed { text, tool_calls, usage, delay_ms } => Response {
             say: Some(text),
             tools: tool_calls.into_iter().map(convert_tool_call).collect(),
             usage,
@@ -75,10 +63,7 @@ fn convert_response_rule(rule: v1::ResponseRule) -> ResponseRule {
     ResponseRule {
         on: convert_pattern(rule.pattern),
         say: response.as_ref().and_then(|r| r.say.clone()),
-        tools: response
-            .as_ref()
-            .map(|r| r.tools.clone())
-            .unwrap_or_default(),
+        tools: response.as_ref().map(|r| r.tools.clone()).unwrap_or_default(),
         usage: response.as_ref().and_then(|r| r.usage.clone()),
         delay_ms: response.as_ref().and_then(|r| r.delay_ms),
         failure: rule.failure,
@@ -100,31 +85,18 @@ fn convert_turn(turn: v1::ConversationTurn) -> Turn {
 }
 
 fn convert_tool_call(spec: v1::ToolCallSpec) -> ToolCall {
-    ToolCall {
-        call: spec.tool,
-        input: spec.input,
-        result: spec.result,
-    }
+    ToolCall { call: spec.tool, input: spec.input, result: spec.result }
 }
 
 fn convert_tool_execution(te: v1::ToolExecutionConfig) -> ToolsConfig {
     ToolsConfig {
         mode: te.mode,
-        tools: te
-            .tools
-            .into_iter()
-            .map(|(k, v)| (k, convert_tool_config(v)))
-            .collect(),
+        tools: te.tools.into_iter().map(|(k, v)| (k, convert_tool_config(v))).collect(),
     }
 }
 
 fn convert_tool_config(tc: v1::ToolConfig) -> ToolConfig {
-    ToolConfig {
-        approve: tc.auto_approve,
-        result: tc.result,
-        error: tc.error,
-        answers: tc.answers,
-    }
+    ToolConfig { approve: tc.auto_approve, result: tc.result, error: tc.error, answers: tc.answers }
 }
 
 #[cfg(test)]

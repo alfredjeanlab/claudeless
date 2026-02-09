@@ -29,12 +29,7 @@ pub struct ScrollState {
 impl ScrollState {
     /// Create a new scroll state with the given visible count.
     pub fn new(visible_count: usize) -> Self {
-        Self {
-            selected_index: 0,
-            scroll_offset: 0,
-            visible_count,
-            total_items: 0,
-        }
+        Self { selected_index: 0, scroll_offset: 0, visible_count, total_items: 0 }
     }
 
     /// Update the total item count (call when list changes).

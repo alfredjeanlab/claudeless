@@ -80,11 +80,7 @@ pub enum ContentBlock {
     #[serde(rename = "text")]
     Text { text: String },
     #[serde(rename = "tool_use")]
-    ToolUse {
-        id: String,
-        name: String,
-        input: serde_json::Value,
-    },
+    ToolUse { id: String, name: String, input: serde_json::Value },
 }
 
 /// Cache creation breakdown for usage statistics.
@@ -175,10 +171,7 @@ pub struct ResultLine {
 
 /// Helper to open a file for appending.
 fn open_append(path: &Path) -> std::io::Result<std::fs::File> {
-    std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)
+    std::fs::OpenOptions::new().create(true).append(true).open(path)
 }
 
 /// Helper to write a single JSONL line to a file.
@@ -262,10 +255,7 @@ pub fn append_turn_jsonl(path: &Path, params: &TurnParams) -> std::io::Result<()
 
     let user_line = UserMessageLine {
         envelope: envelope_base(line_type::USER, params.user_uuid, None),
-        message: UserMessage {
-            role: role::USER,
-            content: params.prompt.to_string(),
-        },
+        message: UserMessage { role: role::USER, content: params.prompt.to_string() },
     };
     write_jsonl_line(&mut file, &user_line)?;
 
@@ -280,9 +270,7 @@ pub fn append_turn_jsonl(path: &Path, params: &TurnParams) -> std::io::Result<()
             id: params.message_id.to_string(),
             message_type: message_type::MESSAGE,
             role: role::ASSISTANT,
-            content: vec![ContentBlock::Text {
-                text: params.response.to_string(),
-            }],
+            content: vec![ContentBlock::Text { text: params.response.to_string() }],
             stop_reason: None,
             stop_sequence: None,
             usage: Usage::new(2, 1),
@@ -337,10 +325,7 @@ pub fn append_user_message_jsonl(path: &Path, params: &UserMessageParams) -> std
                     is_sidechain: false,
                     user_type: user_type::EXTERNAL.to_string(),
                 },
-                message: UserMessage {
-                    role: role::USER,
-                    content: (*text).to_string(),
-                },
+                message: UserMessage { role: role::USER, content: (*text).to_string() },
             };
             write_jsonl_line(&mut file, &user_line)?;
         }
@@ -538,9 +523,7 @@ pub fn append_api_error_jsonl(path: &Path, params: &ErrorMessageParams) -> std::
             stop_sequence: String::new(),
             message_type: message_type::MESSAGE,
             usage: SyntheticUsage::default(),
-            content: vec![ContentBlock::Text {
-                text: params.error_text.to_string(),
-            }],
+            content: vec![ContentBlock::Text { text: params.error_text.to_string() }],
             context_management: None,
         },
         error: params.error_class.to_string(),

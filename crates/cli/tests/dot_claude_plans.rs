@@ -47,11 +47,7 @@ fn create_plan_scenario(dir: &TempDir) -> PathBuf {
             }
         }
     });
-    std::fs::write(
-        &scenario_path,
-        serde_json::to_string_pretty(&scenario).unwrap(),
-    )
-    .unwrap();
+    std::fs::write(&scenario_path, serde_json::to_string_pretty(&scenario).unwrap()).unwrap();
     scenario_path
 }
 
@@ -94,12 +90,7 @@ fn test_plan_file_naming_convention() {
     let output = Command::new(claudeless_bin())
         .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .current_dir(work_dir.path())
-        .args([
-            "--scenario",
-            scenario.to_str().unwrap(),
-            "-p",
-            "Plan a feature",
-        ])
+        .args(["--scenario", scenario.to_str().unwrap(), "-p", "Plan a feature"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -117,21 +108,12 @@ fn test_plan_file_naming_convention() {
     let filename = plan_files[0].file_name().to_string_lossy().to_string();
 
     // Format: {word}-{word}-{word}.md
-    assert!(
-        filename.ends_with(".md"),
-        "Plan file should end with .md: {}",
-        filename
-    );
+    assert!(filename.ends_with(".md"), "Plan file should end with .md: {}", filename);
 
     let name_without_ext = filename.trim_end_matches(".md");
     let parts: Vec<&str> = name_without_ext.split('-').collect();
 
-    assert_eq!(
-        parts.len(),
-        3,
-        "Plan name should have 3 parts (adjective-verb-noun): {}",
-        filename
-    );
+    assert_eq!(parts.len(), 3, "Plan name should have 3 parts (adjective-verb-noun): {}", filename);
 
     // Each part should be lowercase alphabetic
     for part in &parts {
@@ -154,12 +136,7 @@ fn test_plan_file_is_markdown() {
     let output = Command::new(claudeless_bin())
         .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .current_dir(work_dir.path())
-        .args([
-            "--scenario",
-            scenario.to_str().unwrap(),
-            "-p",
-            "Plan something",
-        ])
+        .args(["--scenario", scenario.to_str().unwrap(), "-p", "Plan something"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -178,10 +155,7 @@ fn test_plan_file_is_markdown() {
     assert!(!content.is_empty(), "Plan file should not be empty");
 
     // Should have markdown heading
-    assert!(
-        content.contains('#'),
-        "Plan should contain markdown headings"
-    );
+    assert!(content.contains('#'), "Plan should contain markdown headings");
 }
 
 /// Verify plan file has expected structure
@@ -194,12 +168,7 @@ fn test_plan_file_structure() {
     let output = Command::new(claudeless_bin())
         .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .current_dir(work_dir.path())
-        .args([
-            "--scenario",
-            scenario.to_str().unwrap(),
-            "-p",
-            "Plan a feature implementation",
-        ])
+        .args(["--scenario", scenario.to_str().unwrap(), "-p", "Plan a feature implementation"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -275,10 +244,7 @@ fn test_plan_md_matches_fixture_content() {
     let expected_content = std::fs::read_to_string(&fixture_path).unwrap();
 
     // Since scenario loads plan.md via $file reference, content should match exactly
-    assert_eq!(
-        actual_content, expected_content,
-        "Plan content should match fixture exactly"
-    );
+    assert_eq!(actual_content, expected_content, "Plan content should match fixture exactly");
 }
 
 /// Normalize JSON for comparison by replacing variable fields with placeholders
@@ -323,9 +289,7 @@ fn normalize_json(value: &serde_json::Value) -> serde_json::Value {
             serde_json::Value::Array(arr.iter().map(normalize_json).collect())
         }
         serde_json::Value::Object(obj) => serde_json::Value::Object(
-            obj.iter()
-                .map(|(k, v)| (k.clone(), normalize_json(v)))
-                .collect(),
+            obj.iter().map(|(k, v)| (k.clone(), normalize_json(v))).collect(),
         ),
         other => other.clone(),
     }

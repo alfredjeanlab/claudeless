@@ -94,10 +94,7 @@ fn test_help_dialog_prev_tab() {
 
 #[test]
 fn test_help_dialog_select_next_wraps() {
-    let mut dialog = HelpDialog {
-        active_tab: HelpTab::Commands,
-        ..Default::default()
-    };
+    let mut dialog = HelpDialog { active_tab: HelpTab::Commands, ..Default::default() };
 
     // Start at 0
     assert_eq!(dialog.commands_selected, 0);
@@ -119,10 +116,7 @@ fn test_help_dialog_select_next_wraps() {
 
 #[test]
 fn test_help_dialog_select_prev_wraps() {
-    let mut dialog = HelpDialog {
-        active_tab: HelpTab::Commands,
-        ..Default::default()
-    };
+    let mut dialog = HelpDialog { active_tab: HelpTab::Commands, ..Default::default() };
 
     // Start at 0
     assert_eq!(dialog.commands_selected, 0);
@@ -152,10 +146,7 @@ fn test_help_dialog_select_does_nothing_on_general_tab() {
 
 #[test]
 fn test_help_dialog_select_with_zero_commands() {
-    let mut dialog = HelpDialog {
-        active_tab: HelpTab::Commands,
-        ..Default::default()
-    };
+    let mut dialog = HelpDialog { active_tab: HelpTab::Commands, ..Default::default() };
 
     // With 0 commands, selection should not change
     dialog.select_next(0);

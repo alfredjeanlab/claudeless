@@ -40,10 +40,7 @@ impl SystemClock {
 impl Clock for SystemClock {
     fn now_millis(&self) -> u64 {
         use std::time::{SystemTime, UNIX_EPOCH};
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64
     }
 
     fn sleep(&self, duration: Duration) -> Pin<Box<dyn Future<Output = ()> + Send + '_>> {
@@ -64,10 +61,7 @@ pub struct FakeClock {
 impl FakeClock {
     /// Create a new fake clock starting at a given time
     pub fn new(start_millis: u64) -> Self {
-        Self {
-            current_millis: Arc::new(AtomicU64::new(start_millis)),
-            auto_advance: true,
-        }
+        Self { current_millis: Arc::new(AtomicU64::new(start_millis)), auto_advance: true }
     }
 
     /// Create a fake clock starting at Unix epoch
@@ -78,10 +72,8 @@ impl FakeClock {
     /// Create a fake clock starting at "now"
     pub fn at_now() -> Self {
         use std::time::{SystemTime, UNIX_EPOCH};
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64;
+        let now =
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64;
         Self::new(now)
     }
 
@@ -92,16 +84,12 @@ impl FakeClock {
 
     /// Create a clone with auto-advance disabled
     pub fn without_auto_advance(&self) -> Self {
-        Self {
-            current_millis: Arc::clone(&self.current_millis),
-            auto_advance: false,
-        }
+        Self { current_millis: Arc::clone(&self.current_millis), auto_advance: false }
     }
 
     /// Advance time by a duration
     pub fn advance(&self, duration: Duration) {
-        self.current_millis
-            .fetch_add(duration.as_millis() as u64, Ordering::SeqCst);
+        self.current_millis.fetch_add(duration.as_millis() as u64, Ordering::SeqCst);
     }
 
     /// Advance time by milliseconds

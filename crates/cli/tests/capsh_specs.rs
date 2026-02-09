@@ -9,12 +9,7 @@ mod specs;
 
 #[test]
 fn capsh_after_response() {
-    specs::run_capsh_spec(
-        "v2.1.29",
-        "after-response",
-        &["after_response"],
-        &["--model", "haiku"],
-    );
+    specs::run_capsh_spec("v2.1.29", "after-response", &["after_response"], &["--model", "haiku"]);
 }
 
 #[test]
@@ -59,12 +54,7 @@ fn capsh_context_autocomplete() {
 
 #[test]
 fn capsh_context_usage() {
-    specs::run_capsh_spec(
-        "v2.1.29",
-        "context-usage",
-        &["context_usage"],
-        &["--model", "haiku"],
-    );
+    specs::run_capsh_spec("v2.1.29", "context-usage", &["context_usage"], &["--model", "haiku"]);
 }
 
 #[test]
@@ -169,12 +159,7 @@ fn capsh_help_commands_tab() {
 
 #[test]
 fn capsh_help_dialog() {
-    specs::run_capsh_spec(
-        "v2.1.29",
-        "help-dialog",
-        &["help_response"],
-        &["--model", "haiku"],
-    );
+    specs::run_capsh_spec("v2.1.29", "help-dialog", &["help_response"], &["--model", "haiku"]);
 }
 
 #[test]
@@ -219,12 +204,7 @@ fn capsh_hooks_autocomplete() {
 
 #[test]
 fn capsh_hooks_dialog() {
-    specs::run_capsh_spec(
-        "v2.1.29",
-        "hooks-dialog",
-        &["hooks_dialog"],
-        &["--model", "haiku"],
-    );
+    specs::run_capsh_spec("v2.1.29", "hooks-dialog", &["hooks_dialog"], &["--model", "haiku"]);
 }
 
 #[test]
@@ -244,42 +224,22 @@ fn capsh_initial_state() {
 
 #[test]
 fn capsh_model_haiku() {
-    specs::run_capsh_spec(
-        "v2.1.29",
-        "model-haiku",
-        &["model_haiku"],
-        &["--model", "haiku"],
-    );
+    specs::run_capsh_spec("v2.1.29", "model-haiku", &["model_haiku"], &["--model", "haiku"]);
 }
 
 #[test]
 fn capsh_model_opus() {
-    specs::run_capsh_spec(
-        "v2.1.29",
-        "model-opus",
-        &["model_opus"],
-        &["--model", "opus"],
-    );
+    specs::run_capsh_spec("v2.1.29", "model-opus", &["model_opus"], &["--model", "opus"]);
 }
 
 #[test]
 fn capsh_model_picker() {
-    specs::run_capsh_spec(
-        "v2.1.29",
-        "model-picker",
-        &["model_picker"],
-        &["--model", "haiku"],
-    );
+    specs::run_capsh_spec("v2.1.29", "model-picker", &["model_picker"], &["--model", "haiku"]);
 }
 
 #[test]
 fn capsh_model_sonnet() {
-    specs::run_capsh_spec(
-        "v2.1.29",
-        "model-sonnet",
-        &["model_sonnet"],
-        &["--model", "sonnet"],
-    );
+    specs::run_capsh_spec("v2.1.29", "model-sonnet", &["model_sonnet"], &["--model", "sonnet"]);
 }
 
 #[test]
@@ -467,10 +427,7 @@ fn capsh_thinking_dialog_selected() {
     specs::run_capsh_spec(
         "v2.1.29",
         "thinking-dialog-selected",
-        &[
-            "thinking_dialog_disabled_selected",
-            "thinking_dialog_enabled_selected",
-        ],
+        &["thinking_dialog_disabled_selected", "thinking_dialog_enabled_selected"],
         &["--model", "haiku"],
     );
 }
@@ -497,12 +454,7 @@ fn capsh_thinking_off_status() {
 
 #[test]
 fn capsh_todos_empty() {
-    specs::run_capsh_spec(
-        "v2.1.29",
-        "todos-empty",
-        &["todos_empty"],
-        &["--model", "haiku"],
-    );
+    specs::run_capsh_spec("v2.1.29", "todos-empty", &["todos_empty"], &["--model", "haiku"]);
 }
 
 #[test]
@@ -517,22 +469,12 @@ fn capsh_trust_folder_dialog() {
 
 #[test]
 fn capsh_welcome_back() {
-    specs::run_capsh_spec(
-        "v2.1.29",
-        "welcome-back",
-        &["welcome_back"],
-        &["--model", "haiku"],
-    );
+    specs::run_capsh_spec("v2.1.29", "welcome-back", &["welcome_back"], &["--model", "haiku"]);
 }
 
 #[test]
 fn capsh_with_input() {
-    specs::run_capsh_spec(
-        "v2.1.29",
-        "with-input",
-        &["with_input"],
-        &["--model", "haiku"],
-    );
+    specs::run_capsh_spec("v2.1.29", "with-input", &["with_input"], &["--model", "haiku"]);
 }
 
 #[test]

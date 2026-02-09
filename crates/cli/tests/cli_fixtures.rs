@@ -75,11 +75,7 @@ fn normalize_json(json: &Value) -> Value {
                     "modelUsage" => Value::String("<MODEL_USAGE>".to_string()),
                     "plugins" => Value::String("<PLUGINS>".to_string()),
                     "mcp_servers" => Value::String("<MCP_SERVERS>".to_string()),
-                    "id" if value
-                        .as_str()
-                        .map(|s| s.starts_with("msg_"))
-                        .unwrap_or(false) =>
-                    {
+                    "id" if value.as_str().map(|s| s.starts_with("msg_")).unwrap_or(false) => {
                         Value::String("<MESSAGE_ID>".to_string())
                     }
                     "content" if value.is_array() => Value::String("<CONTENT>".to_string()),
@@ -116,11 +112,8 @@ fn compare_json(expected: &Value, actual: &Value, path: &str) -> Vec<String> {
             // Compare common keys
             for (key, exp_val) in exp_map {
                 if let Some(act_val) = act_map.get(key) {
-                    let sub_path = if path.is_empty() {
-                        key.clone()
-                    } else {
-                        format!("{}.{}", path, key)
-                    };
+                    let sub_path =
+                        if path.is_empty() { key.clone() } else { format!("{}.{}", path, key) };
                     diffs.extend(compare_json(exp_val, act_val, &sub_path));
                 }
             }
@@ -161,14 +154,7 @@ fn test_json_output_matches_fixture() {
     let scenario = scenario_path(FIXTURE_VERSION, "json-output");
 
     let output = Command::new(claudeless_bin())
-        .args([
-            "--scenario",
-            scenario.to_str().unwrap(),
-            "-p",
-            "--output-format",
-            "json",
-            "Hello",
-        ])
+        .args(["--scenario", scenario.to_str().unwrap(), "-p", "--output-format", "json", "Hello"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -199,10 +185,7 @@ fn test_json_output_matches_fixture() {
         for diff in &diffs {
             eprintln!("  - {}", diff);
         }
-        panic!(
-            "JSON output does not match fixture. {} difference(s) found.",
-            diffs.len()
-        );
+        panic!("JSON output does not match fixture. {} difference(s) found.", diffs.len());
     }
 }
 
@@ -212,14 +195,7 @@ fn test_json_output_has_fixture_fields() {
     let scenario = scenario_path(FIXTURE_VERSION, "json-output");
 
     let output = Command::new(claudeless_bin())
-        .args([
-            "--scenario",
-            scenario.to_str().unwrap(),
-            "-p",
-            "--output-format",
-            "json",
-            "test",
-        ])
+        .args(["--scenario", scenario.to_str().unwrap(), "-p", "--output-format", "json", "test"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -334,13 +310,7 @@ fn test_stream_json_is_valid_ndjson() {
             continue;
         }
         let result: Result<Value, _> = serde_json::from_str(line);
-        assert!(
-            result.is_ok(),
-            "Line {} is not valid JSON: {} - {:?}",
-            i + 1,
-            line,
-            result.err()
-        );
+        assert!(result.is_ok(), "Line {} is not valid JSON: {} - {:?}", i + 1, line, result.err());
     }
 }
 
@@ -367,14 +337,8 @@ fn test_stream_json_starts_with_system_init() {
     let first_line = output_str.lines().next().expect("Should have output");
     let first: Value = serde_json::from_str(first_line).expect("First line should be JSON");
 
-    assert_eq!(
-        first["type"], "system",
-        "First event should be type 'system'"
-    );
-    assert_eq!(
-        first["subtype"], "init",
-        "First event should have subtype 'init'"
-    );
+    assert_eq!(first["type"], "system", "First event should be type 'system'");
+    assert_eq!(first["subtype"], "init", "First event should have subtype 'init'");
 }
 
 /// Verify stream-JSON first event has a type field
@@ -400,10 +364,7 @@ fn test_stream_json_starts_with_valid_event() {
     let first_line = output_str.lines().next().expect("Should have output");
     let first: Value = serde_json::from_str(first_line).expect("First line should be JSON");
 
-    assert!(
-        first["type"].is_string(),
-        "First event should have a type field"
-    );
+    assert!(first["type"].is_string(), "First event should have a type field");
 }
 
 /// Verify stream-JSON ends with result event (real Claude format)
@@ -457,10 +418,7 @@ fn test_stream_json_ends_with_valid_event() {
     let last_line = lines.last().expect("Should have output");
     let last: Value = serde_json::from_str(last_line).expect("Last line should be JSON");
 
-    assert!(
-        last["type"].is_string(),
-        "Last event should have a type field"
-    );
+    assert!(last["type"].is_string(), "Last event should have a type field");
 }
 
 // =============================================================================
@@ -473,14 +431,7 @@ fn test_json_output_type_fields() {
     let scenario = scenario_path(FIXTURE_VERSION, "json-output");
 
     let output = Command::new(claudeless_bin())
-        .args([
-            "--scenario",
-            scenario.to_str().unwrap(),
-            "-p",
-            "--output-format",
-            "json",
-            "test",
-        ])
+        .args(["--scenario", scenario.to_str().unwrap(), "-p", "--output-format", "json", "test"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -500,14 +451,7 @@ fn test_json_output_has_type_field() {
     let scenario = scenario_path(FIXTURE_VERSION, "json-output");
 
     let output = Command::new(claudeless_bin())
-        .args([
-            "--scenario",
-            scenario.to_str().unwrap(),
-            "-p",
-            "--output-format",
-            "json",
-            "test",
-        ])
+        .args(["--scenario", scenario.to_str().unwrap(), "-p", "--output-format", "json", "test"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -526,14 +470,7 @@ fn test_json_error_type_fields() {
     let scenario = scenario_path(FIXTURE_VERSION, "json-output");
 
     let output = Command::new(claudeless_bin())
-        .args([
-            "--scenario",
-            scenario.to_str().unwrap(),
-            "-p",
-            "--output-format",
-            "json",
-            "test",
-        ])
+        .args(["--scenario", scenario.to_str().unwrap(), "-p", "--output-format", "json", "test"])
         .output()
         .expect("Failed to run claudeless");
 

@@ -45,10 +45,7 @@ pub struct ClientInfo {
 
 impl Default for ClientInfo {
     fn default() -> Self {
-        Self {
-            name: "claudeless".into(),
-            version: env!("CARGO_PKG_VERSION").into(),
-        }
+        Self { name: "claudeless".into(), version: env!("CARGO_PKG_VERSION").into() }
     }
 }
 

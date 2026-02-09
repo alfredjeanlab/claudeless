@@ -43,12 +43,7 @@ fn test_project_dir_uses_normalized_path_name() {
     let output = Command::new(claudeless_bin())
         .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .current_dir(work_dir.path())
-        .args([
-            "--scenario",
-            scenario.to_str().unwrap(),
-            "-p",
-            "test prompt",
-        ])
+        .args(["--scenario", scenario.to_str().unwrap(), "-p", "test prompt"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -59,16 +54,10 @@ fn test_project_dir_uses_normalized_path_name() {
     assert!(projects_dir.exists(), "projects/ directory should exist");
 
     // Project dir name should be normalized path (/ -> -, . -> -)
-    let entries: Vec<_> = std::fs::read_dir(&projects_dir)
-        .unwrap()
-        .filter_map(|e| e.ok())
-        .collect();
+    let entries: Vec<_> =
+        std::fs::read_dir(&projects_dir).unwrap().filter_map(|e| e.ok()).collect();
 
-    assert_eq!(
-        entries.len(),
-        1,
-        "Should have exactly one project directory"
-    );
+    assert_eq!(entries.len(), 1, "Should have exactly one project directory");
 
     let project_name = entries[0].file_name().to_string_lossy().to_string();
     assert!(
@@ -76,11 +65,7 @@ fn test_project_dir_uses_normalized_path_name() {
         "Project dir should start with - (normalized absolute path): {}",
         project_name
     );
-    assert!(
-        !project_name.contains('/'),
-        "Project dir should not contain /: {}",
-        project_name
-    );
+    assert!(!project_name.contains('/'), "Project dir should not contain /: {}", project_name);
     assert!(
         !project_name.contains('.') || project_name == ".",
         "Project dir should not contain . (except single dot): {}",
@@ -102,12 +87,7 @@ fn test_sessions_index_json_created() {
     let output = Command::new(claudeless_bin())
         .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .current_dir(work_dir.path())
-        .args([
-            "--scenario",
-            scenario.to_str().unwrap(),
-            "-p",
-            "test prompt",
-        ])
+        .args(["--scenario", scenario.to_str().unwrap(), "-p", "test prompt"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -122,11 +102,7 @@ fn test_sessions_index_json_created() {
         .expect("Should have project directory");
 
     let sessions_index = project_dir.path().join("sessions-index.json");
-    assert!(
-        sessions_index.exists(),
-        "sessions-index.json should exist at {:?}",
-        sessions_index
-    );
+    assert!(sessions_index.exists(), "sessions-index.json should exist at {:?}", sessions_index);
 
     let content = std::fs::read_to_string(&sessions_index).unwrap();
     let parsed: serde_json::Value =
@@ -137,10 +113,7 @@ fn test_sessions_index_json_created() {
     assert!(parsed["entries"].is_array(), "entries should be an array");
 
     let entries = parsed["entries"].as_array().unwrap();
-    assert!(
-        !entries.is_empty(),
-        "Should have at least one session entry"
-    );
+    assert!(!entries.is_empty(), "Should have at least one session entry");
 
     let entry = &entries[0];
     assert!(entry["sessionId"].is_string(), "sessionId required");
@@ -169,12 +142,7 @@ fn test_session_file_is_jsonl_format() {
     let output = Command::new(claudeless_bin())
         .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .current_dir(work_dir.path())
-        .args([
-            "--scenario",
-            scenario.to_str().unwrap(),
-            "-p",
-            "test prompt",
-        ])
+        .args(["--scenario", scenario.to_str().unwrap(), "-p", "test prompt"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -182,11 +150,8 @@ fn test_session_file_is_jsonl_format() {
 
     // Find session file (*.jsonl)
     let projects_dir = state_dir.path().join("projects");
-    let project_dir = std::fs::read_dir(&projects_dir)
-        .unwrap()
-        .filter_map(|e| e.ok())
-        .next()
-        .unwrap();
+    let project_dir =
+        std::fs::read_dir(&projects_dir).unwrap().filter_map(|e| e.ok()).next().unwrap();
 
     let jsonl_files: Vec<_> = std::fs::read_dir(project_dir.path())
         .unwrap()
@@ -194,10 +159,7 @@ fn test_session_file_is_jsonl_format() {
         .filter(|e| e.path().extension().map(|x| x == "jsonl").unwrap_or(false))
         .collect();
 
-    assert!(
-        !jsonl_files.is_empty(),
-        "Should have at least one .jsonl session file"
-    );
+    assert!(!jsonl_files.is_empty(), "Should have at least one .jsonl session file");
 
     let session_content = std::fs::read_to_string(jsonl_files[0].path()).unwrap();
 
@@ -224,12 +186,7 @@ fn test_session_jsonl_has_user_message() {
     let output = Command::new(claudeless_bin())
         .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .current_dir(work_dir.path())
-        .args([
-            "--scenario",
-            scenario.to_str().unwrap(),
-            "-p",
-            "my test prompt",
-        ])
+        .args(["--scenario", scenario.to_str().unwrap(), "-p", "my test prompt"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -237,11 +194,8 @@ fn test_session_jsonl_has_user_message() {
 
     // Find and read session file
     let projects_dir = state_dir.path().join("projects");
-    let project_dir = std::fs::read_dir(&projects_dir)
-        .unwrap()
-        .filter_map(|e| e.ok())
-        .next()
-        .unwrap();
+    let project_dir =
+        std::fs::read_dir(&projects_dir).unwrap().filter_map(|e| e.ok()).next().unwrap();
 
     let jsonl_file = std::fs::read_dir(project_dir.path())
         .unwrap()
@@ -264,15 +218,9 @@ fn test_session_jsonl_has_user_message() {
     assert!(msg["sessionId"].is_string(), "user message needs sessionId");
     assert!(msg["timestamp"].is_string(), "user message needs timestamp");
     assert!(msg["cwd"].is_string(), "user message needs cwd");
-    assert_eq!(
-        msg["message"]["role"], "user",
-        "message.role should be user"
-    );
+    assert_eq!(msg["message"]["role"], "user", "message.role should be user");
     assert!(
-        msg["message"]["content"]
-            .as_str()
-            .unwrap()
-            .contains("my test prompt"),
+        msg["message"]["content"].as_str().unwrap().contains("my test prompt"),
         "message.content should contain the prompt"
     );
 }
@@ -295,11 +243,8 @@ fn test_session_jsonl_has_assistant_message() {
 
     // Find and read session file
     let projects_dir = state_dir.path().join("projects");
-    let project_dir = std::fs::read_dir(&projects_dir)
-        .unwrap()
-        .filter_map(|e| e.ok())
-        .next()
-        .unwrap();
+    let project_dir =
+        std::fs::read_dir(&projects_dir).unwrap().filter_map(|e| e.ok()).next().unwrap();
 
     let jsonl_file = std::fs::read_dir(project_dir.path())
         .unwrap()
@@ -319,31 +264,13 @@ fn test_session_jsonl_has_assistant_message() {
 
     let msg = assistant_msg.unwrap();
     assert!(msg["uuid"].is_string(), "assistant message needs uuid");
-    assert!(
-        msg["parentUuid"].is_string(),
-        "assistant message needs parentUuid"
-    );
-    assert!(
-        msg["sessionId"].is_string(),
-        "assistant message needs sessionId"
-    );
-    assert!(
-        msg["timestamp"].is_string(),
-        "assistant message needs timestamp"
-    );
-    assert!(
-        msg["requestId"].is_string(),
-        "assistant message needs requestId"
-    );
+    assert!(msg["parentUuid"].is_string(), "assistant message needs parentUuid");
+    assert!(msg["sessionId"].is_string(), "assistant message needs sessionId");
+    assert!(msg["timestamp"].is_string(), "assistant message needs timestamp");
+    assert!(msg["requestId"].is_string(), "assistant message needs requestId");
     assert_eq!(msg["message"]["role"], "assistant");
-    assert!(
-        msg["message"]["content"].is_array(),
-        "content should be array"
-    );
-    assert!(
-        msg["message"]["model"].is_string(),
-        "model should be string"
-    );
+    assert!(msg["message"]["content"].is_array(), "content should be array");
+    assert!(msg["message"]["model"].is_string(), "model should be string");
 }
 
 /// Normalize JSON for comparison by replacing variable fields with placeholders
@@ -397,9 +324,7 @@ fn normalize_json(value: &serde_json::Value) -> serde_json::Value {
             serde_json::Value::Array(arr.iter().map(normalize_json).collect())
         }
         serde_json::Value::Object(obj) => serde_json::Value::Object(
-            obj.iter()
-                .map(|(k, v)| (k.clone(), normalize_json(v)))
-                .collect(),
+            obj.iter().map(|(k, v)| (k.clone(), normalize_json(v))).collect(),
         ),
         other => other.clone(),
     }
@@ -423,14 +348,10 @@ fn validate_all_messages_of_type(
     expected: &[serde_json::Value],
     msg_type: &str,
 ) {
-    let actual_msgs: Vec<&serde_json::Value> = actual
-        .iter()
-        .filter(|m| m["type"].as_str() == Some(msg_type))
-        .collect();
-    let expected_msgs: Vec<&serde_json::Value> = expected
-        .iter()
-        .filter(|m| m["type"].as_str() == Some(msg_type))
-        .collect();
+    let actual_msgs: Vec<&serde_json::Value> =
+        actual.iter().filter(|m| m["type"].as_str() == Some(msg_type)).collect();
+    let expected_msgs: Vec<&serde_json::Value> =
+        expected.iter().filter(|m| m["type"].as_str() == Some(msg_type)).collect();
 
     // Check count matches
     assert_eq!(
@@ -496,12 +417,7 @@ fn test_sessions_index_matches_fixture() {
     let output = Command::new(claudeless_bin())
         .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .current_dir(work_dir.path())
-        .args([
-            "--scenario",
-            scenario.to_str().unwrap(),
-            "-p",
-            "test prompt",
-        ])
+        .args(["--scenario", scenario.to_str().unwrap(), "-p", "test prompt"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -602,11 +518,8 @@ fn test_session_jsonl_matches_fixture() {
 
     // Read simulator output
     let projects_dir = state_dir.path().join("projects");
-    let project_dir = std::fs::read_dir(&projects_dir)
-        .unwrap()
-        .filter_map(|e| e.ok())
-        .next()
-        .unwrap();
+    let project_dir =
+        std::fs::read_dir(&projects_dir).unwrap().filter_map(|e| e.ok()).next().unwrap();
 
     let jsonl_file = std::fs::read_dir(project_dir.path())
         .unwrap()

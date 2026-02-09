@@ -39,9 +39,7 @@ impl SettingsPaths {
         let sources = sources.unwrap_or(SettingSource::all());
 
         Self {
-            global: sources
-                .contains(&SettingSource::User)
-                .then(|| state_dir.join("settings.json")),
+            global: sources.contains(&SettingSource::User).then(|| state_dir.join("settings.json")),
             project: sources
                 .contains(&SettingSource::Project)
                 .then(|| working_dir.join(".claude").join("settings.json")),
@@ -97,10 +95,7 @@ impl SettingsLoader {
                     settings.merge(cli_settings);
                 }
                 Err(e) => {
-                    print_warning(format_args!(
-                        "Failed to load settings from '{}': {}",
-                        input, e
-                    ));
+                    print_warning(format_args!("Failed to load settings from '{}': {}", input, e));
                 }
             }
         }
@@ -120,9 +115,8 @@ impl SettingsLoader {
         let mut settings = ClaudeSettings::default();
 
         // Load in precedence order
-        for path in [&self.paths.global, &self.paths.project, &self.paths.local]
-            .into_iter()
-            .flatten()
+        for path in
+            [&self.paths.global, &self.paths.project, &self.paths.local].into_iter().flatten()
         {
             if path.exists() {
                 match ClaudeSettings::load(path) {

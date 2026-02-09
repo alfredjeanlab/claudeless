@@ -95,10 +95,7 @@ impl HookType {
 
     /// Whether this hook type shows tool matchers dialog
     pub fn has_matchers(self) -> bool {
-        matches!(
-            self,
-            HookType::PreToolUse | HookType::PostToolUse | HookType::PostToolUseFailure
-        )
+        matches!(self, HookType::PreToolUse | HookType::PostToolUse | HookType::PostToolUseFailure)
     }
 }
 

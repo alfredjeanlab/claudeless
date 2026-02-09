@@ -89,11 +89,7 @@ fn test_tui_export_shows_method_dialog() {
         "Should show clipboard option.\nCapture:\n{}",
         capture
     );
-    assert!(
-        capture.contains("Save to file"),
-        "Should show file option.\nCapture:\n{}",
-        capture
-    );
+    assert!(capture.contains("Save to file"), "Should show file option.\nCapture:\n{}", capture);
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)

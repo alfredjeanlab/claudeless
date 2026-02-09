@@ -5,26 +5,17 @@ use super::*;
 
 #[test]
 fn model_choice_from_opus_model_id() {
-    assert_eq!(
-        ModelChoice::from_model_id("claude-opus-4-5-20251101"),
-        ModelChoice::Opus
-    );
+    assert_eq!(ModelChoice::from_model_id("claude-opus-4-5-20251101"), ModelChoice::Opus);
 }
 
 #[test]
 fn model_choice_from_sonnet_model_id() {
-    assert_eq!(
-        ModelChoice::from_model_id("claude-sonnet-4-20250514"),
-        ModelChoice::Default
-    );
+    assert_eq!(ModelChoice::from_model_id("claude-sonnet-4-20250514"), ModelChoice::Default);
 }
 
 #[test]
 fn model_choice_from_haiku_model_id() {
-    assert_eq!(
-        ModelChoice::from_model_id("claude-haiku-4-5-20251101"),
-        ModelChoice::Haiku
-    );
+    assert_eq!(ModelChoice::from_model_id("claude-haiku-4-5-20251101"), ModelChoice::Haiku);
 }
 
 #[test]

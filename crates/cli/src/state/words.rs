@@ -58,10 +58,7 @@ pub fn generate_plan_name() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     // Use time-based randomness (simple approach without adding rand dependency)
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
+    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
 
     let mut hasher = DefaultHasher::new();
     nanos.hash(&mut hasher);
@@ -72,10 +69,7 @@ pub fn generate_plan_name() -> String {
     let verb_idx = ((hash >> 16) as usize) % VERBS.len();
     let noun_idx = ((hash >> 32) as usize) % NOUNS.len();
 
-    format!(
-        "{}-{}-{}",
-        ADJECTIVES[adj_idx], VERBS[verb_idx], NOUNS[noun_idx]
-    )
+    format!("{}-{}-{}", ADJECTIVES[adj_idx], VERBS[verb_idx], NOUNS[noun_idx])
 }
 
 #[cfg(test)]

@@ -86,10 +86,7 @@ impl ToolExecutionResult {
 
     /// Create a result indicating no mock result was configured.
     pub fn no_mock_result(tool_use_id: impl Into<String>, tool_name: &str) -> Self {
-        Self::error(
-            tool_use_id,
-            format!("No mock result configured for tool '{}'", tool_name),
-        )
+        Self::error(tool_use_id, format!("No mock result configured for tool '{}'", tool_name))
     }
 
     /// Create a result indicating tool execution is disabled.

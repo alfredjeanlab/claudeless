@@ -26,11 +26,7 @@ impl HookRegistry {
 
     /// Create a new registry with custom default timeout
     pub fn with_timeout(default_timeout_ms: u64) -> Self {
-        Self {
-            executor: HookExecutor::new(),
-            temp_scripts: Vec::new(),
-            default_timeout_ms,
-        }
+        Self { executor: HookExecutor::new(), temp_scripts: Vec::new(), default_timeout_ms }
     }
 
     /// Register a hook script from a string
@@ -41,10 +37,7 @@ impl HookRegistry {
         blocking: bool,
     ) -> std::io::Result<()> {
         // Create temp script file (no shebang needed since executor runs via /bin/bash)
-        let mut file = tempfile::Builder::new()
-            .prefix("hook_")
-            .suffix(".sh")
-            .tempfile()?;
+        let mut file = tempfile::Builder::new().prefix("hook_").suffix(".sh").tempfile()?;
 
         write!(file, "{}", script_content)?;
         file.flush()?;

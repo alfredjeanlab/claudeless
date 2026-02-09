@@ -23,10 +23,7 @@ fn hook_type_names_are_correct() {
 fn hook_type_descriptions_are_correct() {
     assert_eq!(HookType::PreToolUse.description(), "Before tool execution");
     assert_eq!(HookType::PostToolUse.description(), "After tool execution");
-    assert_eq!(
-        HookType::UserPromptSubmit.description(),
-        "When the user submits a prompt"
-    );
+    assert_eq!(HookType::UserPromptSubmit.description(), "When the user submits a prompt");
 }
 
 #[test]

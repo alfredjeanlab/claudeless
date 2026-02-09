@@ -91,19 +91,13 @@ fn test_up_arrow_moves_selection() {
     state.handle_key_event(key_event(KeyCode::Down, KeyModifiers::empty()));
 
     let render = state.render_state();
-    assert_eq!(
-        render.display.slash_menu.as_ref().unwrap().selected_index,
-        2
-    );
+    assert_eq!(render.display.slash_menu.as_ref().unwrap().selected_index, 2);
 
     // Press Up
     state.handle_key_event(key_event(KeyCode::Up, KeyModifiers::empty()));
 
     let render = state.render_state();
-    assert_eq!(
-        render.display.slash_menu.as_ref().unwrap().selected_index,
-        1
-    );
+    assert_eq!(render.display.slash_menu.as_ref().unwrap().selected_index, 1);
 }
 
 #[test]
@@ -174,13 +168,7 @@ fn test_backspace_updates_filter() {
     state.handle_key_event(key_event(KeyCode::Char('o'), KeyModifiers::empty()));
 
     let render = state.render_state();
-    let initial_count = render
-        .display
-        .slash_menu
-        .as_ref()
-        .unwrap()
-        .filtered_commands
-        .len();
+    let initial_count = render.display.slash_menu.as_ref().unwrap().filtered_commands.len();
 
     // Backspace to /c
     state.handle_key_event(key_event(KeyCode::Backspace, KeyModifiers::empty()));
@@ -188,13 +176,7 @@ fn test_backspace_updates_filter() {
     let render = state.render_state();
     assert_eq!(render.input.buffer, "/c");
     // Should have more commands now (less restrictive filter)
-    let new_count = render
-        .display
-        .slash_menu
-        .as_ref()
-        .unwrap()
-        .filtered_commands
-        .len();
+    let new_count = render.display.slash_menu.as_ref().unwrap().filtered_commands.len();
     assert!(new_count >= initial_count);
 }
 

@@ -73,12 +73,7 @@ impl Default for HelpDialog {
 
 impl HelpDialog {
     pub fn new(version: String) -> Self {
-        Self {
-            active_tab: HelpTab::General,
-            commands_selected: 0,
-            custom_selected: 0,
-            version,
-        }
+        Self { active_tab: HelpTab::General, commands_selected: 0, custom_selected: 0, version }
     }
 
     /// Switch to next tab

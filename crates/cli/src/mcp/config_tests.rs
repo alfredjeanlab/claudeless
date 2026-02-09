@@ -179,19 +179,13 @@ fn test_qualified_name_preserves_underscores_in_server_name() {
 #[test]
 fn test_parse_qualified_name_success() {
     let parsed = McpToolDef::parse_qualified_name("mcp__filesystem__read_file");
-    assert_eq!(
-        parsed,
-        Some(("filesystem".to_string(), "read_file".to_string()))
-    );
+    assert_eq!(parsed, Some(("filesystem".to_string(), "read_file".to_string())));
 }
 
 #[test]
 fn test_parse_qualified_name_with_underscores() {
     let parsed = McpToolDef::parse_qualified_name("mcp__filesystem__read_text_file");
-    assert_eq!(
-        parsed,
-        Some(("filesystem".to_string(), "read_text_file".to_string()))
-    );
+    assert_eq!(parsed, Some(("filesystem".to_string(), "read_text_file".to_string())));
 }
 
 #[test]
@@ -204,16 +198,10 @@ fn test_parse_qualified_name_rejects_builtin_tool() {
 #[test]
 fn test_parse_qualified_name_rejects_malformed() {
     // Missing mcp__ prefix
-    assert_eq!(
-        McpToolDef::parse_qualified_name("filesystem__read_file"),
-        None
-    );
+    assert_eq!(McpToolDef::parse_qualified_name("filesystem__read_file"), None);
 
     // Missing second separator
-    assert_eq!(
-        McpToolDef::parse_qualified_name("mcp__filesystemread"),
-        None
-    );
+    assert_eq!(McpToolDef::parse_qualified_name("mcp__filesystemread"), None);
 
     // Empty parts
     assert_eq!(McpToolDef::parse_qualified_name("mcp____read_file"), None);

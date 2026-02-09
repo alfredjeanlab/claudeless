@@ -8,10 +8,7 @@ fn test_text_output() {
     let mut buf = Vec::new();
     let mut writer = OutputWriter::new(&mut buf, OutputFormat::Text, "claude-test".to_string());
 
-    let response = Response {
-        say: Some("Hello, world!".to_string()),
-        ..Default::default()
-    };
+    let response = Response { say: Some("Hello, world!".to_string()), ..Default::default() };
     writer.write_response(&response, &[]).unwrap();
 
     let output = String::from_utf8(buf).unwrap();
@@ -40,10 +37,7 @@ fn test_json_output() {
     let mut buf = Vec::new();
     let mut writer = OutputWriter::new(&mut buf, OutputFormat::Json, "claude-test".to_string());
 
-    let response = Response {
-        say: Some("Test response".to_string()),
-        ..Default::default()
-    };
+    let response = Response { say: Some("Test response".to_string()), ..Default::default() };
     writer.write_response(&response, &[]).unwrap();
 
     let output = String::from_utf8(buf).unwrap();
@@ -62,10 +56,7 @@ fn test_json_output_with_tool_calls() {
     let mut buf = Vec::new();
     let mut writer = OutputWriter::new(&mut buf, OutputFormat::Json, "claude-test".to_string());
 
-    let response = Response {
-        say: Some("Running command".to_string()),
-        ..Default::default()
-    };
+    let response = Response { say: Some("Running command".to_string()), ..Default::default() };
     let tool_calls = vec![ToolCall {
         call: "Bash".to_string(),
         input: serde_json::json!({ "command": "ls -la" }),
@@ -89,10 +80,7 @@ fn test_json_output_with_usage() {
     let response = Response {
         say: Some("Response".to_string()),
         tools: vec![],
-        usage: Some(UsageSpec {
-            input_tokens: 50,
-            output_tokens: 25,
-        }),
+        usage: Some(UsageSpec { input_tokens: 50, output_tokens: 25 }),
         delay_ms: None,
     };
     writer.write_response(&response, &[]).unwrap();
@@ -107,16 +95,10 @@ fn test_json_output_with_usage() {
 #[test]
 fn test_stream_json_output() {
     let mut buf = Vec::new();
-    let mut writer = OutputWriter::new(
-        &mut buf,
-        OutputFormat::StreamJson,
-        "claude-test".to_string(),
-    );
+    let mut writer =
+        OutputWriter::new(&mut buf, OutputFormat::StreamJson, "claude-test".to_string());
 
-    let response = Response {
-        say: Some("Hello!".to_string()),
-        ..Default::default()
-    };
+    let response = Response { say: Some("Hello!".to_string()), ..Default::default() };
     writer.write_response(&response, &[]).unwrap();
 
     let output = String::from_utf8(buf).unwrap();
@@ -138,16 +120,10 @@ fn test_stream_json_output() {
 #[test]
 fn test_stream_json_with_tool_calls() {
     let mut buf = Vec::new();
-    let mut writer = OutputWriter::new(
-        &mut buf,
-        OutputFormat::StreamJson,
-        "claude-test".to_string(),
-    );
+    let mut writer =
+        OutputWriter::new(&mut buf, OutputFormat::StreamJson, "claude-test".to_string());
 
-    let response = Response {
-        say: Some("Running".to_string()),
-        ..Default::default()
-    };
+    let response = Response { say: Some("Running".to_string()), ..Default::default() };
     let tool_calls = vec![ToolCall {
         call: "Bash".to_string(),
         input: serde_json::json!({ "command": "pwd" }),
@@ -167,10 +143,7 @@ fn test_estimate_tokens() {
     assert_eq!(estimate_tokens(""), 1); // Min 1
     assert_eq!(estimate_tokens("test"), 1);
     assert_eq!(estimate_tokens("hello world"), 2); // 11 chars / 4 = 2
-    assert_eq!(
-        estimate_tokens("this is a longer string with more tokens"),
-        10
-    );
+    assert_eq!(estimate_tokens("this is a longer string with more tokens"), 10);
 }
 
 #[test]
@@ -180,14 +153,9 @@ fn test_json_response_serialization() {
         model: "claude-test".to_string(),
         response_type: "message".to_string(),
         role: "assistant".to_string(),
-        content: vec![ContentBlock::Text {
-            text: "Hello".to_string(),
-        }],
+        content: vec![ContentBlock::Text { text: "Hello".to_string() }],
         stop_reason: "end_turn".to_string(),
-        usage: Usage {
-            input_tokens: 10,
-            output_tokens: 5,
-        },
+        usage: Usage { input_tokens: 10, output_tokens: 5 },
     };
 
     let json = serde_json::to_string(&response).unwrap();
@@ -201,9 +169,7 @@ fn test_json_response_serialization() {
 fn test_stream_event_serialization() {
     let event = StreamEvent::ContentBlockDelta {
         index: 0,
-        delta: Delta::TextDelta {
-            text: "chunk".to_string(),
-        },
+        delta: Delta::TextDelta { text: "chunk".to_string() },
     };
 
     let json = serde_json::to_string(&event).unwrap();
@@ -233,11 +199,8 @@ fn test_result_output_success() {
 
 #[test]
 fn test_result_output_error() {
-    let result = ResultOutput::error(
-        "Something went wrong".to_string(),
-        "session-123".to_string(),
-        100,
-    );
+    let result =
+        ResultOutput::error("Something went wrong".to_string(), "session-123".to_string(), 100);
 
     let json = serde_json::to_string(&result).unwrap();
     let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
@@ -277,10 +240,8 @@ fn test_system_init_event() {
 
 #[test]
 fn test_system_init_event_with_mcp_servers() {
-    let mcp_servers = vec![
-        McpServerInfo::connected("filesystem"),
-        McpServerInfo::connected("github"),
-    ];
+    let mcp_servers =
+        vec![McpServerInfo::connected("filesystem"), McpServerInfo::connected("github")];
     let init = SystemInitEvent::with_mcp_servers(
         "session-123",
         vec!["Bash".to_string(), "Read".to_string()],
@@ -390,13 +351,8 @@ fn test_write_real_json_response() {
     let mut buf = Vec::new();
     let mut writer = OutputWriter::new(&mut buf, OutputFormat::Json, "claude-test".to_string());
 
-    let response = Response {
-        say: Some("Hello!".to_string()),
-        ..Default::default()
-    };
-    writer
-        .write_real_response(&response, "session-123", vec![])
-        .unwrap();
+    let response = Response { say: Some("Hello!".to_string()), ..Default::default() };
+    writer.write_real_response(&response, "session-123", vec![]).unwrap();
 
     let output = String::from_utf8(buf).unwrap();
     let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
@@ -411,20 +367,12 @@ fn test_write_real_json_response() {
 #[test]
 fn test_write_real_stream_json_response() {
     let mut buf = Vec::new();
-    let mut writer = OutputWriter::new(
-        &mut buf,
-        OutputFormat::StreamJson,
-        "claude-test".to_string(),
-    );
+    let mut writer =
+        OutputWriter::new(&mut buf, OutputFormat::StreamJson, "claude-test".to_string());
 
-    let response = Response {
-        say: Some("Hello!".to_string()),
-        ..Default::default()
-    };
+    let response = Response { say: Some("Hello!".to_string()), ..Default::default() };
     let tools = vec!["Bash".to_string(), "Read".to_string()];
-    writer
-        .write_real_response(&response, "session-123", tools)
-        .unwrap();
+    writer.write_real_response(&response, "session-123", tools).unwrap();
 
     let output = String::from_utf8(buf).unwrap();
     let lines: Vec<&str> = output.lines().collect();
@@ -443,19 +391,11 @@ fn test_write_real_stream_json_response() {
 #[test]
 fn test_real_stream_json_event_sequence() {
     let mut buf = Vec::new();
-    let mut writer = OutputWriter::new(
-        &mut buf,
-        OutputFormat::StreamJson,
-        "claude-test".to_string(),
-    );
+    let mut writer =
+        OutputWriter::new(&mut buf, OutputFormat::StreamJson, "claude-test".to_string());
 
-    let response = Response {
-        say: Some("Hi".to_string()),
-        ..Default::default()
-    };
-    writer
-        .write_real_response(&response, "session-123", vec!["Bash".to_string()])
-        .unwrap();
+    let response = Response { say: Some("Hi".to_string()), ..Default::default() };
+    writer.write_real_response(&response, "session-123", vec!["Bash".to_string()]).unwrap();
 
     let output = String::from_utf8(buf).unwrap();
     let lines: Vec<&str> = output.lines().collect();
@@ -651,11 +591,7 @@ fn test_init_event_has_extended_fields() {
     let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
 
     for field in expected_fields {
-        assert!(
-            parsed.get(field).is_some(),
-            "Missing expected field: {}",
-            field
-        );
+        assert!(parsed.get(field).is_some(), "Missing expected field: {}", field);
     }
 }
 
@@ -667,10 +603,8 @@ fn test_init_event_has_extended_fields() {
 #[test]
 fn test_init_event_tools_includes_builtin_and_mcp() {
     let builtin_tools = vec!["Read".to_string(), "Write".to_string(), "Bash".to_string()];
-    let mcp_tools = vec![
-        "mcp__filesystem__read_file".to_string(),
-        "mcp__filesystem__write_file".to_string(),
-    ];
+    let mcp_tools =
+        vec!["mcp__filesystem__read_file".to_string(), "mcp__filesystem__write_file".to_string()];
 
     let mut all_tools = builtin_tools.clone();
     all_tools.extend(mcp_tools.clone());

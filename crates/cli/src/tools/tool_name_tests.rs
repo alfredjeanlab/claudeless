@@ -29,21 +29,12 @@ fn parse_parses_valid_names() {
     assert_eq!(ToolName::parse("Glob"), Some(ToolName::Glob));
     assert_eq!(ToolName::parse("Grep"), Some(ToolName::Grep));
     assert_eq!(ToolName::parse("TodoWrite"), Some(ToolName::TodoWrite));
-    assert_eq!(
-        ToolName::parse("ExitPlanMode"),
-        Some(ToolName::ExitPlanMode)
-    );
+    assert_eq!(ToolName::parse("ExitPlanMode"), Some(ToolName::ExitPlanMode));
     assert_eq!(ToolName::parse("WebFetch"), Some(ToolName::WebFetch));
     assert_eq!(ToolName::parse("WebSearch"), Some(ToolName::WebSearch));
-    assert_eq!(
-        ToolName::parse("NotebookEdit"),
-        Some(ToolName::NotebookEdit)
-    );
+    assert_eq!(ToolName::parse("NotebookEdit"), Some(ToolName::NotebookEdit));
     assert_eq!(ToolName::parse("Task"), Some(ToolName::Task));
-    assert_eq!(
-        ToolName::parse("AskUserQuestion"),
-        Some(ToolName::AskUserQuestion)
-    );
+    assert_eq!(ToolName::parse("AskUserQuestion"), Some(ToolName::AskUserQuestion));
 }
 
 #[test]

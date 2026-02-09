@@ -79,11 +79,7 @@ impl McpServer {
         let client = McpClient::connect_and_initialize(&self.definition, &self.name, debug).await?;
 
         // Convert discovered tools to McpToolDef
-        self.tools = client
-            .tools()
-            .iter()
-            .map(|t| t.clone().into_tool_def(&self.name))
-            .collect();
+        self.tools = client.tools().iter().map(|t| t.clone().into_tool_def(&self.name)).collect();
 
         self.client = Some(Arc::new(Mutex::new(client)));
         self.status = McpServerStatus::Running;
@@ -125,9 +121,7 @@ impl McpServer {
     ) -> Result<McpToolResult, ClientError> {
         let client = self.client.as_ref().ok_or(ClientError::NotInitialized)?;
         let guard = client.lock().await;
-        let result = guard
-            .call_tool_with_timeout(name, arguments, timeout_ms)
-            .await?;
+        let result = guard.call_tool_with_timeout(name, arguments, timeout_ms).await?;
         Ok(result.into_tool_result())
     }
 
@@ -295,8 +289,7 @@ impl McpManager {
 
     /// Register a tool for a server.
     pub fn register_tool(&mut self, server_name: &str, tool: McpToolDef) {
-        self.tool_server_map
-            .insert(tool.name.clone(), server_name.to_string());
+        self.tool_server_map.insert(tool.name.clone(), server_name.to_string());
         if let Some(server) = self.servers.get_mut(server_name) {
             server.register_tool(tool);
         }
@@ -304,11 +297,7 @@ impl McpManager {
 
     /// Get all available tools from running servers.
     pub fn tools(&self) -> Vec<&McpToolDef> {
-        self.servers
-            .values()
-            .filter(|s| s.is_running())
-            .flat_map(|s| &s.tools)
-            .collect()
+        self.servers.values().filter(|s| s.is_running()).flat_map(|s| &s.tools).collect()
     }
 
     /// Get all servers.
@@ -328,11 +317,7 @@ impl McpManager {
 
     /// Get running server names.
     pub fn running_server_names(&self) -> Vec<String> {
-        self.servers
-            .iter()
-            .filter(|(_, s)| s.is_running())
-            .map(|(n, _)| n.clone())
-            .collect()
+        self.servers.iter().filter(|(_, s)| s.is_running()).map(|(n, _)| n.clone()).collect()
     }
 
     /// Check if a tool exists.

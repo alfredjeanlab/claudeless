@@ -14,10 +14,7 @@ pub struct TokenCounts {
 
 impl TokenCounts {
     pub fn new(input: u32, output: u32) -> Self {
-        Self {
-            input_tokens: input,
-            output_tokens: output,
-        }
+        Self { input_tokens: input, output_tokens: output }
     }
 
     pub fn total(&self) -> u32 {

@@ -10,10 +10,7 @@ use serde_json::json;
 
 #[test]
 fn test_extract_pattern() {
-    assert_eq!(
-        extract_str(&json!({ "pattern": "fn main" }), "pattern"),
-        Some("fn main")
-    );
+    assert_eq!(extract_str(&json!({ "pattern": "fn main" }), "pattern"), Some("fn main"));
 }
 
 #[test]

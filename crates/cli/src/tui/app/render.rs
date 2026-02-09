@@ -40,51 +40,28 @@ use super::types::{AppMode, RenderState};
 /// Render modal dialog if one is active, otherwise return None.
 fn render_active_dialog(state: &RenderState, width: usize) -> Option<AnyElement<'static>> {
     match state.mode {
-        AppMode::Setup => state
-            .dialog
-            .as_setup()
-            .map(|s| render_setup_wizard(s, width)),
-        AppMode::Trust => state
-            .dialog
-            .as_trust()
-            .map(|p| render_trust_prompt(p, width)),
-        AppMode::BypassConfirm => state
-            .dialog
-            .as_bypass_confirm()
-            .map(|d| render_bypass_confirm_dialog(d, width)),
-        AppMode::ThinkingToggle => state
-            .dialog
-            .as_thinking()
-            .map(|d| render_thinking_dialog(d, width)),
-        AppMode::TasksDialog => state
-            .dialog
-            .as_tasks()
-            .map(|d| render_tasks_dialog(d, width)),
-        AppMode::ExportDialog => state
-            .dialog
-            .as_export()
-            .map(|d| render_export_dialog(d, width)),
+        AppMode::Setup => state.dialog.as_setup().map(|s| render_setup_wizard(s, width)),
+        AppMode::Trust => state.dialog.as_trust().map(|p| render_trust_prompt(p, width)),
+        AppMode::BypassConfirm => {
+            state.dialog.as_bypass_confirm().map(|d| render_bypass_confirm_dialog(d, width))
+        }
+        AppMode::ThinkingToggle => {
+            state.dialog.as_thinking().map(|d| render_thinking_dialog(d, width))
+        }
+        AppMode::TasksDialog => state.dialog.as_tasks().map(|d| render_tasks_dialog(d, width)),
+        AppMode::ExportDialog => state.dialog.as_export().map(|d| render_export_dialog(d, width)),
         AppMode::HelpDialog => state.dialog.as_help().map(|d| render_help_dialog(d, width)),
-        AppMode::HooksDialog => state
-            .dialog
-            .as_hooks()
-            .map(|d| render_hooks_dialog(d, width)),
-        AppMode::MemoryDialog => state
-            .dialog
-            .as_memory()
-            .map(|d| render_memory_dialog(d, width)),
-        AppMode::ModelPicker => state
-            .dialog
-            .as_model_picker()
-            .map(|d| render_model_picker_dialog(d, width)),
-        AppMode::Elicitation => state
-            .dialog
-            .as_elicitation()
-            .map(|d| render_elicitation_dialog(d, width)),
-        AppMode::PlanApproval => state
-            .dialog
-            .as_plan_approval()
-            .map(|d| render_plan_approval_dialog(d, width)),
+        AppMode::HooksDialog => state.dialog.as_hooks().map(|d| render_hooks_dialog(d, width)),
+        AppMode::MemoryDialog => state.dialog.as_memory().map(|d| render_memory_dialog(d, width)),
+        AppMode::ModelPicker => {
+            state.dialog.as_model_picker().map(|d| render_model_picker_dialog(d, width))
+        }
+        AppMode::Elicitation => {
+            state.dialog.as_elicitation().map(|d| render_elicitation_dialog(d, width))
+        }
+        AppMode::PlanApproval => {
+            state.dialog.as_plan_approval().map(|d| render_plan_approval_dialog(d, width))
+        }
         // Permission is rendered inline, not as a full-screen modal
         _ => None,
     }
@@ -140,10 +117,7 @@ pub(crate) fn render_main_content(state: &RenderState) -> AnyElement<'static> {
     let input_display = if state.input.shell_mode {
         // Bash mode: show `! ` prefix in pink with suggestion or typed command
         if state.input.buffer.is_empty() {
-            let ph = state
-                .placeholder
-                .as_deref()
-                .unwrap_or("Try \"fix lint errors\"");
+            let ph = state.placeholder.as_deref().unwrap_or("Try \"fix lint errors\"");
             if use_colors {
                 styled_bash_placeholder(ph)
             } else {
@@ -173,10 +147,7 @@ pub(crate) fn render_main_content(state: &RenderState) -> AnyElement<'static> {
             && state.display.response_content.is_empty()
         {
             // Show placeholder only on initial state
-            let ph = state
-                .placeholder
-                .as_deref()
-                .unwrap_or("Try \"write a test for scenario.rs\"");
+            let ph = state.placeholder.as_deref().unwrap_or("Try \"write a test for scenario.rs\"");
             if use_colors {
                 styled_placeholder(ph)
             } else {
@@ -195,11 +166,7 @@ pub(crate) fn render_main_content(state: &RenderState) -> AnyElement<'static> {
         // User is typing - reset to clear dim/gray from separator
         // so chevron and input text are white
         if use_colors {
-            format!(
-                "{}❯\u{00A0}{}",
-                crate::tui::colors::escape::RESET,
-                state.input.buffer
-            )
+            format!("{}❯\u{00A0}{}", crate::tui::colors::escape::RESET, state.input.buffer)
         } else {
             format!("❯\u{00A0}{}", state.input.buffer)
         }

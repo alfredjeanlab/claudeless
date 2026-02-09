@@ -45,11 +45,7 @@ pub(crate) fn render_tasks_dialog(dialog: &TasksDialog, width: usize) -> AnyElem
             .iter()
             .enumerate()
             .map(|(i, task)| {
-                let indicator = if i == dialog.selected_index() {
-                    "❯ "
-                } else {
-                    "  "
-                };
+                let indicator = if i == dialog.selected_index() { "❯ " } else { "  " };
                 format!("{}{}", indicator, task.description)
             })
             .collect::<Vec<_>>()
@@ -111,16 +107,10 @@ pub(crate) fn render_export_dialog(dialog: &ExportDialog, width: usize) -> AnyEl
 
     match dialog.step {
         ExportStep::MethodSelection => {
-            let clipboard_cursor = if dialog.selected_method == ExportMethod::Clipboard {
-                "❯"
-            } else {
-                " "
-            };
-            let file_cursor = if dialog.selected_method == ExportMethod::File {
-                "❯"
-            } else {
-                " "
-            };
+            let clipboard_cursor =
+                if dialog.selected_method == ExportMethod::Clipboard { "❯" } else { " " };
+            let file_cursor =
+                if dialog.selected_method == ExportMethod::File { "❯" } else { " " };
 
             // Format options with descriptions, wrapping long descriptions
             let clipboard_label = "1. Copy to clipboard";

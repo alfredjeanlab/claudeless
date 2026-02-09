@@ -59,12 +59,7 @@ pub(super) struct SelectionList<'a> {
 
 impl<'a> SelectionList<'a> {
     pub fn new(labels: &'a [&'a str]) -> Self {
-        Self {
-            labels,
-            descriptions: &[],
-            selected: 0,
-            current: None,
-        }
+        Self { labels, descriptions: &[], selected: 0, current: None }
     }
 
     pub fn descriptions(mut self, descs: &'a [&'a str]) -> Self {
@@ -97,13 +92,7 @@ impl<'a> SelectionList<'a> {
                 } else {
                     format!("   {}", desc)
                 };
-                format!(
-                    "{}{}. {}{}",
-                    cursor(i == self.selected),
-                    i + 1,
-                    label,
-                    suffix,
-                )
+                format!("{}{}. {}{}", cursor(i == self.selected), i + 1, label, suffix,)
             })
             .collect()
     }
@@ -159,40 +148,15 @@ impl DialogState {
 
     dialog_accessor!(as_setup, as_setup_mut, Setup, SetupState);
     dialog_accessor!(as_trust, as_trust_mut, Trust, TrustPromptState);
-    dialog_accessor!(
-        as_bypass_confirm,
-        as_bypass_confirm_mut,
-        BypassConfirm,
-        BypassConfirmState
-    );
+    dialog_accessor!(as_bypass_confirm, as_bypass_confirm_mut, BypassConfirm, BypassConfirmState);
     dialog_accessor!(as_thinking, as_thinking_mut, Thinking, ThinkingDialog);
     dialog_accessor!(as_tasks, as_tasks_mut, Tasks, TasksDialog);
     dialog_accessor!(as_export, as_export_mut, Export, ExportDialog);
     dialog_accessor!(as_help, as_help_mut, Help, HelpDialog);
     dialog_accessor!(as_hooks, as_hooks_mut, Hooks, HooksDialog);
     dialog_accessor!(as_memory, as_memory_mut, Memory, MemoryDialog);
-    dialog_accessor!(
-        as_model_picker,
-        as_model_picker_mut,
-        ModelPicker,
-        ModelPickerDialog
-    );
-    dialog_accessor!(
-        as_permission,
-        as_permission_mut,
-        Permission,
-        PermissionRequest
-    );
-    dialog_accessor!(
-        as_elicitation,
-        as_elicitation_mut,
-        Elicitation,
-        ElicitationState
-    );
-    dialog_accessor!(
-        as_plan_approval,
-        as_plan_approval_mut,
-        PlanApproval,
-        PlanApprovalState
-    );
+    dialog_accessor!(as_model_picker, as_model_picker_mut, ModelPicker, ModelPickerDialog);
+    dialog_accessor!(as_permission, as_permission_mut, Permission, PermissionRequest);
+    dialog_accessor!(as_elicitation, as_elicitation_mut, Elicitation, ElicitationState);
+    dialog_accessor!(as_plan_approval, as_plan_approval_mut, PlanApproval, PlanApprovalState);
 }

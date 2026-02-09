@@ -5,12 +5,7 @@ use super::*;
 use crate::config::{ClaudeConfig, Pattern, ResponseRule, Turn};
 
 fn simple_config(responses: Vec<ResponseRule>) -> ScenarioConfig {
-    ScenarioConfig {
-        default: None,
-        responses,
-        tools: None,
-        ..Default::default()
-    }
+    ScenarioConfig { default: None, responses, tools: None, ..Default::default() }
 }
 
 #[test]
@@ -190,10 +185,7 @@ fn test_rule_ordering() {
 #[test]
 fn test_default_response() {
     let config = ScenarioConfig {
-        default: Some(Response {
-            say: Some("Default!".to_string()),
-            ..Default::default()
-        }),
+        default: Some(Response { say: Some("Default!".to_string()), ..Default::default() }),
         responses: vec![ResponseRule {
             on: Pattern::Glob("match".to_string()),
             say: Some("Matched!".to_string()),
@@ -280,10 +272,7 @@ fn test_invalid_glob() {
 #[test]
 fn test_invalid_session_id() {
     let config = ScenarioConfig {
-        claude: ClaudeConfig {
-            session_id: Some("not-a-uuid".to_string()),
-            ..Default::default()
-        },
+        claude: ClaudeConfig { session_id: Some("not-a-uuid".to_string()), ..Default::default() },
         ..Default::default()
     };
 
@@ -357,10 +346,8 @@ fn test_launch_timestamp_with_timezone() {
 
 #[test]
 fn test_invalid_permission_mode() {
-    let config = ScenarioConfig {
-        permission_mode: Some("invalid-mode".to_string()),
-        ..Default::default()
-    };
+    let config =
+        ScenarioConfig { permission_mode: Some("invalid-mode".to_string()), ..Default::default() };
 
     let result = Scenario::from_config(config);
     assert!(result.is_err());
@@ -372,18 +359,9 @@ fn test_invalid_permission_mode() {
 
 #[test]
 fn test_valid_permission_modes() {
-    for mode in [
-        "default",
-        "plan",
-        "bypass-permissions",
-        "accept-edits",
-        "dont-ask",
-        "delegate",
-    ] {
-        let config = ScenarioConfig {
-            permission_mode: Some(mode.to_string()),
-            ..Default::default()
-        };
+    for mode in ["default", "plan", "bypass-permissions", "accept-edits", "dont-ask", "delegate"] {
+        let config =
+            ScenarioConfig { permission_mode: Some(mode.to_string()), ..Default::default() };
 
         let result = Scenario::from_config(config);
         assert!(result.is_ok(), "Failed for mode: {}", mode);
@@ -432,25 +410,13 @@ fn test_turn_sequence_advances() {
 
     // Second prompt advances to turn 0
     let r2 = scenario.match_prompt("anything").unwrap();
-    assert_eq!(
-        r2,
-        MatchResult::Turn {
-            rule_index: 0,
-            turn_index: 0
-        }
-    );
+    assert_eq!(r2, MatchResult::Turn { rule_index: 0, turn_index: 0 });
     assert_eq!(scenario.get_say(&r2), Some("Step 2"));
     assert!(scenario.has_active_sequence());
 
     // Third prompt advances to turn 1 and completes
     let r3 = scenario.match_prompt("anything").unwrap();
-    assert_eq!(
-        r3,
-        MatchResult::Turn {
-            rule_index: 0,
-            turn_index: 1
-        }
-    );
+    assert_eq!(r3, MatchResult::Turn { rule_index: 0, turn_index: 1 });
     assert_eq!(scenario.get_say(&r3), Some("Step 3"));
     assert!(!scenario.has_active_sequence());
 }
@@ -518,9 +484,7 @@ fn test_turns_with_failures() {
             tools: Vec::new(),
             usage: None,
             delay_ms: None,
-            failure: Some(FailureSpec::AuthError {
-                message: "Session expired".to_string(),
-            }),
+            failure: Some(FailureSpec::AuthError { message: "Session expired".to_string() }),
         }],
     }]);
 
@@ -648,10 +612,7 @@ fn test_response_text_or_default_matched() {
 #[test]
 fn test_response_text_or_default_falls_back() {
     let config = ScenarioConfig {
-        default: Some(Response {
-            say: Some("Default!".to_string()),
-            ..Default::default()
-        }),
+        default: Some(Response { say: Some("Default!".to_string()), ..Default::default() }),
         responses: vec![ResponseRule {
             on: Pattern::Glob("specific".to_string()),
             say: Some("Matched!".to_string()),

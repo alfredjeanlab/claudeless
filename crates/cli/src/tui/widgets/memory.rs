@@ -25,11 +25,7 @@ pub enum MemorySource {
 impl MemorySource {
     /// All memory sources in display order
     pub fn all() -> &'static [MemorySource] {
-        &[
-            MemorySource::Project,
-            MemorySource::User,
-            MemorySource::Enterprise,
-        ]
+        &[MemorySource::Project, MemorySource::User, MemorySource::Enterprise]
     }
 
     /// Display name for the source type

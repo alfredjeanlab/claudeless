@@ -199,10 +199,7 @@ fn composite_routes_qualified_mcp_tool_to_mcp() {
     // It will fail because we don't have a live MCP connection, but it should
     // NOT return "Unknown built-in tool" error
     assert!(
-        !result
-            .text()
-            .unwrap_or_default()
-            .contains("Unknown built-in tool"),
+        !result.text().unwrap_or_default().contains("Unknown built-in tool"),
         "Should route to MCP, not builtin. Got: {:?}",
         result.text()
     );
@@ -253,10 +250,7 @@ fn canonicalize_path_arguments_preserves_non_path_fields() {
     });
     let result = canonicalize_path_arguments(input);
 
-    assert_eq!(
-        result.get("content").and_then(|v| v.as_str()),
-        Some("hello world")
-    );
+    assert_eq!(result.get("content").and_then(|v| v.as_str()), Some("hello world"));
     assert_eq!(result.get("other").and_then(|v| v.as_i64()), Some(123));
 }
 

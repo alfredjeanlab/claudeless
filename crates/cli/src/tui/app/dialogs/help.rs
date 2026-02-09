@@ -34,9 +34,7 @@ fn layout_help_general_lines(
 
     // Check if everything fits without overflow
     let desc_fits = description.width() <= width;
-    let shortcuts_fit = shortcuts
-        .iter()
-        .all(|(_, _, r)| COL3_START + r.width() <= width);
+    let shortcuts_fit = shortcuts.iter().all(|(_, _, r)| COL3_START + r.width() <= width);
 
     if desc_fits && shortcuts_fit {
         let mut lines = vec![description.to_string()];
@@ -113,10 +111,7 @@ fn layout_help_general_lines(
                 // Count non-space characters in the gap region
                 let gap_nonspace: Vec<(usize, char)> = (col2_text_end..COL3_START)
                     .filter_map(|col| {
-                        initial_chars
-                            .get(col)
-                            .filter(|ch| **ch != ' ')
-                            .map(|&ch| (col, ch))
+                        initial_chars.get(col).filter(|ch| **ch != ' ').map(|&ch| (col, ch))
                     })
                     .collect();
                 if gap_nonspace.len() >= 2 {
@@ -131,14 +126,9 @@ fn layout_help_general_lines(
     }
 
     // Find the last non-empty row
-    let last_row = screen
-        .iter()
-        .rposition(|row| row.iter().any(|&c| c != ' '))
-        .unwrap_or(0);
+    let last_row = screen.iter().rposition(|row| row.iter().any(|&c| c != ' ')).unwrap_or(0);
 
-    (0..=last_row)
-        .map(|i| screen[i].iter().collect::<String>().trim_end().to_string())
-        .collect()
+    (0..=last_row).map(|i| screen[i].iter().collect::<String>().trim_end().to_string()).collect()
 }
 
 /// Word-wrap text at a given width, breaking at word boundaries.
@@ -151,9 +141,7 @@ fn word_wrap_text(text: &str, width: usize) -> Vec<&str> {
     let mut last_space = None;
     let mut col = 0;
     for (i, ch) in text.char_indices() {
-        let ch_w = unicode_width::UnicodeWidthChar::width(ch)
-            .unwrap_or(0)
-            .max(1);
+        let ch_w = unicode_width::UnicodeWidthChar::width(ch).unwrap_or(0).max(1);
         if ch == ' ' {
             last_space = Some(i);
         }
@@ -231,9 +219,7 @@ fn write_text_at(screen: &mut [Vec<char>], row: usize, start_col: usize, text: &
             break;
         }
         screen[row][col] = ch;
-        col += unicode_width::UnicodeWidthChar::width(ch)
-            .unwrap_or(0)
-            .max(1);
+        col += unicode_width::UnicodeWidthChar::width(ch).unwrap_or(0).max(1);
     }
 }
 
@@ -270,9 +256,7 @@ fn write_word_wrapped(
             let word_start = i;
             let mut word_width = 0;
             while i < chars.len() && chars[i] != ' ' {
-                word_width += unicode_width::UnicodeWidthChar::width(chars[i])
-                    .unwrap_or(0)
-                    .max(1);
+                word_width += unicode_width::UnicodeWidthChar::width(chars[i]).unwrap_or(0).max(1);
                 i += 1;
             }
             let word = &chars[word_start..i];
@@ -296,9 +280,7 @@ fn write_word_wrapped(
             for &ch in word {
                 if col < width && row < screen.len() {
                     screen[row][col] = ch;
-                    col += unicode_width::UnicodeWidthChar::width(ch)
-                        .unwrap_or(0)
-                        .max(1);
+                    col += unicode_width::UnicodeWidthChar::width(ch).unwrap_or(0).max(1);
                 }
             }
         }
@@ -344,21 +326,9 @@ pub(crate) fn render_help_dialog(dialog: &HelpDialog, width: usize) -> AnyElemen
             // 3-column shortcuts table matching real Claude layout
             // Col 1: positions 2-23 (22 chars), Col 2: 24-55 (32 chars), Col 3: 56+
             let shortcuts: &[(&str, &str, &str)] = &[
-                (
-                    "! for bash mode",
-                    "double tap esc to clear input",
-                    "ctrl + z to suspend",
-                ),
-                (
-                    "/ for commands",
-                    "shift + tab to auto-accept",
-                    "meta + p to switch models",
-                ),
-                (
-                    "& for background",
-                    "ctrl + t to show todos",
-                    "ctrl + g to edit in $EDITOR",
-                ),
+                ("! for bash mode", "double tap esc to clear input", "ctrl + z to suspend"),
+                ("/ for commands", "shift + tab to auto-accept", "meta + p to switch models"),
+                ("& for background", "ctrl + t to show todos", "ctrl + g to edit in $EDITOR"),
                 ("", "shift + ⏎ for newline", "/keybindings to customize"),
             ];
             let description = "  Claude understands your codebase, makes edits with your permission, and executes commands — right from your terminal.";

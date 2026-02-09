@@ -57,10 +57,7 @@ impl Default for SessionsIndex {
 impl SessionsIndex {
     /// Create a new empty sessions index.
     pub fn new() -> Self {
-        Self {
-            version: 1,
-            entries: vec![],
-        }
+        Self { version: 1, entries: vec![] }
     }
 
     /// Save sessions index to file.
@@ -71,11 +68,7 @@ impl SessionsIndex {
 
     /// Add or update an entry in the index.
     pub fn add_or_update(&mut self, entry: SessionIndexEntry) {
-        if let Some(existing) = self
-            .entries
-            .iter_mut()
-            .find(|e| e.session_id == entry.session_id)
-        {
+        if let Some(existing) = self.entries.iter_mut().find(|e| e.session_id == entry.session_id) {
             // Update existing entry
             existing.file_mtime = entry.file_mtime;
             existing.message_count = entry.message_count;
@@ -110,13 +103,7 @@ pub fn get_git_branch() -> String {
         .args(["rev-parse", "--abbrev-ref", "HEAD"])
         .output()
         .ok()
-        .and_then(|o| {
-            if o.status.success() {
-                String::from_utf8(o.stdout).ok()
-            } else {
-                None
-            }
-        })
+        .and_then(|o| if o.status.success() { String::from_utf8(o.stdout).ok() } else { None })
         .map(|s| s.trim().to_string())
         .unwrap_or_default()
 }

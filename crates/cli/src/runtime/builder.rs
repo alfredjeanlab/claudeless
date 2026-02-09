@@ -53,12 +53,7 @@ impl RuntimeBuilder {
         // Note: --dangerously-skip-permissions without --allow-dangerously-skip-permissions
         // is handled by the TUI with a confirmation dialog (not a build error).
 
-        Ok(Self {
-            cli,
-            scenario: None,
-            mcp_manager: None,
-            settings: None,
-        })
+        Ok(Self { cli, scenario: None, mcp_manager: None, settings: None })
     }
 
     /// Load scenario from file path.
@@ -174,9 +169,7 @@ impl RuntimeBuilder {
                 .map(std::path::PathBuf::from)
                 .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
 
-            let index_path = state_dir
-                .project_dir(&working_dir)
-                .join("sessions-index.json");
+            let index_path = state_dir.project_dir(&working_dir).join("sessions-index.json");
 
             if index_path.exists() {
                 let index = SessionsIndex::load(&index_path)
@@ -241,12 +234,9 @@ impl RuntimeBuilder {
         // Load hook executor from settings, injecting common context fields
         let hook_executor = load_hooks(&settings).ok().map(|executor| {
             let cwd = Some(runtime_ctx.working_directory.to_string_lossy().into_owned());
-            let transcript_path = state_writer.as_ref().map(|sw| {
-                sw.read()
-                    .session_jsonl_path()
-                    .to_string_lossy()
-                    .into_owned()
-            });
+            let transcript_path = state_writer
+                .as_ref()
+                .map(|sw| sw.read().session_jsonl_path().to_string_lossy().into_owned());
             let permission_mode = serde_json::to_value(&runtime_ctx.permission_mode)
                 .ok()
                 .and_then(|v| v.as_str().map(String::from));
@@ -284,9 +274,7 @@ impl RuntimeBuilder {
 
         // Resolve timeouts
         let timeouts = ResolvedTimeouts::resolve(
-            self.scenario
-                .as_ref()
-                .and_then(|s| s.config().claude.timeouts.as_ref()),
+            self.scenario.as_ref().and_then(|s| s.config().claude.timeouts.as_ref()),
         );
 
         Ok(Runtime::new(
@@ -305,12 +293,7 @@ impl RuntimeBuilder {
     ///
     /// Convenience method that loads scenario and MCP from CLI.
     pub async fn build_from_cli(self) -> Result<Runtime, RuntimeBuildError> {
-        self.with_scenario_from_cli()?
-            .with_mcp_from_cli()
-            .await?
-            .with_settings()
-            .build()
-            .await
+        self.with_scenario_from_cli()?.with_mcp_from_cli().await?.with_settings().build().await
     }
 }
 

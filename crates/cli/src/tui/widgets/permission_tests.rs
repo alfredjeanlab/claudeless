@@ -9,18 +9,12 @@ use super::*;
 
 #[test]
 fn test_categorize_etc_reading() {
-    assert_eq!(
-        categorize_bash_command("cat /etc/passwd"),
-        BashCommandCategory::ReadingEtc
-    );
+    assert_eq!(categorize_bash_command("cat /etc/passwd"), BashCommandCategory::ReadingEtc);
     assert_eq!(
         categorize_bash_command("cat /etc/passwd | head -5"),
         BashCommandCategory::ReadingEtc
     );
-    assert_eq!(
-        categorize_bash_command("ls /etc/"),
-        BashCommandCategory::ReadingEtc
-    );
+    assert_eq!(categorize_bash_command("ls /etc/"), BashCommandCategory::ReadingEtc);
 }
 
 #[test]
@@ -135,28 +129,16 @@ fn test_option2_text_path_access() {
 
 #[test]
 fn test_selection_next_cycles() {
-    assert_eq!(
-        PermissionSelection::Yes.next(),
-        PermissionSelection::YesSession
-    );
-    assert_eq!(
-        PermissionSelection::YesSession.next(),
-        PermissionSelection::No
-    );
+    assert_eq!(PermissionSelection::Yes.next(), PermissionSelection::YesSession);
+    assert_eq!(PermissionSelection::YesSession.next(), PermissionSelection::No);
     assert_eq!(PermissionSelection::No.next(), PermissionSelection::Yes);
 }
 
 #[test]
 fn test_selection_prev_cycles() {
     assert_eq!(PermissionSelection::Yes.prev(), PermissionSelection::No);
-    assert_eq!(
-        PermissionSelection::YesSession.prev(),
-        PermissionSelection::Yes
-    );
-    assert_eq!(
-        PermissionSelection::No.prev(),
-        PermissionSelection::YesSession
-    );
+    assert_eq!(PermissionSelection::YesSession.prev(), PermissionSelection::Yes);
+    assert_eq!(PermissionSelection::No.prev(), PermissionSelection::YesSession);
 }
 
 #[test]
@@ -263,27 +245,18 @@ fn test_edit_dialog_render() {
 #[test]
 fn test_diff_line_rendering() {
     // Test removed line
-    let removed = DiffLine {
-        line_num: Some(1),
-        kind: DiffKind::Removed,
-        content: "old line".to_string(),
-    };
+    let removed =
+        DiffLine { line_num: Some(1), kind: DiffKind::Removed, content: "old line".to_string() };
     assert_eq!(render_diff_line(&removed), " 1 -old line");
 
     // Test added line
-    let added = DiffLine {
-        line_num: Some(2),
-        kind: DiffKind::Added,
-        content: "new line".to_string(),
-    };
+    let added =
+        DiffLine { line_num: Some(2), kind: DiffKind::Added, content: "new line".to_string() };
     assert_eq!(render_diff_line(&added), " 2 +new line");
 
     // Test context line
-    let context = DiffLine {
-        line_num: Some(3),
-        kind: DiffKind::Context,
-        content: "unchanged".to_string(),
-    };
+    let context =
+        DiffLine { line_num: Some(3), kind: DiffKind::Context, content: "unchanged".to_string() };
     assert_eq!(render_diff_line(&context), " 3  unchanged");
 
     // Test NoNewline line with number
@@ -293,10 +266,7 @@ fn test_diff_line_rendering() {
         content: "No newline at end of file".to_string(),
     };
     // Format: " {line_num} {prefix}{content}" with prefix "  " (two spaces)
-    assert_eq!(
-        render_diff_line(&no_newline),
-        " 1   No newline at end of file"
-    );
+    assert_eq!(render_diff_line(&no_newline), " 1   No newline at end of file");
 }
 
 // =========================================================================
@@ -324,11 +294,7 @@ fn test_write_dialog_render() {
 fn test_write_dialog_multiple_lines() {
     let dialog = RichPermissionDialog::new(PermissionType::Write {
         file_path: "test.txt".to_string(),
-        content_lines: vec![
-            "Line 1".to_string(),
-            "Line 2".to_string(),
-            "Line 3".to_string(),
-        ],
+        content_lines: vec!["Line 1".to_string(), "Line 2".to_string(), "Line 3".to_string()],
     });
 
     let output = dialog.render(120);
@@ -389,10 +355,7 @@ fn test_session_key_bash() {
         command: "cat /etc/passwd".to_string(),
         description: None,
     });
-    assert!(matches!(
-        dialog.session_key(),
-        SessionPermissionKey::BashPrefix(_)
-    ));
+    assert!(matches!(dialog.session_key(), SessionPermissionKey::BashPrefix(_)));
     if let SessionPermissionKey::BashPrefix(prefix) = dialog.session_key() {
         assert_eq!(prefix, "cat /etc/");
     }

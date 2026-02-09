@@ -315,11 +315,7 @@ fn test_tui_exit_command_exits_with_farewell() {
         || capture.contains("See ya!")
         || capture.contains("Catch you later!");
 
-    assert!(
-        has_farewell,
-        "/exit should display a farewell message.\nCapture:\n{}",
-        capture
-    );
+    assert!(has_farewell, "/exit should display a farewell message.\nCapture:\n{}", capture);
 
     // Should have exited to shell
     assert!(

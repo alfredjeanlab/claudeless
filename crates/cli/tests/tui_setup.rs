@@ -57,11 +57,7 @@ fn test_tui_setup_theme_selection_dark_mode_default() {
     let capture = tui.capture();
 
     // Verify theme options are shown
-    assert!(
-        capture.contains("Dark mode"),
-        "Should show Dark mode option.\nCapture:\n{}",
-        capture
-    );
+    assert!(capture.contains("Dark mode"), "Should show Dark mode option.\nCapture:\n{}", capture);
     assert!(
         capture.contains("Light mode"),
         "Should show Light mode option.\nCapture:\n{}",

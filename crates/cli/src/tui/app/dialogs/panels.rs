@@ -54,13 +54,7 @@ fn render_hooks_list(dialog: &HooksDialog) -> AnyElement<'static> {
                 " "
             };
 
-            format!(
-                " {} {}.  {} - {}",
-                prefix,
-                i + 1,
-                hook.name(),
-                hook.description()
-            )
+            format!(" {} {}.  {} - {}", prefix, i + 1, hook.name(), hook.description())
         })
         .collect();
 
@@ -264,10 +258,7 @@ pub(crate) fn render_setup_wizard(state: &SetupState, width: usize) -> AnyElemen
 
             // Theme options
             lines.extend(
-                SelectionList::new(THEME_LABELS)
-                    .selected(state.selected_theme)
-                    .current(0)
-                    .lines(),
+                SelectionList::new(THEME_LABELS).selected(state.selected_theme).current(0).lines(),
             );
             lines.push(String::new());
 
@@ -305,10 +296,7 @@ pub(crate) fn render_setup_wizard(state: &SetupState, width: usize) -> AnyElemen
                 "Anthropic Console account \u{00B7} API usage billing",
                 "3rd-party platform \u{00B7} Amazon Bedrock, Microsoft Foundry, or Vertex AI",
             ];
-            for line in SelectionList::new(login_labels)
-                .selected(state.selected_login)
-                .lines()
-            {
+            for line in SelectionList::new(login_labels).selected(state.selected_login).lines() {
                 lines.push(line);
                 lines.push(String::new());
             }

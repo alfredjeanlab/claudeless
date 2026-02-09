@@ -46,11 +46,7 @@ impl TuiAppState {
         inner.input.undo_stack.clear();
 
         // Add to history (with shell prefix if applicable)
-        let history_entry = if was_shell_mode {
-            format!("! {}", input)
-        } else {
-            input.clone()
-        };
+        let history_entry = if was_shell_mode { format!("! {}", input) } else { input.clone() };
         if !history_entry.is_empty() {
             inner.input.history.push(history_entry);
         }
@@ -82,10 +78,7 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
         if !inner.display.conversation_display.is_empty() {
             inner.display.conversation_display.push_str("\n\n");
         }
-        inner
-            .display
-            .conversation_display
-            .push_str(&format!("⏺ {}", response));
+        inner.display.conversation_display.push_str(&format!("⏺ {}", response));
     }
     if inner.display.is_command_output && !inner.display.response_content.is_empty() {
         let formatted: String = inner
@@ -148,11 +141,8 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
         }
         "/fork" => {
             // Check if there's a conversation to fork
-            let has_conversation = inner
-                .sessions
-                .get_current()
-                .map(|s| !s.turns.is_empty())
-                .unwrap_or(false);
+            let has_conversation =
+                inner.sessions.get_current().map(|s| !s.turns.is_empty()).unwrap_or(false);
 
             if has_conversation {
                 // TODO: Implement actual fork functionality
@@ -166,11 +156,8 @@ pub(super) fn handle_command_inner(inner: &mut TuiAppStateInner, input: &str) {
         }
         "/help" | "/?" => {
             inner.mode = AppMode::HelpDialog;
-            let version = inner
-                .config
-                .claude_version
-                .clone()
-                .unwrap_or_else(|| "2.1.12".to_string());
+            let version =
+                inner.config.claude_version.clone().unwrap_or_else(|| "2.1.12".to_string());
             inner.dialog = DialogState::Help(HelpDialog::new(version));
         }
         "/context" => {

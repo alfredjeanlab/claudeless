@@ -33,10 +33,7 @@ impl ContextUsage {
 
     /// Create context usage with a specific model name
     pub fn new_with_model(model_name: String) -> Self {
-        Self {
-            model_name,
-            ..Self::new()
-        }
+        Self { model_name, ..Self::new() }
     }
 
     /// Total used tokens (system prompt + system tools + messages)
@@ -94,9 +91,7 @@ impl ContextUsage {
         let autocompact_cells = ((self.autocompact_buffer_tokens as f64 / self.total_tokens as f64)
             * 100.0)
             .ceil() as usize;
-        let free_cells = 100_usize
-            .saturating_sub(used_cells)
-            .saturating_sub(autocompact_cells);
+        let free_cells = 100_usize.saturating_sub(used_cells).saturating_sub(autocompact_cells);
 
         let mut cells = Vec::with_capacity(100);
         if used_cells > 1 {
@@ -108,10 +103,7 @@ impl ContextUsage {
         cells.extend(std::iter::repeat_n('\u{26F6}', free_cells));
         cells.extend(std::iter::repeat_n('\u{26DD}', autocompact_cells));
         cells.truncate(100);
-        cells.extend(std::iter::repeat_n(
-            '\u{26F6}',
-            100_usize.saturating_sub(cells.len()),
-        ));
+        cells.extend(std::iter::repeat_n('\u{26F6}', 100_usize.saturating_sub(cells.len())));
         cells
     }
 }

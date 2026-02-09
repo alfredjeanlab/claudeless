@@ -35,20 +35,14 @@ pub struct StateDirectory {
 impl StateDirectory {
     /// Create a new state directory at the given root.
     pub fn new(root: impl Into<PathBuf>) -> Self {
-        Self {
-            root: root.into(),
-            initialized: false,
-        }
+        Self { root: root.into(), initialized: false }
     }
 
     /// Create a state directory in a temporary location.
     pub fn temp() -> std::io::Result<Self> {
         let temp = tempfile::tempdir()?;
         let path = temp.keep();
-        Ok(Self {
-            root: path,
-            initialized: false,
-        })
+        Ok(Self { root: path, initialized: false })
     }
 
     /// Resolve state directory from environment or default to a temp directory.

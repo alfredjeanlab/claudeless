@@ -22,10 +22,7 @@ impl StreamingResponse {
         // Calculate token count based on text length (rough: 4 chars per token)
         let tokens_streamed = (text.len() / 4).max(1) as u32;
 
-        Self {
-            full_text: text,
-            tokens_streamed,
-        }
+        Self { full_text: text, tokens_streamed }
     }
 
     /// Get the number of tokens streamed

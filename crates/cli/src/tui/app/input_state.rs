@@ -184,16 +184,9 @@ impl InputState {
 
         let before = &self.buffer[..self.cursor_pos];
         let trimmed = before.trim_end();
-        let word_start = trimmed
-            .rfind(char::is_whitespace)
-            .map(|i| i + 1)
-            .unwrap_or(0);
+        let word_start = trimmed.rfind(char::is_whitespace).map(|i| i + 1).unwrap_or(0);
 
-        self.buffer = format!(
-            "{}{}",
-            &self.buffer[..word_start],
-            &self.buffer[self.cursor_pos..]
-        );
+        self.buffer = format!("{}{}", &self.buffer[..word_start], &self.buffer[self.cursor_pos..]);
         self.cursor_pos = word_start;
     }
 

@@ -50,10 +50,7 @@ impl TuiAppState {
         // Check if bypass mode - execute directly without permission dialog
         if inner.permission_mode.allows_all() {
             // Show bash output directly
-            inner
-                .display
-                .conversation_display
-                .push_str(&format!("\n\n⏺ Bash({})", command));
+            inner.display.conversation_display.push_str(&format!("\n\n⏺ Bash({})", command));
 
             // Use shared execute path for consistency (hooks, JSONL recording, etc.)
             drop(inner);
@@ -95,10 +92,7 @@ impl TuiAppState {
             inner.display.spinner_verb = spinner::random_verb().to_string();
 
             // Record the turn
-            inner
-                .sessions
-                .current_session()
-                .add_turn(prompt.clone(), String::new());
+            inner.sessions.current_session().add_turn(prompt.clone(), String::new());
 
             // Drop lock before execution so the render thread can see Thinking mode
         }
@@ -361,8 +355,7 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> TurnA
                 .as_deref()
                 .and_then(|r| {
                     // Try to parse as "Plan saved as X.md" to extract path
-                    r.strip_prefix("Plan saved as ")
-                        .map(|name| format!("~/.claude/plans/{}", name))
+                    r.strip_prefix("Plan saved as ").map(|name| format!("~/.claude/plans/{}", name))
                 })
                 .unwrap_or_else(|| "~/.claude/plans/plan.md".to_string());
 
@@ -464,10 +457,7 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> TurnA
             }
             // Format the pending tool as completed (using its mock result if available)
             let pending_result = pending.tool_call.result.as_deref();
-            post_parts.push(format_completed_tool_display(
-                &pending.tool_call,
-                pending_result,
-            ));
+            post_parts.push(format_completed_tool_display(&pending.tool_call, pending_result));
             if !response_text.is_empty() {
                 post_parts.push(wrap_response_paragraph(
                     response_text,
@@ -496,10 +486,7 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> TurnA
         result.response_text().to_string()
     };
     if !response_text.is_empty() {
-        parts.push(wrap_response_paragraph(
-            &response_text,
-            inner.display.terminal_width as usize,
-        ));
+        parts.push(wrap_response_paragraph(&response_text, inner.display.terminal_width as usize));
     }
 
     // Build display
@@ -535,10 +522,7 @@ fn append_previous_response(inner: &mut TuiAppStateInner) {
         if !inner.display.conversation_display.is_empty() {
             inner.display.conversation_display.push_str("\n\n");
         }
-        inner
-            .display
-            .conversation_display
-            .push_str(&format!("⏺ {}", response));
+        inner.display.conversation_display.push_str(&format!("⏺ {}", response));
     }
 }
 
@@ -547,10 +531,7 @@ fn append_to_conversation(inner: &mut TuiAppStateInner, prefix: &str, content: &
     if !inner.display.conversation_display.is_empty() {
         inner.display.conversation_display.push_str("\n\n");
     }
-    inner
-        .display
-        .conversation_display
-        .push_str(&format!("{} {}", prefix, content));
+    inner.display.conversation_display.push_str(&format!("{} {}", prefix, content));
 }
 
 /// Set up response display with streaming simulation.

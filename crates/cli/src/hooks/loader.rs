@@ -55,10 +55,8 @@ pub fn load_hooks(settings: &ClaudeSettings) -> std::io::Result<HookExecutor> {
 
 /// Create a temporary script file for a hook command.
 fn create_hook_script(command: &str) -> std::io::Result<std::path::PathBuf> {
-    let mut temp_file = tempfile::Builder::new()
-        .prefix("claudeless-hook-")
-        .suffix(".sh")
-        .tempfile()?;
+    let mut temp_file =
+        tempfile::Builder::new().prefix("claudeless-hook-").suffix(".sh").tempfile()?;
 
     writeln!(temp_file, "#!/bin/bash")?;
     writeln!(temp_file, "{}", command)?;

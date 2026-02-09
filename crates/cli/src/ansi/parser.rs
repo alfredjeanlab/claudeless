@@ -115,18 +115,12 @@ pub struct AnsiSpan {
 impl AnsiSpan {
     /// Create a new span with no sequences.
     pub fn plain(text: impl Into<String>) -> Self {
-        AnsiSpan {
-            text: text.into(),
-            sequences: Vec::new(),
-        }
+        AnsiSpan { text: text.into(), sequences: Vec::new() }
     }
 
     /// Create a new span with sequences.
     pub fn styled(text: impl Into<String>, sequences: Vec<AnsiSequence>) -> Self {
-        AnsiSpan {
-            text: text.into(),
-            sequences,
-        }
+        AnsiSpan { text: text.into(), sequences }
     }
 }
 
@@ -138,11 +132,7 @@ pub fn parse_ansi(input: &str) -> Vec<AnsiSpan> {
     let Some(regex) = ansi_regex() else {
         // Regex compilation failed (unreachable for valid patterns)
         // Return input as plain text
-        return if input.is_empty() {
-            Vec::new()
-        } else {
-            vec![AnsiSpan::plain(input)]
-        };
+        return if input.is_empty() { Vec::new() } else { vec![AnsiSpan::plain(input)] };
     };
 
     let mut spans = Vec::new();
@@ -173,10 +163,7 @@ pub fn parse_ansi(input: &str) -> Vec<AnsiSpan> {
     // Remaining text after the last escape sequence
     let remaining = &input[last_end..];
     if !remaining.is_empty() || !current_sequences.is_empty() {
-        spans.push(AnsiSpan {
-            text: remaining.to_string(),
-            sequences: current_sequences,
-        });
+        spans.push(AnsiSpan { text: remaining.to_string(), sequences: current_sequences });
     }
 
     // Ensure we return at least one span for empty or plain input

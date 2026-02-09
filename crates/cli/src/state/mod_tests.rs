@@ -32,9 +32,7 @@ fn test_state_writer_paths() {
 
     // Todo path should be {sessionId}-agent-{sessionId}.json
     let todo_path = writer.todo_path();
-    assert!(todo_path
-        .to_string_lossy()
-        .contains("abc123-agent-abc123.json"));
+    assert!(todo_path.to_string_lossy().contains("abc123-agent-abc123.json"));
 
     // Session JSONL path should end with {sessionId}.jsonl
     let jsonl_path = writer.session_jsonl_path();
@@ -151,9 +149,7 @@ fn test_state_writer_record_assistant_response_final_sets_stop_reason() {
     .unwrap();
 
     let user_uuid = writer.record_user_message("Hello").unwrap();
-    writer
-        .record_assistant_response_final(&user_uuid, "Done.")
-        .unwrap();
+    writer.record_assistant_response_final(&user_uuid, "Done.").unwrap();
 
     // Read JSONL and verify stop_reason
     let content = std::fs::read_to_string(writer.session_jsonl_path()).unwrap();
@@ -255,9 +251,7 @@ fn test_state_writer_record_error() {
     .unwrap();
 
     // Record an error
-    writer
-        .record_error("Rate limited. Retry after 60 seconds.", "rate_limit", None)
-        .unwrap();
+    writer.record_error("Rate limited. Retry after 60 seconds.", "rate_limit", None).unwrap();
 
     // Verify JSONL file exists and contains error
     let jsonl_path = writer.session_jsonl_path();
@@ -288,9 +282,7 @@ fn test_state_writer_record_error_unknown_class() {
     .unwrap();
 
     // Record a network error with "unknown" class
-    writer
-        .record_error("Network error: Connection refused", "unknown", None)
-        .unwrap();
+    writer.record_error("Network error: Connection refused", "unknown", None).unwrap();
 
     // Verify JSONL file content
     let jsonl_path = writer.session_jsonl_path();

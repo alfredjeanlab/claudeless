@@ -69,12 +69,7 @@ pub struct JsonRpcRequest {
 impl JsonRpcRequest {
     /// Create a new JSON-RPC request.
     pub fn new(id: u64, method: impl Into<String>, params: Option<serde_json::Value>) -> Self {
-        Self {
-            jsonrpc: "2.0",
-            id,
-            method: method.into(),
-            params,
-        }
+        Self { jsonrpc: "2.0", id, method: method.into(), params }
     }
 }
 
@@ -132,11 +127,7 @@ pub struct JsonRpcNotification {
 impl JsonRpcNotification {
     /// Create a new JSON-RPC notification.
     pub fn new(method: impl Into<String>, params: Option<serde_json::Value>) -> Self {
-        Self {
-            jsonrpc: "2.0",
-            method: method.into(),
-            params,
-        }
+        Self { jsonrpc: "2.0", method: method.into(), params }
     }
 }
 
@@ -283,19 +274,11 @@ impl StdioTransport {
         cmd.stderr(std::process::Stdio::inherit());
 
         // Spawn the process
-        let mut child = cmd
-            .spawn()
-            .map_err(|e| TransportError::Spawn(e.to_string()))?;
+        let mut child = cmd.spawn().map_err(|e| TransportError::Spawn(e.to_string()))?;
 
         // Take the stdio handles
-        let stdin = child
-            .stdin
-            .take()
-            .ok_or(TransportError::StdinNotAvailable)?;
-        let stdout = child
-            .stdout
-            .take()
-            .ok_or(TransportError::StdoutNotAvailable)?;
+        let stdin = child.stdin.take().ok_or(TransportError::StdinNotAvailable)?;
+        let stdout = child.stdout.take().ok_or(TransportError::StdoutNotAvailable)?;
 
         Ok(Self {
             child: Mutex::new(Some(child)),
@@ -431,10 +414,7 @@ impl StdioTransport {
 
         // Verify response ID matches
         if response.id != id {
-            return Err(TransportError::IdMismatch {
-                request: id,
-                response: response.id,
-            });
+            return Err(TransportError::IdMismatch { request: id, response: response.id });
         }
 
         // Extract result or error

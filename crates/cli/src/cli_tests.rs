@@ -64,14 +64,8 @@ fn test_parse_simulator_flags() {
         "test",
     ])
     .unwrap();
-    assert_eq!(
-        cli.simulator.scenario,
-        Some("/path/to/scenario.toml".to_string())
-    );
-    assert!(matches!(
-        cli.simulator.failure,
-        Some(FailureMode::RateLimit)
-    ));
+    assert_eq!(cli.simulator.scenario, Some("/path/to/scenario.toml".to_string()));
+    assert!(matches!(cli.simulator.failure, Some(FailureMode::RateLimit)));
 }
 
 #[test]
@@ -102,10 +96,7 @@ fn test_parse_system_prompt() {
         "test",
     ])
     .unwrap();
-    assert_eq!(
-        cli.system_prompt,
-        Some("You are a helpful assistant".to_string())
-    );
+    assert_eq!(cli.system_prompt, Some("You are a helpful assistant".to_string()));
 }
 
 #[test]
@@ -137,10 +128,7 @@ fn test_parse_session_id() {
         "test",
     ])
     .unwrap();
-    assert_eq!(
-        cli.session.session_id,
-        Some("01234567-89ab-cdef-0123-456789abcdef".to_string())
-    );
+    assert_eq!(cli.session.session_id, Some("01234567-89ab-cdef-0123-456789abcdef".to_string()));
 }
 
 #[test]
@@ -178,19 +166,13 @@ fn test_parse_max_budget_usd() {
 #[test]
 fn no_session_persistence_requires_print_mode() {
     let cli = Cli::try_parse_from(["claude", "--no-session-persistence", "prompt"]).unwrap();
-    assert!(cli
-        .session
-        .validate_no_session_persistence(cli.print)
-        .is_err());
+    assert!(cli.session.validate_no_session_persistence(cli.print).is_err());
 }
 
 #[test]
 fn no_session_persistence_with_print_mode_succeeds() {
     let cli = Cli::try_parse_from(["claude", "-p", "--no-session-persistence", "prompt"]).unwrap();
-    assert!(cli
-        .session
-        .validate_no_session_persistence(cli.print)
-        .is_ok());
+    assert!(cli.session.validate_no_session_persistence(cli.print).is_ok());
 }
 
 #[test]

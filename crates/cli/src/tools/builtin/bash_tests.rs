@@ -10,10 +10,7 @@ use yare::parameterized;
 
 #[test]
 fn test_extract_command() {
-    assert_eq!(
-        extract_str(&json!({ "command": "ls -la" }), "command"),
-        Some("ls -la")
-    );
+    assert_eq!(extract_str(&json!({ "command": "ls -la" }), "command"), Some("ls -la"));
     assert_eq!(extract_str(&json!({}), "command"), None);
 }
 

@@ -126,9 +126,7 @@ impl DisplayState {
     /// Used to detect Escape-then-letter sequences sent by terminals for Alt/Meta keys in PTY
     /// environments where crossterm cannot distinguish Alt+key from two separate events.
     pub fn is_escape_sequence(&self, now: u64) -> bool {
-        self.escape_pressed_at
-            .map(|t| now.saturating_sub(t) < 100)
-            .unwrap_or(false)
+        self.escape_pressed_at.map(|t| now.saturating_sub(t) < 100).unwrap_or(false)
     }
 
     /// Clear the escape sequence timestamp (call after consuming the sequence).

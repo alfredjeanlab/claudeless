@@ -35,14 +35,8 @@ impl TuiAppState {
         let mut inner = self.inner.lock();
 
         // Check current state
-        let on_free_text = inner
-            .dialog
-            .as_elicitation()
-            .is_some_and(|s| s.is_on_free_text());
-        let on_submit_tab = inner
-            .dialog
-            .as_elicitation()
-            .is_some_and(|s| s.is_on_submit_tab());
+        let on_free_text = inner.dialog.as_elicitation().is_some_and(|s| s.is_on_free_text());
+        let on_submit_tab = inner.dialog.as_elicitation().is_some_and(|s| s.is_on_submit_tab());
 
         match key.code {
             KeyCode::Up => {
@@ -91,10 +85,8 @@ impl TuiAppState {
                     let num = (c as u8 - b'0') as usize;
                     state.select_by_number(num);
                     // Auto-advance for single-select; multi-select stays
-                    let is_multi = state
-                        .questions
-                        .get(state.current_question)
-                        .is_some_and(|q| q.multi_select);
+                    let is_multi =
+                        state.questions.get(state.current_question).is_some_and(|q| q.multi_select);
                     if !is_multi {
                         // Single question: select and immediately submit (no review page)
                         if state.questions.len() == 1 {
@@ -129,11 +121,8 @@ impl TuiAppState {
             KeyCode::Enter => {
                 if on_submit_tab {
                     // On submit tab: cursor 0 = submit, cursor 1 = cancel
-                    let submit_cursor = inner
-                        .dialog
-                        .as_elicitation()
-                        .map(|s| s.submit_cursor)
-                        .unwrap_or(0);
+                    let submit_cursor =
+                        inner.dialog.as_elicitation().map(|s| s.submit_cursor).unwrap_or(0);
                     drop(inner);
                     if submit_cursor == 0 {
                         self.confirm_elicitation();
@@ -229,10 +218,7 @@ impl TuiAppState {
         let mut inner = self.inner.lock();
 
         // Check if cursor is on the free-text row
-        let on_free_text = inner
-            .dialog
-            .as_plan_approval()
-            .is_some_and(|s| s.is_on_free_text());
+        let on_free_text = inner.dialog.as_plan_approval().is_some_and(|s| s.is_on_free_text());
 
         match key.code {
             KeyCode::Up => {

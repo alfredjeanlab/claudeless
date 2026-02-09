@@ -152,10 +152,7 @@ impl HookMessage {
         Self {
             event,
             session_id: session_id.into(),
-            payload: HookPayload::Session {
-                project_path,
-                source,
-            },
+            payload: HookPayload::Session { project_path, source },
         }
     }
 
@@ -164,9 +161,7 @@ impl HookMessage {
         Self {
             event: HookEvent::SessionEnd,
             session_id: session_id.into(),
-            payload: HookPayload::SessionEnd {
-                reason: reason.into(),
-            },
+            payload: HookPayload::SessionEnd { reason: reason.into() },
         }
     }
 
@@ -175,9 +170,7 @@ impl HookMessage {
         Self {
             event: HookEvent::PromptSubmit,
             session_id: session_id.into(),
-            payload: HookPayload::Prompt {
-                prompt: prompt.into(),
-            },
+            payload: HookPayload::Prompt { prompt: prompt.into() },
         }
     }
 
@@ -190,10 +183,7 @@ impl HookMessage {
         Self {
             event: HookEvent::PreCompact,
             session_id: session_id.into(),
-            payload: HookPayload::Compaction {
-                trigger,
-                custom_instructions,
-            },
+            payload: HookPayload::Compaction { trigger, custom_instructions },
         }
     }
 
@@ -219,31 +209,17 @@ impl HookMessage {
             "hook_event_name".to_string(),
             serde_json::Value::String(self.event.wire_name().to_string()),
         );
-        obj.insert(
-            "session_id".to_string(),
-            serde_json::Value::String(self.session_id.clone()),
-        );
+        obj.insert("session_id".to_string(), serde_json::Value::String(self.session_id.clone()));
 
         match &self.payload {
-            HookPayload::ToolExecution {
-                tool_name,
-                tool_input,
-                tool_response,
-                tool_use_id,
-            } => {
-                obj.insert(
-                    "tool_name".to_string(),
-                    serde_json::Value::String(tool_name.clone()),
-                );
+            HookPayload::ToolExecution { tool_name, tool_input, tool_response, tool_use_id } => {
+                obj.insert("tool_name".to_string(), serde_json::Value::String(tool_name.clone()));
                 obj.insert("tool_input".to_string(), tool_input.clone());
                 if let Some(response) = tool_response {
                     obj.insert("tool_response".to_string(), response.clone());
                 }
                 if let Some(id) = tool_use_id {
-                    obj.insert(
-                        "tool_use_id".to_string(),
-                        serde_json::Value::String(id.clone()),
-                    );
+                    obj.insert("tool_use_id".to_string(), serde_json::Value::String(id.clone()));
                 }
             }
             HookPayload::ToolExecutionFailure {
@@ -253,91 +229,44 @@ impl HookMessage {
                 error,
                 is_interrupt,
             } => {
-                obj.insert(
-                    "tool_name".to_string(),
-                    serde_json::Value::String(tool_name.clone()),
-                );
+                obj.insert("tool_name".to_string(), serde_json::Value::String(tool_name.clone()));
                 obj.insert("tool_input".to_string(), tool_input.clone());
                 if let Some(id) = tool_use_id {
-                    obj.insert(
-                        "tool_use_id".to_string(),
-                        serde_json::Value::String(id.clone()),
-                    );
+                    obj.insert("tool_use_id".to_string(), serde_json::Value::String(id.clone()));
                 }
-                obj.insert(
-                    "error".to_string(),
-                    serde_json::Value::String(error.clone()),
-                );
+                obj.insert("error".to_string(), serde_json::Value::String(error.clone()));
                 if let Some(interrupt) = is_interrupt {
-                    obj.insert(
-                        "is_interrupt".to_string(),
-                        serde_json::Value::Bool(*interrupt),
-                    );
+                    obj.insert("is_interrupt".to_string(), serde_json::Value::Bool(*interrupt));
                 }
             }
-            HookPayload::Notification {
-                notification_type,
-                title,
-                message,
-            } => {
+            HookPayload::Notification { notification_type, title, message } => {
                 obj.insert(
                     "notification_type".to_string(),
                     serde_json::Value::String(notification_type.clone()),
                 );
-                obj.insert(
-                    "title".to_string(),
-                    serde_json::Value::String(title.clone()),
-                );
-                obj.insert(
-                    "message".to_string(),
-                    serde_json::Value::String(message.clone()),
-                );
+                obj.insert("title".to_string(), serde_json::Value::String(title.clone()));
+                obj.insert("message".to_string(), serde_json::Value::String(message.clone()));
             }
-            HookPayload::Permission {
-                tool_name,
-                action,
-                context,
-            } => {
-                obj.insert(
-                    "tool_name".to_string(),
-                    serde_json::Value::String(tool_name.clone()),
-                );
-                obj.insert(
-                    "action".to_string(),
-                    serde_json::Value::String(action.clone()),
-                );
+            HookPayload::Permission { tool_name, action, context } => {
+                obj.insert("tool_name".to_string(), serde_json::Value::String(tool_name.clone()));
+                obj.insert("action".to_string(), serde_json::Value::String(action.clone()));
                 obj.insert("tool_input".to_string(), context.clone());
             }
-            HookPayload::Session {
-                project_path,
-                source,
-            } => {
+            HookPayload::Session { project_path, source } => {
                 if let Some(path) = project_path {
-                    obj.insert(
-                        "project_path".to_string(),
-                        serde_json::Value::String(path.clone()),
-                    );
+                    obj.insert("project_path".to_string(), serde_json::Value::String(path.clone()));
                 }
                 if let Some(src) = source {
                     obj.insert("source".to_string(), serde_json::Value::String(src.clone()));
                 }
             }
             HookPayload::SessionEnd { reason } => {
-                obj.insert(
-                    "reason".to_string(),
-                    serde_json::Value::String(reason.clone()),
-                );
+                obj.insert("reason".to_string(), serde_json::Value::String(reason.clone()));
             }
             HookPayload::Prompt { prompt } => {
-                obj.insert(
-                    "prompt".to_string(),
-                    serde_json::Value::String(prompt.clone()),
-                );
+                obj.insert("prompt".to_string(), serde_json::Value::String(prompt.clone()));
             }
-            HookPayload::Compaction {
-                trigger,
-                custom_instructions,
-            } => {
+            HookPayload::Compaction { trigger, custom_instructions } => {
                 obj.insert(
                     "trigger".to_string(),
                     serde_json::to_value(trigger).unwrap_or_default(),
@@ -387,18 +316,10 @@ pub enum HookPayload {
     },
 
     /// Notification content
-    Notification {
-        notification_type: String,
-        title: String,
-        message: String,
-    },
+    Notification { notification_type: String, title: String, message: String },
 
     /// Permission request
-    Permission {
-        tool_name: String,
-        action: String,
-        context: serde_json::Value,
-    },
+    Permission { tool_name: String, action: String, context: serde_json::Value },
 
     /// Session lifecycle
     Session {
@@ -440,9 +361,7 @@ impl HookPayload {
     /// - `None` for Prompt, Compaction, Stop (no matcher filtering)
     pub fn matcher_subject(&self) -> Option<&str> {
         match self {
-            HookPayload::Notification {
-                notification_type, ..
-            } => Some(notification_type.as_str()),
+            HookPayload::Notification { notification_type, .. } => Some(notification_type.as_str()),
             HookPayload::ToolExecution { tool_name, .. } => Some(tool_name.as_str()),
             HookPayload::ToolExecutionFailure { tool_name, .. } => Some(tool_name.as_str()),
             HookPayload::Permission { tool_name, .. } => Some(tool_name.as_str()),
@@ -501,22 +420,12 @@ fn default_proceed() -> bool {
 impl HookResponse {
     /// Create a successful proceed response
     pub fn proceed() -> Self {
-        Self {
-            proceed: true,
-            modified_payload: None,
-            error: None,
-            data: None,
-        }
+        Self { proceed: true, modified_payload: None, error: None, data: None }
     }
 
     /// Create a blocking response
     pub fn block(reason: impl Into<String>) -> Self {
-        Self {
-            proceed: false,
-            modified_payload: None,
-            error: Some(reason.into()),
-            data: None,
-        }
+        Self { proceed: false, modified_payload: None, error: Some(reason.into()), data: None }
     }
 
     /// Create a response with modified payload
@@ -567,18 +476,12 @@ impl StopHookResponse {
 
     /// Create an allow response
     pub fn allow() -> Self {
-        Self {
-            decision: "allow".to_string(),
-            reason: None,
-        }
+        Self { decision: "allow".to_string(), reason: None }
     }
 
     /// Create a block response with reason
     pub fn block(reason: impl Into<String>) -> Self {
-        Self {
-            decision: "block".to_string(),
-            reason: Some(reason.into()),
-        }
+        Self { decision: "block".to_string(), reason: Some(reason.into()) }
     }
 }
 

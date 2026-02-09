@@ -115,22 +115,13 @@ mod mcp_read_scenario {
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         // Should contain response text
-        assert!(
-            stdout.contains("I'll read the file for you"),
-            "Should contain response text"
-        );
+        assert!(stdout.contains("I'll read the file for you"), "Should contain response text");
 
         // Should contain tool result with canned content
-        assert!(
-            stdout.contains("hello world"),
-            "Should contain canned file content 'hello world'"
-        );
+        assert!(stdout.contains("hello world"), "Should contain canned file content 'hello world'");
 
         // Should have tool_result type
-        assert!(
-            stdout.contains("tool_result"),
-            "Should contain tool_result event"
-        );
+        assert!(stdout.contains("tool_result"), "Should contain tool_result event");
     }
 
     /// Test: mcp-test-read.toml response text is correct.
@@ -182,16 +173,10 @@ mod mcp_write_scenario {
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         // Should contain response text
-        assert!(
-            stdout.contains("I'll create that file for you"),
-            "Should contain response text"
-        );
+        assert!(stdout.contains("I'll create that file for you"), "Should contain response text");
 
         // Should contain tool result with success message
-        assert!(
-            stdout.contains("Successfully wrote"),
-            "Should contain success message"
-        );
+        assert!(stdout.contains("Successfully wrote"), "Should contain success message");
     }
 
     /// Test: mcp-test-write.toml response text is correct.
@@ -243,20 +228,11 @@ mod mcp_list_scenario {
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         // Should contain response text
-        assert!(
-            stdout.contains("Here are the files"),
-            "Should contain response text"
-        );
+        assert!(stdout.contains("Here are the files"), "Should contain response text");
 
         // Should contain tool result with file listing
-        assert!(
-            stdout.contains("sample.txt"),
-            "Should contain sample.txt in listing"
-        );
-        assert!(
-            stdout.contains("test-output.txt"),
-            "Should contain test-output.txt in listing"
-        );
+        assert!(stdout.contains("sample.txt"), "Should contain sample.txt in listing");
+        assert!(stdout.contains("test-output.txt"), "Should contain test-output.txt in listing");
     }
 
     /// Test: mcp-test-list.toml response text is correct.
@@ -335,10 +311,7 @@ mod mcp_live_scenarios {
         );
 
         // Should contain a tool_result (success or MCP-level error)
-        assert!(
-            stdout.contains("tool_result"),
-            "Should produce tool_result event"
-        );
+        assert!(stdout.contains("tool_result"), "Should produce tool_result event");
     }
 
     /// Test: mcp-test-read-raw.toml (raw tool name) loads correctly.
@@ -393,14 +366,8 @@ mod tool_mode_behavior {
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         // Should contain tool_result with canned content
-        assert!(
-            stdout.contains("tool_result"),
-            "Mock mode should produce tool_result events"
-        );
-        assert!(
-            stdout.contains("hello world"),
-            "Mock mode should return canned result"
-        );
+        assert!(stdout.contains("tool_result"), "Mock mode should produce tool_result events");
+        assert!(stdout.contains("hello world"), "Mock mode should return canned result");
     }
 }
 
@@ -425,12 +392,7 @@ mod scenario_validation {
 
         for scenario in scenarios {
             let output = Command::new(claudeless_bin())
-                .args([
-                    "--scenario",
-                    scenario_path(scenario).to_str().unwrap(),
-                    "-p",
-                    "test",
-                ])
+                .args(["--scenario", scenario_path(scenario).to_str().unwrap(), "-p", "test"])
                 .output()
                 .expect("Failed to run claudeless");
 
@@ -466,12 +428,7 @@ mod scenario_validation {
                 .output()
                 .expect("Failed to run claudeless");
 
-            assert!(
-                output.status.success(),
-                "Scenario {} should succeed: {:?}",
-                scenario,
-                output
-            );
+            assert!(output.status.success(), "Scenario {} should succeed: {:?}", scenario, output);
             let stdout = String::from_utf8_lossy(&output.stdout);
             assert!(
                 stdout.contains("tool_result"),

@@ -46,11 +46,7 @@ fn test_json_result_has_required_fields() {
     let parsed: serde_json::Value = serde_json::from_str(REAL_JSON_RESULT).unwrap();
 
     for field in REQUIRED_JSON_RESULT_FIELDS {
-        assert!(
-            parsed.get(field).is_some(),
-            "Missing required field: {}",
-            field
-        );
+        assert!(parsed.get(field).is_some(), "Missing required field: {}", field);
     }
 }
 

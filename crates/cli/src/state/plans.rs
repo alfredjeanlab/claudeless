@@ -41,10 +41,8 @@ impl Plan {
         title: impl Into<String>,
         content: impl Into<String>,
     ) -> Self {
-        let now_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64;
+        let now_ms =
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64;
         Self {
             id: id.into(),
             title: title.into(),
@@ -81,10 +79,8 @@ impl Plan {
     /// Update content and modified timestamp
     pub fn update_content(&mut self, content: impl Into<String>) {
         self.content = content.into();
-        self.modified_at_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64;
+        self.modified_at_ms =
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64;
     }
 
     /// Get creation time as SystemTime
@@ -114,9 +110,7 @@ pub struct PlansManager {
 impl PlansManager {
     /// Create a new plans manager
     pub fn new(plans_dir: impl Into<PathBuf>) -> Self {
-        Self {
-            plans_dir: plans_dir.into(),
-        }
+        Self { plans_dir: plans_dir.into() }
     }
 
     /// Get the plans directory
@@ -126,9 +120,8 @@ impl PlansManager {
 
     /// List all plans
     pub fn list(&self) -> std::io::Result<Vec<Plan>> {
-        let mut plans: Vec<Plan> = json_files_in(&self.plans_dir)
-            .filter_map(|path| Plan::load(&path).ok())
-            .collect();
+        let mut plans: Vec<Plan> =
+            json_files_in(&self.plans_dir).filter_map(|path| Plan::load(&path).ok()).collect();
         // Sort by modified time descending (most recent first)
         plans.sort_by(|a, b| b.modified_at_ms.cmp(&a.modified_at_ms));
         Ok(plans)

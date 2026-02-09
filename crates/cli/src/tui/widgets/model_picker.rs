@@ -71,10 +71,7 @@ pub struct ModelPickerDialog {
 impl ModelPickerDialog {
     pub fn new(current_model: &str) -> Self {
         let current = ModelChoice::from_model_id(current_model);
-        Self {
-            selected: current.clone(),
-            current,
-        }
+        Self { selected: current.clone(), current }
     }
 
     /// Move selection up (wraps around)

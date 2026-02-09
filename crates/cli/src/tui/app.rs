@@ -199,10 +199,7 @@ impl TuiApp {
                 // 1. Render inline (like the real Claude CLI) instead of alternate screen
                 // 2. Not enable mouse capture (allows normal text selection/copy)
                 rt.block_on(async {
-                    element!(App(state: Some(state.clone())))
-                        .render_loop()
-                        .ignore_ctrl_c()
-                        .await
+                    element!(App(state: Some(state.clone()))).render_loop().ignore_ctrl_c().await
                 })?;
             }
 

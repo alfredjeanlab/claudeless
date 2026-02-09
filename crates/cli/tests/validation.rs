@@ -67,11 +67,7 @@ fn test_json_output_has_required_result_fields() {
     let json: serde_json::Value = serde_json::to_value(&result).unwrap();
 
     for field in required_fields {
-        assert!(
-            json.get(field).is_some(),
-            "Missing required field: {}",
-            field
-        );
+        assert!(json.get(field).is_some(), "Missing required field: {}", field);
     }
 }
 
@@ -88,70 +84,42 @@ fn test_json_error_has_required_fields() {
         "error",
     ];
 
-    let result = ResultOutput::error(
-        "Something failed".to_string(),
-        "session-123".to_string(),
-        100,
-    );
+    let result =
+        ResultOutput::error("Something failed".to_string(), "session-123".to_string(), 100);
 
     let json: serde_json::Value = serde_json::to_value(&result).unwrap();
 
     for field in required_fields {
-        assert!(
-            json.get(field).is_some(),
-            "Missing required field: {}",
-            field
-        );
+        assert!(json.get(field).is_some(), "Missing required field: {}", field);
     }
 }
 
 #[test]
 fn test_stream_json_produces_valid_ndjson() {
     let mut buf = Vec::new();
-    let mut writer = OutputWriter::new(
-        &mut buf,
-        OutputFormat::StreamJson,
-        "claude-test".to_string(),
-    );
+    let mut writer =
+        OutputWriter::new(&mut buf, OutputFormat::StreamJson, "claude-test".to_string());
 
-    let response = Response {
-        say: Some("Hello, world!".to_string()),
-        ..Default::default()
-    };
-    writer
-        .write_real_response(&response, "session-123", vec!["Bash".to_string()])
-        .unwrap();
+    let response = Response { say: Some("Hello, world!".to_string()), ..Default::default() };
+    writer.write_real_response(&response, "session-123", vec!["Bash".to_string()]).unwrap();
 
     let output = String::from_utf8(buf).unwrap();
 
     // Verify each line is valid JSON
     for line in output.lines() {
         let parsed: Result<serde_json::Value, _> = serde_json::from_str(line);
-        assert!(
-            parsed.is_ok(),
-            "Invalid JSON line: {} - Error: {:?}",
-            line,
-            parsed.err()
-        );
+        assert!(parsed.is_ok(), "Invalid JSON line: {} - Error: {:?}", line, parsed.err());
     }
 }
 
 #[test]
 fn test_stream_json_has_system_init() {
     let mut buf = Vec::new();
-    let mut writer = OutputWriter::new(
-        &mut buf,
-        OutputFormat::StreamJson,
-        "claude-test".to_string(),
-    );
+    let mut writer =
+        OutputWriter::new(&mut buf, OutputFormat::StreamJson, "claude-test".to_string());
 
-    let response = Response {
-        say: Some("Hello!".to_string()),
-        ..Default::default()
-    };
-    writer
-        .write_real_response(&response, "session-123", vec!["Bash".to_string()])
-        .unwrap();
+    let response = Response { say: Some("Hello!".to_string()), ..Default::default() };
+    writer.write_real_response(&response, "session-123", vec!["Bash".to_string()]).unwrap();
 
     let output = String::from_utf8(buf).unwrap();
     let lines: Vec<&str> = output.lines().collect();
@@ -164,19 +132,11 @@ fn test_stream_json_has_system_init() {
 #[test]
 fn test_stream_json_ends_with_result() {
     let mut buf = Vec::new();
-    let mut writer = OutputWriter::new(
-        &mut buf,
-        OutputFormat::StreamJson,
-        "claude-test".to_string(),
-    );
+    let mut writer =
+        OutputWriter::new(&mut buf, OutputFormat::StreamJson, "claude-test".to_string());
 
-    let response = Response {
-        say: Some("Hello!".to_string()),
-        ..Default::default()
-    };
-    writer
-        .write_real_response(&response, "session-123", vec![])
-        .unwrap();
+    let response = Response { say: Some("Hello!".to_string()), ..Default::default() };
+    writer.write_real_response(&response, "session-123", vec![]).unwrap();
 
     let output = String::from_utf8(buf).unwrap();
     let lines: Vec<&str> = output.lines().collect();
@@ -191,9 +151,7 @@ fn test_stream_json_ends_with_result() {
 
 #[test]
 fn test_accuracy_report_covers_all_categories() {
-    let mut report = AccuracyReport::new()
-        .with_date("2025-01-18")
-        .with_claude_version("1.0.0");
+    let mut report = AccuracyReport::new().with_date("2025-01-18").with_claude_version("1.0.0");
 
     // Add CLI flags
     let audit = CliAudit::new();
@@ -208,9 +166,7 @@ fn test_accuracy_report_covers_all_categories() {
 
 #[test]
 fn test_accuracy_report_generates_valid_markdown() {
-    let mut report = AccuracyReport::new()
-        .with_date("2025-01-18")
-        .with_claude_version("1.0.0");
+    let mut report = AccuracyReport::new().with_date("2025-01-18").with_claude_version("1.0.0");
 
     let audit = CliAudit::new();
     report.add_cli_flags(&audit);
@@ -270,11 +226,7 @@ fn test_state_directory_structure_matches_real_claude() {
 
     // Validate structure
     let warnings = dir.validate_structure().unwrap();
-    assert!(
-        warnings.is_empty(),
-        "Structure validation warnings: {:?}",
-        warnings
-    );
+    assert!(warnings.is_empty(), "Structure validation warnings: {:?}", warnings);
 }
 
 // =============================================================================
@@ -332,19 +284,13 @@ fn test_hook_response_parsing_is_lenient() {
 #[test]
 fn test_error_result_is_parseable_as_success_result() {
     // Error and success results should have the same base structure
-    let success: serde_json::Value = serde_json::to_value(ResultOutput::success(
-        "ok".to_string(),
-        "s1".to_string(),
-        100,
-    ))
-    .unwrap();
+    let success: serde_json::Value =
+        serde_json::to_value(ResultOutput::success("ok".to_string(), "s1".to_string(), 100))
+            .unwrap();
 
-    let error: serde_json::Value = serde_json::to_value(ResultOutput::error(
-        "fail".to_string(),
-        "s2".to_string(),
-        100,
-    ))
-    .unwrap();
+    let error: serde_json::Value =
+        serde_json::to_value(ResultOutput::error("fail".to_string(), "s2".to_string(), 100))
+            .unwrap();
 
     // Both should have these fields
     for field in ["type", "subtype", "cost_usd", "is_error", "duration_ms"] {

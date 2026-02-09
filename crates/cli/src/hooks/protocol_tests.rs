@@ -17,20 +17,14 @@ fn test_hook_event_serialization() {
 fn test_hook_event_wire_names() {
     assert_eq!(HookEvent::PreToolExecution.wire_name(), "PreToolUse");
     assert_eq!(HookEvent::PostToolExecution.wire_name(), "PostToolUse");
-    assert_eq!(
-        HookEvent::PostToolExecutionFailure.wire_name(),
-        "PostToolUseFailure"
-    );
+    assert_eq!(HookEvent::PostToolExecutionFailure.wire_name(), "PostToolUseFailure");
     assert_eq!(HookEvent::Notification.wire_name(), "Notification");
     assert_eq!(HookEvent::Stop.wire_name(), "Stop");
     assert_eq!(HookEvent::SessionStart.wire_name(), "SessionStart");
     assert_eq!(HookEvent::SessionEnd.wire_name(), "SessionEnd");
     assert_eq!(HookEvent::PromptSubmit.wire_name(), "UserPromptSubmit");
     assert_eq!(HookEvent::PreCompact.wire_name(), "PreCompact");
-    assert_eq!(
-        HookEvent::PermissionRequest.wire_name(),
-        "PermissionRequest"
-    );
+    assert_eq!(HookEvent::PermissionRequest.wire_name(), "PermissionRequest");
 }
 
 #[test]
@@ -79,12 +73,7 @@ fn test_hook_message_notification() {
     );
 
     assert_eq!(msg.event, HookEvent::Notification);
-    if let HookPayload::Notification {
-        notification_type,
-        title,
-        message,
-    } = &msg.payload
-    {
+    if let HookPayload::Notification { notification_type, title, message } = &msg.payload {
         assert_eq!(notification_type, "idle_prompt");
         assert_eq!(title, "Idle");
         assert_eq!(message, "Claude is waiting for input");
@@ -115,11 +104,7 @@ fn test_hook_message_session() {
     );
 
     assert_eq!(msg.event, HookEvent::SessionStart);
-    if let HookPayload::Session {
-        project_path,
-        source,
-    } = &msg.payload
-    {
+    if let HookPayload::Session { project_path, source } = &msg.payload {
         assert_eq!(*project_path, Some("/project".to_string()));
         assert_eq!(*source, Some("startup".to_string()));
     } else {
@@ -331,10 +316,7 @@ fn test_hook_response_with_modified_payload() {
 
     assert!(response.proceed);
     assert!(response.modified_payload.is_some());
-    assert_eq!(
-        response.modified_payload.unwrap()["command"],
-        "ls -la /safe/path"
-    );
+    assert_eq!(response.modified_payload.unwrap()["command"], "ls -la /safe/path");
 }
 
 #[test]
@@ -392,16 +374,9 @@ fn test_hook_message_compaction_manual() {
     assert_eq!(msg.event, HookEvent::PreCompact);
     assert_eq!(msg.session_id, "test-session");
 
-    if let HookPayload::Compaction {
-        trigger,
-        custom_instructions,
-    } = &msg.payload
-    {
+    if let HookPayload::Compaction { trigger, custom_instructions } = &msg.payload {
         assert_eq!(*trigger, CompactionTrigger::Manual);
-        assert_eq!(
-            *custom_instructions,
-            Some("Focus on core functionality".to_string())
-        );
+        assert_eq!(*custom_instructions, Some("Focus on core functionality".to_string()));
     } else {
         unreachable!("Expected Compaction payload");
     }
@@ -426,11 +401,7 @@ fn test_hook_message_compaction_auto() {
 
     assert_eq!(msg.event, HookEvent::PreCompact);
 
-    if let HookPayload::Compaction {
-        trigger,
-        custom_instructions,
-    } = &msg.payload
-    {
+    if let HookPayload::Compaction { trigger, custom_instructions } = &msg.payload {
         assert_eq!(*trigger, CompactionTrigger::Auto);
         assert!(custom_instructions.is_none());
     } else {
@@ -452,10 +423,7 @@ fn test_pre_compact_payload_matches_spec() {
     assert_eq!(json["session_id"], "session-abc123");
     assert_eq!(json["payload"]["type"], "compaction");
     assert_eq!(json["payload"]["trigger"], "manual");
-    assert_eq!(
-        json["payload"]["custom_instructions"],
-        "Summarize the conversation"
-    );
+    assert_eq!(json["payload"]["custom_instructions"], "Summarize the conversation");
 }
 
 #[test]
@@ -635,13 +603,7 @@ fn test_hook_message_tool_execution_failure_constructor() {
     assert_eq!(msg.event, HookEvent::PostToolExecutionFailure);
     assert_eq!(msg.session_id, "session_123");
 
-    if let HookPayload::ToolExecutionFailure {
-        tool_name,
-        error,
-        is_interrupt,
-        ..
-    } = &msg.payload
-    {
+    if let HookPayload::ToolExecutionFailure { tool_name, error, is_interrupt, .. } = &msg.payload {
         assert_eq!(tool_name, "Bash");
         assert_eq!(error, "error message");
         assert!(is_interrupt.is_none());
@@ -771,34 +733,25 @@ fn test_payload_matcher_subject_session_with_source() {
 
 #[test]
 fn test_payload_matcher_subject_session_without_source() {
-    let payload = HookPayload::Session {
-        project_path: Some("/p".to_string()),
-        source: None,
-    };
+    let payload = HookPayload::Session { project_path: Some("/p".to_string()), source: None };
     assert_eq!(payload.matcher_subject(), None);
 }
 
 #[test]
 fn test_payload_matcher_subject_session_end() {
-    let payload = HookPayload::SessionEnd {
-        reason: "prompt_input_exit".to_string(),
-    };
+    let payload = HookPayload::SessionEnd { reason: "prompt_input_exit".to_string() };
     assert_eq!(payload.matcher_subject(), Some("prompt_input_exit"));
 }
 
 #[test]
 fn test_payload_matcher_subject_prompt() {
-    let payload = HookPayload::Prompt {
-        prompt: "hello".to_string(),
-    };
+    let payload = HookPayload::Prompt { prompt: "hello".to_string() };
     assert_eq!(payload.matcher_subject(), None);
 }
 
 #[test]
 fn test_payload_matcher_subject_stop() {
-    let payload = HookPayload::Stop {
-        stop_hook_active: false,
-    };
+    let payload = HookPayload::Stop { stop_hook_active: false };
     assert_eq!(payload.matcher_subject(), None);
 }
 

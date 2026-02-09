@@ -56,11 +56,7 @@ fn create_todo_scenario(dir: &TempDir) -> PathBuf {
             }
         }
     });
-    std::fs::write(
-        &scenario_path,
-        serde_json::to_string_pretty(&scenario).unwrap(),
-    )
-    .unwrap();
+    std::fs::write(&scenario_path, serde_json::to_string_pretty(&scenario).unwrap()).unwrap();
     scenario_path
 }
 
@@ -103,12 +99,7 @@ fn test_todo_file_naming_convention() {
     let output = Command::new(claudeless_bin())
         .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .current_dir(work_dir.path())
-        .args([
-            "--scenario",
-            scenario.to_str().unwrap(),
-            "-p",
-            "Create todos: item1, item2",
-        ])
+        .args(["--scenario", scenario.to_str().unwrap(), "-p", "Create todos: item1, item2"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -126,27 +117,12 @@ fn test_todo_file_naming_convention() {
     let filename = todo_files[0].file_name().to_string_lossy().to_string();
 
     // Format: {uuid}-agent-{uuid}.json
-    assert!(
-        filename.ends_with(".json"),
-        "Todo file should end with .json: {}",
-        filename
-    );
-    assert!(
-        filename.contains("-agent-"),
-        "Todo file should contain '-agent-': {}",
-        filename
-    );
+    assert!(filename.ends_with(".json"), "Todo file should end with .json: {}", filename);
+    assert!(filename.contains("-agent-"), "Todo file should contain '-agent-': {}", filename);
 
     // Extract and verify UUID format
-    let parts: Vec<&str> = filename
-        .trim_end_matches(".json")
-        .split("-agent-")
-        .collect();
-    assert_eq!(
-        parts.len(),
-        2,
-        "Should have exactly two parts around '-agent-'"
-    );
+    let parts: Vec<&str> = filename.trim_end_matches(".json").split("-agent-").collect();
+    assert_eq!(parts.len(), 2, "Should have exactly two parts around '-agent-'");
 
     // Both parts should be valid UUIDs (same session ID repeated)
     assert_eq!(
@@ -166,12 +142,7 @@ fn test_todo_file_content_structure() {
     let output = Command::new(claudeless_bin())
         .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .current_dir(work_dir.path())
-        .args([
-            "--scenario",
-            scenario.to_str().unwrap(),
-            "-p",
-            "Create a todo list",
-        ])
+        .args(["--scenario", scenario.to_str().unwrap(), "-p", "Create a todo list"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -195,18 +166,9 @@ fn test_todo_file_content_structure() {
     if let Some(items) = parsed.as_array() {
         if !items.is_empty() {
             let item = &items[0];
-            assert!(
-                item["content"].is_string(),
-                "Todo item needs 'content' string"
-            );
-            assert!(
-                item["status"].is_string(),
-                "Todo item needs 'status' string"
-            );
-            assert!(
-                item["activeForm"].is_string(),
-                "Todo item needs 'activeForm' string"
-            );
+            assert!(item["content"].is_string(), "Todo item needs 'content' string");
+            assert!(item["status"].is_string(), "Todo item needs 'status' string");
+            assert!(item["activeForm"].is_string(), "Todo item needs 'activeForm' string");
 
             // Verify status is valid
             let status = item["status"].as_str().unwrap();
@@ -233,12 +195,7 @@ fn test_empty_todo_list_format() {
     let output = Command::new(claudeless_bin())
         .env("CLAUDELESS_STATE_DIR", state_dir.path())
         .current_dir(work_dir.path())
-        .args([
-            "--scenario",
-            scenario_path.to_str().unwrap(),
-            "-p",
-            "Say hello",
-        ])
+        .args(["--scenario", scenario_path.to_str().unwrap(), "-p", "Say hello"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -278,9 +235,7 @@ fn normalize_json(value: &serde_json::Value) -> serde_json::Value {
             serde_json::Value::Array(arr.iter().map(normalize_json).collect())
         }
         serde_json::Value::Object(obj) => serde_json::Value::Object(
-            obj.iter()
-                .map(|(k, v)| (k.clone(), normalize_json(v)))
-                .collect(),
+            obj.iter().map(|(k, v)| (k.clone(), normalize_json(v))).collect(),
         ),
         other => other.clone(),
     }
@@ -337,11 +292,7 @@ fn test_todo_json_matches_fixture() {
         serde_json::from_str(&std::fs::read_to_string(&fixture_path).unwrap()).unwrap();
 
     // Compare structure - todos should be an array of items with specific fields
-    assert!(
-        actual_normalized.is_array(),
-        "Todo should be array, got: {:?}",
-        actual_normalized
-    );
+    assert!(actual_normalized.is_array(), "Todo should be array, got: {:?}", actual_normalized);
     assert!(expected.is_array(), "Fixture should be array");
 
     // Compare first item structure if both have items

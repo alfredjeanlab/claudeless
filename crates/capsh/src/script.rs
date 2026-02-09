@@ -39,11 +39,7 @@ pub enum Command {
         else_cmds: Vec<Command>,
     },
     /// Match first pattern that appears, execute corresponding commands.
-    Match {
-        timeout: Option<u64>,
-        arms: Vec<MatchArm>,
-        else_cmds: Vec<Command>,
-    },
+    Match { timeout: Option<u64>, arms: Vec<MatchArm>, else_cmds: Vec<Command> },
 }
 
 /// A match arm: pattern and commands to execute if matched.
@@ -123,11 +119,8 @@ fn parse_if_statement(
         .trim();
 
     // Check for negation
-    let (negated, rest) = if let Some(r) = rest.strip_prefix('!') {
-        (true, r.trim())
-    } else {
-        (false, rest)
-    };
+    let (negated, rest) =
+        if let Some(r) = rest.strip_prefix('!') { (true, r.trim()) } else { (false, rest) };
 
     if !rest.starts_with('"') {
         return Err(anyhow!("line {}: expected pattern after 'if wait'", lineno));
@@ -167,13 +160,7 @@ fn parse_if_statement(
         }
     }
 
-    Ok(Command::IfWait {
-        pattern: regex,
-        negated,
-        timeout,
-        then_cmds,
-        else_cmds,
-    })
+    Ok(Command::IfWait { pattern: regex, negated, timeout, then_cmds, else_cmds })
 }
 
 /// Parse a match statement with pattern arms.
@@ -183,11 +170,7 @@ fn parse_match_statement(
     lineno: usize,
 ) -> Result<Command> {
     // Parse optional timeout
-    let timeout = if args.is_empty() {
-        None
-    } else {
-        Some(parse_duration_ms(args)?)
-    };
+    let timeout = if args.is_empty() { None } else { Some(parse_duration_ms(args)?) };
 
     let mut arms = Vec::new();
 
@@ -205,10 +188,7 @@ fn parse_match_statement(
     }
 
     if arms.is_empty() {
-        return Err(anyhow!(
-            "line {}: match requires at least one pattern arm",
-            lineno
-        ));
+        return Err(anyhow!("line {}: match requires at least one pattern arm", lineno));
     }
 
     // Check for else
@@ -226,11 +206,7 @@ fn parse_match_statement(
         None => return Err(anyhow!("unexpected end of script, expected 'end'")),
     }
 
-    Ok(Command::Match {
-        timeout,
-        arms,
-        else_cmds,
-    })
+    Ok(Command::Match { timeout, arms, else_cmds })
 }
 
 /// Parse a match arm: "pattern" -> command(s) or "pattern" -> followed by block
@@ -317,11 +293,8 @@ fn parse_line(line: &str) -> Result<Command> {
     if let Some(rest) = line.strip_prefix("wait ") {
         let rest = rest.trim();
         // Check for negation
-        let (negated, rest) = if let Some(r) = rest.strip_prefix('!') {
-            (true, r.trim())
-        } else {
-            (false, rest)
-        };
+        let (negated, rest) =
+            if let Some(r) = rest.strip_prefix('!') { (true, r.trim()) } else { (false, rest) };
         // Check if it starts with a digit (duration) vs quote (pattern)
         if rest.starts_with('"') {
             // Pattern, possibly followed by a timeout
@@ -376,19 +349,14 @@ fn parse_duration_ms(s: &str) -> Result<u64> {
     }
 
     // Find where digits end
-    let num_end = s
-        .char_indices()
-        .find(|(_, c)| !c.is_ascii_digit())
-        .map(|(i, _)| i)
-        .unwrap_or(s.len());
+    let num_end =
+        s.char_indices().find(|(_, c)| !c.is_ascii_digit()).map(|(i, _)| i).unwrap_or(s.len());
 
     if num_end == 0 {
         return Err(anyhow!("invalid duration: {}", s));
     }
 
-    let num: u64 = s[..num_end]
-        .parse()
-        .map_err(|_| anyhow!("invalid duration number: {}", s))?;
+    let num: u64 = s[..num_end].parse().map_err(|_| anyhow!("invalid duration number: {}", s))?;
     let suffix = &s[num_end..];
 
     match suffix {
@@ -424,11 +392,7 @@ fn parse_wait_pattern_args(s: &str) -> Result<(String, Option<u64>)> {
     let pattern = s[1..end].to_string();
     let rest = s[end + 1..].trim();
 
-    let timeout = if rest.is_empty() {
-        None
-    } else {
-        Some(parse_duration_ms(rest)?)
-    };
+    let timeout = if rest.is_empty() { None } else { Some(parse_duration_ms(rest)?) };
 
     Ok((pattern, timeout))
 }

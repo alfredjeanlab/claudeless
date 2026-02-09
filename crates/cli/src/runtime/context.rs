@@ -72,9 +72,7 @@ impl RuntimeContext {
             .as_ref()
             .map(PathBuf::from)
             .or_else(|| {
-                scenario
-                    .and_then(|s| s.claude.working_directory.as_ref())
-                    .map(PathBuf::from)
+                scenario.and_then(|s| s.claude.working_directory.as_ref()).map(PathBuf::from)
             })
             .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
 
@@ -106,9 +104,7 @@ impl RuntimeContext {
         let model = if cli.model != DEFAULT_MODEL {
             cli.model.clone()
         } else {
-            scenario
-                .and_then(|s| s.claude.model.clone())
-                .unwrap_or_else(|| cli.model.clone())
+            scenario.and_then(|s| s.claude.model.clone()).unwrap_or_else(|| cli.model.clone())
         };
 
         // Claude version: scenario config or default
@@ -127,12 +123,7 @@ impl RuntimeContext {
             .resume
             .as_ref()
             .and_then(|s| Uuid::parse_str(s).ok())
-            .or_else(|| {
-                cli.session
-                    .session_id
-                    .as_ref()
-                    .and_then(|s| Uuid::parse_str(s).ok())
-            })
+            .or_else(|| cli.session.session_id.as_ref().and_then(|s| Uuid::parse_str(s).ok()))
             .or_else(|| {
                 scenario
                     .and_then(|s| s.claude.session_id.as_ref())
@@ -146,9 +137,7 @@ impl RuntimeContext {
             .as_ref()
             .map(PathBuf::from)
             .or_else(|| {
-                scenario
-                    .and_then(|s| s.claude.working_directory.as_ref())
-                    .map(PathBuf::from)
+                scenario.and_then(|s| s.claude.working_directory.as_ref()).map(PathBuf::from)
             })
             .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
 
@@ -224,8 +213,7 @@ impl RuntimeContext {
         bypass: PermissionBypass,
         scenario_tools: HashMap<String, ToolConfig>,
     ) -> PermissionChecker {
-        self.permission_checker(bypass)
-            .with_scenario_overrides(scenario_tools)
+        self.permission_checker(bypass).with_scenario_overrides(scenario_tools)
     }
 
     /// Get environment variables from settings.

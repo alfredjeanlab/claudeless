@@ -17,12 +17,7 @@ mod separator_rendering {
     fn separator_width_matches_terminal() {
         for width in [80, 100, 120, 150, 200] {
             let sep = make_separator(width);
-            assert_eq!(
-                sep.chars().count(),
-                width,
-                "Separator should be {} chars wide",
-                width
-            );
+            assert_eq!(sep.chars().count(), width, "Separator should be {} chars wide", width);
         }
     }
 
@@ -60,10 +55,7 @@ mod status_bar_rendering {
             mode: AppMode::Input,
             input: InputState::default(),
             dialog: DialogState::None,
-            display: DisplayState {
-                terminal_width: width,
-                ..Default::default()
-            },
+            display: DisplayState { terminal_width: width, ..Default::default() },
             status: StatusInfo::default(),
             user_name: "test".to_string(),
             thinking_enabled: true,

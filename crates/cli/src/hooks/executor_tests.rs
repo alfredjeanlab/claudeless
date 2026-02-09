@@ -16,17 +16,12 @@ fn test_hook_config_new() {
 fn test_hook_config_with_matcher() {
     let config = HookConfig::new("/path/to/script.sh", 5000)
         .with_matcher(Some("idle_prompt|permission_prompt".to_string()));
-    assert_eq!(
-        config.matcher,
-        Some("idle_prompt|permission_prompt".to_string())
-    );
+    assert_eq!(config.matcher, Some("idle_prompt|permission_prompt".to_string()));
 }
 
 #[test]
 fn test_hook_config_builder() {
-    let config = HookConfig::new("/script.sh", 5000)
-        .with_timeout(10000)
-        .with_blocking(true);
+    let config = HookConfig::new("/script.sh", 5000).with_timeout(10000).with_blocking(true);
 
     assert_eq!(config.timeout_ms, 10000);
     assert!(config.blocking);
@@ -41,10 +36,7 @@ fn test_hook_executor_new() {
 #[test]
 fn test_hook_executor_register() {
     let mut executor = HookExecutor::new();
-    executor.register(
-        HookEvent::PreToolExecution,
-        HookConfig::new("/script.sh", 5000),
-    );
+    executor.register(HookEvent::PreToolExecution, HookConfig::new("/script.sh", 5000));
 
     assert!(executor.has_hooks(&HookEvent::PreToolExecution));
     assert_eq!(executor.hook_count(&HookEvent::PreToolExecution), 1);
@@ -91,10 +83,7 @@ fn test_with_context_sets_fields() {
         Some("default".to_string()),
     );
     assert_eq!(executor.cwd.as_deref(), Some("/home/user/project"));
-    assert_eq!(
-        executor.transcript_path.as_deref(),
-        Some("/tmp/session.jsonl")
-    );
+    assert_eq!(executor.transcript_path.as_deref(), Some("/tmp/session.jsonl"));
     assert_eq!(executor.permission_mode.as_deref(), Some("default"));
 }
 
@@ -209,10 +198,8 @@ async fn test_star_matcher_matches_all_tools() {
 #[test]
 fn test_matcher_filtering_no_matcher_registers_for_all() {
     let mut executor = HookExecutor::new();
-    executor.register(
-        HookEvent::Notification,
-        HookConfig::new("/script.sh", 5000).with_matcher(None),
-    );
+    executor
+        .register(HookEvent::Notification, HookConfig::new("/script.sh", 5000).with_matcher(None));
     // Without matcher, the hook is registered for all Notification events
     assert!(executor.has_hooks(&HookEvent::Notification));
     assert_eq!(executor.hook_count(&HookEvent::Notification), 1);
@@ -244,11 +231,7 @@ async fn test_matcher_filters_session_by_source() {
         Some("startup".to_string()),
     );
     let responses = executor.execute(&msg_startup).await.unwrap();
-    assert_eq!(
-        responses.len(),
-        1,
-        "matcher 'startup' should match source 'startup'"
-    );
+    assert_eq!(responses.len(), 1, "matcher 'startup' should match source 'startup'");
 
     // Should skip for source="resume"
     let msg_resume = HookMessage::session(
@@ -258,11 +241,7 @@ async fn test_matcher_filters_session_by_source() {
         Some("resume".to_string()),
     );
     let responses = executor.execute(&msg_resume).await.unwrap();
-    assert_eq!(
-        responses.len(),
-        0,
-        "matcher 'startup' should skip source 'resume'"
-    );
+    assert_eq!(responses.len(), 0, "matcher 'startup' should skip source 'resume'");
 }
 
 #[tokio::test]
@@ -285,18 +264,10 @@ async fn test_matcher_filters_permission_by_tool_name() {
     // Should fire for tool_name="Bash"
     let msg_bash = HookMessage::permission("test", "Bash", "execute", serde_json::json!({}));
     let responses = executor.execute(&msg_bash).await.unwrap();
-    assert_eq!(
-        responses.len(),
-        1,
-        "matcher 'Bash' should match tool_name 'Bash'"
-    );
+    assert_eq!(responses.len(), 1, "matcher 'Bash' should match tool_name 'Bash'");
 
     // Should skip for tool_name="Write"
     let msg_write = HookMessage::permission("test", "Write", "execute", serde_json::json!({}));
     let responses = executor.execute(&msg_write).await.unwrap();
-    assert_eq!(
-        responses.len(),
-        0,
-        "matcher 'Bash' should skip tool_name 'Write'"
-    );
+    assert_eq!(responses.len(), 0, "matcher 'Bash' should skip tool_name 'Write'");
 }

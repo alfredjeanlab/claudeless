@@ -25,15 +25,9 @@ fn test_memory_source_name() {
 
 #[test]
 fn test_memory_source_description() {
-    assert!(MemorySource::Project
-        .description()
-        .contains(".claude/CLAUDE.md"));
-    assert!(MemorySource::User
-        .description()
-        .contains("~/.claude/CLAUDE.md"));
-    assert!(MemorySource::Enterprise
-        .description()
-        .contains("Organization"));
+    assert!(MemorySource::Project.description().contains(".claude/CLAUDE.md"));
+    assert!(MemorySource::User.description().contains("~/.claude/CLAUDE.md"));
+    assert!(MemorySource::Enterprise.description().contains("Organization"));
 }
 
 // =============================================================================

@@ -38,14 +38,8 @@ fn create_hook_script(dir: &std::path::Path) -> std::path::PathBuf {
     let marker = dir.join("hook_fired");
     let script = dir.join("pre_hook.sh");
     // Parse stdin JSON to extract tool_name, append it to the marker file
-    fs::write(
-        &script,
-        format!(
-            "#!/bin/bash\necho \"fired\" >> {}\n",
-            marker.to_string_lossy()
-        ),
-    )
-    .unwrap();
+    fs::write(&script, format!("#!/bin/bash\necho \"fired\" >> {}\n", marker.to_string_lossy()))
+        .unwrap();
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -87,23 +81,15 @@ async fn pre_tool_use_hook_fires_for_exit_plan_mode_in_tui() {
         result: None,
     }];
 
-    let (results, pending) = runtime
-        .execute_tools_for_turn("test", "", &tool_calls)
-        .await;
+    let (results, pending) = runtime.execute_tools_for_turn("test", "", &tool_calls).await;
 
     FORCE_TUI.set(None);
 
     // Hook should have fired
-    assert!(
-        marker.exists(),
-        "PreToolUse hook should fire for ExitPlanMode in TUI mode"
-    );
+    assert!(marker.exists(), "PreToolUse hook should fire for ExitPlanMode in TUI mode");
 
     // TUI mode should set pending_permission (early return)
-    assert!(
-        pending.is_some(),
-        "ExitPlanMode in TUI mode should return pending_permission"
-    );
+    assert!(pending.is_some(), "ExitPlanMode in TUI mode should return pending_permission");
 
     // No tool results since the tool wasn't executed (pending permission)
     assert!(results.is_empty());
@@ -130,23 +116,15 @@ async fn pre_tool_use_hook_fires_for_ask_user_question_in_tui() {
         result: None,
     }];
 
-    let (results, pending) = runtime
-        .execute_tools_for_turn("test", "", &tool_calls)
-        .await;
+    let (results, pending) = runtime.execute_tools_for_turn("test", "", &tool_calls).await;
 
     FORCE_TUI.set(None);
 
     // Hook should have fired
-    assert!(
-        marker.exists(),
-        "PreToolUse hook should fire for AskUserQuestion in TUI mode"
-    );
+    assert!(marker.exists(), "PreToolUse hook should fire for AskUserQuestion in TUI mode");
 
     // TUI mode should set pending_permission (early return)
-    assert!(
-        pending.is_some(),
-        "AskUserQuestion in TUI mode should return pending_permission"
-    );
+    assert!(pending.is_some(), "AskUserQuestion in TUI mode should return pending_permission");
 
     // No tool results since the tool wasn't executed (pending permission)
     assert!(results.is_empty());
@@ -158,10 +136,8 @@ async fn pre_tool_use_hook_blocking_prevents_tui_pending_permission() {
     let script = create_blocking_hook_script(tmp.path());
 
     let mut hook_executor = HookExecutor::new();
-    hook_executor.register(
-        HookEvent::PreToolExecution,
-        HookConfig::new(&script, 5000).with_blocking(true),
-    );
+    hook_executor
+        .register(HookEvent::PreToolExecution, HookConfig::new(&script, 5000).with_blocking(true));
 
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
     let mut runtime = build_test_runtime(Some(hook_executor), cli);
@@ -175,17 +151,12 @@ async fn pre_tool_use_hook_blocking_prevents_tui_pending_permission() {
         result: None,
     }];
 
-    let (results, pending) = runtime
-        .execute_tools_for_turn("test", "", &tool_calls)
-        .await;
+    let (results, pending) = runtime.execute_tools_for_turn("test", "", &tool_calls).await;
 
     FORCE_TUI.set(None);
 
     // Blocking hook should prevent the TUI early return — tool gets error result instead
-    assert!(
-        pending.is_none(),
-        "Blocking hook should prevent pending_permission"
-    );
+    assert!(pending.is_none(), "Blocking hook should prevent pending_permission");
     assert_eq!(results.len(), 1);
     assert!(results[0].is_error);
 }
@@ -208,15 +179,10 @@ async fn pre_tool_use_hook_fires_for_regular_tools() {
         result: Some("file content".to_string()),
     }];
 
-    let (results, pending) = runtime
-        .execute_tools_for_turn("test", "", &tool_calls)
-        .await;
+    let (results, pending) = runtime.execute_tools_for_turn("test", "", &tool_calls).await;
 
     // Hook should have fired
-    assert!(
-        marker.exists(),
-        "PreToolUse hook should fire for regular tools"
-    );
+    assert!(marker.exists(), "PreToolUse hook should fire for regular tools");
 
     // Regular tools execute normally
     assert!(pending.is_none());
@@ -231,10 +197,7 @@ async fn post_tool_use_hook_fires_on_success() {
     let script = tmp.path().join("post_hook.sh");
     std::fs::write(
         &script,
-        format!(
-            "#!/bin/bash\necho \"fired\" >> {}\n",
-            marker.to_string_lossy()
-        ),
+        format!("#!/bin/bash\necho \"fired\" >> {}\n", marker.to_string_lossy()),
     )
     .unwrap();
     #[cfg(unix)]
@@ -255,15 +218,10 @@ async fn post_tool_use_hook_fires_on_success() {
         result: Some("file content".to_string()),
     }];
 
-    let (results, _) = runtime
-        .execute_tools_for_turn("test", "", &tool_calls)
-        .await;
+    let (results, _) = runtime.execute_tools_for_turn("test", "", &tool_calls).await;
 
     // PostToolUse should fire for successful tool execution
-    assert!(
-        marker.exists(),
-        "PostToolUse hook should fire for successful tools"
-    );
+    assert!(marker.exists(), "PostToolUse hook should fire for successful tools");
     assert_eq!(results.len(), 1);
     assert!(!results[0].is_error);
 }
@@ -275,10 +233,7 @@ async fn post_tool_use_hook_does_not_fire_on_error() {
     let script = tmp.path().join("post_hook.sh");
     std::fs::write(
         &script,
-        format!(
-            "#!/bin/bash\necho \"fired\" >> {}\n",
-            marker.to_string_lossy()
-        ),
+        format!("#!/bin/bash\necho \"fired\" >> {}\n", marker.to_string_lossy()),
     )
     .unwrap();
     #[cfg(unix)]
@@ -300,15 +255,10 @@ async fn post_tool_use_hook_does_not_fire_on_error() {
         result: None,
     }];
 
-    let (results, _) = runtime
-        .execute_tools_for_turn("test", "", &tool_calls)
-        .await;
+    let (results, _) = runtime.execute_tools_for_turn("test", "", &tool_calls).await;
 
     // PostToolUse should NOT fire for error tool execution
-    assert!(
-        !marker.exists(),
-        "PostToolUse hook should not fire for error tools"
-    );
+    assert!(!marker.exists(), "PostToolUse hook should not fire for error tools");
     assert_eq!(results.len(), 1);
     assert!(results[0].is_error);
 }
@@ -320,10 +270,7 @@ async fn post_tool_use_failure_hook_fires_on_error() {
     let script = tmp.path().join("failure_hook.sh");
     std::fs::write(
         &script,
-        format!(
-            "#!/bin/bash\necho \"fired\" >> {}\n",
-            marker.to_string_lossy()
-        ),
+        format!("#!/bin/bash\necho \"fired\" >> {}\n", marker.to_string_lossy()),
     )
     .unwrap();
     #[cfg(unix)]
@@ -333,10 +280,7 @@ async fn post_tool_use_failure_hook_fires_on_error() {
     }
 
     let mut hook_executor = HookExecutor::new();
-    hook_executor.register(
-        HookEvent::PostToolExecutionFailure,
-        HookConfig::new(&script, 5000),
-    );
+    hook_executor.register(HookEvent::PostToolExecutionFailure, HookConfig::new(&script, 5000));
 
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
     let mut runtime = build_test_runtime(Some(hook_executor), cli);
@@ -348,15 +292,10 @@ async fn post_tool_use_failure_hook_fires_on_error() {
         result: None,
     }];
 
-    let (results, _) = runtime
-        .execute_tools_for_turn("test", "", &tool_calls)
-        .await;
+    let (results, _) = runtime.execute_tools_for_turn("test", "", &tool_calls).await;
 
     // PostToolUseFailure should fire for error tool execution
-    assert!(
-        marker.exists(),
-        "PostToolUseFailure hook should fire for error tools"
-    );
+    assert!(marker.exists(), "PostToolUseFailure hook should fire for error tools");
     assert_eq!(results.len(), 1);
     assert!(results[0].is_error);
 }
@@ -368,10 +307,7 @@ async fn post_tool_use_failure_hook_does_not_fire_on_success() {
     let script = tmp.path().join("failure_hook.sh");
     std::fs::write(
         &script,
-        format!(
-            "#!/bin/bash\necho \"fired\" >> {}\n",
-            marker.to_string_lossy()
-        ),
+        format!("#!/bin/bash\necho \"fired\" >> {}\n", marker.to_string_lossy()),
     )
     .unwrap();
     #[cfg(unix)]
@@ -381,10 +317,7 @@ async fn post_tool_use_failure_hook_does_not_fire_on_success() {
     }
 
     let mut hook_executor = HookExecutor::new();
-    hook_executor.register(
-        HookEvent::PostToolExecutionFailure,
-        HookConfig::new(&script, 5000),
-    );
+    hook_executor.register(HookEvent::PostToolExecutionFailure, HookConfig::new(&script, 5000));
 
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
     let mut runtime = build_test_runtime(Some(hook_executor), cli);
@@ -395,15 +328,10 @@ async fn post_tool_use_failure_hook_does_not_fire_on_success() {
         result: Some("file content".to_string()),
     }];
 
-    let (results, _) = runtime
-        .execute_tools_for_turn("test", "", &tool_calls)
-        .await;
+    let (results, _) = runtime.execute_tools_for_turn("test", "", &tool_calls).await;
 
     // PostToolUseFailure should NOT fire for successful tool execution
-    assert!(
-        !marker.exists(),
-        "PostToolUseFailure hook should not fire for successful tools"
-    );
+    assert!(!marker.exists(), "PostToolUseFailure hook should not fire for successful tools");
     assert_eq!(results.len(), 1);
     assert!(!results[0].is_error);
 }
@@ -415,10 +343,7 @@ fn build_test_runtime_with_scenario(
     cli: Cli,
 ) -> Runtime {
     let config = ScenarioConfig {
-        tools: Some(ToolsConfig {
-            mode: ToolExecutionMode::Mock,
-            tools: tool_configs,
-        }),
+        tools: Some(ToolsConfig { mode: ToolExecutionMode::Mock, tools: tool_configs }),
         ..Default::default()
     };
     let scenario = Scenario::from_config(config).unwrap();
@@ -440,10 +365,7 @@ async fn scenario_canned_result_injected_into_tool_call() {
     let mut tools = HashMap::new();
     tools.insert(
         "Read".to_string(),
-        ToolConfig {
-            result: Some("canned content".to_string()),
-            ..Default::default()
-        },
+        ToolConfig { result: Some("canned content".to_string()), ..Default::default() },
     );
 
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
@@ -456,9 +378,7 @@ async fn scenario_canned_result_injected_into_tool_call() {
         result: None,
     }];
 
-    let (results, _) = runtime
-        .execute_tools_for_turn("test", "", &tool_calls)
-        .await;
+    let (results, _) = runtime.execute_tools_for_turn("test", "", &tool_calls).await;
 
     assert_eq!(results.len(), 1);
     assert!(!results[0].is_error, "canned result should produce success");
@@ -470,10 +390,7 @@ async fn scenario_canned_error_injected_into_tool_call() {
     let mut tools = HashMap::new();
     tools.insert(
         "Write".to_string(),
-        ToolConfig {
-            error: Some("Permission denied".to_string()),
-            ..Default::default()
-        },
+        ToolConfig { error: Some("Permission denied".to_string()), ..Default::default() },
     );
 
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
@@ -485,9 +402,7 @@ async fn scenario_canned_error_injected_into_tool_call() {
         result: None,
     }];
 
-    let (results, _) = runtime
-        .execute_tools_for_turn("test", "", &tool_calls)
-        .await;
+    let (results, _) = runtime.execute_tools_for_turn("test", "", &tool_calls).await;
 
     assert_eq!(results.len(), 1);
     // MockExecutor sees the injected result string "Error: Permission denied"
@@ -501,10 +416,7 @@ async fn inline_result_takes_precedence_over_scenario_config() {
     let mut tools = HashMap::new();
     tools.insert(
         "Read".to_string(),
-        ToolConfig {
-            result: Some("scenario canned".to_string()),
-            ..Default::default()
-        },
+        ToolConfig { result: Some("scenario canned".to_string()), ..Default::default() },
     );
 
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
@@ -517,9 +429,7 @@ async fn inline_result_takes_precedence_over_scenario_config() {
         result: Some("inline result".to_string()),
     }];
 
-    let (results, _) = runtime
-        .execute_tools_for_turn("test", "", &tool_calls)
-        .await;
+    let (results, _) = runtime.execute_tools_for_turn("test", "", &tool_calls).await;
 
     assert_eq!(results.len(), 1);
     assert!(!results[0].is_error);
@@ -531,14 +441,8 @@ async fn scenario_canned_result_fires_post_tool_use_hook() {
     let tmp = tempfile::tempdir().unwrap();
     let marker = tmp.path().join("post_hook_fired");
     let script = tmp.path().join("post_hook.sh");
-    fs::write(
-        &script,
-        format!(
-            "#!/bin/bash\necho \"fired\" >> {}\n",
-            marker.to_string_lossy()
-        ),
-    )
-    .unwrap();
+    fs::write(&script, format!("#!/bin/bash\necho \"fired\" >> {}\n", marker.to_string_lossy()))
+        .unwrap();
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -551,10 +455,7 @@ async fn scenario_canned_result_fires_post_tool_use_hook() {
     let mut tools = HashMap::new();
     tools.insert(
         "Read".to_string(),
-        ToolConfig {
-            result: Some("canned content".to_string()),
-            ..Default::default()
-        },
+        ToolConfig { result: Some("canned content".to_string()), ..Default::default() },
     );
 
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
@@ -566,9 +467,7 @@ async fn scenario_canned_result_fires_post_tool_use_hook() {
         result: None,
     }];
 
-    let (results, _) = runtime
-        .execute_tools_for_turn("test", "", &tool_calls)
-        .await;
+    let (results, _) = runtime.execute_tools_for_turn("test", "", &tool_calls).await;
 
     assert!(
         marker.exists(),
@@ -590,9 +489,7 @@ async fn no_scenario_config_leaves_tool_call_unchanged() {
         result: None,
     }];
 
-    let (results, _) = runtime
-        .execute_tools_for_turn("test", "", &tool_calls)
-        .await;
+    let (results, _) = runtime.execute_tools_for_turn("test", "", &tool_calls).await;
 
     // MockExecutor returns error for tool calls with no result
     assert_eq!(results.len(), 1);
@@ -604,14 +501,8 @@ async fn fire_session_end_hook_fires() {
     let tmp = tempfile::tempdir().unwrap();
     let marker = tmp.path().join("session_end_fired");
     let script = tmp.path().join("session_end_hook.sh");
-    fs::write(
-        &script,
-        format!(
-            "#!/bin/bash\necho \"fired\" >> {}\n",
-            marker.to_string_lossy()
-        ),
-    )
-    .unwrap();
+    fs::write(&script, format!("#!/bin/bash\necho \"fired\" >> {}\n", marker.to_string_lossy()))
+        .unwrap();
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -634,14 +525,8 @@ async fn fire_prompt_submit_hook_fires() {
     let tmp = tempfile::tempdir().unwrap();
     let marker = tmp.path().join("prompt_submit_fired");
     let script = tmp.path().join("prompt_submit_hook.sh");
-    fs::write(
-        &script,
-        format!(
-            "#!/bin/bash\necho \"fired\" >> {}\n",
-            marker.to_string_lossy()
-        ),
-    )
-    .unwrap();
+    fs::write(&script, format!("#!/bin/bash\necho \"fired\" >> {}\n", marker.to_string_lossy()))
+        .unwrap();
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -697,9 +582,7 @@ async fn ask_user_question_with_scenario_answers_in_tui_executes_directly() {
         result: None,
     }];
 
-    let (results, pending) = runtime
-        .execute_tools_for_turn("test", "", &tool_calls)
-        .await;
+    let (results, pending) = runtime.execute_tools_for_turn("test", "", &tool_calls).await;
 
     FORCE_TUI.set(None);
 
@@ -710,11 +593,7 @@ async fn ask_user_question_with_scenario_answers_in_tui_executes_directly() {
     );
 
     // Tool should have executed (MockExecutor ran, even if it returns error for unknown tools)
-    assert_eq!(
-        results.len(),
-        1,
-        "Tool should have been executed, not returned as pending"
-    );
+    assert_eq!(results.len(), 1, "Tool should have been executed, not returned as pending");
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -741,9 +620,7 @@ async fn ask_user_question_without_scenario_answers_in_tui_returns_pending() {
         result: None,
     }];
 
-    let (results, pending) = runtime
-        .execute_tools_for_turn("test", "", &tool_calls)
-        .await;
+    let (results, pending) = runtime.execute_tools_for_turn("test", "", &tool_calls).await;
 
     FORCE_TUI.set(None);
 

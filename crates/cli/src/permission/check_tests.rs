@@ -14,10 +14,8 @@ fn test_bypass_allows_all() {
 
 #[test]
 fn test_bypass_permissions_mode_allows_all() {
-    let checker = PermissionChecker::new(
-        PermissionMode::BypassPermissions,
-        PermissionBypass::default(),
-    );
+    let checker =
+        PermissionChecker::new(PermissionMode::BypassPermissions, PermissionBypass::default());
     assert_eq!(checker.check("Bash", "execute"), PermissionResult::Allowed);
     assert!(checker.is_bypassed());
 }
@@ -28,10 +26,7 @@ fn test_accept_edits_allows_edits() {
     assert_eq!(checker.check("Edit", "edit"), PermissionResult::Allowed);
     assert_eq!(checker.check("Write", "write"), PermissionResult::Allowed);
     assert_eq!(checker.check("Write", "create"), PermissionResult::Allowed);
-    assert!(matches!(
-        checker.check("Bash", "execute"),
-        PermissionResult::NeedsPrompt { .. }
-    ));
+    assert!(matches!(checker.check("Bash", "execute"), PermissionResult::NeedsPrompt { .. }));
     assert!(!checker.is_bypassed());
 }
 
@@ -69,10 +64,7 @@ fn test_default_mode_needs_prompt() {
 #[test]
 fn test_delegate_mode_needs_prompt() {
     let checker = PermissionChecker::new(PermissionMode::Delegate, PermissionBypass::default());
-    assert!(matches!(
-        checker.check("Bash", "execute"),
-        PermissionResult::NeedsPrompt { .. }
-    ));
+    assert!(matches!(checker.check("Bash", "execute"), PermissionResult::NeedsPrompt { .. }));
 }
 
 #[test]
@@ -113,10 +105,7 @@ fn test_settings_allow_auto_approves() {
     assert_eq!(checker.check("Read", "read"), PermissionResult::Allowed);
 
     // Other tools still need prompt
-    assert!(matches!(
-        checker.check("Bash", "execute"),
-        PermissionResult::NeedsPrompt { .. }
-    ));
+    assert!(matches!(checker.check("Bash", "execute"), PermissionResult::NeedsPrompt { .. }));
 }
 
 #[test]
@@ -184,12 +173,7 @@ fn test_scenario_override_auto_approve() {
     let mut overrides = HashMap::new();
     overrides.insert(
         "Bash".to_string(),
-        ToolConfig {
-            approve: true,
-            result: None,
-            error: None,
-            answers: None,
-        },
+        ToolConfig { approve: true, result: None, error: None, answers: None },
     );
 
     let checker = PermissionChecker::new(PermissionMode::Default, PermissionBypass::default())
@@ -199,10 +183,7 @@ fn test_scenario_override_auto_approve() {
     assert_eq!(checker.check("Bash", "execute"), PermissionResult::Allowed);
 
     // Other tools still need prompt
-    assert!(matches!(
-        checker.check("Write", "write"),
-        PermissionResult::NeedsPrompt { .. }
-    ));
+    assert!(matches!(checker.check("Write", "write"), PermissionResult::NeedsPrompt { .. }));
 }
 
 #[test]
@@ -243,12 +224,7 @@ fn test_scenario_overrides_beat_settings() {
     let mut overrides = HashMap::new();
     overrides.insert(
         "Bash".to_string(),
-        ToolConfig {
-            approve: true,
-            result: None,
-            error: None,
-            answers: None,
-        },
+        ToolConfig { approve: true, result: None, error: None, answers: None },
     );
 
     let checker = PermissionChecker::with_patterns(

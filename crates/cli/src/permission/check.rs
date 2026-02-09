@@ -57,12 +57,7 @@ impl PermissionChecker {
         bypass: PermissionBypass,
         settings_patterns: PermissionPatterns,
     ) -> Self {
-        Self {
-            mode,
-            bypass,
-            settings_patterns,
-            scenario_overrides: HashMap::new(),
-        }
+        Self { mode, bypass, settings_patterns, scenario_overrides: HashMap::new() }
     }
 
     /// Add scenario tool overrides (highest priority after bypass).
@@ -106,9 +101,7 @@ impl PermissionChecker {
                 return PermissionResult::Allowed;
             }
             if let Some(ref error) = config.error {
-                return PermissionResult::Denied {
-                    reason: error.clone(),
-                };
+                return PermissionResult::Denied { reason: error.clone() };
             }
         }
 
@@ -133,21 +126,18 @@ impl PermissionChecker {
         match self.mode {
             PermissionMode::BypassPermissions => PermissionResult::Allowed,
             PermissionMode::AcceptEdits if is_edit_action(action) => PermissionResult::Allowed,
-            PermissionMode::DontAsk => PermissionResult::Denied {
-                reason: "Permission denied in DontAsk mode".into(),
-            },
-            PermissionMode::Plan => PermissionResult::Denied {
-                reason: "Execution not allowed in Plan mode".into(),
-            },
+            PermissionMode::DontAsk => {
+                PermissionResult::Denied { reason: "Permission denied in DontAsk mode".into() }
+            }
+            PermissionMode::Plan => {
+                PermissionResult::Denied { reason: "Execution not allowed in Plan mode".into() }
+            }
             PermissionMode::Delegate | PermissionMode::Default | PermissionMode::AcceptEdits => {
                 // Read-only and state actions are auto-allowed in interactive modes
                 if is_auto_allowed_action(action) {
                     return PermissionResult::Allowed;
                 }
-                PermissionResult::NeedsPrompt {
-                    tool: tool_name.into(),
-                    action: action.into(),
-                }
+                PermissionResult::NeedsPrompt { tool: tool_name.into(), action: action.into() }
             }
         }
     }
@@ -170,18 +160,12 @@ impl PermissionChecker {
 
 /// Check if an action is considered an edit operation.
 fn is_edit_action(action: &str) -> bool {
-    matches!(
-        action.to_lowercase().as_str(),
-        "edit" | "write" | "create" | "delete" | "modify"
-    )
+    matches!(action.to_lowercase().as_str(), "edit" | "write" | "create" | "delete" | "modify")
 }
 
 /// Check if an action is auto-allowed (read-only, state management, delegation).
 fn is_auto_allowed_action(action: &str) -> bool {
-    matches!(
-        action.to_lowercase().as_str(),
-        "read" | "state" | "delegate"
-    )
+    matches!(action.to_lowercase().as_str(), "read" | "state" | "delegate")
 }
 
 #[cfg(test)]

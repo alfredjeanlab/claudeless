@@ -31,10 +31,7 @@ pub struct PermissionBypass {
 impl PermissionBypass {
     /// Create a new bypass handler from flag values.
     pub fn new(allow_bypass: bool, bypass_requested: bool) -> Self {
-        Self {
-            allow_bypass,
-            bypass_requested,
-        }
+        Self { allow_bypass, bypass_requested }
     }
 
     /// Validate bypass configuration.

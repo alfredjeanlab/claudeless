@@ -22,10 +22,7 @@ use std::process::Command;
 
 /// Root of the workspace (two levels above crates/cli).
 fn workspace_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .canonicalize()
-        .expect("workspace root")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().expect("workspace root")
 }
 
 /// `tests/fixtures/v{version}/` directory.
@@ -518,10 +515,7 @@ fn normalize_state_diff(diff: &str) -> String {
 /// The diff format uses a header like `1a2,12` followed by `> ` prefixed lines.
 /// We extract the path after `> state/`.
 fn parse_state_diff_files(diff: &str) -> Vec<String> {
-    diff.lines()
-        .filter_map(|line| line.strip_prefix("> state/"))
-        .map(|s| s.to_string())
-        .collect()
+    diff.lines().filter_map(|line| line.strip_prefix("> state/")).map(|s| s.to_string()).collect()
 }
 
 /// Recursively list all files under `dir`, returning paths relative to `dir`.
@@ -597,17 +591,13 @@ fn assert_state(version: &str, script: &str, state_dir: &Path) {
 
     let expected_files = parse_state_diff_files(&expected_diff);
     let expected_filtered = filter_state_files(&expected_files);
-    let expected_normalized: BTreeSet<String> = expected_filtered
-        .iter()
-        .map(|f| normalize_state_path(f))
-        .collect();
+    let expected_normalized: BTreeSet<String> =
+        expected_filtered.iter().map(|f| normalize_state_path(f)).collect();
 
     let actual_files = list_state_files(state_dir);
     let actual_filtered = filter_state_files(&actual_files);
-    let actual_normalized: BTreeSet<String> = actual_filtered
-        .iter()
-        .map(|f| normalize_state_path(f))
-        .collect();
+    let actual_normalized: BTreeSet<String> =
+        actual_filtered.iter().map(|f| normalize_state_path(f)).collect();
 
     // Real Claude creates session files asynchronously a few seconds after startup,
     // so captures that exit quickly may not include them in the state diff.
@@ -627,13 +617,10 @@ fn assert_state(version: &str, script: &str, state_dir: &Path) {
          Missing: {missing:?}"
     );
 
-    let session_init_files: BTreeSet<&str> = [
-        ".claude.json",
-        "projects/<PROJDIR>/<UUID>.jsonl",
-        "todos/<UUID>-agent-<UUID>.json",
-    ]
-    .into_iter()
-    .collect();
+    let session_init_files: BTreeSet<&str> =
+        [".claude.json", "projects/<PROJDIR>/<UUID>.jsonl", "todos/<UUID>-agent-<UUID>.json"]
+            .into_iter()
+            .collect();
 
     let unexpected: BTreeSet<_> = actual_normalized
         .difference(&expected_normalized)
@@ -678,16 +665,8 @@ pub fn run_capsh_spec_with_size(
     let scenario = specs_dir().join("scenarios").join(format!("{script}.toml"));
     let capsh_script = specs_dir().join("capsh").join(format!("{script}.capsh"));
 
-    assert!(
-        scenario.exists(),
-        "Scenario file not found: {}",
-        scenario.display()
-    );
-    assert!(
-        capsh_script.exists(),
-        "Capsh script not found: {}",
-        capsh_script.display()
-    );
+    assert!(scenario.exists(), "Scenario file not found: {}", scenario.display());
+    assert!(capsh_script.exists(), "Capsh script not found: {}", capsh_script.display());
 
     let capsh = capsh_bin();
     assert!(
@@ -714,10 +693,8 @@ pub fn run_capsh_spec_with_size(
         .args(["--scenario", scenario.to_str().unwrap()])
         .args(extra_args);
 
-    let output = cmd
-        .stdin(script_file)
-        .output()
-        .unwrap_or_else(|e| panic!("Failed to run capsh: {}", e));
+    let output =
+        cmd.stdin(script_file).output().unwrap_or_else(|e| panic!("Failed to run capsh: {}", e));
 
     // capsh exits 0 on success, 143 when killed by SIGTERM (expected)
     let code = output.status.code().unwrap_or(-1);
@@ -746,11 +723,7 @@ pub fn run_capsh_spec_with_size(
         // Plain text comparison
         let actual_plain_path = frames_dir.path().join(format!("{}.txt", entry.frame));
         let actual_plain = fs::read_to_string(&actual_plain_path).unwrap_or_else(|e| {
-            panic!(
-                "Failed to read frame {}: {}",
-                actual_plain_path.display(),
-                e
-            )
+            panic!("Failed to read frame {}: {}", actual_plain_path.display(), e)
         });
         let expected_plain = load_tui_fixture(version, snapshot_name, false);
         let mut norm_expected = normalize_tui(&expected_plain);
@@ -806,11 +779,7 @@ pub fn run_tmux_spec(version: &str, script: &str, snapshots: &[&str]) {
     // Otherwise, just verify fixtures exist
     for snapshot_name in snapshots {
         let fixture = fixtures_dir(version).join(format!("{snapshot_name}.tmux.txt"));
-        assert!(
-            fixture.exists(),
-            "Tmux fixture not found: {}",
-            fixture.display()
-        );
+        assert!(fixture.exists(), "Tmux fixture not found: {}", fixture.display());
     }
 }
 

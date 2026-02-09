@@ -90,10 +90,8 @@ pub struct Session {
 
 impl Session {
     pub fn new(id: impl Into<String>) -> Self {
-        let now_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64;
+        let now_ms =
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64;
         Self {
             id: id.into(),
             created_at_ms: now_ms,
@@ -123,10 +121,8 @@ impl Session {
     pub fn add_turn(&mut self, prompt: String, response: String) -> &Turn {
         let turn = Turn::new(self.turns.len() as u32, prompt, response);
         self.turns.push(turn);
-        self.last_active_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64;
+        self.last_active_ms =
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64;
         &self.turns[self.turns.len() - 1]
     }
 
@@ -153,10 +149,8 @@ impl Session {
     }
 
     pub fn is_expired(&self, max_age: Duration) -> bool {
-        let elapsed = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64
+        let elapsed = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis()
+            as u64
             - self.last_active_ms;
         elapsed > max_age.as_millis() as u64
     }
@@ -193,11 +187,7 @@ pub struct SessionManager {
 
 impl SessionManager {
     pub fn new() -> Self {
-        Self {
-            sessions: HashMap::new(),
-            current: None,
-            storage_dir: None,
-        }
+        Self { sessions: HashMap::new(), current: None, storage_dir: None }
     }
 
     pub fn with_storage(mut self, dir: impl Into<PathBuf>) -> Self {
@@ -270,11 +260,8 @@ impl SessionManager {
     }
 
     pub fn continue_session(&mut self) -> Option<&mut Session> {
-        let most_recent = self
-            .sessions
-            .values()
-            .max_by_key(|s| s.last_active_ms)
-            .map(|s| s.id.clone());
+        let most_recent =
+            self.sessions.values().max_by_key(|s| s.last_active_ms).map(|s| s.id.clone());
 
         if let Some(id) = most_recent {
             self.current = Some(id.clone());
@@ -351,10 +338,7 @@ impl Default for SessionManager {
 }
 
 fn generate_session_id() -> String {
-    let ts = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis();
+    let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis();
     format!("session_{:x}", ts)
 }
 

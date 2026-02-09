@@ -27,12 +27,7 @@ fn run_capsh(script: &str, command: &[&str]) -> (i32, TempDir) {
         .spawn()
         .expect("failed to spawn capsh");
 
-    child
-        .stdin
-        .as_mut()
-        .unwrap()
-        .write_all(script.as_bytes())
-        .unwrap();
+    child.stdin.as_mut().unwrap().write_all(script.as_bytes()).unwrap();
 
     let output = child.wait_with_output().unwrap();
     let exit_code = output.status.code().unwrap_or(-1);
@@ -51,12 +46,7 @@ fn run_capsh_no_frames(script: &str, command: &[&str]) -> i32 {
         .spawn()
         .expect("failed to spawn capsh");
 
-    child
-        .stdin
-        .as_mut()
-        .unwrap()
-        .write_all(script.as_bytes())
-        .unwrap();
+    child.stdin.as_mut().unwrap().write_all(script.as_bytes()).unwrap();
 
     let output = child.wait_with_output().unwrap();
     output.status.code().unwrap_or(-1)
@@ -77,14 +67,8 @@ wait "hello"
     assert_eq!(exit_code, 0, "echo should exit 0");
 
     // Should have at least one frame
-    assert!(
-        dir.path().join("000001.txt").exists(),
-        "should capture frame"
-    );
-    assert!(
-        dir.path().join("000001.ansi.txt").exists(),
-        "should capture ANSI frame"
-    );
+    assert!(dir.path().join("000001.txt").exists(), "should capture frame");
+    assert!(dir.path().join("000001.ansi.txt").exists(), "should capture ANSI frame");
 
     // Frame should contain "hello"
     let frame = std::fs::read_to_string(dir.path().join("000001.txt")).unwrap();
@@ -118,10 +102,7 @@ wait "test"
 
     // Should have at least one frame entry
     assert!(jsonl.contains(r#""frame":"#), "recording should log frames");
-    assert!(
-        jsonl.contains(r#""ms":"#),
-        "recording should have timestamps"
-    );
+    assert!(jsonl.contains(r#""ms":"#), "recording should have timestamps");
 }
 
 #[test]
@@ -136,10 +117,7 @@ wait "rawtest"
     let raw = std::fs::read(dir.path().join("raw.bin")).unwrap();
     let raw_str = String::from_utf8_lossy(&raw);
 
-    assert!(
-        raw_str.contains("rawtest"),
-        "raw.bin should contain PTY output"
-    );
+    assert!(raw_str.contains("rawtest"), "raw.bin should contain PTY output");
 }
 
 // =============================================================================
@@ -157,10 +135,7 @@ wait "this_will_never_match"
     let (exit_code, _dir) = run_capsh(script, &["echo", "hello"]);
 
     // echo exits 0, so capsh returns 0 (child exited before wait could fail)
-    assert_eq!(
-        exit_code, 0,
-        "should return child exit code when child exits first"
-    );
+    assert_eq!(exit_code, 0, "should return child exit code when child exits first");
 }
 
 #[test]
@@ -174,10 +149,7 @@ wait "this_will_never_appear"
     let (exit_code, _dir) = run_capsh(script, &["sh", "-c", "echo other; exit 3"]);
 
     // Should return child's exit code (3), not error (1)
-    assert_eq!(
-        exit_code, 3,
-        "should return child exit code when pattern doesn't match"
-    );
+    assert_eq!(exit_code, 3, "should return child exit code when pattern doesn't match");
 }
 
 #[test]
@@ -202,11 +174,7 @@ wait "done"
     assert_eq!(exit_code, 7);
 
     let jsonl = std::fs::read_to_string(dir.path().join("recording.jsonl")).unwrap();
-    assert!(
-        jsonl.contains(r#""exit":7"#),
-        "should log exit code, got: {}",
-        jsonl
-    );
+    assert!(jsonl.contains(r#""exit":7"#), "should log exit code, got: {}", jsonl);
 }
 
 // =============================================================================
@@ -306,11 +274,7 @@ send ":q!\n"
 
     let frame = std::fs::read_to_string(dir.path().join("latest.txt")).unwrap();
     // X should be inserted at beginning: "XABC"
-    assert!(
-        frame.contains("XABC"),
-        "X should be at beginning, got: {}",
-        frame
-    );
+    assert!(frame.contains("XABC"), "X should be at beginning, got: {}", frame);
 }
 
 #[test]
@@ -352,12 +316,7 @@ wait "this_will_never_match_so_capsh_blocks_forever"
         .spawn()
         .expect("failed to spawn capsh");
 
-    child
-        .stdin
-        .as_mut()
-        .unwrap()
-        .write_all(script.as_bytes())
-        .unwrap();
+    child.stdin.as_mut().unwrap().write_all(script.as_bytes()).unwrap();
     drop(child.stdin.take()); // Close stdin
 
     // Give capsh time to start
@@ -386,9 +345,5 @@ wait "this_will_never_match_so_capsh_blocks_forever"
         }
     };
 
-    assert!(
-        terminated,
-        "capsh should terminate on SIGTERM, status: {:?}",
-        output.status
-    );
+    assert!(terminated, "capsh should terminate on SIGTERM, status: {:?}", output.status);
 }

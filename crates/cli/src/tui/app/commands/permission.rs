@@ -54,20 +54,15 @@ impl TuiAppState {
 
             // Record tool result to JSONL
             let state_writer = get_state_writer(&inner);
-            if let (Some(ref writer), Some(ref assistant_uuid), Some(ref tool_use_id)) = (
-                &state_writer,
-                &inner.display.pending_assistant_uuid,
-                &perm.tool_use_id,
-            ) {
+            if let (Some(ref writer), Some(ref assistant_uuid), Some(ref tool_use_id)) =
+                (&state_writer, &inner.display.pending_assistant_uuid, &perm.tool_use_id)
+            {
                 let (result_content, result_json) = if granted {
                     let content = format!("[Permission granted for {}]", tool_name);
                     (content, serde_json::json!({"success": true}))
                 } else {
                     let content = format!("[Permission denied for {}]", tool_name);
-                    (
-                        content,
-                        serde_json::json!({"success": false, "denied": true}),
-                    )
+                    (content, serde_json::json!({"success": false, "denied": true}))
                 };
 
                 let _ = writer.write().record_tool_result(
@@ -171,10 +166,10 @@ impl TuiAppState {
                 }
             }
 
-            inner.display.response_content.push_str(&format!(
-                "\n[Permission auto-granted (session): {}]\n",
-                tool_name
-            ));
+            inner
+                .display
+                .response_content
+                .push_str(&format!("\n[Permission auto-granted (session): {}]\n", tool_name));
             return;
         }
 
@@ -211,35 +206,22 @@ impl TuiAppState {
         inner.mode = AppMode::Permission;
         let perm_tool = tool_name.clone();
         drop(inner);
-        self.fire_notification(
-            NOTIFICATION_PERMISSION_PROMPT,
-            "Permission Required",
-            &perm_tool,
-        );
+        self.fire_notification(NOTIFICATION_PERMISSION_PROMPT, "Permission Required", &perm_tool);
     }
 
     /// Show a bash command permission request
     pub fn show_bash_permission(&self, command: String, description: Option<String>) {
-        self.show_permission_request(PermissionType::Bash {
-            command,
-            description,
-        });
+        self.show_permission_request(PermissionType::Bash { command, description });
     }
 
     /// Show an edit file permission request
     pub fn show_edit_permission(&self, file_path: String, diff_lines: Vec<DiffLine>) {
-        self.show_permission_request(PermissionType::Edit {
-            file_path,
-            diff_lines,
-        });
+        self.show_permission_request(PermissionType::Edit { file_path, diff_lines });
     }
 
     /// Show a write file permission request
     pub fn show_write_permission(&self, file_path: String, content_lines: Vec<String>) {
-        self.show_permission_request(PermissionType::Write {
-            file_path,
-            content_lines,
-        });
+        self.show_permission_request(PermissionType::Write { file_path, content_lines });
     }
 }
 
@@ -250,16 +232,13 @@ fn simulate_permission_accept(
     tool_name: &str,
 ) {
     let mut inner = state.inner.lock();
-    inner
-        .display
-        .response_content
-        .push_str(&format!("\n⏺ {}({})\n", tool_name, {
-            match permission_type {
-                PermissionType::Bash { command, .. } => command.clone(),
-                PermissionType::Edit { file_path, .. } => file_path.clone(),
-                PermissionType::Write { file_path, .. } => file_path.clone(),
-            }
-        }));
+    inner.display.response_content.push_str(&format!("\n⏺ {}({})\n", tool_name, {
+        match permission_type {
+            PermissionType::Bash { command, .. } => command.clone(),
+            PermissionType::Edit { file_path, .. } => file_path.clone(),
+            PermissionType::Write { file_path, .. } => file_path.clone(),
+        }
+    }));
     inner.mode = AppMode::Input;
 }
 
@@ -273,24 +252,14 @@ pub(crate) fn build_tool_use_content(
     let tool_use_id = format!("toolu_{}", uuid::Uuid::new_v4().simple());
 
     let content = match permission_type {
-        PermissionType::Bash {
-            command,
-            description,
-        } => {
+        PermissionType::Bash { command, description } => {
             let mut input = serde_json::json!({ "command": command });
             if let Some(desc) = description {
                 input["description"] = serde_json::json!(desc);
             }
-            ContentBlock::ToolUse {
-                id: tool_use_id.clone(),
-                name: "Bash".to_string(),
-                input,
-            }
+            ContentBlock::ToolUse { id: tool_use_id.clone(), name: "Bash".to_string(), input }
         }
-        PermissionType::Edit {
-            file_path,
-            diff_lines,
-        } => ContentBlock::ToolUse {
+        PermissionType::Edit { file_path, diff_lines } => ContentBlock::ToolUse {
             id: tool_use_id.clone(),
             name: "Edit".to_string(),
             input: serde_json::json!({
@@ -298,10 +267,7 @@ pub(crate) fn build_tool_use_content(
                 "changes": diff_lines.len()
             }),
         },
-        PermissionType::Write {
-            file_path,
-            content_lines,
-        } => ContentBlock::ToolUse {
+        PermissionType::Write { file_path, content_lines } => ContentBlock::ToolUse {
             id: tool_use_id.clone(),
             name: "Write".to_string(),
             input: serde_json::json!({

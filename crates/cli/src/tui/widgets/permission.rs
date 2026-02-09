@@ -79,20 +79,11 @@ fn categorize_bash_command(command: &str) -> BashCommandCategory {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PermissionType {
     /// Bash command execution
-    Bash {
-        command: String,
-        description: Option<String>,
-    },
+    Bash { command: String, description: Option<String> },
     /// File edit with diff
-    Edit {
-        file_path: String,
-        diff_lines: Vec<DiffLine>,
-    },
+    Edit { file_path: String, diff_lines: Vec<DiffLine> },
     /// New file creation
-    Write {
-        file_path: String,
-        content_lines: Vec<String>,
-    },
+    Write { file_path: String, content_lines: Vec<String> },
 }
 
 /// A line in a diff preview
@@ -185,10 +176,7 @@ pub struct RichPermissionDialog {
 
 impl RichPermissionDialog {
     pub fn new(permission_type: PermissionType) -> Self {
-        Self {
-            permission_type,
-            selected: PermissionSelection::Yes,
-        }
+        Self { permission_type, selected: PermissionSelection::Yes }
     }
 
     /// Extract the session permission key for this dialog
@@ -265,10 +253,7 @@ impl RichPermissionDialog {
 
         // Content section based on type
         match &self.permission_type {
-            PermissionType::Bash {
-                command,
-                description,
-            } => {
+            PermissionType::Bash { command, description } => {
                 lines.push(String::new());
                 lines.push(format!("   {}", command));
                 if let Some(desc) = description {
@@ -296,21 +281,10 @@ impl RichPermissionDialog {
         lines.push(format!(" {}", self.question_text()));
 
         // Options
-        let yes_indicator = if self.selected == PermissionSelection::Yes {
-            " ❯ "
-        } else {
-            "   "
-        };
-        let session_indicator = if self.selected == PermissionSelection::YesSession {
-            " ❯ "
-        } else {
-            "   "
-        };
-        let no_indicator = if self.selected == PermissionSelection::No {
-            " ❯ "
-        } else {
-            "   "
-        };
+        let yes_indicator = if self.selected == PermissionSelection::Yes { " ❯ " } else { "   " };
+        let session_indicator =
+            if self.selected == PermissionSelection::YesSession { " ❯ " } else { "   " };
+        let no_indicator = if self.selected == PermissionSelection::No { " ❯ " } else { "   " };
 
         lines.push(format!("{}1. Yes", yes_indicator));
         lines.push(format!("{}2. {}", session_indicator, self.option2_text()));

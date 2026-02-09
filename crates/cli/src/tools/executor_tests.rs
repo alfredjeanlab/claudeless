@@ -38,9 +38,7 @@ fn test_mock_executor_without_result() {
 
 #[test]
 fn test_execution_context_builder() {
-    let ctx = ExecutionContext::default()
-        .with_cwd("/home/user")
-        .with_session_id("session-123");
+    let ctx = ExecutionContext::default().with_cwd("/home/user").with_session_id("session-123");
 
     assert_eq!(ctx.cwd, Some(PathBuf::from("/home/user")));
     assert_eq!(ctx.session_id, Some("session-123".to_string()));
@@ -62,10 +60,8 @@ fn test_permission_checking_executor_allowed() {
     use crate::permission::{PermissionBypass, PermissionMode};
 
     let inner = Box::new(MockExecutor::new());
-    let checker = PermissionChecker::new(
-        PermissionMode::BypassPermissions,
-        PermissionBypass::default(),
-    );
+    let checker =
+        PermissionChecker::new(PermissionMode::BypassPermissions, PermissionBypass::default());
     let executor = PermissionCheckingExecutor::new(inner, checker);
 
     let call = ToolCall {
@@ -125,10 +121,8 @@ fn test_permission_checking_executor_needs_prompt() {
 fn test_create_executor_with_permissions() {
     use crate::permission::{PermissionBypass, PermissionMode};
 
-    let checker = PermissionChecker::new(
-        PermissionMode::BypassPermissions,
-        PermissionBypass::default(),
-    );
+    let checker =
+        PermissionChecker::new(PermissionMode::BypassPermissions, PermissionBypass::default());
     let executor = create_executor_with_permissions(ToolExecutionMode::Mock, checker);
     assert_eq!(executor.name(), "permission_checking");
 }

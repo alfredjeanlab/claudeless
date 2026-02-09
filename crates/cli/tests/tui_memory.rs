@@ -65,11 +65,7 @@ fn test_tui_memory_shows_dialog_with_sources() {
     let capture = tui.wait_for("Memory");
 
     // Should show the memory dialog header
-    assert!(
-        capture.contains("Memory"),
-        "Should show 'Memory' header.\nCapture:\n{}",
-        capture
-    );
+    assert!(capture.contains("Memory"), "Should show 'Memory' header.\nCapture:\n{}", capture);
     // Should show Project memory source
     assert!(
         capture.contains("Project"),
@@ -91,11 +87,7 @@ fn test_tui_memory_shows_active_files_count() {
     let capture = tui.wait_for("Memory");
 
     // Should show count of active files
-    assert!(
-        capture.contains("file"),
-        "Should show active files count.\nCapture:\n{}",
-        capture
-    );
+    assert!(capture.contains("file"), "Should show active files count.\nCapture:\n{}", capture);
 }
 
 // =============================================================================
@@ -198,11 +190,7 @@ fn test_tui_memory_shows_no_files_gracefully() {
     let capture = tui.wait_for("Memory");
 
     // Should still show dialog with all source types (even if inactive)
-    assert!(
-        capture.contains("Memory"),
-        "Should show Memory dialog header.\nCapture:\n{}",
-        capture
-    );
+    assert!(capture.contains("Memory"), "Should show Memory dialog header.\nCapture:\n{}", capture);
     assert!(
         capture.contains("Project") && capture.contains("User") && capture.contains("Enterprise"),
         "Should show all memory source types.\nCapture:\n{}",

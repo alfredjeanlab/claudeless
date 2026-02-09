@@ -75,12 +75,7 @@ pub struct HookExecutor {
 impl HookExecutor {
     /// Create a new hook executor
     pub fn new() -> Self {
-        Self {
-            hooks: HashMap::new(),
-            cwd: None,
-            transcript_path: None,
-            permission_mode: None,
-        }
+        Self { hooks: HashMap::new(), cwd: None, transcript_path: None, permission_mode: None }
     }
 
     /// Set common context fields injected into every hook payload.
@@ -116,9 +111,8 @@ impl HookExecutor {
                 if !matcher_pattern.is_empty() && matcher_pattern != "*" {
                     let subject = message.payload.matcher_subject();
                     if let Some(subject) = subject {
-                        let matches = matcher_pattern
-                            .split('|')
-                            .any(|segment| segment.trim() == subject);
+                        let matches =
+                            matcher_pattern.split('|').any(|segment| segment.trim() == subject);
                         if !matches {
                             continue;
                         }
@@ -153,16 +147,10 @@ impl HookExecutor {
                 obj.insert("cwd".to_string(), serde_json::Value::String(cwd.clone()));
             }
             if let Some(ref tp) = self.transcript_path {
-                obj.insert(
-                    "transcript_path".to_string(),
-                    serde_json::Value::String(tp.clone()),
-                );
+                obj.insert("transcript_path".to_string(), serde_json::Value::String(tp.clone()));
             }
             if let Some(ref pm) = self.permission_mode {
-                obj.insert(
-                    "permission_mode".to_string(),
-                    serde_json::Value::String(pm.clone()),
-                );
+                obj.insert("permission_mode".to_string(), serde_json::Value::String(pm.clone()));
             }
         }
         let message_json = wire.to_string();

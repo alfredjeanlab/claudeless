@@ -30,19 +30,10 @@ fn capture_frame(script: &str, command: &[&str], cols: u16, rows: u16) -> String
         .spawn()
         .expect("failed to spawn capsh");
 
-    child
-        .stdin
-        .as_mut()
-        .unwrap()
-        .write_all(script.as_bytes())
-        .unwrap();
+    child.stdin.as_mut().unwrap().write_all(script.as_bytes()).unwrap();
 
     let output = child.wait_with_output().unwrap();
-    assert!(
-        output.status.success(),
-        "capsh failed: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    assert!(output.status.success(), "capsh failed: {}", String::from_utf8_lossy(&output.stderr));
 
     std::fs::read_to_string(dir.path().join("latest.txt")).expect("no frame captured")
 }
@@ -70,19 +61,10 @@ fn capture_vi_frame(script: &str) -> String {
         .spawn()
         .expect("failed to spawn capsh");
 
-    child
-        .stdin
-        .as_mut()
-        .unwrap()
-        .write_all(script.as_bytes())
-        .unwrap();
+    child.stdin.as_mut().unwrap().write_all(script.as_bytes()).unwrap();
 
     let output = child.wait_with_output().unwrap();
-    assert!(
-        output.status.success(),
-        "capsh failed: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    assert!(output.status.success(), "capsh failed: {}", String::from_utf8_lossy(&output.stderr));
 
     std::fs::read_to_string(dir.path().join("latest.txt")).expect("no frame captured")
 }

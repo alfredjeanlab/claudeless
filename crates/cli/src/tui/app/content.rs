@@ -192,10 +192,7 @@ pub(crate) fn render_stash_indicator(state: &RenderState) -> AnyElement<'static>
     let accent_fg = escape::fg(LOGO_FG.0, LOGO_FG.1, LOGO_FG.2);
     let reset = escape::RESET;
 
-    let indicator_text = format!(
-        "  {}›{} Stashed (auto-restores after submit)",
-        accent_fg, reset
-    );
+    let indicator_text = format!("  {}›{} Stashed (auto-restores after submit)", accent_fg, reset);
 
     element! {
         View(flex_direction: FlexDirection::Column) {

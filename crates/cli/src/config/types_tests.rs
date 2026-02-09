@@ -96,10 +96,7 @@ fn validate_accepts_valid_config() {
 #[test]
 fn validate_rejects_invalid_session_id() {
     let config = ScenarioConfig {
-        claude: ClaudeConfig {
-            session_id: Some("not-a-uuid".to_string()),
-            ..Default::default()
-        },
+        claude: ClaudeConfig { session_id: Some("not-a-uuid".to_string()), ..Default::default() },
         ..Default::default()
     };
 
@@ -123,10 +120,8 @@ fn validate_rejects_invalid_launch_timestamp() {
 
 #[test]
 fn validate_rejects_invalid_permission_mode() {
-    let config = ScenarioConfig {
-        permission_mode: Some("invalid-mode".to_string()),
-        ..Default::default()
-    };
+    let config =
+        ScenarioConfig { permission_mode: Some("invalid-mode".to_string()), ..Default::default() };
 
     let err = config.validate().unwrap_err();
     assert!(err.contains("permission_mode"));
@@ -135,10 +130,8 @@ fn validate_rejects_invalid_permission_mode() {
 #[test]
 fn validate_accepts_all_permission_modes() {
     for mode in VALID_PERMISSION_MODES {
-        let config = ScenarioConfig {
-            permission_mode: Some(mode.to_string()),
-            ..Default::default()
-        };
+        let config =
+            ScenarioConfig { permission_mode: Some(mode.to_string()), ..Default::default() };
         assert!(config.validate().is_ok(), "mode '{}' should be valid", mode);
     }
 }

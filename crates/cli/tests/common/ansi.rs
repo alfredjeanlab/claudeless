@@ -36,10 +36,7 @@ pub fn normalize_ansi_tui(input: &str, cwd: Option<&str>) -> String {
         .into_iter()
         .map(|span| {
             let normalized_text = normalize_text_content(&span.text, cwd);
-            AnsiSpan {
-                text: normalized_text,
-                sequences: span.sequences,
-            }
+            AnsiSpan { text: normalized_text, sequences: span.sequences }
         })
         .collect();
 
@@ -134,14 +131,10 @@ fn normalize_text_content(input: &str, cwd: Option<&str>) -> String {
     // Note: In ANSI output, the placeholder may be split across spans:
     // [inverse]T[reset+dim]ry "..." so we match both full and partial forms
     let placeholder_re = Regex::new(r#"Try "[^"]+""#).unwrap();
-    result = placeholder_re
-        .replace_all(&result, "<PLACEHOLDER>")
-        .to_string();
+    result = placeholder_re.replace_all(&result, "<PLACEHOLDER>").to_string();
     // Handle partial placeholder when "T" is in a separate span
     let partial_placeholder_re = Regex::new(r#"ry "[^"]+""#).unwrap();
-    result = partial_placeholder_re
-        .replace_all(&result, "ry <PLACEHOLDER_TAIL>")
-        .to_string();
+    result = partial_placeholder_re.replace_all(&result, "ry <PLACEHOLDER_TAIL>").to_string();
 
     // Strip trailing whitespace per line (handled at line level in output)
     result
@@ -209,9 +202,7 @@ fn escape_ansi_for_display(input: &str) -> String {
 
 /// Load a fixture file with ANSI sequences.
 pub fn load_ansi_fixture(name: &str) -> String {
-    let path = super::fixtures_dir()
-        .join(super::DEFAULT_FIXTURE_VERSION)
-        .join(name);
+    let path = super::fixtures_dir().join(super::DEFAULT_FIXTURE_VERSION).join(name);
     std::fs::read_to_string(&path)
         .unwrap_or_else(|e| panic!("Failed to load ANSI fixture {:?}: {}", path, e))
 }

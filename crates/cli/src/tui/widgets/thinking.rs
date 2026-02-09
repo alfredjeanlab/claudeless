@@ -25,15 +25,8 @@ pub struct ThinkingDialog {
 
 impl ThinkingDialog {
     pub fn new(current_enabled: bool) -> Self {
-        let current = if current_enabled {
-            ThinkingMode::Enabled
-        } else {
-            ThinkingMode::Disabled
-        };
-        Self {
-            selected: current,
-            current,
-        }
+        let current = if current_enabled { ThinkingMode::Enabled } else { ThinkingMode::Disabled };
+        Self { selected: current, current }
     }
 }
 

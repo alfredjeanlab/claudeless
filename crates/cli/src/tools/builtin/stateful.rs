@@ -63,18 +63,9 @@ pub fn execute_todo_write(call: &ToolCall, state_writer: &StateWriter) -> ToolEx
 fn parse_todo_item(value: &serde_json::Value) -> Option<TodoItem> {
     let content = value.get("content")?.as_str()?.to_string();
     let status: TodoStatus = serde_json::from_value(value.get("status")?.clone()).ok()?;
-    let active_form = value
-        .get("activeForm")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
+    let active_form = value.get("activeForm").and_then(|v| v.as_str()).map(|s| s.to_string());
 
-    Some(TodoItem {
-        id: format!("todo_{}", rand_id()),
-        content,
-        active_form,
-        status,
-        priority: 0,
-    })
+    Some(TodoItem { id: format!("todo_{}", rand_id()), content, active_form, status, priority: 0 })
 }
 
 /// Generate a simple random ID.
@@ -83,10 +74,7 @@ fn rand_id() -> u64 {
     use std::hash::{Hash, Hasher};
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
+    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
     let mut hasher = DefaultHasher::new();
     nanos.hash(&mut hasher);
     hasher.finish()
@@ -106,9 +94,7 @@ pub fn execute_enter_plan_mode() -> ToolExecutionResult {
 
     ToolExecutionResult {
         tool_use_id: String::new(), // Set by caller
-        content: vec![ToolResultContent::Text {
-            text: instructions.to_string(),
-        }],
+        content: vec![ToolResultContent::Text { text: instructions.to_string() }],
         is_error: false,
         tool_use_result: Some(serde_json::json!({
             "message": "Entered plan mode. You are now exploring and designing an implementation approach."
@@ -124,11 +110,8 @@ pub fn execute_enter_plan_mode() -> ToolExecutionResult {
 /// show a plan approval dialog. In print mode, it auto-approves.
 pub fn execute_exit_plan_mode(call: &ToolCall, state_writer: &StateWriter) -> ToolExecutionResult {
     // Real Claude Code always uses "plan" as the field name
-    let content = call
-        .input
-        .get("plan")
-        .and_then(|v| v.as_str())
-        .unwrap_or("# Plan\n\nNo content provided.");
+    let content =
+        call.input.get("plan").and_then(|v| v.as_str()).unwrap_or("# Plan\n\nNo content provided.");
 
     match state_writer.create_plan(content) {
         Ok(name) => {
@@ -148,9 +131,7 @@ pub fn execute_exit_plan_mode(call: &ToolCall, state_writer: &StateWriter) -> To
         }
         Err(e) => ToolExecutionResult {
             tool_use_id: String::new(),
-            content: vec![ToolResultContent::Text {
-                text: format!("Failed to save plan: {}", e),
-            }],
+            content: vec![ToolResultContent::Text { text: format!("Failed to save plan: {}", e) }],
             is_error: true,
             tool_use_result: None,
             needs_prompt: false,
@@ -163,12 +144,8 @@ pub fn execute_exit_plan_mode(call: &ToolCall, state_writer: &StateWriter) -> To
 /// In mock/print mode: uses pre-configured answers from `call.input["answers"]`
 /// or auto-selects the first option for each question.
 pub fn execute_ask_user_question(call: &ToolCall) -> ToolExecutionResult {
-    let questions = call
-        .input
-        .get("questions")
-        .and_then(|v| v.as_array())
-        .cloned()
-        .unwrap_or_default();
+    let questions =
+        call.input.get("questions").and_then(|v| v.as_array()).cloned().unwrap_or_default();
 
     // Check if answers are already provided (from scenario config or TUI)
     let answers = if let Some(ans) = call.input.get("answers") {

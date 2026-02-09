@@ -21,11 +21,7 @@ static TMUX_AVAILABLE: OnceLock<bool> = OnceLock::new();
 /// Check if tmux is available on the system.
 fn is_tmux_available() -> bool {
     *TMUX_AVAILABLE.get_or_init(|| {
-        Command::new("tmux")
-            .arg("-V")
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
+        Command::new("tmux").arg("-V").output().map(|o| o.status.success()).unwrap_or(false)
     })
 }
 
@@ -117,11 +113,7 @@ pub fn new_session(session: impl AsRef<str>, width: u16, height: u16) {
         .status()
         .expect("Failed to create tmux session");
 
-    assert!(
-        status.success(),
-        "Failed to create tmux session '{}'",
-        session
-    );
+    assert!(status.success(), "Failed to create tmux session '{}'", session);
 
     // Wait for shell to be ready by checking that the pane has content
     // This prevents race conditions where commands are sent before the shell initializes
@@ -134,10 +126,7 @@ pub fn new_session(session: impl AsRef<str>, width: u16, height: u16) {
             break;
         }
         if start.elapsed() >= timeout {
-            panic!(
-                "Timeout waiting for shell to initialize in tmux session '{}'",
-                session
-            );
+            panic!("Timeout waiting for shell to initialize in tmux session '{}'", session);
         }
         sleep(Duration::from_millis(10));
     }
@@ -145,9 +134,7 @@ pub fn new_session(session: impl AsRef<str>, width: u16, height: u16) {
 
 /// Kill a tmux session, ignoring errors if it doesn't exist.
 pub fn kill_session(session: impl AsRef<str>) {
-    let _ = Command::new("tmux")
-        .args(["kill-session", "-t", session.as_ref()])
-        .output();
+    let _ = Command::new("tmux").args(["kill-session", "-t", session.as_ref()]).output();
 }
 
 /// Send keys to a tmux session (without pressing Enter).

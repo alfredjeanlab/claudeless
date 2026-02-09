@@ -50,11 +50,7 @@ pub fn ensure_parent_exists(path: &Path) -> std::io::Result<()> {
 /// Silently skips entries that can't be read. Returns an empty iterator if the
 /// directory doesn't exist or can't be read.
 pub fn files_in(dir: &Path) -> impl Iterator<Item = PathBuf> {
-    std::fs::read_dir(dir)
-        .into_iter()
-        .flatten()
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
+    std::fs::read_dir(dir).into_iter().flatten().filter_map(|e| e.ok()).map(|e| e.path())
 }
 
 /// Iterate over JSON file paths in a directory.

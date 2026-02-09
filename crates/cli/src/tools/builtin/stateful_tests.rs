@@ -78,10 +78,7 @@ fn test_execute_todo_write() {
 
     let result = execute_todo_write(&call, &writer);
     assert!(!result.is_error);
-    assert!(result
-        .text()
-        .unwrap()
-        .contains("Todos have been modified successfully"));
+    assert!(result.text().unwrap().contains("Todos have been modified successfully"));
 
     // Verify file was created
     assert!(writer.todo_path().exists());
@@ -107,11 +104,7 @@ fn test_execute_exit_plan_mode() {
 #[test]
 fn test_execute_exit_plan_mode_no_content() {
     let writer = create_test_state_writer();
-    let call = ToolCall {
-        call: "ExitPlanMode".to_string(),
-        input: json!({}),
-        result: None,
-    };
+    let call = ToolCall { call: "ExitPlanMode".to_string(), input: json!({}), result: None };
 
     let result = execute_exit_plan_mode(&call, &writer);
     assert!(!result.is_error);
@@ -182,10 +175,7 @@ fn test_ask_user_question_auto_select_first() {
     assert!(text.contains("\"How should I format the output?\"=\"Summary\""));
 
     let result_json = result.tool_use_result.unwrap();
-    assert_eq!(
-        result_json["answers"]["How should I format the output?"],
-        "Summary"
-    );
+    assert_eq!(result_json["answers"]["How should I format the output?"], "Summary");
 }
 
 #[test]
@@ -241,11 +231,7 @@ fn test_ask_user_question_empty_questions() {
 
 #[test]
 fn test_ask_user_question_malformed_input() {
-    let call = ToolCall {
-        call: "AskUserQuestion".to_string(),
-        input: json!({}),
-        result: None,
-    };
+    let call = ToolCall { call: "AskUserQuestion".to_string(), input: json!({}), result: None };
 
     let result = execute_ask_user_question(&call);
     assert!(!result.is_error);
@@ -273,10 +259,7 @@ fn test_execute_enter_plan_mode() {
 
     // tool_use_result has structured message
     let result_json = result.tool_use_result.unwrap();
-    assert!(result_json["message"]
-        .as_str()
-        .unwrap()
-        .contains("plan mode"));
+    assert!(result_json["message"].as_str().unwrap().contains("plan mode"));
 }
 
 // =========================================================================
@@ -301,8 +284,5 @@ fn test_execute_exit_plan_mode_plan_field() {
     // tool_use_result has plan metadata
     let result_json = result.tool_use_result.unwrap();
     assert!(result_json["plan_name"].as_str().is_some());
-    assert!(result_json["plan_path"]
-        .as_str()
-        .unwrap()
-        .contains("~/.claude/plans/"));
+    assert!(result_json["plan_path"].as_str().unwrap().contains("~/.claude/plans/"));
 }

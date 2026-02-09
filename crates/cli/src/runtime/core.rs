@@ -160,15 +160,11 @@ impl Runtime {
 
     /// Get the scenario config (for TUI mode config extraction).
     pub fn scenario_config(&self) -> &ScenarioConfig {
-        self.scenario
-            .as_ref()
-            .map(|s| s.config())
-            .unwrap_or_else(|| {
-                // Use a static default config if no scenario
-                static DEFAULT_CONFIG: std::sync::OnceLock<ScenarioConfig> =
-                    std::sync::OnceLock::new();
-                DEFAULT_CONFIG.get_or_init(ScenarioConfig::default)
-            })
+        self.scenario.as_ref().map(|s| s.config()).unwrap_or_else(|| {
+            // Use a static default config if no scenario
+            static DEFAULT_CONFIG: std::sync::OnceLock<ScenarioConfig> = std::sync::OnceLock::new();
+            DEFAULT_CONFIG.get_or_init(ScenarioConfig::default)
+        })
     }
 
     /// Take ownership of the scenario (for TUI mode handoff).
@@ -231,9 +227,8 @@ impl Runtime {
             final_usage = response.usage;
 
             // Execute tools and collect results
-            let (tool_results, pending_permission) = self
-                .execute_tools_for_turn(&current_prompt, &response_text, &tool_calls)
-                .await;
+            let (tool_results, pending_permission) =
+                self.execute_tools_for_turn(&current_prompt, &response_text, &tool_calls).await;
 
             // Record the turn to state if no tool calls (tool calls record their own state)
             if tool_calls.is_empty() {
@@ -261,17 +256,11 @@ impl Runtime {
             }
 
             // If scenario has active turns, auto-continue with tool results as prompt
-            let has_active_turns = self
-                .scenario
-                .as_ref()
-                .is_some_and(|s| s.has_active_sequence());
+            let has_active_turns = self.scenario.as_ref().is_some_and(|s| s.has_active_sequence());
             if has_active_turns {
                 // Build continuation prompt from tool results
-                current_prompt = all_tool_results
-                    .iter()
-                    .filter_map(|r| r.text())
-                    .collect::<Vec<_>>()
-                    .join("\n");
+                current_prompt =
+                    all_tool_results.iter().filter_map(|r| r.text()).collect::<Vec<_>>().join("\n");
                 continue;
             }
 
@@ -363,9 +352,7 @@ impl Runtime {
         // Record initial assistant text (if any)
         if !response_text.is_empty() {
             if let (Some(ref state_writer), Some(ref uuid)) = (&self.state, &user_uuid) {
-                let _ = state_writer
-                    .write()
-                    .record_assistant_response(uuid, response_text);
+                let _ = state_writer.write().record_assistant_response(uuid, response_text);
             }
         }
 
@@ -415,10 +402,8 @@ impl Runtime {
             // For ExitPlanMode: return as pending for TUI mode interactive dialog
             if call.call == "ExitPlanMode" && self.cli.should_use_tui() {
                 // TUI mode — return as pending for plan approval dialog
-                pending_permission = Some(PendingPermission {
-                    tool_call: call.clone(),
-                    tool_use_id,
-                });
+                pending_permission =
+                    Some(PendingPermission { tool_call: call.clone(), tool_use_id });
                 break;
             }
 
@@ -434,10 +419,8 @@ impl Runtime {
                         std::borrow::Cow::Owned(modified)
                     } else if self.cli.should_use_tui() {
                         // TUI mode without answers — return as pending for interactive dialog
-                        pending_permission = Some(PendingPermission {
-                            tool_call: call.clone(),
-                            tool_use_id,
-                        });
+                        pending_permission =
+                            Some(PendingPermission { tool_call: call.clone(), tool_use_id });
                         break;
                     } else {
                         std::borrow::Cow::Borrowed(call)
@@ -479,10 +462,7 @@ impl Runtime {
                         name: call.call.clone(),
                         input: call.input.clone(),
                     };
-                    state_writer
-                        .write()
-                        .record_assistant_tool_use(uuid, vec![tool_use_block])
-                        .ok()
+                    state_writer.write().record_assistant_tool_use(uuid, vec![tool_use_block]).ok()
                 } else {
                     None
                 };
@@ -493,10 +473,8 @@ impl Runtime {
             // If this tool needs a permission prompt, stop here — don't record
             // the result to JSONL since the tool hasn't actually executed.
             if result.needs_prompt {
-                pending_permission = Some(PendingPermission {
-                    tool_call: call.clone(),
-                    tool_use_id,
-                });
+                pending_permission =
+                    Some(PendingPermission { tool_call: call.clone(), tool_use_id });
                 break;
             }
 
@@ -537,9 +515,7 @@ impl Runtime {
                             HookEvent::PostToolExecution,
                             &call.call,
                             call.input.clone(),
-                            result
-                                .text()
-                                .map(|s| serde_json::Value::String(s.to_string())),
+                            result.text().map(|s| serde_json::Value::String(s.to_string())),
                             Some(tool_use_id.clone()),
                         );
                         if let Err(e) = hook_executor.execute(&post_msg).await {
@@ -557,9 +533,7 @@ impl Runtime {
             if let (Some(ref state_writer), Some(ref uuid)) = (&self.state, &user_uuid) {
                 let final_response =
                     "Done! The requested operation has been completed successfully.";
-                let _ = state_writer
-                    .write()
-                    .record_assistant_response(uuid, final_response);
+                let _ = state_writer.write().record_assistant_response(uuid, final_response);
             }
         }
 

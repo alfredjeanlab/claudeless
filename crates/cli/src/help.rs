@@ -150,12 +150,7 @@ fn render_entry(
                 }
             }
         } else {
-            out.push_str(&format!(
-                "  {}{}{}\n",
-                flags,
-                " ".repeat(padding),
-                description
-            ));
+            out.push_str(&format!("  {}{}{}\n", flags, " ".repeat(padding), description));
         }
     }
 }
@@ -230,10 +225,7 @@ pub fn render_doctor_help() -> String {
     let spec = HelpSpec {
         usage: "claude doctor [options]",
         description: "Check the health of your Claude Code auto-updater",
-        sections: vec![HelpSection {
-            title: "Options",
-            items: vec![help_entry()],
-        }],
+        sections: vec![HelpSection { title: "Options", items: vec![help_entry()] }],
         after_text: None,
     };
     render_help(&spec, Some(80))
@@ -357,10 +349,7 @@ pub fn render_mcp_serve_help() -> String {
         sections: vec![HelpSection {
             title: "Options",
             items: vec![
-                HelpItem::Entry {
-                    flags: "-d, --debug",
-                    description: "Enable debug mode",
-                },
+                HelpItem::Entry { flags: "-d, --debug", description: "Enable debug mode" },
                 help_entry(),
                 HelpItem::Entry {
                     flags: "--verbose",
@@ -476,10 +465,7 @@ pub fn render_setup_token_help() -> String {
     let spec = HelpSpec {
         usage: "claude setup-token [options]",
         description: "Set up a long-lived authentication token (requires Claude subscription)",
-        sections: vec![HelpSection {
-            title: "Options",
-            items: vec![help_entry()],
-        }],
+        sections: vec![HelpSection { title: "Options", items: vec![help_entry()] }],
         after_text: None,
     };
     render_help(&spec, Some(80))
@@ -490,10 +476,7 @@ pub fn render_update_help() -> String {
     let spec = HelpSpec {
         usage: "claude update [options]",
         description: "Check for updates and install if available",
-        sections: vec![HelpSection {
-            title: "Options",
-            items: vec![help_entry()],
-        }],
+        sections: vec![HelpSection { title: "Options", items: vec![help_entry()] }],
         after_text: None,
     };
     render_help(&spec, Some(80))
@@ -505,10 +488,7 @@ pub fn render_update_help() -> String {
 
 /// Standard `-h, --help` entry.
 fn help_entry() -> HelpItem {
-    HelpItem::Entry {
-        flags: "-h, --help",
-        description: "Display help for command",
-    }
+    HelpItem::Entry { flags: "-h, --help", description: "Display help for command" }
 }
 
 /// All options for the main help page, in alphabetical order.

@@ -193,31 +193,19 @@ impl PlanApprovalState {
         }
 
         // Free-text option
-        let free_cursor = if self.cursor == Self::FREE_TEXT_INDEX {
-            "❯"
-        } else {
-            " "
-        };
+        let free_cursor = if self.cursor == Self::FREE_TEXT_INDEX { "❯" } else { " " };
         let free_label = if self.free_text.is_empty() {
             "Type here to tell Claude what to change".to_string()
         } else {
             self.free_text.clone()
         };
-        lines.push(format!(
-            "{} {}. {}",
-            free_cursor,
-            Self::FREE_TEXT_INDEX + 1,
-            free_label
-        ));
+        lines.push(format!("{} {}. {}", free_cursor, Self::FREE_TEXT_INDEX + 1, free_label));
 
         lines.push(sep);
         lines.push(String::new());
 
         // Footer
-        lines.push(format!(
-            "  ctrl-g to edit in VS Code · {}",
-            self.plan_file_path
-        ));
+        lines.push(format!("  ctrl-g to edit in VS Code · {}", self.plan_file_path));
         lines.push("  Enter to select · ↑/↓ to navigate · Esc to cancel".to_string());
 
         lines.join("\n")

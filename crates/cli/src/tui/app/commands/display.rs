@@ -37,11 +37,7 @@ pub(super) fn wrap_response_paragraph(text: &str, terminal_width: usize) -> Stri
 
     for word in text.split_whitespace() {
         let word_len = word.chars().count();
-        let max_width = if is_first_line {
-            first_line_width
-        } else {
-            continuation_width
-        };
+        let max_width = if is_first_line { first_line_width } else { continuation_width };
 
         if current_line_len == 0 {
             result.push_str(word);
@@ -80,11 +76,7 @@ pub(super) fn join_display_parts(parts: &[String]) -> String {
 pub(super) fn format_completed_tool_display(call: &ToolCall, result_text: Option<&str>) -> String {
     match call.call.as_str() {
         "Write" => {
-            let file_path = call
-                .input
-                .get("file_path")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let file_path = call.input.get("file_path").and_then(|v| v.as_str()).unwrap_or("");
             let mut display = format!("Write({})", file_path);
             if let Some(result) = result_text {
                 display.push_str(&format!("\n  \u{23bf} \u{a0}{}", result));
@@ -110,11 +102,7 @@ pub(super) fn format_completed_tool_display(call: &ToolCall, result_text: Option
             }
         }
         "Bash" => {
-            let command = call
-                .input
-                .get("command")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let command = call.input.get("command").and_then(|v| v.as_str()).unwrap_or("");
             let mut display = format!("Bash({})", command);
             if let Some(result) = result_text {
                 display.push_str(&format!("\n  \u{23bf} \u{a0}{}", result));
@@ -135,27 +123,15 @@ pub(super) fn format_completed_tool_display(call: &ToolCall, result_text: Option
 pub(super) fn format_tool_call_display(call: &ToolCall) -> String {
     match call.call.as_str() {
         "Bash" => {
-            let command = call
-                .input
-                .get("command")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let command = call.input.get("command").and_then(|v| v.as_str()).unwrap_or("");
             format!("Bash({})\n  \u{23bf} \u{a0}Running\u{2026}", command)
         }
         "Edit" => {
-            let file_path = call
-                .input
-                .get("file_path")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let file_path = call.input.get("file_path").and_then(|v| v.as_str()).unwrap_or("");
             format!("Update({})", file_path)
         }
         "Write" => {
-            let file_path = call
-                .input
-                .get("file_path")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let file_path = call.input.get("file_path").and_then(|v| v.as_str()).unwrap_or("");
             format!("Write({})", file_path)
         }
         _ => call.call.clone(),
@@ -174,41 +150,20 @@ pub(crate) fn tool_call_to_permission_type(call: &ToolCall) -> Option<Permission
     match call.call.as_str() {
         "Bash" => {
             let command = call.input.get("command")?.as_str()?.to_string();
-            let description = call
-                .input
-                .get("description")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
-            Some(PermissionType::Bash {
-                command,
-                description,
-            })
+            let description =
+                call.input.get("description").and_then(|v| v.as_str()).map(|s| s.to_string());
+            Some(PermissionType::Bash { command, description })
         }
         "Write" => {
             let file_path = call.input.get("file_path")?.as_str()?.to_string();
-            let content = call
-                .input
-                .get("content")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let content = call.input.get("content").and_then(|v| v.as_str()).unwrap_or("");
             let content_lines = content.split('\n').map(|s| s.to_string()).collect();
-            Some(PermissionType::Write {
-                file_path,
-                content_lines,
-            })
+            Some(PermissionType::Write { file_path, content_lines })
         }
         "Edit" => {
             let file_path = call.input.get("file_path")?.as_str()?.to_string();
-            let old_string = call
-                .input
-                .get("old_string")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let new_string = call
-                .input
-                .get("new_string")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let old_string = call.input.get("old_string").and_then(|v| v.as_str()).unwrap_or("");
+            let new_string = call.input.get("new_string").and_then(|v| v.as_str()).unwrap_or("");
 
             let mut diff_lines = Vec::new();
             let mut line_num: u32 = 1;
@@ -250,10 +205,7 @@ pub(crate) fn tool_call_to_permission_type(call: &ToolCall) -> Option<Permission
                 });
             }
 
-            Some(PermissionType::Edit {
-                file_path,
-                diff_lines,
-            })
+            Some(PermissionType::Edit { file_path, diff_lines })
         }
         _ => None,
     }

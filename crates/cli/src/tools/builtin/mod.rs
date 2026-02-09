@@ -69,15 +69,10 @@ impl BuiltinExecutor {
             Box::new(GrepExecutor),
         ];
 
-        let executors = all_executors
-            .into_iter()
-            .map(|e| (e.tool_name().as_str().to_string(), e))
-            .collect();
+        let executors =
+            all_executors.into_iter().map(|e| (e.tool_name().as_str().to_string(), e)).collect();
 
-        Self {
-            executors,
-            state_writer: None,
-        }
+        Self { executors, state_writer: None }
     }
 
     /// Set the state writer for stateful tools (TodoWrite, ExitPlanMode).
@@ -136,9 +131,7 @@ impl ToolExecutor for BuiltinExecutor {
 
         // Look up the tool executor
         if let Some(executor) = self.executors.get(&call.call) {
-            let builtin_ctx = BuiltinContext {
-                cwd: ctx.cwd.clone(),
-            };
+            let builtin_ctx = BuiltinContext { cwd: ctx.cwd.clone() };
             executor.execute(call, tool_use_id, &builtin_ctx)
         } else {
             // Return mock result for unknown stateful tools

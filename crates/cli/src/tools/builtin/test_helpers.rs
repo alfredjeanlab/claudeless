@@ -45,9 +45,7 @@ pub struct TestDir {
 impl TestDir {
     /// Create a new empty test directory.
     pub fn new() -> Self {
-        Self {
-            dir: TempDir::new().unwrap(),
-        }
+        Self { dir: TempDir::new().unwrap() }
     }
 
     /// Add a file with the given content.
@@ -64,11 +62,7 @@ impl TestDir {
 
 /// Create a tool call spec with the given tool name and input.
 pub fn tool_call(tool: &str, input: serde_json::Value) -> ToolCall {
-    ToolCall {
-        call: tool.to_string(),
-        input,
-        result: None,
-    }
+    ToolCall { call: tool.to_string(), input, result: None }
 }
 
 /// Execute a builtin tool executor with default context.
@@ -80,45 +74,23 @@ pub fn execute<E: BuiltinToolExecutor + Default>(input: serde_json::Value) -> To
 
 /// Assert that a tool result is an error containing the expected text.
 pub fn assert_tool_error_contains(result: &ToolExecutionResult, expected: &str) {
-    assert!(
-        result.is_error,
-        "Expected error but got success: {:?}",
-        result
-    );
+    assert!(result.is_error, "Expected error but got success: {:?}", result);
     let text = result.text().expect("Error result should have text");
-    assert!(
-        text.contains(expected),
-        "Expected '{}' in: {}",
-        expected,
-        text
-    );
+    assert!(text.contains(expected), "Expected '{}' in: {}", expected, text);
 }
 
 /// Assert that a tool result is a success containing the expected text.
 pub fn assert_tool_success_contains(result: &ToolExecutionResult, expected: &str) {
-    assert!(
-        !result.is_error,
-        "Expected success but got error: {:?}",
-        result
-    );
+    assert!(!result.is_error, "Expected success but got error: {:?}", result);
     let text = result.text().expect("Success result should have text");
-    assert!(
-        text.contains(expected),
-        "Expected '{}' in: {}",
-        expected,
-        text
-    );
+    assert!(text.contains(expected), "Expected '{}' in: {}", expected, text);
 }
 
 /// Execute a builtin tool by name with the given input.
 pub fn execute_tool(tool: &str, input: serde_json::Value) -> ToolExecutionResult {
     let executor = BuiltinExecutor::new();
     let call = tool_call(tool, input);
-    executor.execute(
-        &call,
-        "test_id",
-        &crate::tools::executor::ExecutionContext::default(),
-    )
+    executor.execute(&call, "test_id", &crate::tools::executor::ExecutionContext::default())
 }
 
 #[cfg(test)]

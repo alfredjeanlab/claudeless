@@ -151,23 +151,17 @@ impl TodoState {
 
     /// Get pending items
     pub fn pending(&self) -> impl Iterator<Item = &TodoItem> {
-        self.items
-            .iter()
-            .filter(|i| i.status == TodoStatus::Pending)
+        self.items.iter().filter(|i| i.status == TodoStatus::Pending)
     }
 
     /// Get in-progress items
     pub fn in_progress(&self) -> impl Iterator<Item = &TodoItem> {
-        self.items
-            .iter()
-            .filter(|i| i.status == TodoStatus::InProgress)
+        self.items.iter().filter(|i| i.status == TodoStatus::InProgress)
     }
 
     /// Get completed items
     pub fn completed(&self) -> impl Iterator<Item = &TodoItem> {
-        self.items
-            .iter()
-            .filter(|i| i.status == TodoStatus::Completed)
+        self.items.iter().filter(|i| i.status == TodoStatus::Completed)
     }
 
     /// Remove item by ID

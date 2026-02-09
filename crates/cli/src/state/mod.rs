@@ -148,16 +148,12 @@ impl StateWriter {
     }
 
     pub fn session_jsonl_path(&self) -> PathBuf {
-        self.project_dir()
-            .join(format!("{}.jsonl", self.session_id))
+        self.project_dir().join(format!("{}.jsonl", self.session_id))
     }
 
     /// Get the todo file path (Claude format: `{sessionId}-agent-{sessionId}.json`).
     pub fn todo_path(&self) -> PathBuf {
-        self.dir.todos_dir().join(format!(
-            "{}-agent-{}.json",
-            self.session_id, self.session_id
-        ))
+        self.dir.todos_dir().join(format!("{}-agent-{}.json", self.session_id, self.session_id))
     }
 
     fn on_message_written(&mut self, prompt: Option<&str>) {
@@ -197,12 +193,7 @@ impl StateWriter {
     pub fn write_queue_operation(&self) -> std::io::Result<()> {
         let project_dir = self.project_dir();
         std::fs::create_dir_all(&project_dir)?;
-        write_queue_operation(
-            &self.session_jsonl_path(),
-            &self.session_id,
-            "dequeue",
-            Utc::now(),
-        )
+        write_queue_operation(&self.session_jsonl_path(), &self.session_id, "dequeue", Utc::now())
     }
 
     /// Record a conversation turn.
@@ -315,9 +306,7 @@ impl StateWriter {
             parent_uuid: parent_user_uuid,
             request_id: &request_id,
             message_id: &message_id,
-            content: vec![ContentBlock::Text {
-                text: response.to_string(),
-            }],
+            content: vec![ContentBlock::Text { text: response.to_string() }],
             model: &self.model,
             stop_reason,
             cwd: &cwd,
@@ -424,10 +413,8 @@ impl StateWriter {
             SessionsIndex::new()
         };
 
-        let file_mtime = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64;
+        let file_mtime =
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64;
 
         let entry = SessionIndexEntry {
             session_id: self.session_id.clone(),
@@ -450,9 +437,7 @@ impl StateWriter {
     pub fn write_todos(&self, items: &[TodoItem]) -> std::io::Result<()> {
         std::fs::create_dir_all(self.dir.todos_dir())?;
 
-        let state = TodoState {
-            items: items.to_vec(),
-        };
+        let state = TodoState { items: items.to_vec() };
         state.save_claude_format(&self.todo_path())
     }
 

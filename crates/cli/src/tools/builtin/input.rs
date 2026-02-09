@@ -51,19 +51,13 @@ pub use require_field;
 /// Extract a file path from tool input.
 /// Checks "file_path" first, then "path" as fallback.
 pub(crate) fn extract_file_path(input: &Value) -> Option<&str> {
-    input
-        .get("file_path")
-        .or_else(|| input.get("path"))
-        .and_then(|v| v.as_str())
+    input.get("file_path").or_else(|| input.get("path")).and_then(|v| v.as_str())
 }
 
 /// Extract a directory/path from tool input.
 /// Checks "path" first, then "directory" as fallback.
 pub(crate) fn extract_directory(input: &Value) -> Option<&str> {
-    input
-        .get("path")
-        .or_else(|| input.get("directory"))
-        .and_then(|v| v.as_str())
+    input.get("path").or_else(|| input.get("directory")).and_then(|v| v.as_str())
 }
 
 /// Extract a string field by name.

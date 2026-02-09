@@ -102,9 +102,8 @@ impl PermissionCheckingExecutor {
 
     /// Get the action type for a tool.
     fn get_action(&self, tool_name: &str) -> &'static str {
-        super::tool_name::ToolName::parse(tool_name)
-            .map(|t| t.action())
-            .unwrap_or("execute") // Default for MCP tools
+        super::tool_name::ToolName::parse(tool_name).map(|t| t.action()).unwrap_or("execute")
+        // Default for MCP tools
     }
 }
 

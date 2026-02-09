@@ -152,11 +152,7 @@ impl Runtime {
         match &self.mcp_manager {
             Some(manager) => {
                 let guard = manager.read();
-                guard
-                    .tools()
-                    .iter()
-                    .map(|tool| tool.qualified_name())
-                    .collect()
+                guard.tools().iter().map(|tool| tool.qualified_name()).collect()
             }
             None => vec![],
         }

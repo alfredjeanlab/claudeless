@@ -58,7 +58,5 @@ fn test_edit_successful() {
         })),
         "Successfully edited",
     );
-    assert!(fs::read_to_string(&file.path)
-        .unwrap()
-        .contains("Hello, Rust!"));
+    assert!(fs::read_to_string(&file.path).unwrap().contains("Hello, Rust!"));
 }

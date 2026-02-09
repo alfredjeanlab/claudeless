@@ -28,26 +28,17 @@ pub struct McpServerInfo {
 impl McpServerInfo {
     /// Create a connected server info.
     pub fn connected(name: impl Into<String>) -> Self {
-        Self {
-            name: name.into(),
-            status: mcp_status::CONNECTED.to_string(),
-        }
+        Self { name: name.into(), status: mcp_status::CONNECTED.to_string() }
     }
 
     /// Create a failed server info.
     pub fn failed(name: impl Into<String>) -> Self {
-        Self {
-            name: name.into(),
-            status: mcp_status::FAILED.to_string(),
-        }
+        Self { name: name.into(), status: mcp_status::FAILED.to_string() }
     }
 
     /// Create a disconnected server info.
     pub fn disconnected(name: impl Into<String>) -> Self {
-        Self {
-            name: name.into(),
-            status: mcp_status::DISCONNECTED.to_string(),
-        }
+        Self { name: name.into(), status: mcp_status::DISCONNECTED.to_string() }
     }
 }
 
@@ -237,9 +228,6 @@ pub struct ContentBlockStopEvent {
 
 impl ContentBlockStopEvent {
     pub fn new(index: u32) -> Self {
-        Self {
-            event_type: content_block::STOP.to_string(),
-            index,
-        }
+        Self { event_type: content_block::STOP.to_string(), index }
     }
 }

@@ -42,28 +42,15 @@ fn test_connection_timeout_via_scenario() {
     let start = Instant::now();
 
     let output = Command::new(claudeless_bin())
-        .args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
+        .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
         .output()
         .expect("Failed to run claudeless");
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
 
     let elapsed = start.elapsed();
-    assert!(
-        elapsed.as_millis() >= 50,
-        "Timeout should delay at least 50ms"
-    );
+    assert!(elapsed.as_millis() >= 50, "Timeout should delay at least 50ms");
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -75,12 +62,7 @@ fn test_auth_error_exit_code() {
         .expect("Failed to run claudeless");
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -92,12 +74,7 @@ fn test_rate_limit_exit_code() {
         .expect("Failed to run claudeless");
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -109,12 +86,7 @@ fn test_network_unreachable_exit_code() {
         .expect("Failed to run claudeless");
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -126,12 +98,7 @@ fn test_out_of_credits_exit_code() {
         .expect("Failed to run claudeless");
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -143,12 +110,7 @@ fn test_partial_response_exit_code_2() {
         .expect("Failed to run claudeless");
 
     // Partial response uses exit code 2
-    assert_eq!(
-        output.status.code(),
-        Some(2),
-        "Expected exit code 2: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(2), "Expected exit code 2: {:?}", output);
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -184,22 +146,13 @@ fn test_response_delay_via_scenario_timeouts() {
     let start = Instant::now();
 
     let output = Command::new(claudeless_bin())
-        .args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
+        .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
         .output()
         .expect("Failed to run claudeless");
 
     assert!(output.status.success(), "Expected success: {:?}", output);
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        stdout.contains("delayed"),
-        "Expected stdout to contain 'delayed': {}",
-        stdout
-    );
+    assert!(stdout.contains("delayed"), "Expected stdout to contain 'delayed': {}", stdout);
 
     let elapsed = start.elapsed();
     assert!(
@@ -224,12 +177,7 @@ fn test_delay_ms_via_scenario_response() {
     let start = Instant::now();
 
     let output = Command::new(claudeless_bin())
-        .args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
+        .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
         .output()
         .expect("Failed to run claudeless");
 

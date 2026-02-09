@@ -44,12 +44,7 @@ mod unknown_fields {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -75,12 +70,7 @@ mod unknown_fields {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -108,12 +98,7 @@ mod unknown_fields {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -144,12 +129,7 @@ mod unknown_fields {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -183,12 +163,7 @@ mod session_id_validation {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -214,12 +189,7 @@ mod session_id_validation {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -245,12 +215,7 @@ mod session_id_validation {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -284,12 +249,7 @@ mod timestamp_validation {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -317,12 +277,7 @@ mod timestamp_validation {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -349,12 +304,7 @@ mod timestamp_validation {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -388,12 +338,7 @@ mod permission_mode_validation {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -419,12 +364,7 @@ mod permission_mode_validation {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -457,12 +397,7 @@ mod pattern_validation {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -487,12 +422,7 @@ mod pattern_validation {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -526,12 +456,7 @@ mod type_validation {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -556,12 +481,7 @@ mod type_validation {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -605,12 +525,7 @@ mod json_validation {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -633,12 +548,7 @@ mod json_validation {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -667,12 +577,7 @@ mod json_validation {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -706,12 +611,7 @@ mod error_message_quality {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -737,12 +637,7 @@ mod error_message_quality {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "--scenario",
-                scenario.path().to_str().unwrap(),
-                "-p",
-                "test",
-            ])
+            .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
             .output()
             .expect("Failed to run claudeless");
 

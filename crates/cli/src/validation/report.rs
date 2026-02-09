@@ -63,11 +63,7 @@ pub struct AccuracyReport {
 impl AccuracyReport {
     /// Create a new accuracy report
     pub fn new() -> Self {
-        Self {
-            items: Vec::new(),
-            validated_date: None,
-            claude_version: None,
-        }
+        Self { items: Vec::new(), validated_date: None, claude_version: None }
     }
 
     /// Set validation date
@@ -167,10 +163,7 @@ impl AccuracyReport {
         md.push_str(&format!("- Partial: {}\n", counts["partial"]));
         md.push_str(&format!("- Mismatch: {}\n", counts["mismatch"]));
         md.push_str(&format!("- Not Validated: {}\n", counts["not_validated"]));
-        md.push_str(&format!(
-            "- Intentional Difference: {}\n",
-            counts["intentional"]
-        ));
+        md.push_str(&format!("- Intentional Difference: {}\n", counts["intentional"]));
         md.push('\n');
 
         // By category

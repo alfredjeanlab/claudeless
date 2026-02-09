@@ -177,10 +177,7 @@ mod permission_checker_integration {
         assert_eq!(checker.check("Read", "read"), PermissionResult::Allowed);
 
         // Other tools still need prompt
-        assert!(matches!(
-            checker.check("Bash", "execute"),
-            PermissionResult::NeedsPrompt { .. }
-        ));
+        assert!(matches!(checker.check("Bash", "execute"), PermissionResult::NeedsPrompt { .. }));
     }
 
     #[test]
@@ -248,12 +245,7 @@ mod permission_checker_integration {
         let mut overrides = HashMap::new();
         overrides.insert(
             "Bash".to_string(),
-            ToolConfig {
-                approve: true,
-                result: None,
-                error: None,
-                answers: None,
-            },
+            ToolConfig { approve: true, result: None, error: None, answers: None },
         );
 
         let checker = PermissionChecker::with_patterns(
@@ -437,11 +429,7 @@ mod real_world_patterns {
     #[test]
     fn test_file_type_patterns() {
         let settings = PermissionSettings {
-            allow: vec![
-                "Read".to_string(),
-                "Write(*.md)".to_string(),
-                "Write(*.txt)".to_string(),
-            ],
+            allow: vec!["Read".to_string(), "Write(*.md)".to_string(), "Write(*.txt)".to_string()],
             deny: vec!["Write(.env)".to_string(), "Write(*.key)".to_string()],
             additional_directories: vec![],
         };

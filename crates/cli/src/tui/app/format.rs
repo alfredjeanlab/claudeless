@@ -146,9 +146,9 @@ pub(crate) fn format_status_bar_styled(state: &RenderState, width: usize) -> Str
         PermissionMode::Default => "  ? for shortcuts".chars().count(),
         PermissionMode::Plan => "  ⏸ plan mode on (shift+tab to cycle)".chars().count(),
         PermissionMode::AcceptEdits => "  ⏵⏵ accept edits on (shift+tab to cycle)".chars().count(),
-        PermissionMode::BypassPermissions => "  ⏵⏵ bypass permissions on (shift+tab to cycle)"
-            .chars()
-            .count(),
+        PermissionMode::BypassPermissions => {
+            "  ⏵⏵ bypass permissions on (shift+tab to cycle)".chars().count()
+        }
         PermissionMode::Delegate => "  delegate mode (shift+tab to cycle)".chars().count(),
         PermissionMode::DontAsk => "  don't ask mode (shift+tab to cycle)".chars().count(),
     };
@@ -510,10 +510,7 @@ pub(crate) fn format_welcome_back_box(state: &RenderState, width: usize) -> Vec<
         let title_part = format!("─── {} ", product_name);
         let version_fill =
             total_inner.saturating_sub(title_part.chars().count() + version.len() + 1);
-        lines.push(format!(
-            "╭{title_part}{version} {}╮",
-            "─".repeat(version_fill),
-        ));
+        lines.push(format!("╭{title_part}{version} {}╮", "─".repeat(version_fill),));
 
         // Content rows
         for row in 0..9 {

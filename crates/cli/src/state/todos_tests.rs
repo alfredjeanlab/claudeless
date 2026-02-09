@@ -108,8 +108,5 @@ fn test_serialization() {
     let loaded: TodoState = serde_json::from_str(&json).unwrap();
 
     assert_eq!(loaded.items[0].content, "Build project");
-    assert_eq!(
-        loaded.items[0].active_form,
-        Some("Building project".to_string())
-    );
+    assert_eq!(loaded.items[0].active_form, Some("Building project".to_string()));
 }

@@ -73,10 +73,7 @@ async fn test_resume_session_validation_success() {
     let mut index = SessionsIndex::new();
     index.add_or_update(SessionIndexEntry {
         session_id: session_id.to_string(),
-        full_path: project_dir
-            .join(format!("{}.jsonl", session_id))
-            .to_string_lossy()
-            .to_string(),
+        full_path: project_dir.join(format!("{}.jsonl", session_id)).to_string_lossy().to_string(),
         file_mtime: 0,
         first_prompt: "test".to_string(),
         message_count: 1,
@@ -86,9 +83,7 @@ async fn test_resume_session_validation_success() {
         project_path: work_dir.path().to_string_lossy().to_string(),
         is_sidechain: false,
     });
-    index
-        .save(&project_dir.join("sessions-index.json"))
-        .unwrap();
+    index.save(&project_dir.join("sessions-index.json")).unwrap();
 
     // Create CLI with resume flag
     let cli = Cli::try_parse_from([
@@ -106,11 +101,7 @@ async fn test_resume_session_validation_success() {
     let result = builder.build().await;
 
     // Should succeed since session exists in index
-    assert!(
-        result.is_ok(),
-        "Expected success but got error: {:?}",
-        result.err()
-    );
+    assert!(result.is_ok(), "Expected success but got error: {:?}", result.err());
 
     std::env::remove_var("CLAUDELESS_CONFIG_DIR");
 }
@@ -143,9 +134,7 @@ async fn test_resume_session_not_in_index() {
         project_path: work_dir.path().to_string_lossy().to_string(),
         is_sidechain: false,
     });
-    index
-        .save(&project_dir.join("sessions-index.json"))
-        .unwrap();
+    index.save(&project_dir.join("sessions-index.json")).unwrap();
 
     // Create CLI with resume flag for a different session
     let cli = Cli::try_parse_from([

@@ -28,20 +28,12 @@ fn default_success() -> bool {
 impl McpToolResult {
     /// Create a successful result.
     pub fn success(content: Value) -> Self {
-        Self {
-            content,
-            success: true,
-            error: None,
-        }
+        Self { content, success: true, error: None }
     }
 
     /// Create a failed result.
     pub fn failure(error: impl Into<String>) -> Self {
-        Self {
-            content: Value::Null,
-            success: false,
-            error: Some(error.into()),
-        }
+        Self { content: Value::Null, success: false, error: Some(error.into()) }
     }
 }
 

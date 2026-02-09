@@ -172,14 +172,7 @@ end
 "#;
     let cmds = parse(script).unwrap();
     assert_eq!(cmds.len(), 1);
-    if let Command::IfWait {
-        pattern,
-        negated,
-        timeout,
-        then_cmds,
-        else_cmds,
-    } = &cmds[0]
-    {
+    if let Command::IfWait { pattern, negated, timeout, then_cmds, else_cmds } = &cmds[0] {
         assert_eq!(pattern.as_str(), "Ready");
         assert!(!negated);
         assert_eq!(*timeout, Some(2000));
@@ -235,13 +228,7 @@ end
     assert_eq!(cmds.len(), 1);
 
     // Outer if
-    if let Command::IfWait {
-        pattern,
-        then_cmds,
-        else_cmds,
-        ..
-    } = &cmds[0]
-    {
+    if let Command::IfWait { pattern, then_cmds, else_cmds, .. } = &cmds[0] {
         assert_eq!(pattern.as_str(), "StateA");
         assert_eq!(then_cmds.len(), 1);
         assert!(matches!(then_cmds[0], Command::Snapshot(Some(ref n)) if n == "state_a"));
@@ -289,13 +276,7 @@ end
     // Walk the chain: A -> B -> C -> D -> fallback
     let mut current = &cmds[0];
     for (expected_pattern, expected_snapshot) in [("A", "a"), ("B", "b"), ("C", "c"), ("D", "d")] {
-        if let Command::IfWait {
-            pattern,
-            then_cmds,
-            else_cmds,
-            ..
-        } = current
-        {
+        if let Command::IfWait { pattern, then_cmds, else_cmds, .. } = current {
             assert_eq!(pattern.as_str(), expected_pattern);
             assert_eq!(then_cmds.len(), 1);
             assert!(
@@ -326,11 +307,7 @@ end
 
     if let Command::IfWait { else_cmds, .. } = &cmds[0] {
         assert_eq!(else_cmds.len(), 1);
-        if let Command::IfWait {
-            else_cmds: inner_else,
-            ..
-        } = &else_cmds[0]
-        {
+        if let Command::IfWait { else_cmds: inner_else, .. } = &else_cmds[0] {
             assert!(inner_else.is_empty());
         } else {
             panic!("expected nested IfWait");
@@ -377,12 +354,7 @@ end
     let cmds = parse(script).unwrap();
     assert_eq!(cmds.len(), 1);
 
-    if let Command::Match {
-        timeout,
-        arms,
-        else_cmds,
-    } = &cmds[0]
-    {
+    if let Command::Match { timeout, arms, else_cmds } = &cmds[0] {
         assert_eq!(*timeout, Some(3000));
         assert_eq!(arms.len(), 3);
         assert_eq!(arms[0].pattern.as_str(), "Sonnet");
@@ -413,12 +385,7 @@ end
 "#;
     let cmds = parse(script).unwrap();
 
-    if let Command::Match {
-        timeout,
-        arms,
-        else_cmds,
-    } = &cmds[0]
-    {
+    if let Command::Match { timeout, arms, else_cmds } = &cmds[0] {
         assert_eq!(*timeout, Some(5000));
         assert_eq!(arms.len(), 2);
         assert_eq!(else_cmds.len(), 1);
@@ -462,12 +429,7 @@ end
 "#;
     let cmds = parse(script).unwrap();
 
-    if let Command::Match {
-        timeout,
-        arms,
-        else_cmds,
-    } = &cmds[0]
-    {
+    if let Command::Match { timeout, arms, else_cmds } = &cmds[0] {
         assert_eq!(*timeout, Some(3000));
         assert_eq!(arms.len(), 3);
 

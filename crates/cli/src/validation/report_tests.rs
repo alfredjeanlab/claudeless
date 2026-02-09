@@ -87,9 +87,7 @@ fn test_count_by_status() {
 
 #[test]
 fn test_to_markdown() {
-    let mut report = AccuracyReport::new()
-        .with_date("2025-01-18")
-        .with_claude_version("1.0.0");
+    let mut report = AccuracyReport::new().with_date("2025-01-18").with_claude_version("1.0.0");
 
     report.add_item(ValidationItem {
         name: "--print".to_string(),

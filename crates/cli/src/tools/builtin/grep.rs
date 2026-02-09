@@ -32,10 +32,8 @@ impl GrepExecutor {
                     if entry_path.is_file() {
                         // Apply glob filter if provided
                         if let Some(pattern) = glob_pattern {
-                            let file_name = entry_path
-                                .file_name()
-                                .and_then(|n| n.to_str())
-                                .unwrap_or("");
+                            let file_name =
+                                entry_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
                             if let Ok(glob) = glob::Pattern::new(pattern) {
                                 if glob.matches(file_name) {
                                     files.push(entry_path);

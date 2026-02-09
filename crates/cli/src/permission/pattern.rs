@@ -61,18 +61,12 @@ impl ToolPattern {
                     Some(CompiledPattern::Exact(arg.to_string()))
                 };
 
-                return Some(Self {
-                    tool,
-                    argument: pattern,
-                });
+                return Some(Self { tool, argument: pattern });
             }
         }
 
         // No parentheses - match all calls to this tool
-        Some(Self {
-            tool: s.to_string(),
-            argument: None,
-        })
+        Some(Self { tool: s.to_string(), argument: None })
     }
 
     /// Check if this pattern matches a tool call.
@@ -117,16 +111,8 @@ impl PermissionPatterns {
     /// Create from permission settings.
     pub fn from_settings(settings: &PermissionSettings) -> Self {
         Self {
-            allow: settings
-                .allow
-                .iter()
-                .filter_map(|s| ToolPattern::parse(s))
-                .collect(),
-            deny: settings
-                .deny
-                .iter()
-                .filter_map(|s| ToolPattern::parse(s))
-                .collect(),
+            allow: settings.allow.iter().filter_map(|s| ToolPattern::parse(s)).collect(),
+            deny: settings.deny.iter().filter_map(|s| ToolPattern::parse(s)).collect(),
         }
     }
 

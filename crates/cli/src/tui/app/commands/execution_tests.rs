@@ -21,10 +21,7 @@ fn bash_tool_converts_to_bash_permission() {
 
     let perm = tool_call_to_permission_type(&call).unwrap();
     match perm {
-        PermissionType::Bash {
-            command,
-            description,
-        } => {
+        PermissionType::Bash { command, description } => {
             assert_eq!(command, "ls -la");
             assert_eq!(description, Some("List files".to_string()));
         }
@@ -34,18 +31,12 @@ fn bash_tool_converts_to_bash_permission() {
 
 #[test]
 fn bash_tool_without_description() {
-    let call = ToolCall {
-        call: "Bash".to_string(),
-        input: json!({ "command": "echo hi" }),
-        result: None,
-    };
+    let call =
+        ToolCall { call: "Bash".to_string(), input: json!({ "command": "echo hi" }), result: None };
 
     let perm = tool_call_to_permission_type(&call).unwrap();
     match perm {
-        PermissionType::Bash {
-            command,
-            description,
-        } => {
+        PermissionType::Bash { command, description } => {
             assert_eq!(command, "echo hi");
             assert_eq!(description, None);
         }
@@ -55,11 +46,7 @@ fn bash_tool_without_description() {
 
 #[test]
 fn bash_tool_without_command_returns_none() {
-    let call = ToolCall {
-        call: "Bash".to_string(),
-        input: json!({}),
-        result: None,
-    };
+    let call = ToolCall { call: "Bash".to_string(), input: json!({}), result: None };
 
     assert!(tool_call_to_permission_type(&call).is_none());
 }
@@ -77,10 +64,7 @@ fn write_tool_converts_to_write_permission() {
 
     let perm = tool_call_to_permission_type(&call).unwrap();
     match perm {
-        PermissionType::Write {
-            file_path,
-            content_lines,
-        } => {
+        PermissionType::Write { file_path, content_lines } => {
             assert_eq!(file_path, "/tmp/test.txt");
             assert_eq!(content_lines, vec!["line1", "line2", "line3"]);
         }
@@ -102,10 +86,7 @@ fn edit_tool_converts_to_edit_permission() {
 
     let perm = tool_call_to_permission_type(&call).unwrap();
     match perm {
-        PermissionType::Edit {
-            file_path,
-            diff_lines,
-        } => {
+        PermissionType::Edit { file_path, diff_lines } => {
             assert_eq!(file_path, "src/main.rs");
             // Removed + NoNewline + Added + NoNewline = 4 lines
             assert_eq!(diff_lines.len(), 4);
@@ -144,11 +125,7 @@ fn read_streaming_display_uses_reading_prefix() {
 
 #[test]
 fn unknown_tool_returns_none() {
-    let call = ToolCall {
-        call: "UnknownTool".to_string(),
-        input: json!({}),
-        result: None,
-    };
+    let call = ToolCall { call: "UnknownTool".to_string(), input: json!({}), result: None };
 
     assert!(tool_call_to_permission_type(&call).is_none());
 }
@@ -228,17 +205,11 @@ fn handle_turn_result_sets_elicitation_mode_with_response_text() {
     );
 
     // Dialog should be active
-    assert!(
-        inner.dialog.as_elicitation().is_some(),
-        "elicitation dialog should be set"
-    );
+    assert!(inner.dialog.as_elicitation().is_some(), "elicitation dialog should be set");
 
     // Response text should be captured in display
     assert!(
-        inner
-            .display
-            .response_content
-            .contains("Let me ask you a question"),
+        inner.display.response_content.contains("Let me ask you a question"),
         "response text should be displayed"
     );
 }
@@ -250,11 +221,7 @@ fn handle_turn_result_sets_plan_approval_mode_with_response_text() {
 
     let result = TurnResult {
         say: Some("Here is my plan.".to_string()),
-        tools: vec![ToolCall {
-            call: "ExitPlanMode".to_string(),
-            input: json!({}),
-            result: None,
-        }],
+        tools: vec![ToolCall { call: "ExitPlanMode".to_string(), input: json!({}), result: None }],
         usage: None,
         tool_results: vec![],
         hook_continuation: None,
@@ -276,8 +243,5 @@ fn handle_turn_result_sets_plan_approval_mode_with_response_text() {
         AppMode::PlanApproval,
         "mode should be PlanApproval after handle_turn_result with pending ExitPlanMode"
     );
-    assert!(
-        inner.dialog.as_plan_approval().is_some(),
-        "plan approval dialog should be set"
-    );
+    assert!(inner.dialog.as_plan_approval().is_some(), "plan approval dialog should be set");
 }

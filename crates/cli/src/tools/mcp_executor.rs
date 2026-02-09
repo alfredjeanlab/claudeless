@@ -100,9 +100,7 @@ impl ToolExecutor for McpToolExecutor {
                 } else {
                     ToolExecutionResult::error(
                         tool_use_id,
-                        mcp_result
-                            .error
-                            .unwrap_or_else(|| "MCP tool execution failed".into()),
+                        mcp_result.error.unwrap_or_else(|| "MCP tool execution failed".into()),
                     )
                 }
             }
@@ -125,15 +123,8 @@ fn format_mcp_content(content: &serde_json::Value) -> String {
 }
 
 /// Known path argument names used by filesystem tools.
-const PATH_ARGUMENT_NAMES: &[&str] = &[
-    "path",
-    "file_path",
-    "directory",
-    "source",
-    "destination",
-    "old_path",
-    "new_path",
-];
+const PATH_ARGUMENT_NAMES: &[&str] =
+    &["path", "file_path", "directory", "source", "destination", "old_path", "new_path"];
 
 /// Canonicalize path arguments in tool input to resolve symlinks.
 ///

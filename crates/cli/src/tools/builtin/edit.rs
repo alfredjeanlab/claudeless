@@ -31,20 +31,10 @@ impl BuiltinToolExecutor for EditExecutor {
             tool_use_id,
             call.call
         );
-        let old_string = require_field!(
-            call.input,
-            "old_string",
-            extract_str,
-            tool_use_id,
-            call.call
-        );
-        let new_string = require_field!(
-            call.input,
-            "new_string",
-            extract_str,
-            tool_use_id,
-            call.call
-        );
+        let old_string =
+            require_field!(call.input, "old_string", extract_str, tool_use_id, call.call);
+        let new_string =
+            require_field!(call.input, "new_string", extract_str, tool_use_id, call.call);
 
         let resolved_path = std::path::PathBuf::from(path);
 

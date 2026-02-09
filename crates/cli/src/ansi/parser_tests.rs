@@ -47,28 +47,18 @@ fn test_parse_reset_dim() {
 fn test_parse_fg_rgb() {
     assert_eq!(
         AnsiSequence::from_params("38;2;215;119;87"),
-        AnsiSequence::FgRgb {
-            r: 215,
-            g: 119,
-            b: 87
-        }
+        AnsiSequence::FgRgb { r: 215, g: 119, b: 87 }
     );
 }
 
 #[test]
 fn test_parse_bg_rgb() {
-    assert_eq!(
-        AnsiSequence::from_params("48;2;0;0;0"),
-        AnsiSequence::BgRgb { r: 0, g: 0, b: 0 }
-    );
+    assert_eq!(AnsiSequence::from_params("48;2;0;0;0"), AnsiSequence::BgRgb { r: 0, g: 0, b: 0 });
 }
 
 #[test]
 fn test_parse_unknown() {
-    assert_eq!(
-        AnsiSequence::from_params("42"),
-        AnsiSequence::Other("42".to_string())
-    );
+    assert_eq!(AnsiSequence::from_params("42"), AnsiSequence::Other("42".to_string()));
 }
 
 // =============================================================================
@@ -113,22 +103,14 @@ fn test_escape_code_round_trip_reset_dim() {
 #[test]
 fn test_escape_code_round_trip_fg_rgb() {
     assert_eq!(
-        AnsiSequence::FgRgb {
-            r: 215,
-            g: 119,
-            b: 87
-        }
-        .to_escape_code(),
+        AnsiSequence::FgRgb { r: 215, g: 119, b: 87 }.to_escape_code(),
         "\x1b[38;2;215;119;87m"
     );
 }
 
 #[test]
 fn test_escape_code_round_trip_bg_rgb() {
-    assert_eq!(
-        AnsiSequence::BgRgb { r: 0, g: 0, b: 0 }.to_escape_code(),
-        "\x1b[48;2;0;0;0m"
-    );
+    assert_eq!(AnsiSequence::BgRgb { r: 0, g: 0, b: 0 }.to_escape_code(), "\x1b[48;2;0;0;0m");
 }
 
 // =============================================================================
@@ -169,10 +151,7 @@ fn test_parse_ansi_multiple_sequences() {
     assert_eq!(spans[0].text, "Red bold");
     assert_eq!(
         spans[0].sequences,
-        vec![
-            AnsiSequence::Bold,
-            AnsiSequence::FgRgb { r: 255, g: 0, b: 0 }
-        ]
+        vec![AnsiSequence::Bold, AnsiSequence::FgRgb { r: 255, g: 0, b: 0 }]
     );
 
     assert_eq!(spans[1].text, "");
@@ -204,21 +183,11 @@ fn test_parse_ansi_from_fixture() {
 
     // Orange foreground: " ▐"
     assert_eq!(spans[0].text, " ▐");
-    assert_eq!(
-        spans[0].sequences,
-        vec![AnsiSequence::FgRgb {
-            r: 215,
-            g: 119,
-            b: 87
-        }]
-    );
+    assert_eq!(spans[0].sequences, vec![AnsiSequence::FgRgb { r: 215, g: 119, b: 87 }]);
 
     // Black background: "▛███▜"
     assert_eq!(spans[1].text, "▛███▜");
-    assert_eq!(
-        spans[1].sequences,
-        vec![AnsiSequence::BgRgb { r: 0, g: 0, b: 0 }]
-    );
+    assert_eq!(spans[1].sequences, vec![AnsiSequence::BgRgb { r: 0, g: 0, b: 0 }]);
 
     // Background reset: "▌"
     assert_eq!(spans[2].text, "▌");

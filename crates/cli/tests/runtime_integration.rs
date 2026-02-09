@@ -20,10 +20,7 @@ use common::write_scenario;
 fn test_runtime_builder_construction() {
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
     let builder = RuntimeBuilder::new(cli);
-    assert!(
-        builder.is_ok(),
-        "RuntimeBuilder should construct with valid CLI"
-    );
+    assert!(builder.is_ok(), "RuntimeBuilder should construct with valid CLI");
 }
 
 /// Test that RuntimeBuilder validates CLI args.
@@ -32,10 +29,7 @@ fn test_runtime_builder_validation() {
     // --no-session-persistence without -p should fail validation
     let cli = Cli::try_parse_from(["claude", "--no-session-persistence"]).unwrap();
     let builder = RuntimeBuilder::new(cli);
-    assert!(
-        builder.is_err(),
-        "RuntimeBuilder should fail with invalid CLI args"
-    );
+    assert!(builder.is_err(), "RuntimeBuilder should fail with invalid CLI args");
 }
 
 /// Test that Runtime can be built with a scenario.
@@ -122,10 +116,7 @@ fn test_runtime_builder_permission_bypass() {
         Cli::try_parse_from(["claude", "-p", "test", "--dangerously-skip-permissions"]).unwrap();
 
     let builder = RuntimeBuilder::new(cli);
-    assert!(
-        builder.is_ok(),
-        "Should succeed in print mode without --allow flag"
-    );
+    assert!(builder.is_ok(), "Should succeed in print mode without --allow flag");
 
     // With both flags, should also succeed
     let cli = Cli::try_parse_from([

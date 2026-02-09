@@ -83,11 +83,7 @@ fn test_tui_hooks_shows_dialog_with_hook_types() {
     let capture = tui.wait_for("Hooks");
 
     // Should show the hooks dialog with hook types
-    assert!(
-        capture.contains("Hooks"),
-        "Should show 'Hooks' header.\nCapture:\n{}",
-        capture
-    );
+    assert!(capture.contains("Hooks"), "Should show 'Hooks' header.\nCapture:\n{}", capture);
     assert!(
         capture.contains("PreToolUse") && capture.contains("Before tool execution"),
         "Should show PreToolUse hook type.\nCapture:\n{}",

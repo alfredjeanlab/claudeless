@@ -42,7 +42,5 @@ fn make_compact_separator_handles_narrow_width() {
 #[test]
 fn make_section_divider_generates_correct_width() {
     assert_eq!(make_section_divider(50).chars().count(), 50);
-    assert!(make_section_divider(50)
-        .chars()
-        .all(|c| c == SECTION_DIVIDER_CHAR));
+    assert!(make_section_divider(50).chars().all(|c| c == SECTION_DIVIDER_CHAR));
 }

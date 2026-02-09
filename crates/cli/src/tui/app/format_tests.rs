@@ -13,10 +13,7 @@ fn make_render_state(model: &str, claude_version: Option<&str>, is_tty: bool) ->
         input: InputState::default(),
         dialog: DialogState::None,
         display: DisplayState::new(),
-        status: StatusInfo {
-            model: model.to_string(),
-            ..Default::default()
-        },
+        status: StatusInfo { model: model.to_string(), ..Default::default() },
         permission_mode: PermissionMode::Default,
         thinking_enabled: true,
         user_name: "TestUser".to_string(),
@@ -46,11 +43,7 @@ fn welcome_box_width_matches_terminal() {
     let lines = format_welcome_back_box(&state, 80);
     for (i, line) in lines.iter().enumerate() {
         let char_count = line.chars().count();
-        assert_eq!(
-            char_count, 80,
-            "Line {} has {} chars, expected 80: {:?}",
-            i, char_count, line
-        );
+        assert_eq!(char_count, 80, "Line {} has {} chars, expected 80: {:?}", i, char_count, line);
     }
 }
 
@@ -77,10 +70,7 @@ fn welcome_box_welcome_back_centered() {
     let lines = format_welcome_back_box(&state, 80);
     // Row 1 (index 2 in lines: top border + row 0 + row 1)
     let row1 = &lines[2]; // index 0=top, 1=row0, 2=row1
-    assert!(
-        row1.contains("Welcome back!"),
-        "Row 1 should contain 'Welcome back!'"
-    );
+    assert!(row1.contains("Welcome back!"), "Row 1 should contain 'Welcome back!'");
     // Check centering: left panel is 52 chars, "Welcome back!" is 13.
     // Left padding = 20, right padding = 19
     assert!(row1.contains("                    Welcome back!                   "));
@@ -91,15 +81,9 @@ fn welcome_box_logo_characters() {
     let state = make_render_state("haiku", Some("2.1.29"), false);
     let lines = format_welcome_back_box(&state, 80);
     // Row 3 (index 4): logo line 1
-    assert!(
-        lines[4].contains("▗ ▗   ▖ ▖"),
-        "Row 3 should contain logo top"
-    );
+    assert!(lines[4].contains("▗ ▗   ▖ ▖"), "Row 3 should contain logo top");
     // Row 5 (index 6): logo line 3
-    assert!(
-        lines[6].contains("▘▘ ▝▝"),
-        "Row 5 should contain logo bottom"
-    );
+    assert!(lines[6].contains("▘▘ ▝▝"), "Row 5 should contain logo bottom");
 }
 
 #[test]
@@ -107,10 +91,7 @@ fn welcome_box_model_provider_centered() {
     let state = make_render_state("haiku", Some("2.1.29"), false);
     let lines = format_welcome_back_box(&state, 80);
     // Row 7 (index 8): model/provider
-    assert!(
-        lines[8].contains("Haiku 4.5 · Claude API"),
-        "Row 7 should contain model/provider"
-    );
+    assert!(lines[8].contains("Haiku 4.5 · Claude API"), "Row 7 should contain model/provider");
 }
 
 #[test]
@@ -120,23 +101,14 @@ fn welcome_box_right_panel() {
     // Check right panel content
     assert!(lines[1].contains("Tips for getting"), "Row 0 right: Tips");
     assert!(lines[2].contains("started"), "Row 1 right: started");
-    assert!(
-        lines[3].contains("Ask Claude to create a"),
-        "Row 2 right: tip text"
-    );
+    assert!(lines[3].contains("Ask Claude to create a"), "Row 2 right: tip text");
     assert!(lines[5].contains("Recent activity"), "Row 4 right: Recent");
-    assert!(
-        lines[6].contains("No recent activity"),
-        "Row 5 right: No recent"
-    );
+    assert!(lines[6].contains("No recent activity"), "Row 5 right: No recent");
 }
 
 #[test]
 fn truncate_path_short_path_unchanged() {
-    assert_eq!(
-        truncate_path("/home/user/project", 50),
-        "/home/user/project"
-    );
+    assert_eq!(truncate_path("/home/user/project", 50), "/home/user/project");
 }
 
 #[test]

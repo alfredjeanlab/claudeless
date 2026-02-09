@@ -22,11 +22,7 @@ fn test_builtin_executor_with_mock_result() {
 #[test]
 fn test_builtin_executor_unknown_tool() {
     let executor = BuiltinExecutor::new();
-    let call = ToolCall {
-        call: "UnknownTool".to_string(),
-        input: json!({}),
-        result: None,
-    };
+    let call = ToolCall { call: "UnknownTool".to_string(), input: json!({}), result: None };
     let ctx = ExecutionContext::default();
     let result = executor.execute(&call, "toolu_123", &ctx);
 

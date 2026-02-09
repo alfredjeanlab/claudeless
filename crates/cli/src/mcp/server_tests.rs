@@ -175,10 +175,8 @@ mod integration_tests {
         server.spawn(false).await.expect("spawn failed");
 
         // The "fail" tool always returns an error
-        let result = server
-            .call_tool("fail", serde_json::json!({}))
-            .await
-            .expect("call_tool failed");
+        let result =
+            server.call_tool("fail", serde_json::json!({})).await.expect("call_tool failed");
 
         assert!(!result.success);
         assert!(result.error.is_some());
@@ -220,9 +218,7 @@ mod integration_tests {
     async fn test_manager_call_unknown_tool() {
         let manager = McpManager::new();
 
-        let result = manager
-            .call_tool("nonexistent", serde_json::json!({}))
-            .await;
+        let result = manager.call_tool("nonexistent", serde_json::json!({})).await;
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), ClientError::ToolNotFound(_)));
     }

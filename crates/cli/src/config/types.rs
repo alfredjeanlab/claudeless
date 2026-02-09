@@ -142,14 +142,8 @@ pub struct ToolConfig {
 // =============================================================================
 
 /// Valid permission mode values.
-pub const VALID_PERMISSION_MODES: &[&str] = &[
-    "default",
-    "plan",
-    "bypass-permissions",
-    "accept-edits",
-    "dont-ask",
-    "delegate",
-];
+pub const VALID_PERMISSION_MODES: &[&str] =
+    &["default", "plan", "bypass-permissions", "accept-edits", "dont-ask", "delegate"];
 
 impl ScenarioConfig {
     /// Validate the scenario configuration.

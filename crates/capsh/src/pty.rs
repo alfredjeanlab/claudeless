@@ -25,12 +25,7 @@ pub struct Pty {
 impl Pty {
     /// Spawn a command in a new PTY.
     pub fn spawn(command: &str, cols: u16, rows: u16) -> Result<Self> {
-        let winsize = Winsize {
-            ws_row: rows,
-            ws_col: cols,
-            ws_xpixel: 0,
-            ws_ypixel: 0,
-        };
+        let winsize = Winsize { ws_row: rows, ws_col: cols, ws_xpixel: 0, ws_ypixel: 0 };
 
         // SAFETY: forkpty is safe to call; it creates a new PTY and forks.
         // In the child, we immediately exec, so no shared state issues.
@@ -62,10 +57,7 @@ impl Pty {
                 let owned: OwnedFd = unsafe { OwnedFd::from_raw_fd(master.into_raw_fd()) };
                 let async_fd = AsyncFd::new(owned)?;
 
-                Ok(Self {
-                    master_fd: async_fd,
-                    child_pid: child,
-                })
+                Ok(Self { master_fd: async_fd, child_pid: child })
             }
         }
     }

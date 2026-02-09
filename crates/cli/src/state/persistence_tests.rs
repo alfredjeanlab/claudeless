@@ -62,9 +62,7 @@ fn test_assistant_message_with_stop_reason_end_turn() {
         parent_uuid: "user_789",
         request_id: "req_abc",
         message_id: "msg_def",
-        content: vec![ContentBlock::Text {
-            text: "Done.".to_string(),
-        }],
+        content: vec![ContentBlock::Text { text: "Done.".to_string() }],
         model: "claude-sonnet-4-20250514",
         stop_reason: Some("end_turn"),
         cwd: "/tmp",

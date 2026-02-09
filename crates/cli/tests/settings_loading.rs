@@ -24,11 +24,8 @@ fn test_global_settings_loaded() {
     let work_dir = tempdir().unwrap();
 
     // Create global settings
-    fs::write(
-        state_dir.path().join("settings.json"),
-        r#"{"permissions": {"allow": ["Read"]}}"#,
-    )
-    .unwrap();
+    fs::write(state_dir.path().join("settings.json"), r#"{"permissions": {"allow": ["Read"]}}"#)
+        .unwrap();
 
     let dir = StateDirectory::new(state_dir.path());
     let loader = dir.settings_loader(work_dir.path());
@@ -45,11 +42,8 @@ fn test_project_settings_loaded() {
     // Create project settings
     let project_claude = work_dir.path().join(".claude");
     fs::create_dir_all(&project_claude).unwrap();
-    fs::write(
-        project_claude.join("settings.json"),
-        r#"{"permissions": {"allow": ["Write"]}}"#,
-    )
-    .unwrap();
+    fs::write(project_claude.join("settings.json"), r#"{"permissions": {"allow": ["Write"]}}"#)
+        .unwrap();
 
     let dir = StateDirectory::new(state_dir.path());
     let loader = dir.settings_loader(work_dir.path());
@@ -89,20 +83,14 @@ fn test_project_settings_override_global() {
     let work_dir = tempdir().unwrap();
 
     // Global settings
-    fs::write(
-        state_dir.path().join("settings.json"),
-        r#"{"permissions": {"allow": ["Read"]}}"#,
-    )
-    .unwrap();
+    fs::write(state_dir.path().join("settings.json"), r#"{"permissions": {"allow": ["Read"]}}"#)
+        .unwrap();
 
     // Project settings (should override)
     let project_claude = work_dir.path().join(".claude");
     fs::create_dir_all(&project_claude).unwrap();
-    fs::write(
-        project_claude.join("settings.json"),
-        r#"{"permissions": {"allow": ["Write"]}}"#,
-    )
-    .unwrap();
+    fs::write(project_claude.join("settings.json"), r#"{"permissions": {"allow": ["Write"]}}"#)
+        .unwrap();
 
     let dir = StateDirectory::new(state_dir.path());
     let loader = dir.settings_loader(work_dir.path());
@@ -118,19 +106,13 @@ fn test_local_settings_highest_priority() {
     let work_dir = tempdir().unwrap();
 
     // Global, project, and local settings
-    fs::write(
-        state_dir.path().join("settings.json"),
-        r#"{"permissions": {"allow": ["Read"]}}"#,
-    )
-    .unwrap();
+    fs::write(state_dir.path().join("settings.json"), r#"{"permissions": {"allow": ["Read"]}}"#)
+        .unwrap();
 
     let project_claude = work_dir.path().join(".claude");
     fs::create_dir_all(&project_claude).unwrap();
-    fs::write(
-        project_claude.join("settings.json"),
-        r#"{"permissions": {"allow": ["Write"]}}"#,
-    )
-    .unwrap();
+    fs::write(project_claude.join("settings.json"), r#"{"permissions": {"allow": ["Write"]}}"#)
+        .unwrap();
     fs::write(
         project_claude.join("settings.local.json"),
         r#"{"permissions": {"allow": ["Bash"]}}"#,
@@ -155,20 +137,12 @@ fn test_env_vars_merged_across_files() {
     let work_dir = tempdir().unwrap();
 
     // Global with one env var
-    fs::write(
-        state_dir.path().join("settings.json"),
-        r#"{"env": {"GLOBAL": "1"}}"#,
-    )
-    .unwrap();
+    fs::write(state_dir.path().join("settings.json"), r#"{"env": {"GLOBAL": "1"}}"#).unwrap();
 
     // Project with another
     let project_claude = work_dir.path().join(".claude");
     fs::create_dir_all(&project_claude).unwrap();
-    fs::write(
-        project_claude.join("settings.json"),
-        r#"{"env": {"PROJECT": "2"}}"#,
-    )
-    .unwrap();
+    fs::write(project_claude.join("settings.json"), r#"{"env": {"PROJECT": "2"}}"#).unwrap();
 
     let dir = StateDirectory::new(state_dir.path());
     let loader = dir.settings_loader(work_dir.path());
@@ -194,11 +168,7 @@ fn test_env_vars_later_overrides() {
     // Project overrides KEY
     let project_claude = work_dir.path().join(".claude");
     fs::create_dir_all(&project_claude).unwrap();
-    fs::write(
-        project_claude.join("settings.json"),
-        r#"{"env": {"KEY": "project"}}"#,
-    )
-    .unwrap();
+    fs::write(project_claude.join("settings.json"), r#"{"env": {"KEY": "project"}}"#).unwrap();
 
     let dir = StateDirectory::new(state_dir.path());
     let loader = dir.settings_loader(work_dir.path());
@@ -254,11 +224,8 @@ fn test_permission_arrays_replaced_not_merged() {
     // Project replaces only allow (deny stays from global)
     let project_claude = work_dir.path().join(".claude");
     fs::create_dir_all(&project_claude).unwrap();
-    fs::write(
-        project_claude.join("settings.json"),
-        r#"{"permissions": {"allow": ["Write"]}}"#,
-    )
-    .unwrap();
+    fs::write(project_claude.join("settings.json"), r#"{"permissions": {"allow": ["Write"]}}"#)
+        .unwrap();
 
     let dir = StateDirectory::new(state_dir.path());
     let loader = dir.settings_loader(work_dir.path());
@@ -301,11 +268,8 @@ fn test_invalid_json_skipped_with_warning() {
     // Valid project settings
     let project_claude = work_dir.path().join(".claude");
     fs::create_dir_all(&project_claude).unwrap();
-    fs::write(
-        project_claude.join("settings.json"),
-        r#"{"permissions": {"allow": ["Read"]}}"#,
-    )
-    .unwrap();
+    fs::write(project_claude.join("settings.json"), r#"{"permissions": {"allow": ["Read"]}}"#)
+        .unwrap();
 
     let dir = StateDirectory::new(state_dir.path());
     let loader = dir.settings_loader(work_dir.path());
@@ -323,11 +287,8 @@ fn test_partial_invalid_still_loads_valid() {
     // Invalid local, valid project
     let project_claude = work_dir.path().join(".claude");
     fs::create_dir_all(&project_claude).unwrap();
-    fs::write(
-        project_claude.join("settings.json"),
-        r#"{"permissions": {"allow": ["Project"]}}"#,
-    )
-    .unwrap();
+    fs::write(project_claude.join("settings.json"), r#"{"permissions": {"allow": ["Project"]}}"#)
+        .unwrap();
     fs::write(project_claude.join("settings.local.json"), "{{{invalid").unwrap();
 
     let dir = StateDirectory::new(state_dir.path());
@@ -419,10 +380,7 @@ fn test_additional_directories_loaded() {
     let loader = dir.settings_loader(work_dir.path());
     let settings = loader.load();
 
-    assert_eq!(
-        settings.permissions.additional_directories,
-        vec!["/tmp/workspace", "/home/shared"]
-    );
+    assert_eq!(settings.permissions.additional_directories, vec!["/tmp/workspace", "/home/shared"]);
 }
 
 // =============================================================================
@@ -437,14 +395,8 @@ fn test_settings_paths_resolve() {
     let paths = SettingsPaths::resolve(state_dir.path(), work_dir.path());
 
     assert_eq!(paths.global, Some(state_dir.path().join("settings.json")));
-    assert_eq!(
-        paths.project,
-        Some(work_dir.path().join(".claude/settings.json"))
-    );
-    assert_eq!(
-        paths.local,
-        Some(work_dir.path().join(".claude/settings.local.json"))
-    );
+    assert_eq!(paths.project, Some(work_dir.path().join(".claude/settings.json")));
+    assert_eq!(paths.local, Some(work_dir.path().join(".claude/settings.local.json")));
 }
 
 #[test]
@@ -454,14 +406,8 @@ fn test_settings_paths_project_only() {
     let paths = SettingsPaths::project_only(work_dir.path());
 
     assert!(paths.global.is_none());
-    assert_eq!(
-        paths.project,
-        Some(work_dir.path().join(".claude/settings.json"))
-    );
-    assert_eq!(
-        paths.local,
-        Some(work_dir.path().join(".claude/settings.local.json"))
-    );
+    assert_eq!(paths.project, Some(work_dir.path().join(".claude/settings.json")));
+    assert_eq!(paths.local, Some(work_dir.path().join(".claude/settings.local.json")));
 }
 
 #[test]

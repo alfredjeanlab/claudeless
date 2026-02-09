@@ -35,10 +35,8 @@ fn test_tui_shows_typed_input() {
 /// After submitting, the response should appear with "⏺" prefix
 #[test]
 fn test_tui_shows_response_with_indicator() {
-    let tui = TuiTestSession::new(
-        "response-test",
-        &simple_scenario_toml("Test response from simulator"),
-    );
+    let tui =
+        TuiTestSession::new("response-test", &simple_scenario_toml("Test response from simulator"));
 
     tui.send_line("test prompt");
 

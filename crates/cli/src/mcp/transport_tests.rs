@@ -98,10 +98,7 @@ mod spawn {
 
     #[tokio::test]
     async fn spawns_echo_process() {
-        let def = McpServerDef {
-            command: "cat".to_string(),
-            ..Default::default()
-        };
+        let def = McpServerDef { command: "cat".to_string(), ..Default::default() };
         let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
         assert!(transport.is_running().await);
         transport.shutdown().await.unwrap();
@@ -109,10 +106,8 @@ mod spawn {
 
     #[tokio::test]
     async fn spawn_fails_for_nonexistent_command() {
-        let def = McpServerDef {
-            command: "nonexistent_command_12345".to_string(),
-            ..Default::default()
-        };
+        let def =
+            McpServerDef { command: "nonexistent_command_12345".to_string(), ..Default::default() };
         let result = StdioTransport::spawn(&def, "test", false).await;
         assert!(matches!(result, Err(TransportError::Spawn(_))));
     }
@@ -284,10 +279,7 @@ mod shutdown_tests {
 
     #[tokio::test]
     async fn shutdown_marks_transport_closed() {
-        let def = McpServerDef {
-            command: "cat".to_string(),
-            ..Default::default()
-        };
+        let def = McpServerDef { command: "cat".to_string(), ..Default::default() };
         let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
 
         transport.shutdown().await.unwrap();
@@ -298,10 +290,7 @@ mod shutdown_tests {
 
     #[tokio::test]
     async fn operations_fail_after_shutdown() {
-        let def = McpServerDef {
-            command: "cat".to_string(),
-            ..Default::default()
-        };
+        let def = McpServerDef { command: "cat".to_string(), ..Default::default() };
         let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
         transport.shutdown().await.unwrap();
 
@@ -311,10 +300,7 @@ mod shutdown_tests {
 
     #[tokio::test]
     async fn send_fails_after_shutdown() {
-        let def = McpServerDef {
-            command: "cat".to_string(),
-            ..Default::default()
-        };
+        let def = McpServerDef { command: "cat".to_string(), ..Default::default() };
         let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
         transport.shutdown().await.unwrap();
 
@@ -325,10 +311,7 @@ mod shutdown_tests {
 
     #[tokio::test]
     async fn receive_fails_after_shutdown() {
-        let def = McpServerDef {
-            command: "cat".to_string(),
-            ..Default::default()
-        };
+        let def = McpServerDef { command: "cat".to_string(), ..Default::default() };
         let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
         transport.shutdown().await.unwrap();
 
@@ -359,10 +342,7 @@ mod shutdown_tests {
 
     #[tokio::test]
     async fn notification_fails_after_shutdown() {
-        let def = McpServerDef {
-            command: "cat".to_string(),
-            ..Default::default()
-        };
+        let def = McpServerDef { command: "cat".to_string(), ..Default::default() };
         let transport = StdioTransport::spawn(&def, "test", false).await.unwrap();
         transport.shutdown().await.unwrap();
 
@@ -413,31 +393,18 @@ mod error_display {
     #[test]
     fn transport_error_display() {
         let err = TransportError::Spawn("command not found".to_string());
-        assert_eq!(
-            format!("{}", err),
-            "failed to spawn process: command not found"
-        );
+        assert_eq!(format!("{}", err), "failed to spawn process: command not found");
 
         let err = TransportError::Timeout(5000);
         assert_eq!(format!("{}", err), "request timed out after 5000ms");
 
-        let err = TransportError::IdMismatch {
-            request: 1,
-            response: 2,
-        };
-        assert_eq!(
-            format!("{}", err),
-            "response id 2 doesn't match request id 1"
-        );
+        let err = TransportError::IdMismatch { request: 1, response: 2 };
+        assert_eq!(format!("{}", err), "response id 2 doesn't match request id 1");
     }
 
     #[test]
     fn json_rpc_error_display() {
-        let err = JsonRpcError {
-            code: -32600,
-            message: "Invalid Request".to_string(),
-            data: None,
-        };
+        let err = JsonRpcError { code: -32600, message: "Invalid Request".to_string(), data: None };
         assert_eq!(format!("{}", err), "JSON-RPC error -32600: Invalid Request");
     }
 }
@@ -490,10 +457,7 @@ mod transport_error_coverage {
             TransportError::Parse("parse".into()),
             TransportError::ProcessExited,
             TransportError::Timeout(1000),
-            TransportError::IdMismatch {
-                request: 1,
-                response: 2,
-            },
+            TransportError::IdMismatch { request: 1, response: 2 },
             TransportError::JsonRpc(JsonRpcError {
                 code: -32600,
                 message: "test".into(),

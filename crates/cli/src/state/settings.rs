@@ -248,9 +248,8 @@ impl ClaudeSettings {
         for (event, other_entries) in other.hooks {
             let entries = self.hooks.entry(event).or_default();
             for other_entry in other_entries {
-                if let Some(existing) = entries
-                    .iter_mut()
-                    .find(|e| e.matcher == other_entry.matcher)
+                if let Some(existing) =
+                    entries.iter_mut().find(|e| e.matcher == other_entry.matcher)
                 {
                     *existing = other_entry;
                 } else {
@@ -292,14 +291,9 @@ where
             let mut result: HashMap<String, Vec<HookDefEntry>> = HashMap::new();
             for item in arr {
                 let hook_def: HookDef = serde_json::from_value(item).map_err(D::Error::custom)?;
-                let entry = HookDefEntry {
-                    matcher: hook_def.matcher.matcher,
-                    hooks: hook_def.hooks,
-                };
-                result
-                    .entry(hook_def.matcher.event)
-                    .or_default()
-                    .push(entry);
+                let entry =
+                    HookDefEntry { matcher: hook_def.matcher.matcher, hooks: hook_def.hooks };
+                result.entry(hook_def.matcher.event).or_default().push(entry);
             }
             Ok(result)
         }

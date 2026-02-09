@@ -5,10 +5,8 @@ use super::*;
 
 #[test]
 fn test_builder_respond_to() {
-    let sim = SimulatorBuilder::new()
-        .respond_to("hello", "Hello back!")
-        .build_in_process()
-        .unwrap();
+    let sim =
+        SimulatorBuilder::new().respond_to("hello", "Hello back!").build_in_process().unwrap();
 
     let response = sim.execute("hello world");
     assert_eq!(response, "Hello back!");
@@ -56,10 +54,7 @@ fn test_builder_default_response() {
 
 #[test]
 fn test_assertions() {
-    let sim = SimulatorBuilder::new()
-        .respond_to("test", "response")
-        .build_in_process()
-        .unwrap();
+    let sim = SimulatorBuilder::new().respond_to("test", "response").build_in_process().unwrap();
 
     sim.execute("test prompt");
 
@@ -71,10 +66,7 @@ fn test_assertions() {
 
 #[test]
 fn test_reset() {
-    let sim = SimulatorBuilder::new()
-        .respond_to("test", "response")
-        .build_in_process()
-        .unwrap();
+    let sim = SimulatorBuilder::new().respond_to("test", "response").build_in_process().unwrap();
 
     sim.execute("test");
     sim.assert_count(1);
@@ -85,10 +77,7 @@ fn test_reset() {
 
 #[test]
 fn test_interactions_recorded() {
-    let sim = SimulatorBuilder::new()
-        .respond_to("hello", "Hi!")
-        .build_in_process()
-        .unwrap();
+    let sim = SimulatorBuilder::new().respond_to("hello", "Hi!").build_in_process().unwrap();
 
     sim.execute("hello world");
 
@@ -99,10 +88,7 @@ fn test_interactions_recorded() {
 
 #[test]
 fn test_execute_with_args() {
-    let sim = SimulatorBuilder::new()
-        .respond_to("test", "ok")
-        .build_in_process()
-        .unwrap();
+    let sim = SimulatorBuilder::new().respond_to("test", "ok").build_in_process().unwrap();
 
     sim.execute_with_args("test", Some("claude-opus"));
 
@@ -112,10 +98,7 @@ fn test_execute_with_args() {
 
 #[test]
 fn test_binary_handle_env_vars() {
-    let handle = SimulatorBuilder::new()
-        .respond_to("test", "ok")
-        .build_binary()
-        .unwrap();
+    let handle = SimulatorBuilder::new().respond_to("test", "ok").build_binary().unwrap();
 
     let vars = handle.env_vars();
     assert!(vars.iter().any(|(k, _)| *k == "CLAUDELESS_SCENARIO"));
@@ -123,10 +106,7 @@ fn test_binary_handle_env_vars() {
 
 #[test]
 fn test_binary_handle_paths() {
-    let handle = SimulatorBuilder::new()
-        .respond_to("test", "ok")
-        .build_binary()
-        .unwrap();
+    let handle = SimulatorBuilder::new().respond_to("test", "ok").build_binary().unwrap();
 
     assert!(handle.scenario_path().exists());
 }
@@ -148,19 +128,13 @@ fn test_multiple_rules_order() {
 #[test]
 fn test_scenario_from_config() {
     let config = ScenarioConfig {
-        default: Some(Response {
-            say: Some("default".to_string()),
-            ..Default::default()
-        }),
+        default: Some(Response { say: Some("default".to_string()), ..Default::default() }),
         responses: vec![],
         tools: None,
         ..Default::default()
     };
 
-    let sim = SimulatorBuilder::new()
-        .scenario(config)
-        .build_in_process()
-        .unwrap();
+    let sim = SimulatorBuilder::new().scenario(config).build_in_process().unwrap();
 
     assert_eq!(sim.execute("anything"), "default");
 }

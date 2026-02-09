@@ -118,12 +118,7 @@ fn test_reset() {
     // Add some state
     inspector.todos.lock().add("Task");
     inspector.sessions.lock().create_session();
-    inspector.record_hook(HookMessage::session(
-        "test",
-        HookEvent::SessionStart,
-        None,
-        None,
-    ));
+    inspector.record_hook(HookMessage::session("test", HookEvent::SessionStart, None, None));
 
     assert_eq!(inspector.todo_count(), 1);
     assert_eq!(inspector.session_count(), 1);
@@ -140,12 +135,7 @@ fn test_reset() {
 fn test_clear_hooks() {
     let inspector = StateInspector::with_temp_dir().unwrap();
 
-    inspector.record_hook(HookMessage::session(
-        "test",
-        HookEvent::SessionStart,
-        None,
-        None,
-    ));
+    inspector.record_hook(HookMessage::session("test", HookEvent::SessionStart, None, None));
     assert_eq!(inspector.hook_count(), 1);
 
     inspector.clear_hooks();

@@ -449,14 +449,7 @@ pub(crate) fn render_memory_dialog(dialog: &MemoryDialog, _width: usize) -> AnyE
             let status = if entry.is_active { "✓" } else { " " };
             let path = entry.path.as_deref().unwrap_or("(not configured)");
 
-            format!(
-                " {} {} {}. {} - {}",
-                prefix,
-                status,
-                i + 1,
-                entry.source.name(),
-                path
-            )
+            format!(" {} {} {}. {} - {}", prefix, status, i + 1, entry.source.name(), path)
         })
         .collect();
 

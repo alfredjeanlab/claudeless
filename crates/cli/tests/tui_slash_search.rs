@@ -98,21 +98,9 @@ fn test_tui_slash_filters_commands() {
     let capture = tui.wait_for("/compact");
 
     // Should show commands matching "co"
-    assert!(
-        capture.contains("/compact"),
-        "/co should show /compact.\nCapture:\n{}",
-        capture
-    );
-    assert!(
-        capture.contains("/context"),
-        "/co should show /context.\nCapture:\n{}",
-        capture
-    );
-    assert!(
-        capture.contains("/config"),
-        "/co should show /config.\nCapture:\n{}",
-        capture
-    );
+    assert!(capture.contains("/compact"), "/co should show /compact.\nCapture:\n{}", capture);
+    assert!(capture.contains("/context"), "/co should show /context.\nCapture:\n{}", capture);
+    assert!(capture.contains("/config"), "/co should show /config.\nCapture:\n{}", capture);
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -128,11 +116,7 @@ fn test_tui_slash_filters_progressively() {
     let capture = tui.wait_for("/help");
 
     // Should only show /help
-    assert!(
-        capture.contains("/help"),
-        "/hel should show /help.\nCapture:\n{}",
-        capture
-    );
+    assert!(capture.contains("/help"), "/hel should show /help.\nCapture:\n{}", capture);
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -148,16 +132,8 @@ fn test_tui_slash_fuzzy_matches() {
     let capture = tui.wait_for_change(&previous);
 
     // Should show commands containing 'h'
-    assert!(
-        capture.contains("/help"),
-        "/h should show /help.\nCapture:\n{}",
-        capture
-    );
-    assert!(
-        capture.contains("/hooks"),
-        "/h should show /hooks.\nCapture:\n{}",
-        capture
-    );
+    assert!(capture.contains("/help"), "/h should show /help.\nCapture:\n{}", capture);
+    assert!(capture.contains("/hooks"), "/h should show /hooks.\nCapture:\n{}", capture);
 }
 
 // =============================================================================

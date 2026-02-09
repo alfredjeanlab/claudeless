@@ -74,44 +74,30 @@ pub struct ScenarioBuilder {
 impl ScenarioBuilder {
     /// Create a new scenario builder with the given name.
     pub fn new(name: &str) -> Self {
-        Self {
-            name: name.to_string(),
-            responses: vec![],
-            response_delay_ms: None,
-        }
+        Self { name: name.to_string(), responses: vec![], response_delay_ms: None }
     }
 
     /// Add a response that matches any input.
     pub fn any_response(mut self, response: &str) -> Self {
-        self.responses
-            .push((Pattern::Any, response.to_string(), None));
+        self.responses.push((Pattern::Any, response.to_string(), None));
         self
     }
 
     /// Add a response that matches any input with a delay.
     pub fn any_response_delayed(mut self, response: &str, delay_ms: u64) -> Self {
-        self.responses
-            .push((Pattern::Any, response.to_string(), Some(delay_ms)));
+        self.responses.push((Pattern::Any, response.to_string(), Some(delay_ms)));
         self
     }
 
     /// Add a response that matches input containing the given text.
     pub fn contains_response(mut self, pattern: &str, response: &str) -> Self {
-        self.responses.push((
-            Pattern::Contains(pattern.to_string()),
-            response.to_string(),
-            None,
-        ));
+        self.responses.push((Pattern::Contains(pattern.to_string()), response.to_string(), None));
         self
     }
 
     /// Add a response that matches input matching the given regex.
     pub fn regex_response(mut self, pattern: &str, response: &str) -> Self {
-        self.responses.push((
-            Pattern::Regex(pattern.to_string()),
-            response.to_string(),
-            None,
-        ));
+        self.responses.push((Pattern::Regex(pattern.to_string()), response.to_string(), None));
         self
     }
 
@@ -218,11 +204,7 @@ pub fn start_tui_ext(
     tmux::kill_session(session);
     tmux::new_session(session, width, height);
 
-    let cmd = format!(
-        "{} --scenario {}",
-        claudeless_bin(),
-        scenario.path().display()
-    );
+    let cmd = format!("{} --scenario {}", claudeless_bin(), scenario.path().display());
     tmux::send_line(session, &cmd);
 
     tmux::wait_for_content(session, wait_for)
@@ -304,11 +286,7 @@ impl TuiTestSession {
         tmux::send_line(session_ref, &cmd);
         tmux::wait_for_content(session_ref, wait_for);
 
-        Self {
-            session,
-            scenario,
-            workdir,
-        }
+        Self { session, scenario, workdir }
     }
 
     /// Get the tmux session name.
@@ -392,12 +370,8 @@ pub fn capture_tui_initial(prefix: impl AsRef<str>, extra_args: &str) -> String 
     tmux::kill_session(session);
     tmux::new_session(session, 120, 20);
 
-    let cmd = format!(
-        "{} --scenario {} {}",
-        claudeless_bin(),
-        scenario.path().display(),
-        extra_args
-    );
+    let cmd =
+        format!("{} --scenario {} {}", claudeless_bin(), scenario.path().display(), extra_args);
     tmux::send_line(session, &cmd);
 
     let capture = tmux::wait_for_content(session, TUI_READY_PATTERN);
@@ -507,9 +481,7 @@ pub fn normalize_tui(input: &str, cwd: Option<&str>) -> String {
 
     // Placeholder prompts (e.g., 'Try "refactor mod.rs"', 'Try "fix lint errors"')
     let placeholder_re = Regex::new(r#"Try "[^"]+""#).unwrap();
-    result = placeholder_re
-        .replace_all(&result, "<PLACEHOLDER>")
-        .to_string();
+    result = placeholder_re.replace_all(&result, "<PLACEHOLDER>").to_string();
 
     // User prompts after ❯ (normalize different prompt content)
     result = result
@@ -528,24 +500,21 @@ pub fn normalize_tui(input: &str, cwd: Option<&str>) -> String {
         .join("\n");
 
     // Response content after ⏺ (normalize different response content)
-    result = result
-        .lines()
-        .map(|line| {
-            if line.starts_with("⏺ ") {
-                "⏺ <RESPONSE>".to_string()
-            } else {
-                line.to_string()
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
+    result =
+        result
+            .lines()
+            .map(|line| {
+                if line.starts_with("⏺ ") {
+                    "⏺ <RESPONSE>".to_string()
+                } else {
+                    line.to_string()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
 
     // Strip trailing whitespace per line (preserve leading and interior)
-    result = result
-        .lines()
-        .map(|line| line.trim_end())
-        .collect::<Vec<_>>()
-        .join("\n");
+    result = result.lines().map(|line| line.trim_end()).collect::<Vec<_>>().join("\n");
 
     // Strip leading empty lines only (not leading whitespace on first content line)
     while result.starts_with('\n') {
@@ -662,11 +631,7 @@ pub fn capture_key_sequence(session: impl AsRef<str>, keys: &[&str]) -> Vec<Stri
     tmux::kill_session(session);
     tmux::new_session(session, 120, 25);
 
-    let cmd = format!(
-        "{} --scenario {}",
-        claudeless_bin(),
-        scenario.path().display()
-    );
+    let cmd = format!("{} --scenario {}", claudeless_bin(), scenario.path().display());
     tmux::send_line(session, &cmd);
 
     tmux::wait_for_content(session, TUI_READY_PATTERN);

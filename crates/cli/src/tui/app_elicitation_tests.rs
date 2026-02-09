@@ -63,10 +63,7 @@ fn test_arrow_down_moves_cursor() {
     // Initially at option 0
     {
         let inner = state.inner.lock();
-        assert_eq!(
-            inner.dialog.as_elicitation().unwrap().questions[0].cursor,
-            0
-        );
+        assert_eq!(inner.dialog.as_elicitation().unwrap().questions[0].cursor, 0);
     }
 
     // Press Down
@@ -74,10 +71,7 @@ fn test_arrow_down_moves_cursor() {
 
     {
         let inner = state.inner.lock();
-        assert_eq!(
-            inner.dialog.as_elicitation().unwrap().questions[0].cursor,
-            1
-        );
+        assert_eq!(inner.dialog.as_elicitation().unwrap().questions[0].cursor, 1);
     }
 }
 
@@ -93,10 +87,7 @@ fn test_arrow_up_moves_cursor() {
 
     {
         let inner = state.inner.lock();
-        assert_eq!(
-            inner.dialog.as_elicitation().unwrap().questions[0].cursor,
-            1
-        );
+        assert_eq!(inner.dialog.as_elicitation().unwrap().questions[0].cursor, 1);
     }
 }
 
@@ -126,10 +117,7 @@ fn test_arrow_down_clamps_at_chat_about_this() {
     }
     {
         let inner = state.inner.lock();
-        assert_eq!(
-            inner.dialog.as_elicitation().unwrap().questions[0].cursor,
-            4
-        );
+        assert_eq!(inner.dialog.as_elicitation().unwrap().questions[0].cursor, 4);
     }
 }
 
@@ -148,10 +136,7 @@ fn test_escape_cancels_elicitation() {
     // Dialog dismissed, back to input mode
     assert!(!inner.dialog.is_active());
     // Response matches real Claude Code
-    assert_eq!(
-        inner.display.response_content,
-        "User declined to answer questions"
-    );
+    assert_eq!(inner.display.response_content, "User declined to answer questions");
 }
 
 // =========================================================================
@@ -208,10 +193,7 @@ fn test_alphabetic_keys_ignored() {
     let inner = state.inner.lock();
     // Dialog still active, cursor unchanged
     assert!(inner.dialog.is_active());
-    assert_eq!(
-        inner.dialog.as_elicitation().unwrap().questions[0].cursor,
-        0
-    );
+    assert_eq!(inner.dialog.as_elicitation().unwrap().questions[0].cursor, 0);
 }
 
 // =========================================================================
@@ -272,10 +254,7 @@ fn test_backspace_on_free_text() {
     state.handle_elicitation_key(key_event(KeyCode::Backspace, KeyModifiers::NONE));
 
     let inner = state.inner.lock();
-    assert_eq!(
-        inner.dialog.as_elicitation().unwrap().questions[0].free_text,
-        "A"
-    );
+    assert_eq!(inner.dialog.as_elicitation().unwrap().questions[0].free_text, "A");
 }
 
 #[test]
@@ -294,10 +273,7 @@ fn test_space_types_space_on_free_text() {
     state.handle_elicitation_key(key_event(KeyCode::Char('b'), KeyModifiers::NONE));
 
     let inner = state.inner.lock();
-    assert_eq!(
-        inner.dialog.as_elicitation().unwrap().questions[0].free_text,
-        "a b"
-    );
+    assert_eq!(inner.dialog.as_elicitation().unwrap().questions[0].free_text, "a b");
 }
 
 #[test]
@@ -316,10 +292,7 @@ fn test_number_key_types_on_free_text() {
 
     let inner = state.inner.lock();
     assert!(inner.dialog.is_active());
-    assert_eq!(
-        inner.dialog.as_elicitation().unwrap().questions[0].free_text,
-        "42"
-    );
+    assert_eq!(inner.dialog.as_elicitation().unwrap().questions[0].free_text, "42");
 }
 
 // =========================================================================
@@ -337,10 +310,7 @@ fn test_navigate_to_chat_about_this() {
     }
 
     let inner = state.inner.lock();
-    assert_eq!(
-        inner.dialog.as_elicitation().unwrap().questions[0].cursor,
-        4
-    );
+    assert_eq!(inner.dialog.as_elicitation().unwrap().questions[0].cursor, 4);
     assert!(inner.dialog.is_active());
 }
 
@@ -359,10 +329,7 @@ fn test_enter_on_chat_about_this_dismisses_with_clarification() {
 
     let inner = state.inner.lock();
     assert!(!inner.dialog.is_active());
-    assert!(inner
-        .display
-        .response_content
-        .contains("user wants to clarify"));
+    assert!(inner.display.response_content.contains("user wants to clarify"));
     assert!(inner.display.response_content.contains("What language?"));
 }
 
@@ -411,10 +378,7 @@ fn test_multi_question_number_key_advances_to_next_question() {
     let elicitation = inner.dialog.as_elicitation().unwrap();
     assert_eq!(elicitation.questions[0].selected, vec![0]);
     assert_eq!(elicitation.current_question, 1, "should advance to Q2");
-    assert!(
-        !elicitation.on_submit_tab,
-        "should not be on submit tab yet"
-    );
+    assert!(!elicitation.on_submit_tab, "should not be on submit tab yet");
 }
 
 #[test]
@@ -428,14 +392,8 @@ fn test_multi_question_last_question_goes_to_submit_tab() {
 
     let inner = state.inner.lock();
     let elicitation = inner.dialog.as_elicitation().unwrap();
-    assert!(
-        elicitation.on_submit_tab,
-        "after answering all questions, should be on submit tab"
-    );
-    assert!(
-        inner.dialog.is_active(),
-        "dialog should still be active (awaiting submit)"
-    );
+    assert!(elicitation.on_submit_tab, "after answering all questions, should be on submit tab");
+    assert!(inner.dialog.is_active(), "dialog should still be active (awaiting submit)");
 }
 
 #[test]
@@ -450,10 +408,7 @@ fn test_multi_question_enter_on_submit_tab_confirms() {
     state.handle_elicitation_key(key_event(KeyCode::Enter, KeyModifiers::NONE));
 
     let inner = state.inner.lock();
-    assert!(
-        !inner.dialog.is_active(),
-        "dialog should be dismissed after submit"
-    );
+    assert!(!inner.dialog.is_active(), "dialog should be dismissed after submit");
 }
 
 #[test]

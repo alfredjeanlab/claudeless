@@ -18,23 +18,17 @@ use std::path::PathBuf;
 
 /// `CLAUDELESS_CONFIG_DIR` — Claudeless-specific config directory override.
 pub fn config_dir() -> Option<PathBuf> {
-    std::env::var(names::CLAUDELESS_CONFIG_DIR)
-        .ok()
-        .map(PathBuf::from)
+    std::env::var(names::CLAUDELESS_CONFIG_DIR).ok().map(PathBuf::from)
 }
 
 /// `CLAUDELESS_STATE_DIR` — Legacy state directory (backwards compatibility).
 pub fn state_dir() -> Option<PathBuf> {
-    std::env::var(names::CLAUDELESS_STATE_DIR)
-        .ok()
-        .map(PathBuf::from)
+    std::env::var(names::CLAUDELESS_STATE_DIR).ok().map(PathBuf::from)
 }
 
 /// `CLAUDE_CONFIG_DIR` — Standard Claude Code config directory.
 pub fn claude_config_dir() -> Option<PathBuf> {
-    std::env::var(names::CLAUDE_CONFIG_DIR)
-        .ok()
-        .map(PathBuf::from)
+    std::env::var(names::CLAUDE_CONFIG_DIR).ok().map(PathBuf::from)
 }
 
 /// `CLAUDELESS_EXIT_HINT_TIMEOUT_MS` — Exit hint display duration.
@@ -69,9 +63,7 @@ pub fn cargo_bin_exe() -> Option<String> {
 
 /// `CARGO_TARGET_DIR` — Cargo build target directory.
 pub fn cargo_target_dir() -> Option<PathBuf> {
-    std::env::var(names::CARGO_TARGET_DIR)
-        .ok()
-        .map(PathBuf::from)
+    std::env::var(names::CARGO_TARGET_DIR).ok().map(PathBuf::from)
 }
 
 /// `HOME` — User's home directory.

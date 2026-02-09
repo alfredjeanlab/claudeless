@@ -117,10 +117,7 @@ fn test_claude_settings_parse_permissions() {
     let settings: ClaudeSettings = serde_json::from_str(json).unwrap();
     assert_eq!(settings.permissions.allow, vec!["Read", "Bash(npm test)"]);
     assert_eq!(settings.permissions.deny, vec!["Bash(rm *)"]);
-    assert_eq!(
-        settings.permissions.additional_directories,
-        vec!["/tmp/workspace"]
-    );
+    assert_eq!(settings.permissions.additional_directories, vec!["/tmp/workspace"]);
 }
 
 #[test]
@@ -138,10 +135,7 @@ fn test_claude_settings_parse_mcp_servers() {
     let settings: ClaudeSettings = serde_json::from_str(json).unwrap();
     let server = settings.mcp_servers.get("filesystem").unwrap();
     assert_eq!(server.command, "npx");
-    assert_eq!(
-        server.args,
-        vec!["-y", "@modelcontextprotocol/server-filesystem"]
-    );
+    assert_eq!(server.args, vec!["-y", "@modelcontextprotocol/server-filesystem"]);
     assert_eq!(server.cwd.as_deref(), Some("/home/user"));
 }
 
@@ -179,10 +173,7 @@ fn test_claude_settings_merge_permissions_replace() {
     base.permissions.allow = vec!["Read".to_string(), "Glob".to_string()];
 
     let override_settings = ClaudeSettings {
-        permissions: PermissionSettings {
-            allow: vec!["Write".to_string()],
-            ..Default::default()
-        },
+        permissions: PermissionSettings { allow: vec!["Write".to_string()], ..Default::default() },
         ..Default::default()
     };
 
@@ -222,12 +213,8 @@ fn test_claude_settings_merge_env() {
     base.env.insert("B".to_string(), "2".to_string());
 
     let mut override_settings = ClaudeSettings::default();
-    override_settings
-        .env
-        .insert("B".to_string(), "3".to_string());
-    override_settings
-        .env
-        .insert("C".to_string(), "4".to_string());
+    override_settings.env.insert("B".to_string(), "3".to_string());
+    override_settings.env.insert("C".to_string(), "4".to_string());
 
     base.merge(override_settings);
 
@@ -242,19 +229,13 @@ fn test_claude_settings_merge_mcp_servers() {
     let mut base = ClaudeSettings::default();
     base.mcp_servers.insert(
         "server1".to_string(),
-        McpServerDef {
-            command: "cmd1".to_string(),
-            ..Default::default()
-        },
+        McpServerDef { command: "cmd1".to_string(), ..Default::default() },
     );
 
     let mut override_settings = ClaudeSettings::default();
     override_settings.mcp_servers.insert(
         "server2".to_string(),
-        McpServerDef {
-            command: "cmd2".to_string(),
-            ..Default::default()
-        },
+        McpServerDef { command: "cmd2".to_string(), ..Default::default() },
     );
 
     base.merge(override_settings);
@@ -440,10 +421,7 @@ fn test_claude_settings_parse_hooks_map_format() {
 
     let pre_tool = &settings.hooks["PreToolUse"];
     assert_eq!(pre_tool.len(), 1);
-    assert_eq!(
-        pre_tool[0].matcher,
-        Some("AskUserQuestion|ExitPlanMode".to_string())
-    );
+    assert_eq!(pre_tool[0].matcher, Some("AskUserQuestion|ExitPlanMode".to_string()));
     assert_eq!(pre_tool[0].hooks[0].command_type, "command");
     assert_eq!(pre_tool[0].hooks[0].command, "echo pre-tool");
 
@@ -558,10 +536,7 @@ fn test_claude_settings_merge_hooks_different_events_accumulate() {
     assert!(base.hooks.contains_key("Stop"));
     assert!(base.hooks.contains_key("SessionStart"));
     assert_eq!(base.hooks["Stop"][0].hooks[0].command, "echo stop");
-    assert_eq!(
-        base.hooks["SessionStart"][0].hooks[0].command,
-        "echo session-start"
-    );
+    assert_eq!(base.hooks["SessionStart"][0].hooks[0].command, "echo session-start");
 }
 
 #[test]
@@ -597,10 +572,7 @@ fn test_hook_matcher_with_notification_matcher() {
     let json = r#"{"event": "Notification", "matcher": "idle_prompt|permission_prompt"}"#;
     let matcher: HookMatcher = serde_json::from_str(json).unwrap();
     assert_eq!(matcher.event, "Notification");
-    assert_eq!(
-        matcher.matcher,
-        Some("idle_prompt|permission_prompt".to_string())
-    );
+    assert_eq!(matcher.matcher, Some("idle_prompt|permission_prompt".to_string()));
 }
 
 #[test]
@@ -653,8 +625,5 @@ fn test_claude_settings_parse_hooks_legacy_with_matcher() {
     let settings: ClaudeSettings = serde_json::from_str(json).unwrap();
     let notif = &settings.hooks["Notification"];
     assert_eq!(notif.len(), 1);
-    assert_eq!(
-        notif[0].matcher,
-        Some("idle_prompt|permission_prompt".to_string())
-    );
+    assert_eq!(notif[0].matcher, Some("idle_prompt|permission_prompt".to_string()));
 }

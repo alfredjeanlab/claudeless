@@ -51,9 +51,7 @@ pub struct SimulatorBuilder {
 impl SimulatorBuilder {
     /// Create a new simulator builder with default configuration
     pub fn new() -> Self {
-        Self {
-            scenario: ScenarioConfig::default(),
-        }
+        Self { scenario: ScenarioConfig::default() }
     }
 
     /// Load scenario from file
@@ -117,10 +115,8 @@ impl SimulatorBuilder {
 
     /// Set default response for unmatched prompts
     pub fn default_response(mut self, response: &str) -> Self {
-        self.scenario.default = Some(Response {
-            say: Some(response.to_string()),
-            ..Default::default()
-        });
+        self.scenario.default =
+            Some(Response { say: Some(response.to_string()), ..Default::default() });
         self
     }
 
@@ -146,10 +142,7 @@ impl SimulatorBuilder {
         let scenario_toml = toml::to_string(&v1_config)?;
         std::fs::write(&scenario_path, scenario_toml)?;
 
-        Ok(BinarySimulatorHandle {
-            _temp_dir: temp_dir,
-            scenario_path,
-        })
+        Ok(BinarySimulatorHandle { _temp_dir: temp_dir, scenario_path })
     }
 }
 
@@ -195,36 +188,20 @@ impl SimulatorHandle {
     pub fn assert_received(&self, pattern: &str) {
         let interactions = self.interactions.lock();
         let found = interactions.iter().any(|i| i.prompt.contains(pattern));
-        assert!(
-            found,
-            "Expected prompt containing '{}' but none found",
-            pattern
-        );
+        assert!(found, "Expected prompt containing '{}' but none found", pattern);
     }
 
     /// Assert that a prompt was NOT received
     pub fn assert_not_received(&self, pattern: &str) {
         let interactions = self.interactions.lock();
-        let count = interactions
-            .iter()
-            .filter(|i| i.prompt.contains(pattern))
-            .count();
-        assert!(
-            count == 0,
-            "Expected no prompt containing '{}' but found {}",
-            pattern,
-            count
-        );
+        let count = interactions.iter().filter(|i| i.prompt.contains(pattern)).count();
+        assert!(count == 0, "Expected no prompt containing '{}' but found {}", pattern, count);
     }
 
     /// Assert interaction count
     pub fn assert_count(&self, expected: usize) {
         let actual = self.interactions.lock().len();
-        assert_eq!(
-            actual, expected,
-            "Expected {} interactions, got {}",
-            expected, actual
-        );
+        assert_eq!(actual, expected, "Expected {} interactions, got {}", expected, actual);
     }
 
     /// Assert that the last response contains a pattern
@@ -256,10 +233,7 @@ pub struct BinarySimulatorHandle {
 impl BinarySimulatorHandle {
     /// Get environment variables to set for subprocess
     pub fn env_vars(&self) -> Vec<(&str, String)> {
-        vec![(
-            "CLAUDELESS_SCENARIO",
-            self.scenario_path.to_string_lossy().to_string(),
-        )]
+        vec![("CLAUDELESS_SCENARIO", self.scenario_path.to_string_lossy().to_string())]
     }
 
     /// Get the path to use for the simulator binary

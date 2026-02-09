@@ -182,18 +182,14 @@ impl McpClient {
         let params = InitializeParams::default();
         let params_json = self.serialize_params(&params)?;
 
-        let result = self
-            .transport
-            .request("initialize", Some(params_json), self.timeout_ms)
-            .await?;
+        let result =
+            self.transport.request("initialize", Some(params_json), self.timeout_ms).await?;
 
         let init_result: InitializeResult = self.deserialize_response(result)?;
 
         // Verify protocol version compatibility
         if init_result.protocol_version != PROTOCOL_VERSION {
-            return Err(ClientError::UnsupportedVersion(
-                init_result.protocol_version,
-            ));
+            return Err(ClientError::UnsupportedVersion(init_result.protocol_version));
         }
 
         self.server_info = Some(init_result.server_info);
@@ -223,10 +219,7 @@ impl McpClient {
     pub async fn list_tools(&mut self) -> Result<&[ToolInfo], ClientError> {
         self.require_initialized()?;
 
-        let result = self
-            .transport
-            .request("tools/list", None, self.timeout_ms)
-            .await?;
+        let result = self.transport.request("tools/list", None, self.timeout_ms).await?;
 
         let tools_result: ToolsListResult = self.deserialize_response(result)?;
 
@@ -255,8 +248,7 @@ impl McpClient {
         name: &str,
         arguments: serde_json::Value,
     ) -> Result<ToolCallResult, ClientError> {
-        self.call_tool_with_timeout(name, arguments, self.timeout_ms)
-            .await
+        self.call_tool_with_timeout(name, arguments, self.timeout_ms).await
     }
 
     /// Execute a tool call with a custom timeout.
@@ -268,16 +260,10 @@ impl McpClient {
     ) -> Result<ToolCallResult, ClientError> {
         self.require_initialized()?;
 
-        let params = ToolCallParams {
-            name: name.to_string(),
-            arguments: Some(arguments),
-        };
+        let params = ToolCallParams { name: name.to_string(), arguments: Some(arguments) };
         let params_json = self.serialize_params(&params)?;
 
-        let result = self
-            .transport
-            .request("tools/call", Some(params_json), timeout_ms)
-            .await?;
+        let result = self.transport.request("tools/call", Some(params_json), timeout_ms).await?;
 
         self.deserialize_response(result)
     }

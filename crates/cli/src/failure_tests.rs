@@ -12,10 +12,7 @@ fn test_from_mode_network_unreachable() {
 #[test]
 fn test_from_mode_connection_timeout() {
     let spec = FailureExecutor::from_mode(&FailureMode::ConnectionTimeout);
-    assert!(matches!(
-        spec,
-        FailureSpec::ConnectionTimeout { after_ms: 5000 }
-    ));
+    assert!(matches!(spec, FailureSpec::ConnectionTimeout { after_ms: 5000 }));
 }
 
 #[test]
@@ -72,9 +69,7 @@ fn test_from_mode_malformed_json() {
 #[test]
 fn test_malformed_json_output() {
     let mut buf = Vec::new();
-    let _spec = FailureSpec::MalformedJson {
-        raw: r#"{"incomplete"#.to_string(),
-    };
+    let _spec = FailureSpec::MalformedJson { raw: r#"{"incomplete"#.to_string() };
 
     // This should not exit, just write malformed output
     let result = FailureExecutor::malformed_json(r#"{"incomplete"#, &mut buf);
@@ -140,13 +135,10 @@ fn test_write_real_rate_limit_format() {
 #[tokio::test]
 async fn test_execute_real_format_auth_error() {
     let mut buf = Vec::new();
-    let spec = FailureSpec::AuthError {
-        message: "Invalid API key".to_string(),
-    };
+    let spec = FailureSpec::AuthError { message: "Invalid API key".to_string() };
 
-    let exit_code = FailureExecutor::execute_real_format(&spec, &mut buf, "session-123")
-        .await
-        .unwrap();
+    let exit_code =
+        FailureExecutor::execute_real_format(&spec, &mut buf, "session-123").await.unwrap();
 
     assert_eq!(exit_code, exit_codes::ERROR);
 
@@ -163,9 +155,8 @@ async fn test_execute_real_format_rate_limit() {
     let mut buf = Vec::new();
     let spec = FailureSpec::RateLimit { retry_after: 30 };
 
-    let exit_code = FailureExecutor::execute_real_format(&spec, &mut buf, "session-123")
-        .await
-        .unwrap();
+    let exit_code =
+        FailureExecutor::execute_real_format(&spec, &mut buf, "session-123").await.unwrap();
 
     assert_eq!(exit_code, exit_codes::ERROR);
 
@@ -178,13 +169,11 @@ async fn test_execute_real_format_rate_limit() {
 #[tokio::test]
 async fn test_execute_real_format_partial_response() {
     let mut buf = Vec::new();
-    let spec = FailureSpec::PartialResponse {
-        partial_text: "Hello, I was going to say...".to_string(),
-    };
+    let spec =
+        FailureSpec::PartialResponse { partial_text: "Hello, I was going to say...".to_string() };
 
-    let exit_code = FailureExecutor::execute_real_format(&spec, &mut buf, "session-123")
-        .await
-        .unwrap();
+    let exit_code =
+        FailureExecutor::execute_real_format(&spec, &mut buf, "session-123").await.unwrap();
 
     // Partial response should exit with code 2
     assert_eq!(exit_code, exit_codes::PARTIAL);
@@ -198,9 +187,8 @@ async fn test_execute_real_format_network_error() {
     let mut buf = Vec::new();
     let spec = FailureSpec::NetworkUnreachable;
 
-    let exit_code = FailureExecutor::execute_real_format(&spec, &mut buf, "session-123")
-        .await
-        .unwrap();
+    let exit_code =
+        FailureExecutor::execute_real_format(&spec, &mut buf, "session-123").await.unwrap();
 
     assert_eq!(exit_code, exit_codes::ERROR);
 
@@ -236,14 +224,10 @@ async fn test_execute_with_session_malformed_json_skips_recording() {
     ));
 
     let mut buf = Vec::new();
-    let spec = FailureSpec::MalformedJson {
-        raw: r#"{"incomplete"#.to_string(),
-    };
+    let spec = FailureSpec::MalformedJson { raw: r#"{"incomplete"#.to_string() };
 
     // Execute with session - should skip recording for MalformedJson
-    FailureExecutor::execute_with_session(&spec, &mut buf, Some(&writer))
-        .await
-        .unwrap();
+    FailureExecutor::execute_with_session(&spec, &mut buf, Some(&writer)).await.unwrap();
 
     // MalformedJson should write the raw output but NOT record to JSONL
     let output = String::from_utf8(buf).unwrap();
@@ -257,14 +241,10 @@ async fn test_execute_with_session_malformed_json_skips_recording() {
 #[tokio::test]
 async fn test_execute_with_session_no_state_writer() {
     let mut buf = Vec::new();
-    let spec = FailureSpec::MalformedJson {
-        raw: r#"{"incomplete"#.to_string(),
-    };
+    let spec = FailureSpec::MalformedJson { raw: r#"{"incomplete"#.to_string() };
 
     // Execute without state writer - should not panic
-    FailureExecutor::execute_with_session(&spec, &mut buf, None)
-        .await
-        .unwrap();
+    FailureExecutor::execute_with_session(&spec, &mut buf, None).await.unwrap();
 
     let output = String::from_utf8(buf).unwrap();
     assert!(output.contains(r#"{"incomplete"#));

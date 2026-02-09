@@ -43,10 +43,7 @@ pub enum MatchResult {
     /// Matched a top-level response rule
     Response { rule_index: usize },
     /// Matched a turn within an active sequence
-    Turn {
-        rule_index: usize,
-        turn_index: usize,
-    },
+    Turn { rule_index: usize, turn_index: usize },
 }
 
 /// Compiled scenario ready for matching
@@ -88,9 +85,7 @@ struct CompiledRule {
 
 impl std::fmt::Debug for CompiledRule {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CompiledRule")
-            .field("rule_index", &self.rule_index)
-            .finish_non_exhaustive()
+        f.debug_struct("CompiledRule").field("rule_index", &self.rule_index).finish_non_exhaustive()
     }
 }
 
@@ -135,10 +130,7 @@ impl Scenario {
 
         for (idx, rule) in config.responses.iter().enumerate() {
             let matcher = compile_pattern(&rule.on)?;
-            compiled.push(CompiledRule {
-                matcher,
-                rule_index: idx,
-            });
+            compiled.push(CompiledRule { matcher, rule_index: idx });
 
             // Compile turn patterns for this rule
             let mut turn_matchers = Vec::new();
@@ -178,10 +170,7 @@ impl Scenario {
                         self.current_turn = 0;
                     }
 
-                    return Some(MatchResult::Turn {
-                        rule_index: rule_idx,
-                        turn_index: turn_idx,
-                    });
+                    return Some(MatchResult::Turn { rule_index: rule_idx, turn_index: turn_idx });
                 }
             }
 
@@ -210,9 +199,7 @@ impl Scenario {
                     self.current_turn = 0;
                 }
 
-                return Some(MatchResult::Response {
-                    rule_index: compiled.rule_index,
-                });
+                return Some(MatchResult::Response { rule_index: compiled.rule_index });
             }
         }
 
@@ -225,12 +212,9 @@ impl Scenario {
             MatchResult::Response { rule_index } => {
                 self.config.responses[*rule_index].say.as_deref()
             }
-            MatchResult::Turn {
-                rule_index,
-                turn_index,
-            } => self.config.responses[*rule_index].then[*turn_index]
-                .say
-                .as_deref(),
+            MatchResult::Turn { rule_index, turn_index } => {
+                self.config.responses[*rule_index].then[*turn_index].say.as_deref()
+            }
         }
     }
 
@@ -238,10 +222,9 @@ impl Scenario {
     pub fn get_tools(&self, result: &MatchResult) -> &[ToolCall] {
         match result {
             MatchResult::Response { rule_index } => &self.config.responses[*rule_index].tools,
-            MatchResult::Turn {
-                rule_index,
-                turn_index,
-            } => &self.config.responses[*rule_index].then[*turn_index].tools,
+            MatchResult::Turn { rule_index, turn_index } => {
+                &self.config.responses[*rule_index].then[*turn_index].tools
+            }
         }
     }
 
@@ -249,10 +232,9 @@ impl Scenario {
     pub fn get_delay_ms(&self, result: &MatchResult) -> Option<u64> {
         match result {
             MatchResult::Response { rule_index } => self.config.responses[*rule_index].delay_ms,
-            MatchResult::Turn {
-                rule_index,
-                turn_index,
-            } => self.config.responses[*rule_index].then[*turn_index].delay_ms,
+            MatchResult::Turn { rule_index, turn_index } => {
+                self.config.responses[*rule_index].then[*turn_index].delay_ms
+            }
         }
     }
 
@@ -262,12 +244,9 @@ impl Scenario {
             MatchResult::Response { rule_index } => {
                 self.config.responses[*rule_index].usage.as_ref()
             }
-            MatchResult::Turn {
-                rule_index,
-                turn_index,
-            } => self.config.responses[*rule_index].then[*turn_index]
-                .usage
-                .as_ref(),
+            MatchResult::Turn { rule_index, turn_index } => {
+                self.config.responses[*rule_index].then[*turn_index].usage.as_ref()
+            }
         }
     }
 
@@ -277,12 +256,9 @@ impl Scenario {
             MatchResult::Response { rule_index } => {
                 self.config.responses[*rule_index].failure.as_ref()
             }
-            MatchResult::Turn {
-                rule_index,
-                turn_index,
-            } => self.config.responses[*rule_index].then[*turn_index]
-                .failure
-                .as_ref(),
+            MatchResult::Turn { rule_index, turn_index } => {
+                self.config.responses[*rule_index].then[*turn_index].failure.as_ref()
+            }
         }
     }
 
@@ -394,10 +370,7 @@ fn resolve_file_references_in_value(
             if let Some(file_path) = map.get("$file").and_then(|v| v.as_str()) {
                 let full_path = base_dir.join(file_path);
                 let content = std::fs::read_to_string(&full_path).map_err(|e| {
-                    ScenarioError::FileReference {
-                        path: file_path.to_string(),
-                        source: e,
-                    }
+                    ScenarioError::FileReference { path: file_path.to_string(), source: e }
                 })?;
 
                 // Parse as JSON if it's a .json file, otherwise return as string
@@ -415,10 +388,8 @@ fn resolve_file_references_in_value(
             Ok(serde_json::Value::Object(map))
         }
         serde_json::Value::Array(arr) => {
-            let resolved: Result<Vec<_>, _> = arr
-                .into_iter()
-                .map(|v| resolve_file_references_in_value(v, base_dir))
-                .collect();
+            let resolved: Result<Vec<_>, _> =
+                arr.into_iter().map(|v| resolve_file_references_in_value(v, base_dir)).collect();
             Ok(serde_json::Value::Array(resolved?))
         }
         // Primitives pass through unchanged

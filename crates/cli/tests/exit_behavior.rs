@@ -27,17 +27,10 @@ fn claudeless_bin() -> PathBuf {
 /// "Error: Input must be provided either through stdin or as a prompt argument when using --print"
 #[test]
 fn test_no_prompt_non_tty_errors() {
-    let output = Command::new(claudeless_bin())
-        .output()
-        .expect("Failed to run claudeless");
+    let output = Command::new(claudeless_bin()).output().expect("Failed to run claudeless");
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
@@ -90,21 +83,11 @@ fn test_success_exit_code_0() {
     );
 
     let output = Command::new(claudeless_bin())
-        .args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
+        .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
         .output()
         .expect("Failed to run claudeless");
 
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "Expected exit code 0: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(0), "Expected exit code 0: {:?}", output);
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -115,12 +98,7 @@ fn test_error_exit_code_1() {
         .output()
         .expect("Failed to run claudeless");
 
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -131,10 +109,5 @@ fn test_partial_exit_code_2() {
         .output()
         .expect("Failed to run claudeless");
 
-    assert_eq!(
-        output.status.code(),
-        Some(2),
-        "Expected exit code 2: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(2), "Expected exit code 2: {:?}", output);
 }

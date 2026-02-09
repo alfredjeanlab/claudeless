@@ -77,31 +77,15 @@ fn find_jsonl_file(state_dir: &TempDir) -> Option<PathBuf> {
 /// Assert common fields on an API error line.
 fn assert_api_error_structure(line: &Value, expected_error: &str) {
     assert_eq!(line["type"], "assistant", "should have type: assistant");
-    assert_eq!(
-        line["isApiErrorMessage"], true,
-        "should have isApiErrorMessage: true"
-    );
-    assert_eq!(
-        line["error"], expected_error,
-        "should have error: {}",
-        expected_error
-    );
-    assert_eq!(
-        line["message"]["model"], "<synthetic>",
-        "should have message.model: <synthetic>"
-    );
+    assert_eq!(line["isApiErrorMessage"], true, "should have isApiErrorMessage: true");
+    assert_eq!(line["error"], expected_error, "should have error: {}", expected_error);
+    assert_eq!(line["message"]["model"], "<synthetic>", "should have message.model: <synthetic>");
     assert_eq!(
         line["message"]["stop_reason"], "stop_sequence",
         "should have message.stop_reason: stop_sequence"
     );
-    assert_eq!(
-        line["message"]["usage"]["input_tokens"], 0,
-        "should have zero input_tokens"
-    );
-    assert_eq!(
-        line["message"]["content"][0]["type"], "text",
-        "should have text content block"
-    );
+    assert_eq!(line["message"]["usage"]["input_tokens"], 0, "should have zero input_tokens");
+    assert_eq!(line["message"]["content"][0]["type"], "text", "should have text content block");
     assert!(line["sessionId"].is_string(), "should have sessionId");
     assert!(line["uuid"].is_string(), "should have uuid");
     assert!(line["cwd"].is_string(), "should have cwd");
@@ -138,12 +122,7 @@ fn error_jsonl_rate_limit() {
         .expect("Failed to run claudeless");
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
     let error_line =
@@ -183,12 +162,7 @@ fn error_jsonl_network_unreachable() {
         .expect("Failed to run claudeless");
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
     let error_line =
@@ -221,22 +195,12 @@ fn error_jsonl_scenario_failure() {
 
     let output = Command::new(claudeless_bin())
         .env("CLAUDELESS_STATE_DIR", state_dir.path())
-        .args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "fail this request",
-        ])
+        .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "fail this request"])
         .output()
         .expect("Failed to run claudeless");
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
     let error_line =
@@ -261,22 +225,12 @@ fn error_jsonl_scenario_network_failure() {
 
     let output = Command::new(claudeless_bin())
         .env("CLAUDELESS_STATE_DIR", state_dir.path())
-        .args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test prompt",
-        ])
+        .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test prompt"])
         .output()
         .expect("Failed to run claudeless");
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
     let error_line =
@@ -316,12 +270,7 @@ fn error_jsonl_auth_error() {
         .expect("Failed to run claudeless");
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
     let error_line =
@@ -357,12 +306,7 @@ fn error_jsonl_out_of_credits() {
         .expect("Failed to run claudeless");
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
     let error_line =
@@ -389,22 +333,12 @@ fn error_jsonl_connection_timeout() {
 
     let output = Command::new(claudeless_bin())
         .env("CLAUDELESS_STATE_DIR", state_dir.path())
-        .args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test prompt",
-        ])
+        .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test prompt"])
         .output()
         .expect("Failed to run claudeless");
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
     let error_line =
@@ -440,12 +374,7 @@ fn error_jsonl_partial_response() {
         .expect("Failed to run claudeless");
 
     // Partial response uses exit code 2
-    assert_eq!(
-        output.status.code(),
-        Some(2),
-        "Expected exit code 2: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(2), "Expected exit code 2: {:?}", output);
 
     let jsonl_path = find_jsonl_file(&state_dir).expect("JSONL file should exist");
     let error_line =
@@ -486,19 +415,11 @@ fn error_jsonl_no_session_persistence() {
         .expect("Failed to run claudeless");
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
 
     // With --no-session-persistence, no JSONL file should be created
     let jsonl_path = find_jsonl_file(&state_dir);
-    assert!(
-        jsonl_path.is_none(),
-        "No JSONL file should exist with --no-session-persistence"
-    );
+    assert!(jsonl_path.is_none(), "No JSONL file should exist with --no-session-persistence");
 }
 
 // =============================================================================
@@ -539,9 +460,6 @@ fn error_jsonl_malformed_json_no_entry() {
     // JSONL file may exist but should not have an API error entry
     if let Some(jsonl_path) = find_jsonl_file(&state_dir) {
         let error_line = find_api_error_line(&jsonl_path);
-        assert!(
-            error_line.is_none(),
-            "Malformed JSON should not produce API error JSONL entry"
-        );
+        assert!(error_line.is_none(), "Malformed JSON should not produce API error JSONL entry");
     }
 }

@@ -49,11 +49,7 @@ fn test_invalid_permission_mode_rejected() {
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("invalid"),
-        "Expected stderr to contain 'invalid': {}",
-        stderr
-    );
+    assert!(stderr.contains("invalid"), "Expected stderr to contain 'invalid': {}", stderr);
 }
 
 #[test]

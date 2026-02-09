@@ -75,11 +75,7 @@ pub async fn run(config: Config) -> Result<i32> {
         std::fs::create_dir_all(dir)?;
     }
 
-    let mut recording = config
-        .frames_dir
-        .as_ref()
-        .map(|dir| Recording::new(dir))
-        .transpose()?;
+    let mut recording = config.frames_dir.as_ref().map(|dir| Recording::new(dir)).transpose()?;
 
     let pty = Pty::spawn(&config.command, config.cols, config.rows)?;
     let mut screen = Screen::new(config.cols, config.rows);
@@ -204,13 +200,7 @@ async fn execute_commands(ctx: &mut ExecutionContext<'_>, commands: &[Command]) 
                     return ExecResult::Error(e);
                 }
             }
-            Command::IfWait {
-                pattern,
-                negated,
-                timeout: timeout_ms,
-                then_cmds,
-                else_cmds,
-            } => {
+            Command::IfWait { pattern, negated, timeout: timeout_ms, then_cmds, else_cmds } => {
                 let wait_timeout = resolve_timeout(*timeout_ms);
                 match do_wait(ctx, pattern, *negated, wait_timeout).await {
                     Ok(WaitResult::Matched) => {
@@ -229,11 +219,7 @@ async fn execute_commands(ctx: &mut ExecutionContext<'_>, commands: &[Command]) 
                     Err(e) => return ExecResult::Error(e),
                 }
             }
-            Command::Match {
-                timeout: timeout_ms,
-                arms,
-                else_cmds,
-            } => {
+            Command::Match { timeout: timeout_ms, arms, else_cmds } => {
                 let wait_timeout = resolve_timeout(*timeout_ms);
                 match do_match(ctx, arms, wait_timeout).await {
                     Ok(Some(matched_cmds)) => {

@@ -40,14 +40,7 @@ fn test_add_dir_flag_should_be_accepted() {
     );
 
     let output = Command::new(claudeless_bin())
-        .args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "--add-dir",
-            "/tmp",
-            "-p",
-            "test",
-        ])
+        .args(["--scenario", scenario.path().to_str().unwrap(), "--add-dir", "/tmp", "-p", "test"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -193,14 +186,7 @@ fn test_model_flag_accepted() {
 
     // Model flag should be accepted for compatibility
     let output = Command::new(claudeless_bin())
-        .args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "--model",
-            "haiku",
-            "-p",
-            "test",
-        ])
+        .args(["--scenario", scenario.path().to_str().unwrap(), "--model", "haiku", "-p", "test"])
         .output()
         .expect("Failed to run claudeless");
 

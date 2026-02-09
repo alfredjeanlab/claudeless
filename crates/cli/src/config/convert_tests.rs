@@ -21,9 +21,7 @@ fn convert_pattern_any() {
 
 #[test]
 fn convert_pattern_exact() {
-    let pat = convert_pattern(v1::PatternSpec::Exact {
-        text: "hello".to_string(),
-    });
+    let pat = convert_pattern(v1::PatternSpec::Exact { text: "hello".to_string() });
     match pat {
         Pattern::Glob(s) => assert_eq!(s, "hello"),
         other => panic!("Expected Glob(\"hello\"), got {:?}", other),
@@ -32,9 +30,7 @@ fn convert_pattern_exact() {
 
 #[test]
 fn convert_pattern_glob() {
-    let pat = convert_pattern(v1::PatternSpec::Glob {
-        pattern: "*.rs".to_string(),
-    });
+    let pat = convert_pattern(v1::PatternSpec::Glob { pattern: "*.rs".to_string() });
     match pat {
         Pattern::Glob(s) => assert_eq!(s, "*.rs"),
         other => panic!("Expected Glob(\"*.rs\"), got {:?}", other),
@@ -43,9 +39,7 @@ fn convert_pattern_glob() {
 
 #[test]
 fn convert_pattern_contains() {
-    let pat = convert_pattern(v1::PatternSpec::Contains {
-        text: "error".to_string(),
-    });
+    let pat = convert_pattern(v1::PatternSpec::Contains { text: "error".to_string() });
     match pat {
         Pattern::Contains(s) => assert_eq!(s, "error"),
         other => panic!("Expected Contains(\"error\"), got {:?}", other),
@@ -54,9 +48,7 @@ fn convert_pattern_contains() {
 
 #[test]
 fn convert_pattern_regex() {
-    let pat = convert_pattern(v1::PatternSpec::Regex {
-        pattern: r"^\d+$".to_string(),
-    });
+    let pat = convert_pattern(v1::PatternSpec::Regex { pattern: r"^\d+$".to_string() });
     match pat {
         Pattern::Regexp(s) => assert_eq!(s, r"^\d+$"),
         other => panic!("Expected Regexp, got {:?}", other),
@@ -86,10 +78,7 @@ fn convert_detailed_response() {
             input: json!({"file_path": "test.rs"}),
             result: Some("contents".to_string()),
         }],
-        usage: Some(UsageSpec {
-            input_tokens: 100,
-            output_tokens: 50,
-        }),
+        usage: Some(UsageSpec { input_tokens: 100, output_tokens: 50 }),
         delay_ms: Some(500),
     });
 
@@ -144,9 +133,7 @@ fn convert_tool_config_renames_auto_approve() {
 #[test]
 fn convert_response_rule_maps_fields() {
     let rule = convert_response_rule(v1::ResponseRule {
-        pattern: v1::PatternSpec::Contains {
-            text: "hello".to_string(),
-        },
+        pattern: v1::PatternSpec::Contains { text: "hello".to_string() },
         response: Some(v1::ResponseSpec::Simple("world".to_string())),
         failure: None,
         max_matches: Some(3),
@@ -174,9 +161,7 @@ fn convert_response_rule_with_turns() {
         failure: None,
         max_matches: None,
         turns: vec![v1::ConversationTurn {
-            expect: v1::PatternSpec::Contains {
-                text: "follow-up".to_string(),
-            },
+            expect: v1::PatternSpec::Contains { text: "follow-up".to_string() },
             response: v1::ResponseSpec::Simple("second".to_string()),
             failure: None,
         }],
@@ -202,10 +187,7 @@ fn convert_response_rule_with_no_response() {
 
     assert!(rule.say.is_none());
     assert!(rule.tools.is_empty());
-    assert!(matches!(
-        rule.failure,
-        Some(FailureSpec::NetworkUnreachable)
-    ));
+    assert!(matches!(rule.failure, Some(FailureSpec::NetworkUnreachable)));
 }
 
 // =========================================================================
@@ -217,12 +199,7 @@ fn convert_tool_execution_maps_mode_and_tools() {
     let mut v1_tools = HashMap::new();
     v1_tools.insert(
         "Bash".to_string(),
-        v1::ToolConfig {
-            auto_approve: true,
-            result: None,
-            error: None,
-            answers: None,
-        },
+        v1::ToolConfig { auto_approve: true, result: None, error: None, answers: None },
     );
 
     let te = convert_tool_execution(v1::ToolExecutionConfig {
@@ -259,20 +236,11 @@ fn convert_full_scenario_identity_fields() {
     assert_eq!(config.claude.model, Some("custom-model".to_string()));
     assert_eq!(config.claude.version, Some("3.0.0".to_string()));
     assert_eq!(config.claude.username, Some("TestUser".to_string()));
-    assert_eq!(
-        config.claude.session_id,
-        Some("550e8400-e29b-41d4-a716-446655440000".to_string())
-    );
+    assert_eq!(config.claude.session_id, Some("550e8400-e29b-41d4-a716-446655440000".to_string()));
     assert_eq!(config.claude.provider, Some("Custom Provider".to_string()));
-    assert_eq!(
-        config.claude.placeholder,
-        Some("placeholder text".to_string())
-    );
+    assert_eq!(config.claude.placeholder, Some("placeholder text".to_string()));
     assert_eq!(config.claude.show_welcome_back, Some(true));
-    assert_eq!(
-        config.claude.welcome_back_right_panel,
-        Some(vec!["line1".to_string()])
-    );
+    assert_eq!(config.claude.welcome_back_right_panel, Some(vec!["line1".to_string()]));
 }
 
 #[test]
@@ -302,20 +270,14 @@ fn convert_full_scenario_timing_fields() {
     let v1_config = v1::ScenarioConfig {
         timing: v1::TimingConfig {
             launch_timestamp: Some("2025-01-15T10:30:00Z".to_string()),
-            timeouts: Some(v1::TimeoutOverrides {
-                exit_hint_ms: Some(1000),
-                ..Default::default()
-            }),
+            timeouts: Some(v1::TimeoutOverrides { exit_hint_ms: Some(1000), ..Default::default() }),
         },
         ..Default::default()
     };
 
     let config: ScenarioConfig = v1_config.into();
 
-    assert_eq!(
-        config.claude.launch_timestamp,
-        Some("2025-01-15T10:30:00Z".to_string())
-    );
+    assert_eq!(config.claude.launch_timestamp, Some("2025-01-15T10:30:00Z".to_string()));
     assert_eq!(config.claude.timeouts.unwrap().exit_hint_ms, Some(1000));
 }
 
@@ -335,9 +297,7 @@ fn convert_full_scenario_default_response() {
 fn convert_full_scenario_responses() {
     let v1_config = v1::ScenarioConfig {
         responses: vec![v1::ResponseRule {
-            pattern: v1::PatternSpec::Contains {
-                text: "test".to_string(),
-            },
+            pattern: v1::PatternSpec::Contains { text: "test".to_string() },
             response: Some(v1::ResponseSpec::Simple("matched".to_string())),
             failure: None,
             max_matches: None,
@@ -357,12 +317,7 @@ fn convert_full_scenario_tool_execution() {
     let mut v1_tools = HashMap::new();
     v1_tools.insert(
         "Read".to_string(),
-        v1::ToolConfig {
-            auto_approve: true,
-            result: None,
-            error: None,
-            answers: None,
-        },
+        v1::ToolConfig { auto_approve: true, result: None, error: None, answers: None },
     );
 
     let v1_config = v1::ScenarioConfig {

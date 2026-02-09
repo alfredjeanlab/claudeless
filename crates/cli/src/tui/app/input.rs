@@ -182,9 +182,8 @@ impl TuiAppState {
 
             // Shift+Tab - Cycle permission mode
             (_, KeyCode::BackTab) => {
-                inner.permission_mode = inner
-                    .permission_mode
-                    .cycle_next(inner.allow_bypass_permissions);
+                inner.permission_mode =
+                    inner.permission_mode.cycle_next(inner.allow_bypass_permissions);
             }
 
             // Enter - Submit input

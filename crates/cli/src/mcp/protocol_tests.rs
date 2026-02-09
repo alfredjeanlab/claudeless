@@ -20,10 +20,7 @@ fn serialize_initialize_params_omits_none_experimental() {
     let json = serde_json::to_value(&params).unwrap();
 
     // experimental should not be present when None
-    assert!(!json["capabilities"]
-        .as_object()
-        .unwrap()
-        .contains_key("experimental"));
+    assert!(!json["capabilities"].as_object().unwrap().contains_key("experimental"));
 }
 
 #[test]
@@ -81,10 +78,7 @@ fn deserialize_tools_list() {
     let result: ToolsListResult = serde_json::from_value(json).unwrap();
     assert_eq!(result.tools.len(), 1);
     assert_eq!(result.tools[0].name, "read_file");
-    assert_eq!(
-        result.tools[0].description,
-        Some("Read file contents".into())
-    );
+    assert_eq!(result.tools[0].description, Some("Read file contents".into()));
 }
 
 #[test]
@@ -153,13 +147,8 @@ fn deserialize_content_block_resource_minimal() {
 #[test]
 fn serialize_content_block_roundtrip() {
     let blocks = vec![
-        ContentBlock::Text {
-            text: "hello".into(),
-        },
-        ContentBlock::Image {
-            data: "abc123".into(),
-            mime_type: "image/png".into(),
-        },
+        ContentBlock::Text { text: "hello".into() },
+        ContentBlock::Image { data: "abc123".into(), mime_type: "image/png".into() },
         ContentBlock::Resource {
             uri: "file:///test".into(),
             text: Some("content".into()),
@@ -177,9 +166,7 @@ fn serialize_content_block_roundtrip() {
 #[test]
 fn tool_call_result_conversion_success() {
     let result = ToolCallResult {
-        content: vec![ContentBlock::Text {
-            text: "output".into(),
-        }],
+        content: vec![ContentBlock::Text { text: "output".into() }],
         is_error: false,
     };
 
@@ -191,9 +178,7 @@ fn tool_call_result_conversion_success() {
 #[test]
 fn tool_call_result_conversion_error() {
     let error_result = ToolCallResult {
-        content: vec![ContentBlock::Text {
-            text: "error message".into(),
-        }],
+        content: vec![ContentBlock::Text { text: "error message".into() }],
         is_error: true,
     };
 
@@ -206,12 +191,8 @@ fn tool_call_result_conversion_error() {
 fn tool_call_result_conversion_multiline_error() {
     let error_result = ToolCallResult {
         content: vec![
-            ContentBlock::Text {
-                text: "line 1".into(),
-            },
-            ContentBlock::Text {
-                text: "line 2".into(),
-            },
+            ContentBlock::Text { text: "line 1".into() },
+            ContentBlock::Text { text: "line 2".into() },
         ],
         is_error: true,
     };
@@ -225,13 +206,8 @@ fn tool_call_result_conversion_multiline_error() {
 fn tool_call_result_conversion_error_ignores_non_text() {
     let error_result = ToolCallResult {
         content: vec![
-            ContentBlock::Text {
-                text: "error text".into(),
-            },
-            ContentBlock::Image {
-                data: "ignored".into(),
-                mime_type: "image/png".into(),
-            },
+            ContentBlock::Text { text: "error text".into() },
+            ContentBlock::Image { data: "ignored".into(), mime_type: "image/png".into() },
         ],
         is_error: true,
     };
@@ -257,11 +233,7 @@ fn tool_info_to_def_conversion() {
 
 #[test]
 fn tool_info_to_def_conversion_no_description() {
-    let info = ToolInfo {
-        name: "no_desc_tool".into(),
-        description: None,
-        input_schema: json!({}),
-    };
+    let info = ToolInfo { name: "no_desc_tool".into(), description: None, input_schema: json!({}) };
 
     let def = info.into_tool_def("server");
     assert_eq!(def.name, "no_desc_tool");
@@ -270,10 +242,8 @@ fn tool_info_to_def_conversion_no_description() {
 
 #[test]
 fn serialize_tool_call_params() {
-    let params = ToolCallParams {
-        name: "test_tool".into(),
-        arguments: Some(json!({"key": "value"})),
-    };
+    let params =
+        ToolCallParams { name: "test_tool".into(), arguments: Some(json!({"key": "value"})) };
 
     let json = serde_json::to_value(&params).unwrap();
     assert_eq!(json["name"], "test_tool");
@@ -282,10 +252,7 @@ fn serialize_tool_call_params() {
 
 #[test]
 fn serialize_tool_call_params_no_arguments() {
-    let params = ToolCallParams {
-        name: "no_args_tool".into(),
-        arguments: None,
-    };
+    let params = ToolCallParams { name: "no_args_tool".into(), arguments: None };
 
     let json = serde_json::to_value(&params).unwrap();
     assert_eq!(json["name"], "no_args_tool");
@@ -374,10 +341,7 @@ mod tool_call_edge_cases {
 
     #[test]
     fn tool_call_result_empty_content() {
-        let result = ToolCallResult {
-            content: vec![],
-            is_error: false,
-        };
+        let result = ToolCallResult { content: vec![], is_error: false };
         let mcp_result = result.into_tool_result();
         assert!(mcp_result.success);
         assert!(mcp_result.content.is_array());
@@ -404,10 +368,7 @@ mod tool_call_edge_cases {
 
     #[test]
     fn tool_call_params_empty_arguments() {
-        let params = ToolCallParams {
-            name: "no_args".into(),
-            arguments: Some(json!({})),
-        };
+        let params = ToolCallParams { name: "no_args".into(), arguments: Some(json!({})) };
         let json = serde_json::to_value(&params).unwrap();
         assert!(json["arguments"].is_object());
         assert!(json["arguments"].as_object().unwrap().is_empty());
@@ -427,11 +388,7 @@ mod content_block_edge_cases {
         });
         let block: ContentBlock = serde_json::from_value(json).unwrap();
         match block {
-            ContentBlock::Resource {
-                uri,
-                text,
-                mime_type,
-            } => {
+            ContentBlock::Resource { uri, text, mime_type } => {
                 assert_eq!(uri, "file:///test");
                 assert_eq!(text, Some("content".into()));
                 assert_eq!(mime_type, Some("application/json".into()));
@@ -449,10 +406,7 @@ mod content_block_edge_cases {
     #[test]
     fn image_block_preserves_base64() {
         let data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
-        let block = ContentBlock::Image {
-            data: data.into(),
-            mime_type: "image/png".into(),
-        };
+        let block = ContentBlock::Image { data: data.into(), mime_type: "image/png".into() };
         let json = serde_json::to_value(&block).unwrap();
         assert_eq!(json["data"], data);
     }

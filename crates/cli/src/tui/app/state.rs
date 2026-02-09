@@ -140,9 +140,7 @@ impl TuiAppState {
             // Bypass confirmation takes priority
             (
                 AppMode::BypassConfirm,
-                DialogState::BypassConfirm(BypassConfirmState {
-                    selected: BypassChoice::No,
-                }),
+                DialogState::BypassConfirm(BypassConfirmState { selected: BypassChoice::No }),
             )
         } else if !config.trusted {
             (
@@ -175,10 +173,7 @@ impl TuiAppState {
 
                 // Session state
                 mode: initial_mode,
-                status: StatusInfo {
-                    model: config.model.clone(),
-                    ..Default::default()
-                },
+                status: StatusInfo { model: config.model.clone(), ..Default::default() },
                 permission_mode: config.permission_mode.clone(),
                 session_grants: HashSet::new(),
                 trust_granted: config.trusted,
@@ -512,11 +507,7 @@ impl TuiAppState {
         let (runtime, source) = {
             let mut inner = self.inner.lock();
             inner.session_start_hook_fired = true;
-            let source = if inner.config.show_welcome_back {
-                "resume"
-            } else {
-                "startup"
-            };
+            let source = if inner.config.show_welcome_back { "resume" } else { "startup" };
             (inner.runtime.take(), source.to_string())
         };
 
@@ -577,36 +568,29 @@ impl TuiAppState {
         permission_type: &crate::tui::widgets::permission::PermissionType,
     ) {
         let (tool_name, tool_input) = match permission_type {
-            crate::tui::widgets::permission::PermissionType::Bash {
-                command,
-                description,
-            } => {
+            crate::tui::widgets::permission::PermissionType::Bash { command, description } => {
                 let mut input = serde_json::json!({ "command": command });
                 if let Some(desc) = description {
                     input["description"] = serde_json::json!(desc);
                 }
                 ("Bash".to_string(), input)
             }
-            crate::tui::widgets::permission::PermissionType::Edit {
-                file_path,
-                diff_lines,
-            } => (
+            crate::tui::widgets::permission::PermissionType::Edit { file_path, diff_lines } => (
                 "Edit".to_string(),
                 serde_json::json!({
                     "file_path": file_path,
                     "changes": diff_lines.len()
                 }),
             ),
-            crate::tui::widgets::permission::PermissionType::Write {
-                file_path,
-                content_lines,
-            } => (
-                "Write".to_string(),
-                serde_json::json!({
-                    "file_path": file_path,
-                    "content": content_lines.join("\n")
-                }),
-            ),
+            crate::tui::widgets::permission::PermissionType::Write { file_path, content_lines } => {
+                (
+                    "Write".to_string(),
+                    serde_json::json!({
+                        "file_path": file_path,
+                        "content": content_lines.join("\n")
+                    }),
+                )
+            }
         };
 
         let runtime = {
@@ -708,36 +692,27 @@ pub(super) fn format_tool_summary(tool: &crate::state::session::TurnToolCall) ->
         "Read" => {
             let path = tool.input.get("file_path")?.as_str()?;
             // Extract just the filename from the path
-            let filename = std::path::Path::new(path)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or(path);
+            let filename =
+                std::path::Path::new(path).file_name().and_then(|n| n.to_str()).unwrap_or(path);
             let lines = tool.output.as_ref().map(|o| o.lines().count()).unwrap_or(0);
             Some(format!("Read {} ({} lines)", filename, lines))
         }
         "Write" => {
             let path = tool.input.get("file_path")?.as_str()?;
-            let filename = std::path::Path::new(path)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or(path);
+            let filename =
+                std::path::Path::new(path).file_name().and_then(|n| n.to_str()).unwrap_or(path);
             Some(format!("Wrote {}", filename))
         }
         "Edit" => {
             let path = tool.input.get("file_path")?.as_str()?;
-            let filename = std::path::Path::new(path)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or(path);
+            let filename =
+                std::path::Path::new(path).file_name().and_then(|n| n.to_str()).unwrap_or(path);
             Some(format!("Edited {}", filename))
         }
         "Bash" => {
             let cmd = tool.input.get("command")?.as_str()?;
-            let short_cmd = if cmd.len() > 30 {
-                format!("{}...", &cmd[..27])
-            } else {
-                cmd.to_string()
-            };
+            let short_cmd =
+                if cmd.len() > 30 { format!("{}...", &cmd[..27]) } else { cmd.to_string() };
             Some(format!("Ran `{}`", short_cmd))
         }
         _ => None,

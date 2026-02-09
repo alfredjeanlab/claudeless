@@ -4,11 +4,7 @@
 use super::*;
 
 fn make_task(id: &str, desc: &str, status: TaskStatus) -> TaskInfo {
-    TaskInfo {
-        id: id.to_string(),
-        description: desc.to_string(),
-        status,
-    }
+    TaskInfo { id: id.to_string(), description: desc.to_string(), status }
 }
 
 #[test]

@@ -37,12 +37,7 @@ mod config_loading {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "-p",
-                "--mcp-config",
-                config.path().to_str().unwrap(),
-                "hello",
-            ])
+            .args(["-p", "--mcp-config", config.path().to_str().unwrap(), "hello"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -128,12 +123,7 @@ mod config_errors {
     #[test]
     fn test_nonexistent_config_file_error() {
         let output = Command::new(claudeless_bin())
-            .args([
-                "-p",
-                "--mcp-config",
-                "/nonexistent/path/config.json",
-                "hello",
-            ])
+            .args(["-p", "--mcp-config", "/nonexistent/path/config.json", "hello"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -145,12 +135,7 @@ mod config_errors {
         let config = write_config("not valid json at all");
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "-p",
-                "--mcp-config",
-                config.path().to_str().unwrap(),
-                "hello",
-            ])
+            .args(["-p", "--mcp-config", config.path().to_str().unwrap(), "hello"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -169,12 +154,7 @@ mod config_errors {
         let config = write_config("{}");
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "-p",
-                "--mcp-config",
-                config.path().to_str().unwrap(),
-                "hello",
-            ])
+            .args(["-p", "--mcp-config", config.path().to_str().unwrap(), "hello"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -202,12 +182,7 @@ mod json5_support {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "-p",
-                "--mcp-config",
-                config.path().to_str().unwrap(),
-                "hello",
-            ])
+            .args(["-p", "--mcp-config", config.path().to_str().unwrap(), "hello"])
             .output()
             .expect("Failed to run claudeless");
 
@@ -230,12 +205,7 @@ mod json5_support {
         );
 
         let output = Command::new(claudeless_bin())
-            .args([
-                "-p",
-                "--mcp-config",
-                config.path().to_str().unwrap(),
-                "hello",
-            ])
+            .args(["-p", "--mcp-config", config.path().to_str().unwrap(), "hello"])
             .output()
             .expect("Failed to run claudeless");
 

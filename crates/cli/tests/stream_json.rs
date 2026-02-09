@@ -40,12 +40,7 @@ fn test_stream_json_print_requires_verbose() {
         .expect("Failed to run claudeless");
 
     assert!(!output.status.success(), "Expected failure: {:?}", output);
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Expected exit code 1: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(1), "Expected exit code 1: {:?}", output);
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains("When using --print, --output-format=stream-json requires --verbose"),
@@ -121,12 +116,7 @@ fn test_stream_json_is_ndjson() {
     // Each line should be valid JSON
     for line in stdout.lines() {
         let parsed: Result<serde_json::Value, _> = serde_json::from_str(line);
-        assert!(
-            parsed.is_ok(),
-            "Line should be valid JSON: {} - Error: {:?}",
-            line,
-            parsed.err()
-        );
+        assert!(parsed.is_ok(), "Line should be valid JSON: {} - Error: {:?}", line, parsed.err());
     }
 }
 
@@ -163,22 +153,10 @@ fn test_stream_json_starts_with_system_init() {
     let parsed: serde_json::Value = serde_json::from_str(first_line).unwrap();
 
     // Real Claude starts with system init event
-    assert_eq!(
-        parsed["type"], "system",
-        "Real Claude starts with type=system, not message_start"
-    );
-    assert_eq!(
-        parsed["subtype"], "init",
-        "Real Claude starts with subtype=init"
-    );
-    assert!(
-        parsed["tools"].is_array(),
-        "System init should include tools array"
-    );
-    assert!(
-        parsed["model"].is_string(),
-        "System init should include model"
-    );
+    assert_eq!(parsed["type"], "system", "Real Claude starts with type=system, not message_start");
+    assert_eq!(parsed["subtype"], "init", "Real Claude starts with subtype=init");
+    assert!(parsed["tools"].is_array(), "System init should include tools array");
+    assert!(parsed["model"].is_string(), "System init should include model");
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -213,10 +191,7 @@ fn test_stream_json_ends_with_result() {
     let parsed: serde_json::Value = serde_json::from_str(last_line).unwrap();
 
     // Real Claude ends with result event
-    assert_eq!(
-        parsed["type"], "result",
-        "Real Claude ends with type=result, not message_stop"
-    );
+    assert_eq!(parsed["type"], "result", "Real Claude ends with type=result, not message_stop");
     assert_eq!(parsed["subtype"], "success");
 }
 
@@ -244,10 +219,5 @@ fn test_stream_json_exit_code_zero_on_success() {
         .output()
         .expect("Failed to run claudeless");
 
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "Expected exit code 0: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(0), "Expected exit code 0: {:?}", output);
 }

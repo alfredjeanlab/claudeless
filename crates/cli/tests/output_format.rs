@@ -38,12 +38,7 @@ fn test_basic_text_output_with_scenario() {
     );
 
     let output = Command::new(claudeless_bin())
-        .args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "hello world",
-        ])
+        .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "hello world"])
         .output()
         .expect("Failed to run claudeless");
 
@@ -69,23 +64,14 @@ fn test_text_output_is_plain_text_no_json() {
     );
 
     let output = Command::new(claudeless_bin())
-        .args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
+        .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
         .output()
         .expect("Failed to run claudeless");
 
     assert!(output.status.success(), "Expected success: {:?}", output);
     let stdout = String::from_utf8_lossy(&output.stdout);
     // Text output should NOT be JSON
-    assert!(
-        !stdout.starts_with('{'),
-        "Text output should not be JSON, got: {}",
-        stdout
-    );
+    assert!(!stdout.starts_with('{'), "Text output should not be JSON, got: {}", stdout);
     assert!(stdout.contains("Simple response"));
 }
 
@@ -102,21 +88,11 @@ fn test_text_output_exit_code_zero_on_success() {
     );
 
     let output = Command::new(claudeless_bin())
-        .args([
-            "--scenario",
-            scenario.path().to_str().unwrap(),
-            "-p",
-            "test",
-        ])
+        .args(["--scenario", scenario.path().to_str().unwrap(), "-p", "test"])
         .output()
         .expect("Failed to run claudeless");
 
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "Expected exit code 0: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(0), "Expected exit code 0: {:?}", output);
 }
 
 // =============================================================================
@@ -164,25 +140,13 @@ fn test_json_output_uses_result_wrapper_format() {
     let parsed: serde_json::Value = serde_json::from_str(&stdout).unwrap();
 
     // Real Claude uses result wrapper format
-    assert_eq!(
-        parsed["type"], "result",
-        "Real Claude returns type=result, not type=message"
-    );
-    assert_eq!(
-        parsed["subtype"], "success",
-        "Real Claude returns subtype=success"
-    );
+    assert_eq!(parsed["type"], "result", "Real Claude returns type=result, not type=message");
+    assert_eq!(parsed["subtype"], "success", "Real Claude returns subtype=success");
     assert_eq!(parsed["is_error"], false);
-    assert!(
-        parsed["result"].is_string(),
-        "Real Claude has 'result' field with response text"
-    );
+    assert!(parsed["result"].is_string(), "Real Claude has 'result' field with response text");
     assert!(parsed["session_id"].is_string());
     assert!(parsed["duration_ms"].is_number());
-    assert!(
-        parsed["cost_usd"].is_number(),
-        "Real Claude includes cost_usd"
-    );
+    assert!(parsed["cost_usd"].is_number(), "Real Claude includes cost_usd");
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -214,10 +178,7 @@ fn test_json_output_result_contains_response_text() {
     let parsed: serde_json::Value = serde_json::from_str(&stdout).unwrap();
 
     // Real Claude puts response text in "result" field, not content[0].text
-    assert_eq!(
-        parsed["result"], "Expected response text",
-        "Response should be in 'result' field"
-    );
+    assert_eq!(parsed["result"], "Expected response text", "Response should be in 'result' field");
 }
 
 /// Behavior observed with: claude --version 2.1.12 (Claude Code)
@@ -244,10 +205,5 @@ fn test_json_output_exit_code_zero_on_success() {
         .output()
         .expect("Failed to run claudeless");
 
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "Expected exit code 0: {:?}",
-        output
-    );
+    assert_eq!(output.status.code(), Some(0), "Expected exit code 0: {:?}", output);
 }

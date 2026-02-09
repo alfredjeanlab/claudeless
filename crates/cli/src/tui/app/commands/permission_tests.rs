@@ -49,16 +49,8 @@ fn test_build_tool_use_content_edit() {
     let (id, content) = build_tool_use_content(&PermissionType::Edit {
         file_path: "src/main.rs".to_string(),
         diff_lines: vec![
-            DiffLine {
-                line_num: Some(1),
-                kind: DiffKind::Removed,
-                content: "old".to_string(),
-            },
-            DiffLine {
-                line_num: Some(2),
-                kind: DiffKind::Added,
-                content: "new".to_string(),
-            },
+            DiffLine { line_num: Some(1), kind: DiffKind::Removed, content: "old".to_string() },
+            DiffLine { line_num: Some(2), kind: DiffKind::Added, content: "new".to_string() },
         ],
     });
 

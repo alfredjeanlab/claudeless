@@ -94,11 +94,8 @@ impl TuiConfig {
         };
 
         // CLI claude_version overrides scenario
-        let claude_version = cli
-            .simulator
-            .claude_version
-            .clone()
-            .or_else(|| config.claude.version.clone());
+        let claude_version =
+            cli.simulator.claude_version.clone().or_else(|| config.claude.version.clone());
 
         Self {
             trusted: config.trusted,
@@ -108,11 +105,7 @@ impl TuiConfig {
                 .username
                 .clone()
                 .unwrap_or_else(|| DEFAULT_USER_NAME.to_string()),
-            model: config
-                .claude
-                .model
-                .clone()
-                .unwrap_or_else(|| cli.model.clone()),
+            model: config.claude.model.clone().unwrap_or_else(|| cli.model.clone()),
             working_directory: config
                 .claude
                 .working_directory
@@ -157,9 +150,8 @@ impl TuiConfig {
         };
 
         // CLI claude_version overrides scenario
-        let claude_version = cli_claude_version
-            .map(|s| s.to_string())
-            .or_else(|| config.claude.version.clone());
+        let claude_version =
+            cli_claude_version.map(|s| s.to_string()).or_else(|| config.claude.version.clone());
 
         Self {
             trusted: config.trusted,
@@ -287,19 +279,11 @@ pub struct PermissionRequest {
 
 impl PermissionRequest {
     pub fn new(dialog: RichPermissionDialog) -> Self {
-        Self {
-            dialog,
-            tool_use_id: None,
-            post_grant_display: None,
-        }
+        Self { dialog, tool_use_id: None, post_grant_display: None }
     }
 
     pub fn with_tool_use_id(dialog: RichPermissionDialog, tool_use_id: String) -> Self {
-        Self {
-            dialog,
-            tool_use_id: Some(tool_use_id),
-            post_grant_display: None,
-        }
+        Self { dialog, tool_use_id: Some(tool_use_id), post_grant_display: None }
     }
 }
 
@@ -351,9 +335,6 @@ pub struct BypassConfirmState {
 
 impl TrustPromptState {
     pub fn new(working_directory: String) -> Self {
-        Self {
-            working_directory,
-            selected: TrustChoice::Yes,
-        }
+        Self { working_directory, selected: TrustChoice::Yes }
     }
 }

@@ -101,17 +101,13 @@ impl ResultOutput {
         output_tokens: u32,
         model: &str,
     ) -> Self {
-        let output_tokens = if output_tokens == 0 {
-            estimate_tokens(&result)
-        } else {
-            output_tokens
-        };
+        let output_tokens =
+            if output_tokens == 0 { estimate_tokens(&result) } else { output_tokens };
         let usage = ResultUsage::from_tokens(input_tokens, output_tokens);
         let mut model_usage = ModelUsage::default();
-        model_usage.models.insert(
-            model.to_string(),
-            ResultUsage::from_tokens(input_tokens, output_tokens),
-        );
+        model_usage
+            .models
+            .insert(model.to_string(), ResultUsage::from_tokens(input_tokens, output_tokens));
 
         Self {
             cost_usd: usage.cost_usd,
@@ -144,10 +140,7 @@ impl ResultOutput {
             is_error: true,
             duration_ms: 50,
             duration_api_ms: 50,
-            error: Some(format!(
-                "Rate limited. Retry after {} seconds.",
-                retry_after
-            )),
+            error: Some(format!("Rate limited. Retry after {} seconds.", retry_after)),
             retry_after: Some(retry_after),
             ..Self::base(session_id)
         }
@@ -174,24 +167,11 @@ pub use crate::usage::TokenCounts as Usage;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum StreamEvent {
-    MessageStart {
-        message: StreamMessage,
-    },
-    ContentBlockStart {
-        index: u32,
-        content_block: ContentBlock,
-    },
-    ContentBlockDelta {
-        index: u32,
-        delta: Delta,
-    },
-    ContentBlockStop {
-        index: u32,
-    },
-    MessageDelta {
-        delta: MessageDelta,
-        usage: Usage,
-    },
+    MessageStart { message: StreamMessage },
+    ContentBlockStart { index: u32, content_block: ContentBlock },
+    ContentBlockDelta { index: u32, delta: Delta },
+    ContentBlockStop { index: u32 },
+    MessageDelta { delta: MessageDelta, usage: Usage },
     MessageStop,
 }
 
@@ -256,11 +236,7 @@ pub struct OutputWriter<W: Write> {
 impl<W: Write> OutputWriter<W> {
     /// Create a new output writer
     pub fn new(writer: W, format: OutputFormat, model: String) -> Self {
-        Self {
-            writer,
-            format,
-            model,
-        }
+        Self { writer, format, model }
     }
 
     /// Write a response in the configured format
@@ -306,10 +282,7 @@ impl<W: Write> OutputWriter<W> {
             role: "assistant".to_string(),
             content,
             stop_reason: "end_turn".to_string(),
-            usage: Usage {
-                input_tokens: usage.input_tokens,
-                output_tokens: usage.output_tokens,
-            },
+            usage: Usage { input_tokens: usage.input_tokens, output_tokens: usage.output_tokens },
         };
 
         let json = to_io_json(&json_response)?;
@@ -340,9 +313,7 @@ impl<W: Write> OutputWriter<W> {
         // content_block_start for text
         let block_start = StreamEvent::ContentBlockStart {
             index: 0,
-            content_block: ContentBlock::Text {
-                text: String::new(),
-            },
+            content_block: ContentBlock::Text { text: String::new() },
         };
         self.write_event(&block_start)?;
 
@@ -352,9 +323,7 @@ impl<W: Write> OutputWriter<W> {
             let chunk_text = String::from_utf8_lossy(chunk);
             let delta = StreamEvent::ContentBlockDelta {
                 index: 0,
-                delta: Delta::TextDelta {
-                    text: chunk_text.to_string(),
-                },
+                delta: Delta::TextDelta { text: chunk_text.to_string() },
             };
             self.write_event(&delta)?;
         }
@@ -382,9 +351,7 @@ impl<W: Write> OutputWriter<W> {
             let input_json = to_io_json(&tc.input)?;
             let input_delta = StreamEvent::ContentBlockDelta {
                 index: idx,
-                delta: Delta::InputJsonDelta {
-                    partial_json: input_json,
-                },
+                delta: Delta::InputJsonDelta { partial_json: input_json },
             };
             self.write_event(&input_delta)?;
 
@@ -398,13 +365,8 @@ impl<W: Write> OutputWriter<W> {
             output_tokens: estimate_tokens(&text),
         });
         let msg_delta = StreamEvent::MessageDelta {
-            delta: MessageDelta {
-                stop_reason: "end_turn".to_string(),
-            },
-            usage: Usage {
-                input_tokens: usage.input_tokens,
-                output_tokens: usage.output_tokens,
-            },
+            delta: MessageDelta { stop_reason: "end_turn".to_string() },
+            usage: Usage { input_tokens: usage.input_tokens, output_tokens: usage.output_tokens },
         };
         self.write_event(&msg_delta)?;
 

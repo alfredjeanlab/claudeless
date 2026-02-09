@@ -291,11 +291,7 @@ impl ElicitationState {
         }
         let mut tabs = Vec::new();
         for (i, q) in self.questions.iter().enumerate() {
-            let check = if self.is_question_answered(i) {
-                "☒"
-            } else {
-                "☐"
-            };
+            let check = if self.is_question_answered(i) { "☒" } else { "☐" };
             if i == self.current_question && !self.on_submit_tab {
                 tabs.push(format!("[{} {}]", check, q.header));
             } else {
@@ -445,23 +441,14 @@ impl ElicitationState {
             } else {
                 q.free_text.clone()
             };
-            lines.push(format!(
-                "{} {}. {}",
-                type_cursor,
-                q.options.len() + 1,
-                type_label
-            ));
+            lines.push(format!("{} {}. {}", type_cursor, q.options.len() + 1, type_label));
 
             // Separator before "Chat about this"
             lines.push(sep.clone());
 
             // "Chat about this" option
             let chat_cursor = if q.cursor == chat_idx { "❯" } else { " " };
-            lines.push(format!(
-                "{} {}. Chat about this",
-                chat_cursor,
-                q.options.len() + 2,
-            ));
+            lines.push(format!("{} {}. Chat about this", chat_cursor, q.options.len() + 2,));
 
             // Footer
             let action = if q.multi_select {
@@ -477,31 +464,16 @@ impl ElicitationState {
 }
 
 fn parse_question(value: &serde_json::Value) -> ElicitationQuestion {
-    let header = value
-        .get("header")
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .to_string();
-    let question = value
-        .get("question")
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .to_string();
-    let multi_select = value
-        .get("multiSelect")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
+    let header = value.get("header").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let question = value.get("question").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let multi_select = value.get("multiSelect").and_then(|v| v.as_bool()).unwrap_or(false);
     let options = value
         .get("options")
         .and_then(|v| v.as_array())
         .map(|arr| {
             arr.iter()
                 .map(|o| ElicitationOption {
-                    label: o
-                        .get("label")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("")
-                        .to_string(),
+                    label: o.get("label").and_then(|v| v.as_str()).unwrap_or("").to_string(),
                     description: o
                         .get("description")
                         .and_then(|v| v.as_str())

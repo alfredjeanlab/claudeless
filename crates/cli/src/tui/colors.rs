@@ -132,12 +132,7 @@ pub fn styled_logo_line3(path_str: &str) -> String {
 pub fn styled_separator(width: usize) -> String {
     let fg_gray = escape::fg(SEPARATOR_GRAY.0, SEPARATOR_GRAY.1, SEPARATOR_GRAY.2);
 
-    format!(
-        "{dim}{fg_gray}{line}",
-        dim = escape::DIM,
-        fg_gray = fg_gray,
-        line = "─".repeat(width),
-    )
+    format!("{dim}{fg_gray}{line}", dim = escape::DIM, fg_gray = fg_gray, line = "─".repeat(width),)
 }
 
 /// Format a styled separator line for bash mode (dim + pink).
@@ -147,12 +142,7 @@ pub fn styled_separator(width: usize) -> String {
 pub fn styled_bash_separator(width: usize) -> String {
     let fg_pink = escape::fg(BASH_MODE.0, BASH_MODE.1, BASH_MODE.2);
 
-    format!(
-        "{dim}{fg_pink}{line}",
-        dim = escape::DIM,
-        fg_pink = fg_pink,
-        line = "─".repeat(width),
-    )
+    format!("{dim}{fg_pink}{line}", dim = escape::DIM, fg_pink = fg_pink, line = "─".repeat(width),)
 }
 
 /// Format the placeholder prompt with proper styling.
@@ -226,11 +216,7 @@ pub fn styled_bash_status() -> String {
 pub fn styled_status_text(text: &str) -> String {
     let fg_gray = escape::fg(TEXT_GRAY.0, TEXT_GRAY.1, TEXT_GRAY.2);
 
-    format!(
-        "{reset}  {fg_gray}{text}{fg_reset}",
-        reset = escape::RESET,
-        fg_reset = escape::RESET,
-    )
+    format!("{reset}  {fg_gray}{text}{fg_reset}", reset = escape::RESET, fg_reset = escape::RESET,)
 }
 
 /// Generate styled permission status text with ANSI colors.

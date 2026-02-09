@@ -38,12 +38,7 @@ input = { command = "ls" }
     let config: ScenarioConfig = toml::from_str(toml_str).unwrap();
     let rule = &config.responses[0];
     match &rule.response {
-        Some(ResponseSpec::Detailed {
-            text,
-            delay_ms,
-            tool_calls,
-            ..
-        }) => {
+        Some(ResponseSpec::Detailed { text, delay_ms, tool_calls, .. }) => {
             assert_eq!(text, "Response text");
             assert_eq!(*delay_ms, Some(100));
             assert_eq!(tool_calls.len(), 1);
@@ -200,10 +195,7 @@ result = "file1.txt\nfile2.txt"
     let rule = &config.responses[0];
     if let Some(ResponseSpec::Detailed { tool_calls, .. }) = &rule.response {
         assert_eq!(tool_calls.len(), 1);
-        assert_eq!(
-            tool_calls[0].result,
-            Some("file1.txt\nfile2.txt".to_string())
-        );
+        assert_eq!(tool_calls[0].result, Some("file1.txt\nfile2.txt".to_string()));
     } else {
         unreachable!("Expected Detailed response");
     }
@@ -272,28 +264,16 @@ permission_mode = "plan"
     let config: ScenarioConfig = toml::from_str(toml_str).unwrap();
 
     assert_eq!(config.name, "full-featured");
-    assert_eq!(
-        config.identity.default_model,
-        Some("claude-opus-4-20250514".to_string())
-    );
+    assert_eq!(config.identity.default_model, Some("claude-opus-4-20250514".to_string()));
     assert_eq!(config.identity.claude_version, Some("3.0.0".to_string()));
     assert_eq!(config.identity.user_name, Some("TestUser".to_string()));
     assert_eq!(
         config.identity.session_id,
         Some("550e8400-e29b-41d4-a716-446655440000".to_string())
     );
-    assert_eq!(
-        config.environment.project_path,
-        Some("/test/project".to_string())
-    );
-    assert_eq!(
-        config.timing.launch_timestamp,
-        Some("2025-01-15T10:30:00Z".to_string())
-    );
-    assert_eq!(
-        config.environment.working_directory,
-        Some("/work/dir".to_string())
-    );
+    assert_eq!(config.environment.project_path, Some("/test/project".to_string()));
+    assert_eq!(config.timing.launch_timestamp, Some("2025-01-15T10:30:00Z".to_string()));
+    assert_eq!(config.environment.working_directory, Some("/work/dir".to_string()));
     assert!(!config.environment.trusted);
     assert_eq!(config.environment.permission_mode, Some("plan".to_string()));
 }
@@ -362,10 +342,7 @@ auto_approve = true
     assert!(ask.auto_approve);
     let answers = ask.answers.as_ref().unwrap();
     assert_eq!(answers.get("What language?").unwrap(), "Rust");
-    assert_eq!(
-        answers.get("Which sections?").unwrap(),
-        "Introduction, Conclusion"
-    );
+    assert_eq!(answers.get("Which sections?").unwrap(), "Introduction, Conclusion");
 }
 
 #[test]

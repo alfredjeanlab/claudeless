@@ -13,9 +13,7 @@ fn test_registry_new() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_register_passthrough() {
     let mut registry = HookRegistry::new();
-    registry
-        .register_passthrough(HookEvent::PreToolExecution)
-        .unwrap();
+    registry.register_passthrough(HookEvent::PreToolExecution).unwrap();
 
     assert!(registry.has_hooks(&HookEvent::PreToolExecution));
 
@@ -36,9 +34,7 @@ async fn test_register_passthrough() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_register_blocking() {
     let mut registry = HookRegistry::new();
-    registry
-        .register_blocking(HookEvent::PreToolExecution, "Not allowed")
-        .unwrap();
+    registry.register_blocking(HookEvent::PreToolExecution, "Not allowed").unwrap();
 
     let message = HookMessage::tool_execution(
         "test_session",
@@ -74,9 +70,7 @@ async fn test_register_logger() {
     let log_path = temp.path().join("hook.log");
 
     let mut registry = HookRegistry::new();
-    registry
-        .register_logger(HookEvent::SessionStart, &log_path)
-        .unwrap();
+    registry.register_logger(HookEvent::SessionStart, &log_path).unwrap();
 
     let message = HookMessage::session("test_session", HookEvent::SessionStart, None, None);
 
@@ -118,12 +112,8 @@ async fn test_register_inline() {
 #[test]
 fn test_clear() {
     let mut registry = HookRegistry::new();
-    registry
-        .register_passthrough(HookEvent::PreToolExecution)
-        .unwrap();
-    registry
-        .register_passthrough(HookEvent::PostToolExecution)
-        .unwrap();
+    registry.register_passthrough(HookEvent::PreToolExecution).unwrap();
+    registry.register_passthrough(HookEvent::PostToolExecution).unwrap();
 
     assert!(registry.has_hooks(&HookEvent::PreToolExecution));
     registry.clear();
@@ -136,12 +126,8 @@ async fn test_multiple_hooks_same_event() {
     let mut registry = HookRegistry::new();
 
     // Register two non-blocking hooks
-    registry
-        .register_passthrough(HookEvent::PreToolExecution)
-        .unwrap();
-    registry
-        .register_passthrough(HookEvent::PreToolExecution)
-        .unwrap();
+    registry.register_passthrough(HookEvent::PreToolExecution).unwrap();
+    registry.register_passthrough(HookEvent::PreToolExecution).unwrap();
 
     let message = HookMessage::tool_execution(
         "test",
@@ -161,13 +147,9 @@ async fn test_blocking_stops_processing() {
     let mut registry = HookRegistry::new();
 
     // First hook blocks
-    registry
-        .register_blocking(HookEvent::PreToolExecution, "Blocked")
-        .unwrap();
+    registry.register_blocking(HookEvent::PreToolExecution, "Blocked").unwrap();
     // Second hook would proceed, but should never execute
-    registry
-        .register_passthrough(HookEvent::PreToolExecution)
-        .unwrap();
+    registry.register_passthrough(HookEvent::PreToolExecution).unwrap();
 
     let message = HookMessage::tool_execution(
         "test",

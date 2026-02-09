@@ -61,21 +61,13 @@ pub static COMMANDS: &[SlashCommand] = &[
         description: "Clear conversation history but keep a summary in context",
         argument_hint: None,
     },
-    SlashCommand {
-        name: "config",
-        description: "Open config panel",
-        argument_hint: None,
-    },
+    SlashCommand { name: "config", description: "Open config panel", argument_hint: None },
     SlashCommand {
         name: "context",
         description: "Visualize current context usage as a colored grid",
         argument_hint: None,
     },
-    SlashCommand {
-        name: "exit",
-        description: "Exit the REPL",
-        argument_hint: None,
-    },
+    SlashCommand { name: "exit", description: "Exit the REPL", argument_hint: None },
     SlashCommand {
         name: "export",
         description: "Export the current conversation to a file or clipboard",
@@ -101,21 +93,9 @@ pub static COMMANDS: &[SlashCommand] = &[
         description: "Initialize a new project or configuration",
         argument_hint: None,
     },
-    SlashCommand {
-        name: "login",
-        description: "Log in to your account",
-        argument_hint: None,
-    },
-    SlashCommand {
-        name: "logout",
-        description: "Log out of your account",
-        argument_hint: None,
-    },
-    SlashCommand {
-        name: "mcp",
-        description: "Manage MCP server connections",
-        argument_hint: None,
-    },
+    SlashCommand { name: "login", description: "Log in to your account", argument_hint: None },
+    SlashCommand { name: "logout", description: "Log out of your account", argument_hint: None },
+    SlashCommand { name: "mcp", description: "Manage MCP server connections", argument_hint: None },
     SlashCommand {
         name: "memory",
         description: "View or manage conversation memory",
@@ -141,11 +121,7 @@ pub static COMMANDS: &[SlashCommand] = &[
         description: "View pull request comments",
         argument_hint: None,
     },
-    SlashCommand {
-        name: "review",
-        description: "Review code changes",
-        argument_hint: None,
-    },
+    SlashCommand { name: "review", description: "Review code changes", argument_hint: None },
     SlashCommand {
         name: "status",
         description: "Show current session status",
@@ -161,16 +137,8 @@ pub static COMMANDS: &[SlashCommand] = &[
         description: "Configure terminal settings",
         argument_hint: None,
     },
-    SlashCommand {
-        name: "todos",
-        description: "Show the current todo list",
-        argument_hint: None,
-    },
-    SlashCommand {
-        name: "vim",
-        description: "Toggle vim keybindings mode",
-        argument_hint: None,
-    },
+    SlashCommand { name: "todos", description: "Show the current todo list", argument_hint: None },
+    SlashCommand { name: "vim", description: "Toggle vim keybindings mode", argument_hint: None },
 ];
 
 /// Check if `query` matches `text` using fuzzy subsequence matching.
@@ -209,10 +177,7 @@ pub fn fuzzy_matches(query: &str, text: &str) -> bool {
 /// Returns commands where the name fuzzy-matches the query,
 /// preserving alphabetical order.
 pub fn filter_commands(query: &str) -> Vec<&'static SlashCommand> {
-    COMMANDS
-        .iter()
-        .filter(|cmd| fuzzy_matches(query, cmd.name))
-        .collect()
+    COMMANDS.iter().filter(|cmd| fuzzy_matches(query, cmd.name)).collect()
 }
 
 /// State of the slash command autocomplete menu.
@@ -235,11 +200,7 @@ impl Default for SlashMenuState {
 impl SlashMenuState {
     /// Create a new menu state showing all commands.
     pub fn new() -> Self {
-        Self {
-            filter: String::new(),
-            selected_index: 0,
-            filtered_commands: filter_commands(""),
-        }
+        Self { filter: String::new(), selected_index: 0, filtered_commands: filter_commands("") }
     }
 
     /// Update the filter and refresh the command list.

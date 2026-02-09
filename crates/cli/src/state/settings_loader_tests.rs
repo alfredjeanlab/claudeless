@@ -11,20 +11,9 @@ fn test_settings_paths_resolve() {
 
     let paths = SettingsPaths::resolve(state_dir, working_dir);
 
-    assert_eq!(
-        paths.global,
-        Some(PathBuf::from("/home/user/.claude/settings.json"))
-    );
-    assert_eq!(
-        paths.project,
-        Some(PathBuf::from("/home/user/project/.claude/settings.json"))
-    );
-    assert_eq!(
-        paths.local,
-        Some(PathBuf::from(
-            "/home/user/project/.claude/settings.local.json"
-        ))
-    );
+    assert_eq!(paths.global, Some(PathBuf::from("/home/user/.claude/settings.json")));
+    assert_eq!(paths.project, Some(PathBuf::from("/home/user/project/.claude/settings.json")));
+    assert_eq!(paths.local, Some(PathBuf::from("/home/user/project/.claude/settings.local.json")));
 }
 
 #[test]
@@ -34,16 +23,8 @@ fn test_settings_paths_project_only() {
     let paths = SettingsPaths::project_only(working_dir);
 
     assert!(paths.global.is_none());
-    assert_eq!(
-        paths.project,
-        Some(PathBuf::from("/home/user/project/.claude/settings.json"))
-    );
-    assert_eq!(
-        paths.local,
-        Some(PathBuf::from(
-            "/home/user/project/.claude/settings.local.json"
-        ))
-    );
+    assert_eq!(paths.project, Some(PathBuf::from("/home/user/project/.claude/settings.json")));
+    assert_eq!(paths.local, Some(PathBuf::from("/home/user/project/.claude/settings.local.json")));
 }
 
 #[test]
@@ -66,11 +47,7 @@ fn test_loader_global_only() {
     let work_dir = tempfile::tempdir().unwrap();
 
     // Create global settings
-    fs::write(
-        state_dir.join("settings.json"),
-        r#"{"permissions": {"allow": ["Read"]}}"#,
-    )
-    .unwrap();
+    fs::write(state_dir.join("settings.json"), r#"{"permissions": {"allow": ["Read"]}}"#).unwrap();
 
     let paths = SettingsPaths::resolve(state_dir, work_dir.path());
     let loader = SettingsLoader::new(paths);
@@ -85,20 +62,14 @@ fn test_loader_project_overrides_global() {
     let work_dir = tempfile::tempdir().unwrap();
 
     // Global settings
-    fs::write(
-        global_dir.path().join("settings.json"),
-        r#"{"permissions": {"allow": ["Read"]}}"#,
-    )
-    .unwrap();
+    fs::write(global_dir.path().join("settings.json"), r#"{"permissions": {"allow": ["Read"]}}"#)
+        .unwrap();
 
     // Project settings (should override)
     let project_claude = work_dir.path().join(".claude");
     fs::create_dir_all(&project_claude).unwrap();
-    fs::write(
-        project_claude.join("settings.json"),
-        r#"{"permissions": {"allow": ["Write"]}}"#,
-    )
-    .unwrap();
+    fs::write(project_claude.join("settings.json"), r#"{"permissions": {"allow": ["Write"]}}"#)
+        .unwrap();
 
     let paths = SettingsPaths::resolve(global_dir.path(), work_dir.path());
     let loader = SettingsLoader::new(paths);
@@ -113,19 +84,13 @@ fn test_loader_local_highest_priority() {
     let work_dir = tempfile::tempdir().unwrap();
 
     // Global, project, and local settings
-    fs::write(
-        global_dir.path().join("settings.json"),
-        r#"{"permissions": {"allow": ["Read"]}}"#,
-    )
-    .unwrap();
+    fs::write(global_dir.path().join("settings.json"), r#"{"permissions": {"allow": ["Read"]}}"#)
+        .unwrap();
 
     let project_claude = work_dir.path().join(".claude");
     fs::create_dir_all(&project_claude).unwrap();
-    fs::write(
-        project_claude.join("settings.json"),
-        r#"{"permissions": {"allow": ["Write"]}}"#,
-    )
-    .unwrap();
+    fs::write(project_claude.join("settings.json"), r#"{"permissions": {"allow": ["Write"]}}"#)
+        .unwrap();
     fs::write(
         project_claude.join("settings.local.json"),
         r#"{"permissions": {"allow": ["Bash"]}}"#,
@@ -146,20 +111,12 @@ fn test_loader_env_vars_merged() {
     let work_dir = tempfile::tempdir().unwrap();
 
     // Global with one env var
-    fs::write(
-        global_dir.path().join("settings.json"),
-        r#"{"env": {"GLOBAL": "1"}}"#,
-    )
-    .unwrap();
+    fs::write(global_dir.path().join("settings.json"), r#"{"env": {"GLOBAL": "1"}}"#).unwrap();
 
     // Project with another
     let project_claude = work_dir.path().join(".claude");
     fs::create_dir_all(&project_claude).unwrap();
-    fs::write(
-        project_claude.join("settings.json"),
-        r#"{"env": {"PROJECT": "2"}}"#,
-    )
-    .unwrap();
+    fs::write(project_claude.join("settings.json"), r#"{"env": {"PROJECT": "2"}}"#).unwrap();
 
     let paths = SettingsPaths::resolve(global_dir.path(), work_dir.path());
     let loader = SettingsLoader::new(paths);
@@ -181,11 +138,8 @@ fn test_loader_invalid_json_skipped() {
     // Valid project settings
     let project_claude = work_dir.path().join(".claude");
     fs::create_dir_all(&project_claude).unwrap();
-    fs::write(
-        project_claude.join("settings.json"),
-        r#"{"permissions": {"allow": ["Read"]}}"#,
-    )
-    .unwrap();
+    fs::write(project_claude.join("settings.json"), r#"{"permissions": {"allow": ["Read"]}}"#)
+        .unwrap();
 
     let paths = SettingsPaths::resolve(global_dir.path(), work_dir.path());
     let loader = SettingsLoader::new(paths);
@@ -225,10 +179,7 @@ fn test_resolve_with_sources_user_only() {
     let paths =
         SettingsPaths::resolve_with_sources(state_dir, working_dir, Some(&[SettingSource::User]));
 
-    assert_eq!(
-        paths.global,
-        Some(PathBuf::from("/home/user/.claude/settings.json"))
-    );
+    assert_eq!(paths.global, Some(PathBuf::from("/home/user/.claude/settings.json")));
     assert!(paths.project.is_none());
     assert!(paths.local.is_none());
 }
@@ -245,16 +196,8 @@ fn test_resolve_with_sources_project_and_local() {
     );
 
     assert!(paths.global.is_none());
-    assert_eq!(
-        paths.project,
-        Some(PathBuf::from("/home/user/project/.claude/settings.json"))
-    );
-    assert_eq!(
-        paths.local,
-        Some(PathBuf::from(
-            "/home/user/project/.claude/settings.local.json"
-        ))
-    );
+    assert_eq!(paths.project, Some(PathBuf::from("/home/user/project/.claude/settings.json")));
+    assert_eq!(paths.local, Some(PathBuf::from("/home/user/project/.claude/settings.local.json")));
 }
 
 #[test]
@@ -287,20 +230,14 @@ fn test_loader_with_source_filter() {
     let work_dir = tempfile::tempdir().unwrap();
 
     // Global settings
-    fs::write(
-        global_dir.path().join("settings.json"),
-        r#"{"permissions": {"allow": ["Read"]}}"#,
-    )
-    .unwrap();
+    fs::write(global_dir.path().join("settings.json"), r#"{"permissions": {"allow": ["Read"]}}"#)
+        .unwrap();
 
     // Project settings
     let project_claude = work_dir.path().join(".claude");
     fs::create_dir_all(&project_claude).unwrap();
-    fs::write(
-        project_claude.join("settings.json"),
-        r#"{"permissions": {"allow": ["Write"]}}"#,
-    )
-    .unwrap();
+    fs::write(project_claude.join("settings.json"), r#"{"permissions": {"allow": ["Write"]}}"#)
+        .unwrap();
 
     // Local settings
     fs::write(
@@ -328,20 +265,14 @@ fn test_loader_user_only_ignores_project() {
     let work_dir = tempfile::tempdir().unwrap();
 
     // Global settings
-    fs::write(
-        global_dir.path().join("settings.json"),
-        r#"{"permissions": {"allow": ["Read"]}}"#,
-    )
-    .unwrap();
+    fs::write(global_dir.path().join("settings.json"), r#"{"permissions": {"allow": ["Read"]}}"#)
+        .unwrap();
 
     // Project settings
     let project_claude = work_dir.path().join(".claude");
     fs::create_dir_all(&project_claude).unwrap();
-    fs::write(
-        project_claude.join("settings.json"),
-        r#"{"permissions": {"allow": ["Write"]}}"#,
-    )
-    .unwrap();
+    fs::write(project_claude.join("settings.json"), r#"{"permissions": {"allow": ["Write"]}}"#)
+        .unwrap();
 
     // Load only user/global
     let paths = SettingsPaths::resolve_with_sources(
@@ -392,10 +323,8 @@ fn test_load_with_overrides_env_merged() {
     let paths = SettingsPaths::project_only(temp.path());
     let loader = SettingsLoader::new(paths);
 
-    let cli_settings = vec![
-        r#"{"env": {"A": "1"}}"#.to_string(),
-        r#"{"env": {"B": "2"}}"#.to_string(),
-    ];
+    let cli_settings =
+        vec![r#"{"env": {"A": "1"}}"#.to_string(), r#"{"env": {"B": "2"}}"#.to_string()];
     let settings = loader.load_with_overrides(&cli_settings);
 
     // Env maps should be merged
@@ -409,11 +338,8 @@ fn test_load_with_overrides_cli_overrides_file() {
     let work_dir = tempfile::tempdir().unwrap();
 
     // Create global settings file
-    fs::write(
-        global_dir.path().join("settings.json"),
-        r#"{"permissions": {"allow": ["Read"]}}"#,
-    )
-    .unwrap();
+    fs::write(global_dir.path().join("settings.json"), r#"{"permissions": {"allow": ["Read"]}}"#)
+        .unwrap();
 
     let paths = SettingsPaths::resolve(global_dir.path(), work_dir.path());
     let loader = SettingsLoader::new(paths);

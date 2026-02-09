@@ -145,15 +145,8 @@ fn screen_handles_split_utf8() {
     screen.feed(&[0x80]); // Last byte
 
     let text = screen.render();
-    assert!(
-        text.contains("─"),
-        "should correctly reassemble split UTF-8: {:?}",
-        text
-    );
-    assert!(
-        !text.contains("�"),
-        "should not contain replacement characters"
-    );
+    assert!(text.contains("─"), "should correctly reassemble split UTF-8: {:?}", text);
+    assert!(!text.contains("�"), "should not contain replacement characters");
 }
 
 #[test]
@@ -165,11 +158,7 @@ fn screen_handles_multiple_split_utf8() {
     screen.feed(b"\x94\x80 World"); // rest of ─ + ' World'
 
     let text = screen.render();
-    assert!(
-        text.contains("Hello ─ World"),
-        "should handle split UTF-8 in context: {:?}",
-        text
-    );
+    assert!(text.contains("Hello ─ World"), "should handle split UTF-8 in context: {:?}", text);
 }
 
 #[test]
