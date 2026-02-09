@@ -149,17 +149,25 @@ impl TuiAppState {
                 }
             };
 
-            // Build a modified tool call with answers injected
-            let mut input = state.tool_input.clone();
-            input["answers"] = serde_json::json!(answers);
+            // Record result and restore input (don't re-execute — the
+            // runtime would re-match the default_response which may
+            // contain AskUserQuestion again, causing an infinite loop).
+            let answers_summary: Vec<String> =
+                answers.iter().map(|(k, v)| format!("  {}: {}", k, v)).collect();
 
-            // Re-execute via runtime with the answers
-            let prompt = serde_json::to_string(&serde_json::json!({
-                "questions": input.get("questions"),
-                "answers": answers,
-            }))
-            .unwrap_or_default();
-            self.execute_with_runtime(prompt);
+            let mut inner = self.inner.lock();
+            inner.display.response_content.push_str(&format!(
+                "\n[User answered questions]\n{}\n",
+                answers_summary.join("\n")
+            ));
+            restore_input_state(&mut inner);
+            drop(inner);
+
+            self.fire_notification(
+                NOTIFICATION_IDLE_PROMPT,
+                "Agent Idle",
+                "Claude is waiting for input",
+            );
         }
     }
 
@@ -188,7 +196,6 @@ impl TuiAppState {
         if let Some(state) = plan_approval {
             match state.collect_result() {
                 PlanApprovalResult::Approved(mode) => {
-                    // Build approval message for the tool result
                     let mode_str = match mode {
                         crate::tui::widgets::plan_approval::ApprovalMode::ClearContext => {
                             "clear_context_auto_accept"
@@ -201,16 +208,22 @@ impl TuiAppState {
                         }
                     };
 
-                    // Re-execute with approval injected
-                    let mut input = state.tool_input.clone();
-                    input["approval"] = serde_json::json!(mode_str);
+                    // Record result and restore input (don't re-execute — the
+                    // runtime would re-match the default_response which may
+                    // contain ExitPlanMode again, causing an infinite loop).
+                    let mut inner = self.inner.lock();
+                    inner
+                        .display
+                        .response_content
+                        .push_str(&format!("\n[Plan approved (mode: {})]\n", mode_str));
+                    restore_input_state(&mut inner);
+                    drop(inner);
 
-                    let prompt = serde_json::to_string(&serde_json::json!({
-                        "plan_approved": true,
-                        "approval_mode": mode_str,
-                    }))
-                    .unwrap_or_default();
-                    self.execute_with_runtime(prompt);
+                    self.fire_notification(
+                        NOTIFICATION_IDLE_PROMPT,
+                        "Agent Idle",
+                        "Claude is waiting for input",
+                    );
                 }
                 PlanApprovalResult::Revised(feedback) => {
                     // Re-execute with feedback

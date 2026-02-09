@@ -245,3 +245,87 @@ fn handle_turn_result_sets_plan_approval_mode_with_response_text() {
     );
     assert!(inner.dialog.as_plan_approval().is_some(), "plan approval dialog should be set");
 }
+
+// =========================================================================
+// confirm_plan_approval / confirm_elicitation restore input without re-exec
+// =========================================================================
+
+use crate::tui::app::state::DialogState;
+use crate::tui::widgets::elicitation::ElicitationState;
+use crate::tui::widgets::plan_approval::PlanApprovalState;
+
+#[test]
+fn confirm_plan_approval_approved_restores_input_without_reexecution() {
+    let state = create_test_app();
+
+    // Set up: dialog in PlanApproval with cursor at 1 (AutoAccept)
+    {
+        let mut inner = state.inner.lock();
+        let mut plan_state =
+            PlanApprovalState::from_tool_input(&json!({}), "toolu_test".into(), "plan.md".into());
+        plan_state.cursor = 1; // AutoAccept
+        inner.dialog = DialogState::PlanApproval(plan_state);
+        inner.mode = AppMode::PlanApproval;
+    }
+
+    // Act: confirm the approval (no runtime — fire_notification is a no-op)
+    state.confirm_plan_approval();
+
+    // Assert: mode restored to Input, not Thinking (no re-execution happened)
+    let inner = state.inner.lock();
+    assert_eq!(inner.mode, AppMode::Input, "mode should be Input after plan approval");
+    assert!(
+        inner.display.response_content.contains("[Plan approved (mode: auto_accept)]"),
+        "response should record approval; got: {:?}",
+        inner.display.response_content,
+    );
+    // Dialog should be cleared
+    assert!(inner.dialog.as_plan_approval().is_none(), "dialog should be cleared");
+}
+
+#[test]
+fn confirm_elicitation_answered_restores_input_without_reexecution() {
+    let state = create_test_app();
+
+    // Set up: dialog in Elicitation with one question, first option selected
+    {
+        let mut inner = state.inner.lock();
+        let mut elicitation_state = ElicitationState::from_tool_input(
+            &json!({
+                "questions": [{
+                    "question": "Which DB?",
+                    "header": "DB",
+                    "options": [
+                        { "label": "PostgreSQL", "description": "Relational" },
+                        { "label": "SQLite", "description": "Embedded" }
+                    ],
+                    "multiSelect": false
+                }]
+            }),
+            "toolu_test".into(),
+        );
+        // Select first option (PostgreSQL)
+        elicitation_state.questions[0].selected = vec![0];
+        inner.dialog = DialogState::Elicitation(elicitation_state);
+        inner.mode = AppMode::Elicitation;
+    }
+
+    // Act
+    state.confirm_elicitation();
+
+    // Assert: mode restored to Input, not Thinking
+    let inner = state.inner.lock();
+    assert_eq!(inner.mode, AppMode::Input, "mode should be Input after elicitation answer");
+    assert!(
+        inner.display.response_content.contains("[User answered questions]"),
+        "response should record answers; got: {:?}",
+        inner.display.response_content,
+    );
+    assert!(
+        inner.display.response_content.contains("PostgreSQL"),
+        "response should include the selected answer; got: {:?}",
+        inner.display.response_content,
+    );
+    // Dialog should be cleared
+    assert!(inner.dialog.as_elicitation().is_none(), "dialog should be cleared");
+}
