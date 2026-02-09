@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-02-08
+
+### Features
+
+- **Hooks**: Add SessionEnd, UserPromptSubmit, PermissionRequest hooks and generic matchers
+
+### Fixed
+
+- **Scenarios**: Inject scenario canned results into tool calls before execution
+- **Elicitation**: Fix AskUserQuestion dialog rendering and scenario answer injection
+- **Elicitation**: Single-question elicitation submits immediately without review page
+
 ## [0.2.4] - 2026-02-08
 
 ### Fixed

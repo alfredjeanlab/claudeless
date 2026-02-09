@@ -411,7 +411,10 @@ fn test_multi_question_number_key_advances_to_next_question() {
     let elicitation = inner.dialog.as_elicitation().unwrap();
     assert_eq!(elicitation.questions[0].selected, vec![0]);
     assert_eq!(elicitation.current_question, 1, "should advance to Q2");
-    assert!(!elicitation.on_submit_tab, "should not be on submit tab yet");
+    assert!(
+        !elicitation.on_submit_tab,
+        "should not be on submit tab yet"
+    );
 }
 
 #[test]

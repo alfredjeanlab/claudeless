@@ -176,14 +176,11 @@ impl TuiAppState {
                         }
                     } else {
                         // Single-select: select at cursor and advance
-                        let auto_submit = inner
-                            .dialog
-                            .as_elicitation_mut()
-                            .is_some_and(|state| {
-                                state.select_and_advance();
-                                // Single question: submit immediately (no review page)
-                                state.questions.len() == 1
-                            });
+                        let auto_submit = inner.dialog.as_elicitation_mut().is_some_and(|state| {
+                            state.select_and_advance();
+                            // Single question: submit immediately (no review page)
+                            state.questions.len() == 1
+                        });
                         if auto_submit {
                             drop(inner);
                             self.confirm_elicitation();
