@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-02-09
+
+### Features
+
+- **Capsh**: Add Shift+Arrow, BackTab special keys
+
+### Fixed
+
+- **TUI**: Prevent infinite loop when ExitPlanMode/AskUserQuestion re-emitted after approval
+- **Capture**: Replace "for shortcuts" with structural ready detection
+
 ## [0.3.0] - 2026-02-09
 
 ### Refactored
