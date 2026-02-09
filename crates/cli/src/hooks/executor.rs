@@ -24,7 +24,8 @@ pub struct HookConfig {
     pub blocking: bool,
 
     /// Optional pipe-separated matcher pattern for sub-event filtering.
-    /// For Notification hooks, matches against notification_type.
+    /// Matches against `HookPayload::matcher_subject()` — the field depends
+    /// on the payload variant (e.g. tool_name, notification_type, source).
     pub matcher: Option<String>,
 }
 

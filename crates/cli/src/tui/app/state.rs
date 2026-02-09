@@ -237,6 +237,18 @@ impl TuiAppState {
         }
     }
 
+    /// Returns true when periodic timer re-renders are needed
+    /// (spinner, compacting, exit hints, pending prompts). False when idle.
+    pub fn needs_timer_render(&self) -> bool {
+        let inner = self.inner.lock();
+        matches!(inner.mode, AppMode::Responding | AppMode::Thinking)
+            || inner.is_compacting
+            || inner.display.exit_hint.is_some()
+            || inner.pending_hook_message.is_some()
+            || inner.pending_initial_prompt.is_some()
+            || !inner.session_start_hook_fired
+    }
+
     /// Advance the spinner animation frame
     pub fn advance_spinner(&self) {
         use crate::tui::spinner;
@@ -731,3 +743,7 @@ pub(super) fn format_tool_summary(tool: &crate::state::session::TurnToolCall) ->
         _ => None,
     }
 }
+
+#[cfg(test)]
+#[path = "state_tests.rs"]
+mod tests;

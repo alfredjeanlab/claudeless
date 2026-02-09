@@ -659,3 +659,99 @@ async fn fire_prompt_submit_hook_fires() {
 
     assert!(marker.exists(), "UserPromptSubmit hook should fire");
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn ask_user_question_with_scenario_answers_in_tui_executes_directly() {
+    let mut tools = HashMap::new();
+    tools.insert(
+        "AskUserQuestion".to_string(),
+        ToolConfig {
+            auto_approve: true,
+            answers: Some({
+                let mut m = HashMap::new();
+                m.insert("Which DB?".to_string(), "PostgreSQL".to_string());
+                m
+            }),
+            ..Default::default()
+        },
+    );
+
+    let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
+    let mut runtime = build_test_runtime_with_scenario(tools, None, cli);
+
+    // Force TUI mode — scenario answers should still be used instead of pending_permission
+    FORCE_TUI.set(Some(true));
+
+    let tool_calls = vec![ToolCallSpec {
+        tool: "AskUserQuestion".to_string(),
+        input: serde_json::json!({
+            "questions": [{
+                "question": "Which DB?",
+                "header": "DB",
+                "options": [
+                    { "label": "PostgreSQL", "description": "Relational" },
+                    { "label": "SQLite", "description": "Embedded" }
+                ],
+                "multiSelect": false
+            }]
+        }),
+        result: None,
+    }];
+
+    let (results, pending) = runtime
+        .execute_tools_for_turn("test", "", &tool_calls)
+        .await;
+
+    FORCE_TUI.set(None);
+
+    // Scenario answers should be injected — no pending permission needed
+    assert!(
+        pending.is_none(),
+        "AskUserQuestion with scenario answers in TUI should execute directly, not pend"
+    );
+
+    // Tool should have executed (MockExecutor ran, even if it returns error for unknown tools)
+    assert_eq!(
+        results.len(),
+        1,
+        "Tool should have been executed, not returned as pending"
+    );
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn ask_user_question_without_scenario_answers_in_tui_returns_pending() {
+    // No scenario answers configured — TUI mode should return pending_permission
+    let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
+    let mut runtime = build_test_runtime(None, cli);
+
+    FORCE_TUI.set(Some(true));
+
+    let tool_calls = vec![ToolCallSpec {
+        tool: "AskUserQuestion".to_string(),
+        input: serde_json::json!({
+            "questions": [{
+                "question": "Which DB?",
+                "header": "DB",
+                "options": [
+                    { "label": "PostgreSQL", "description": "Relational" },
+                    { "label": "SQLite", "description": "Embedded" }
+                ],
+                "multiSelect": false
+            }]
+        }),
+        result: None,
+    }];
+
+    let (results, pending) = runtime
+        .execute_tools_for_turn("test", "", &tool_calls)
+        .await;
+
+    FORCE_TUI.set(None);
+
+    // No scenario answers → TUI mode should set pending_permission for interactive dialog
+    assert!(
+        pending.is_some(),
+        "AskUserQuestion without scenario answers in TUI should return pending_permission"
+    );
+    assert!(results.is_empty());
+}

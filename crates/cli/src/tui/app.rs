@@ -72,13 +72,18 @@ pub fn App(mut hooks: Hooks, props: &AppProps) -> impl Into<AnyElement<'static>>
     });
 
     // Periodic timer for updates (compacting, streaming, spinner animation, etc.)
-    // 120ms matches Claude Code's spinner timing
+    // 120ms matches Claude Code's spinner timing.
+    // Only triggers re-renders when the app actually needs them (e.g. spinner
+    // animation, compacting timeout). Idle input prompt skips the update.
     hooks.use_future({
+        let state = state.clone();
         async move {
             loop {
                 tokio::time::sleep(std::time::Duration::from_millis(120)).await;
-                let current = *timer_counter.read();
-                timer_counter.set(current.wrapping_add(1));
+                if state.needs_timer_render() {
+                    let current = *timer_counter.read();
+                    timer_counter.set(current.wrapping_add(1));
+                }
             }
         }
     });

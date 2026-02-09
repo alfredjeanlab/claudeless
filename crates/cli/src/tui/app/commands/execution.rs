@@ -372,7 +372,6 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> TurnA
                 plan_file_path,
             );
             inner.dialog = super::super::state::DialogState::PlanApproval(state);
-            inner.mode = super::super::types::AppMode::PlanApproval;
 
             // Build display for completed tool calls before the plan approval
             let mut parts = Vec::new();
@@ -390,6 +389,8 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> TurnA
             if !parts.is_empty() {
                 setup_response_display(inner, join_display_parts(&parts));
             }
+            // Set mode after setup_response_display (which overwrites mode to Responding)
+            inner.mode = super::super::types::AppMode::PlanApproval;
             return TurnAction::Notify(NOTIFICATION_ELICITATION_DIALOG);
         }
 
@@ -400,7 +401,6 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> TurnA
                 pending.tool_use_id.clone(),
             );
             inner.dialog = super::super::state::DialogState::Elicitation(state);
-            inner.mode = super::super::types::AppMode::Elicitation;
 
             // Build display for completed tool calls before the elicitation
             let mut parts = Vec::new();
@@ -418,6 +418,8 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> TurnA
             if !parts.is_empty() {
                 setup_response_display(inner, join_display_parts(&parts));
             }
+            // Set mode after setup_response_display (which overwrites mode to Responding)
+            inner.mode = super::super::types::AppMode::Elicitation;
             return TurnAction::Notify(NOTIFICATION_ELICITATION_DIALOG);
         }
 

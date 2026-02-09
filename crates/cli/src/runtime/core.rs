@@ -418,20 +418,19 @@ impl Runtime {
             // return as pending for TUI mode interactive dialog
             let call = if call.tool == "AskUserQuestion" {
                 let has_answers = call.input.get("answers").is_some();
-                if !has_answers && self.cli.should_use_tui() {
-                    // TUI mode without answers — return as pending for interactive dialog
-                    pending_permission = Some(PendingPermission {
-                        tool_call: call.clone(),
-                        tool_use_id,
-                    });
-                    break;
-                }
                 if !has_answers {
-                    // Check scenario for configured answers
+                    // Check scenario for configured answers first (works in both TUI and print mode)
                     if let Some(answers) = self.get_scenario_answers("AskUserQuestion") {
                         let mut modified = call.clone();
                         modified.input["answers"] = answers;
                         std::borrow::Cow::Owned(modified)
+                    } else if self.cli.should_use_tui() {
+                        // TUI mode without answers — return as pending for interactive dialog
+                        pending_permission = Some(PendingPermission {
+                            tool_call: call.clone(),
+                            tool_use_id,
+                        });
+                        break;
                     } else {
                         std::borrow::Cow::Borrowed(call)
                     }

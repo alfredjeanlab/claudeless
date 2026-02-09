@@ -152,3 +152,139 @@ fn unknown_tool_returns_none() {
 
     assert!(tool_call_to_permission_type(&call).is_none());
 }
+
+// =========================================================================
+// handle_turn_result sets correct mode for dialog-based pending permissions
+// =========================================================================
+
+use crate::config::ResponseSpec;
+use crate::runtime::{PendingPermission, TurnResult};
+use crate::state::session::SessionManager;
+use crate::time::ClockHandle;
+use crate::tui::app::state::TuiAppState;
+use crate::tui::app::types::{AppMode, TuiConfig};
+
+fn create_test_app() -> TuiAppState {
+    let sessions = SessionManager::new();
+    let clock = ClockHandle::fake_at_epoch();
+    let tui_config = TuiConfig::default();
+    TuiAppState::for_test(sessions, clock, tui_config)
+}
+
+#[test]
+fn handle_turn_result_sets_elicitation_mode_with_response_text() {
+    let state = create_test_app();
+    let mut inner = state.inner.lock();
+
+    // Simulate a turn result with response text AND a pending AskUserQuestion
+    let result = TurnResult {
+        response: ResponseSpec::Detailed {
+            text: "Let me ask you a question.".to_string(),
+            tool_calls: vec![ToolCallSpec {
+                tool: "AskUserQuestion".to_string(),
+                input: json!({
+                    "questions": [{
+                        "question": "Which DB?",
+                        "header": "DB",
+                        "options": [
+                            { "label": "PostgreSQL", "description": "Relational" },
+                            { "label": "SQLite", "description": "Embedded" }
+                        ],
+                        "multiSelect": false
+                    }]
+                }),
+                result: None,
+            }],
+            usage: None,
+            delay_ms: None,
+        },
+        tool_results: vec![],
+        hook_continuation: None,
+        is_hook_continuation: false,
+        pending_permission: Some(PendingPermission {
+            tool_call: ToolCallSpec {
+                tool: "AskUserQuestion".to_string(),
+                input: json!({
+                    "questions": [{
+                        "question": "Which DB?",
+                        "header": "DB",
+                        "options": [
+                            { "label": "PostgreSQL", "description": "Relational" },
+                            { "label": "SQLite", "description": "Embedded" }
+                        ],
+                        "multiSelect": false
+                    }]
+                }),
+                result: None,
+            },
+            tool_use_id: "toolu_00000000".to_string(),
+        }),
+    };
+
+    let _action = super::handle_turn_result(&mut inner, result);
+
+    // Mode must be Elicitation, NOT Responding (setup_response_display sets Responding,
+    // but it should be overridden back to Elicitation)
+    assert_eq!(
+        inner.mode,
+        AppMode::Elicitation,
+        "mode should be Elicitation after handle_turn_result with pending AskUserQuestion"
+    );
+
+    // Dialog should be active
+    assert!(
+        inner.dialog.as_elicitation().is_some(),
+        "elicitation dialog should be set"
+    );
+
+    // Response text should be captured in display
+    assert!(
+        inner
+            .display
+            .response_content
+            .contains("Let me ask you a question"),
+        "response text should be displayed"
+    );
+}
+
+#[test]
+fn handle_turn_result_sets_plan_approval_mode_with_response_text() {
+    let state = create_test_app();
+    let mut inner = state.inner.lock();
+
+    let result = TurnResult {
+        response: ResponseSpec::Detailed {
+            text: "Here is my plan.".to_string(),
+            tool_calls: vec![ToolCallSpec {
+                tool: "ExitPlanMode".to_string(),
+                input: json!({}),
+                result: None,
+            }],
+            usage: None,
+            delay_ms: None,
+        },
+        tool_results: vec![],
+        hook_continuation: None,
+        is_hook_continuation: false,
+        pending_permission: Some(PendingPermission {
+            tool_call: ToolCallSpec {
+                tool: "ExitPlanMode".to_string(),
+                input: json!({}),
+                result: None,
+            },
+            tool_use_id: "toolu_00000000".to_string(),
+        }),
+    };
+
+    let _action = super::handle_turn_result(&mut inner, result);
+
+    assert_eq!(
+        inner.mode,
+        AppMode::PlanApproval,
+        "mode should be PlanApproval after handle_turn_result with pending ExitPlanMode"
+    );
+    assert!(
+        inner.dialog.as_plan_approval().is_some(),
+        "plan approval dialog should be set"
+    );
+}
