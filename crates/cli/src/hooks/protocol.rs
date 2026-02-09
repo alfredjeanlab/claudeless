@@ -42,7 +42,7 @@ impl HookEvent {
             HookEvent::PermissionRequest => "PermissionRequest",
             HookEvent::SessionStart => "SessionStart",
             HookEvent::SessionEnd => "SessionEnd",
-            HookEvent::PromptSubmit => "PromptSubmit",
+            HookEvent::PromptSubmit => "UserPromptSubmit",
             HookEvent::PreCompact => "PreCompact",
             HookEvent::Stop => "Stop",
         }
@@ -147,11 +147,26 @@ impl HookMessage {
         session_id: impl Into<String>,
         event: HookEvent,
         project_path: Option<String>,
+        source: Option<String>,
     ) -> Self {
         Self {
             event,
             session_id: session_id.into(),
-            payload: HookPayload::Session { project_path },
+            payload: HookPayload::Session {
+                project_path,
+                source,
+            },
+        }
+    }
+
+    /// Create a session end message
+    pub fn session_end(session_id: impl Into<String>, reason: impl Into<String>) -> Self {
+        Self {
+            event: HookEvent::SessionEnd,
+            session_id: session_id.into(),
+            payload: HookPayload::SessionEnd {
+                reason: reason.into(),
+            },
         }
     }
 
@@ -291,15 +306,27 @@ impl HookMessage {
                     "action".to_string(),
                     serde_json::Value::String(action.clone()),
                 );
-                obj.insert("context".to_string(), context.clone());
+                obj.insert("tool_input".to_string(), context.clone());
             }
-            HookPayload::Session { project_path } => {
+            HookPayload::Session {
+                project_path,
+                source,
+            } => {
                 if let Some(path) = project_path {
                     obj.insert(
                         "project_path".to_string(),
                         serde_json::Value::String(path.clone()),
                     );
                 }
+                if let Some(src) = source {
+                    obj.insert("source".to_string(), serde_json::Value::String(src.clone()));
+                }
+            }
+            HookPayload::SessionEnd { reason } => {
+                obj.insert(
+                    "reason".to_string(),
+                    serde_json::Value::String(reason.clone()),
+                );
             }
             HookPayload::Prompt { prompt } => {
                 obj.insert(
@@ -377,7 +404,12 @@ pub enum HookPayload {
     Session {
         #[serde(skip_serializing_if = "Option::is_none")]
         project_path: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        source: Option<String>,
     },
+
+    /// Session end
+    SessionEnd { reason: String },
 
     /// Prompt submission
     Prompt { prompt: String },
@@ -395,6 +427,32 @@ pub enum HookPayload {
         /// Check this value or process the transcript to prevent infinite loops.
         stop_hook_active: bool,
     },
+}
+
+impl HookPayload {
+    /// Get the matcher subject for this payload.
+    ///
+    /// Returns the field that hook matchers should filter on:
+    /// - `notification_type` for Notification
+    /// - `tool_name` for ToolExecution, ToolExecutionFailure, Permission
+    /// - `source` for Session (SessionStart)
+    /// - `reason` for SessionEnd
+    /// - `None` for Prompt, Compaction, Stop (no matcher filtering)
+    pub fn matcher_subject(&self) -> Option<&str> {
+        match self {
+            HookPayload::Notification {
+                notification_type, ..
+            } => Some(notification_type.as_str()),
+            HookPayload::ToolExecution { tool_name, .. } => Some(tool_name.as_str()),
+            HookPayload::ToolExecutionFailure { tool_name, .. } => Some(tool_name.as_str()),
+            HookPayload::Permission { tool_name, .. } => Some(tool_name.as_str()),
+            HookPayload::Session { source, .. } => source.as_deref(),
+            HookPayload::SessionEnd { reason } => Some(reason.as_str()),
+            HookPayload::Prompt { .. }
+            | HookPayload::Compaction { .. }
+            | HookPayload::Stop { .. } => None,
+        }
+    }
 }
 
 /// Compaction trigger type

@@ -599,3 +599,63 @@ async fn no_scenario_config_leaves_tool_call_unchanged() {
     assert_eq!(results.len(), 1);
     assert!(results[0].is_error);
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn fire_session_end_hook_fires() {
+    let tmp = tempfile::tempdir().unwrap();
+    let marker = tmp.path().join("session_end_fired");
+    let script = tmp.path().join("session_end_hook.sh");
+    fs::write(
+        &script,
+        format!(
+            "#!/bin/bash\necho \"fired\" >> {}\n",
+            marker.to_string_lossy()
+        ),
+    )
+    .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    let mut hook_executor = HookExecutor::new();
+    hook_executor.register(HookEvent::SessionEnd, HookConfig::new(&script, 5000));
+
+    let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
+    let runtime = build_test_runtime(Some(hook_executor), cli);
+
+    runtime.fire_session_end_hook("prompt_input_exit").await;
+
+    assert!(marker.exists(), "SessionEnd hook should fire");
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn fire_prompt_submit_hook_fires() {
+    let tmp = tempfile::tempdir().unwrap();
+    let marker = tmp.path().join("prompt_submit_fired");
+    let script = tmp.path().join("prompt_submit_hook.sh");
+    fs::write(
+        &script,
+        format!(
+            "#!/bin/bash\necho \"fired\" >> {}\n",
+            marker.to_string_lossy()
+        ),
+    )
+    .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    let mut hook_executor = HookExecutor::new();
+    hook_executor.register(HookEvent::PromptSubmit, HookConfig::new(&script, 5000));
+
+    let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
+    let runtime = build_test_runtime(Some(hook_executor), cli);
+
+    runtime.fire_prompt_submit_hook("Hello, Claude!").await;
+
+    assert!(marker.exists(), "UserPromptSubmit hook should fire");
+}

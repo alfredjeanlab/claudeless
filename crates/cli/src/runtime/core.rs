@@ -619,13 +619,53 @@ impl Runtime {
     }
 
     /// Fire SessionStart hook (fire-and-forget notification).
-    pub(crate) async fn fire_session_start_hook(&self) {
+    pub(crate) async fn fire_session_start_hook(&self, source: &str) {
         if let Some(ref executor) = self.hook_executor {
             if executor.has_hooks(&HookEvent::SessionStart) {
                 let msg = HookMessage::session(
                     self.context.session_id.to_string(),
                     HookEvent::SessionStart,
                     Some(self.context.project_path.to_string_lossy().to_string()),
+                    Some(source.to_string()),
+                );
+                let _ = executor.execute(&msg).await;
+            }
+        }
+    }
+
+    /// Fire SessionEnd hook (fire-and-forget notification).
+    pub(crate) async fn fire_session_end_hook(&self, reason: &str) {
+        if let Some(ref executor) = self.hook_executor {
+            if executor.has_hooks(&HookEvent::SessionEnd) {
+                let msg = HookMessage::session_end(self.context.session_id.to_string(), reason);
+                let _ = executor.execute(&msg).await;
+            }
+        }
+    }
+
+    /// Fire UserPromptSubmit hook (fire-and-forget notification).
+    pub(crate) async fn fire_prompt_submit_hook(&self, prompt: &str) {
+        if let Some(ref executor) = self.hook_executor {
+            if executor.has_hooks(&HookEvent::PromptSubmit) {
+                let msg = HookMessage::prompt_submit(self.context.session_id.to_string(), prompt);
+                let _ = executor.execute(&msg).await;
+            }
+        }
+    }
+
+    /// Fire PermissionRequest hook (fire-and-forget notification).
+    pub(crate) async fn fire_permission_request_hook(
+        &self,
+        tool_name: &str,
+        tool_input: serde_json::Value,
+    ) {
+        if let Some(ref executor) = self.hook_executor {
+            if executor.has_hooks(&HookEvent::PermissionRequest) {
+                let msg = HookMessage::permission(
+                    self.context.session_id.to_string(),
+                    tool_name,
+                    "execute",
+                    tool_input,
                 );
                 let _ = executor.execute(&msg).await;
             }

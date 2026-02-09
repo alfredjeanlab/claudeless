@@ -103,6 +103,9 @@ impl TuiAppState {
             // Drop lock before execution so the render thread can see Thinking mode
         }
 
+        // Fire UserPromptSubmit hook before execution
+        self.fire_prompt_submit_hook(&prompt);
+
         // Use Runtime::execute() for shared agent loop
         self.execute_with_runtime(prompt);
     }

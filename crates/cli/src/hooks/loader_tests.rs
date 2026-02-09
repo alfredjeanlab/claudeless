@@ -281,3 +281,69 @@ fn test_load_hooks_post_tool_use_failure_with_matcher() {
     assert!(executor.has_hooks(&HookEvent::PostToolExecutionFailure));
     assert_eq!(executor.hook_count(&HookEvent::PostToolExecutionFailure), 1);
 }
+
+#[test]
+fn test_load_hooks_session_end() {
+    let settings = ClaudeSettings {
+        hooks: HashMap::from([(
+            "SessionEnd".to_string(),
+            vec![HookDefEntry {
+                matcher: None,
+                hooks: vec![HookCommand {
+                    command_type: "bash".to_string(),
+                    command: "echo session-end".to_string(),
+                    timeout: 5000,
+                }],
+            }],
+        )]),
+        ..Default::default()
+    };
+
+    let executor = load_hooks(&settings).unwrap();
+    assert!(executor.has_hooks(&HookEvent::SessionEnd));
+    assert_eq!(executor.hook_count(&HookEvent::SessionEnd), 1);
+}
+
+#[test]
+fn test_load_hooks_user_prompt_submit() {
+    let settings = ClaudeSettings {
+        hooks: HashMap::from([(
+            "UserPromptSubmit".to_string(),
+            vec![HookDefEntry {
+                matcher: None,
+                hooks: vec![HookCommand {
+                    command_type: "bash".to_string(),
+                    command: "echo prompt-submit".to_string(),
+                    timeout: 5000,
+                }],
+            }],
+        )]),
+        ..Default::default()
+    };
+
+    let executor = load_hooks(&settings).unwrap();
+    assert!(executor.has_hooks(&HookEvent::PromptSubmit));
+    assert_eq!(executor.hook_count(&HookEvent::PromptSubmit), 1);
+}
+
+#[test]
+fn test_load_hooks_permission_request() {
+    let settings = ClaudeSettings {
+        hooks: HashMap::from([(
+            "PermissionRequest".to_string(),
+            vec![HookDefEntry {
+                matcher: None,
+                hooks: vec![HookCommand {
+                    command_type: "bash".to_string(),
+                    command: "echo permission-request".to_string(),
+                    timeout: 5000,
+                }],
+            }],
+        )]),
+        ..Default::default()
+    };
+
+    let executor = load_hooks(&settings).unwrap();
+    assert!(executor.has_hooks(&HookEvent::PermissionRequest));
+    assert_eq!(executor.hook_count(&HookEvent::PermissionRequest), 1);
+}

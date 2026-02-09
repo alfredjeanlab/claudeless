@@ -136,6 +136,13 @@ async fn run_tui_mode(runtime: Runtime) -> Result<(), Box<dyn std::error::Error>
         println!("{}", msg);
     }
 
+    // Fire SessionEnd hook before shutdown
+    let session_end_reason = match &exit_reason {
+        ExitReason::UserQuit => "prompt_input_exit",
+        _ => "other",
+    };
+    app.state().fire_session_end_hook(session_end_reason);
+
     // Shutdown MCP servers before exiting
     if let Some(runtime) = app.take_runtime() {
         runtime.shutdown_mcp().await;

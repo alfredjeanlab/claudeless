@@ -178,6 +178,9 @@ impl TuiAppState {
             return;
         }
 
+        // Fire PermissionRequest hook before showing dialog
+        self.fire_permission_request_hook(&permission_type);
+
         // Show dialog as normal - record tool_use message first
         let mut inner = self.inner.lock();
 

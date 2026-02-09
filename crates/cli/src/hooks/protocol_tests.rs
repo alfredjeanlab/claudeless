@@ -25,7 +25,7 @@ fn test_hook_event_wire_names() {
     assert_eq!(HookEvent::Stop.wire_name(), "Stop");
     assert_eq!(HookEvent::SessionStart.wire_name(), "SessionStart");
     assert_eq!(HookEvent::SessionEnd.wire_name(), "SessionEnd");
-    assert_eq!(HookEvent::PromptSubmit.wire_name(), "PromptSubmit");
+    assert_eq!(HookEvent::PromptSubmit.wire_name(), "UserPromptSubmit");
     assert_eq!(HookEvent::PreCompact.wire_name(), "PreCompact");
     assert_eq!(
         HookEvent::PermissionRequest.wire_name(),
@@ -111,11 +111,17 @@ fn test_hook_message_session() {
         "session_123",
         HookEvent::SessionStart,
         Some("/project".to_string()),
+        Some("startup".to_string()),
     );
 
     assert_eq!(msg.event, HookEvent::SessionStart);
-    if let HookPayload::Session { project_path } = &msg.payload {
+    if let HookPayload::Session {
+        project_path,
+        source,
+    } = &msg.payload
+    {
         assert_eq!(*project_path, Some("/project".to_string()));
+        assert_eq!(*source, Some("startup".to_string()));
     } else {
         unreachable!("Expected Session payload");
     }
@@ -261,6 +267,7 @@ fn test_session_start_payload() {
         "test-session",
         HookEvent::SessionStart,
         Some("/path/to/project".to_string()),
+        Some("startup".to_string()),
     );
 
     let json = serde_json::to_value(&msg).unwrap();
@@ -268,17 +275,17 @@ fn test_session_start_payload() {
     assert_eq!(json["event"], "session_start");
     assert_eq!(json["session_id"], "test-session");
     assert_eq!(json["payload"]["project_path"], "/path/to/project");
+    assert_eq!(json["payload"]["source"], "startup");
 }
 
 #[test]
 fn test_session_end_payload() {
-    let msg = HookMessage::session("test-session", HookEvent::SessionEnd, None);
+    let msg = HookMessage::session_end("test-session", "prompt_input_exit");
 
     let json = serde_json::to_value(&msg).unwrap();
 
     assert_eq!(json["event"], "session_end");
-    // project_path should not be serialized when None
-    assert!(json["payload"].get("project_path").is_none());
+    assert_eq!(json["payload"]["reason"], "prompt_input_exit");
 }
 
 #[test]
@@ -680,11 +687,13 @@ fn test_hook_message_wire_format_session_start() {
         "session-abc",
         HookEvent::SessionStart,
         Some("/project".to_string()),
+        Some("startup".to_string()),
     );
     let wire = msg.to_wire_json();
 
     assert_eq!(wire["hook_event_name"], "SessionStart");
     assert_eq!(wire["project_path"], "/project");
+    assert_eq!(wire["source"], "startup");
 }
 
 #[test]
@@ -702,4 +711,142 @@ fn test_hook_message_wire_format_no_tool_use_id() {
 
     // tool_use_id should not be present when None
     assert!(wire.get("tool_use_id").is_none());
+}
+
+// =========================================================================
+// matcher_subject() Tests
+// =========================================================================
+
+#[test]
+fn test_payload_matcher_subject_notification() {
+    let payload = HookPayload::Notification {
+        notification_type: "idle_prompt".to_string(),
+        title: "t".to_string(),
+        message: "m".to_string(),
+    };
+    assert_eq!(payload.matcher_subject(), Some("idle_prompt"));
+}
+
+#[test]
+fn test_payload_matcher_subject_tool_execution() {
+    let payload = HookPayload::ToolExecution {
+        tool_name: "Bash".to_string(),
+        tool_input: serde_json::json!({}),
+        tool_response: None,
+        tool_use_id: None,
+    };
+    assert_eq!(payload.matcher_subject(), Some("Bash"));
+}
+
+#[test]
+fn test_payload_matcher_subject_tool_execution_failure() {
+    let payload = HookPayload::ToolExecutionFailure {
+        tool_name: "Read".to_string(),
+        tool_input: serde_json::json!({}),
+        tool_use_id: None,
+        error: "err".to_string(),
+        is_interrupt: None,
+    };
+    assert_eq!(payload.matcher_subject(), Some("Read"));
+}
+
+#[test]
+fn test_payload_matcher_subject_permission() {
+    let payload = HookPayload::Permission {
+        tool_name: "Bash".to_string(),
+        action: "execute".to_string(),
+        context: serde_json::json!({}),
+    };
+    assert_eq!(payload.matcher_subject(), Some("Bash"));
+}
+
+#[test]
+fn test_payload_matcher_subject_session_with_source() {
+    let payload = HookPayload::Session {
+        project_path: Some("/p".to_string()),
+        source: Some("startup".to_string()),
+    };
+    assert_eq!(payload.matcher_subject(), Some("startup"));
+}
+
+#[test]
+fn test_payload_matcher_subject_session_without_source() {
+    let payload = HookPayload::Session {
+        project_path: Some("/p".to_string()),
+        source: None,
+    };
+    assert_eq!(payload.matcher_subject(), None);
+}
+
+#[test]
+fn test_payload_matcher_subject_session_end() {
+    let payload = HookPayload::SessionEnd {
+        reason: "prompt_input_exit".to_string(),
+    };
+    assert_eq!(payload.matcher_subject(), Some("prompt_input_exit"));
+}
+
+#[test]
+fn test_payload_matcher_subject_prompt() {
+    let payload = HookPayload::Prompt {
+        prompt: "hello".to_string(),
+    };
+    assert_eq!(payload.matcher_subject(), None);
+}
+
+#[test]
+fn test_payload_matcher_subject_stop() {
+    let payload = HookPayload::Stop {
+        stop_hook_active: false,
+    };
+    assert_eq!(payload.matcher_subject(), None);
+}
+
+// =========================================================================
+// SessionEnd Wire Format Tests
+// =========================================================================
+
+#[test]
+fn test_session_end_wire_format() {
+    let msg = HookMessage::session_end("session-abc", "prompt_input_exit");
+    let wire = msg.to_wire_json();
+
+    assert_eq!(wire["hook_event_name"], "SessionEnd");
+    assert_eq!(wire["session_id"], "session-abc");
+    assert_eq!(wire["reason"], "prompt_input_exit");
+}
+
+#[test]
+fn test_session_end_constructor() {
+    let msg = HookMessage::session_end("test-session", "other");
+
+    assert_eq!(msg.event, HookEvent::SessionEnd);
+    assert_eq!(msg.session_id, "test-session");
+    if let HookPayload::SessionEnd { reason } = &msg.payload {
+        assert_eq!(reason, "other");
+    } else {
+        unreachable!("Expected SessionEnd payload");
+    }
+}
+
+// =========================================================================
+// PermissionRequest Wire Format Tests
+// =========================================================================
+
+#[test]
+fn test_permission_request_wire_format_uses_tool_input() {
+    let msg = HookMessage::permission(
+        "session-abc",
+        "Bash",
+        "execute",
+        serde_json::json!({"command": "rm -rf /"}),
+    );
+    let wire = msg.to_wire_json();
+
+    assert_eq!(wire["hook_event_name"], "PermissionRequest");
+    assert_eq!(wire["tool_name"], "Bash");
+    assert_eq!(wire["action"], "execute");
+    // Should be "tool_input", not "context"
+    assert_eq!(wire["tool_input"]["command"], "rm -rf /");
+    assert!(wire.get("context").is_none());
 }

@@ -77,7 +77,7 @@ fn test_hook_executor_registered_events() {
 #[tokio::test]
 async fn test_execute_no_hooks() {
     let executor = HookExecutor::new();
-    let message = HookMessage::session("test", HookEvent::SessionStart, None);
+    let message = HookMessage::session("test", HookEvent::SessionStart, None, None);
 
     let responses = executor.execute(&message).await.unwrap();
     assert!(responses.is_empty());
@@ -129,7 +129,7 @@ async fn test_context_fields_in_wire_json() {
     );
     executor.register(HookEvent::SessionStart, HookConfig::new(&script_path, 5000));
 
-    let message = HookMessage::session("test-session", HookEvent::SessionStart, None);
+    let message = HookMessage::session("test-session", HookEvent::SessionStart, None, None);
     let responses = executor.execute(&message).await.unwrap();
     assert_eq!(responses.len(), 1);
     assert!(responses[0].proceed);
@@ -216,4 +216,87 @@ fn test_matcher_filtering_no_matcher_registers_for_all() {
     // Without matcher, the hook is registered for all Notification events
     assert!(executor.has_hooks(&HookEvent::Notification));
     assert_eq!(executor.hook_count(&HookEvent::Notification), 1);
+}
+
+#[tokio::test]
+async fn test_matcher_filters_session_by_source() {
+    // Hook with matcher "startup" should only fire for source="startup", not "resume"
+    let dir = tempfile::tempdir().unwrap();
+    let script_path = dir.path().join("hook.sh");
+    std::fs::write(&script_path, "#!/bin/bash\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    let mut executor = HookExecutor::new();
+    executor.register(
+        HookEvent::SessionStart,
+        HookConfig::new(&script_path, 5000).with_matcher(Some("startup".to_string())),
+    );
+
+    // Should fire for source="startup"
+    let msg_startup = HookMessage::session(
+        "test",
+        HookEvent::SessionStart,
+        Some("/p".to_string()),
+        Some("startup".to_string()),
+    );
+    let responses = executor.execute(&msg_startup).await.unwrap();
+    assert_eq!(
+        responses.len(),
+        1,
+        "matcher 'startup' should match source 'startup'"
+    );
+
+    // Should skip for source="resume"
+    let msg_resume = HookMessage::session(
+        "test",
+        HookEvent::SessionStart,
+        Some("/p".to_string()),
+        Some("resume".to_string()),
+    );
+    let responses = executor.execute(&msg_resume).await.unwrap();
+    assert_eq!(
+        responses.len(),
+        0,
+        "matcher 'startup' should skip source 'resume'"
+    );
+}
+
+#[tokio::test]
+async fn test_matcher_filters_permission_by_tool_name() {
+    let dir = tempfile::tempdir().unwrap();
+    let script_path = dir.path().join("hook.sh");
+    std::fs::write(&script_path, "#!/bin/bash\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    let mut executor = HookExecutor::new();
+    executor.register(
+        HookEvent::PermissionRequest,
+        HookConfig::new(&script_path, 5000).with_matcher(Some("Bash".to_string())),
+    );
+
+    // Should fire for tool_name="Bash"
+    let msg_bash = HookMessage::permission("test", "Bash", "execute", serde_json::json!({}));
+    let responses = executor.execute(&msg_bash).await.unwrap();
+    assert_eq!(
+        responses.len(),
+        1,
+        "matcher 'Bash' should match tool_name 'Bash'"
+    );
+
+    // Should skip for tool_name="Write"
+    let msg_write = HookMessage::permission("test", "Write", "execute", serde_json::json!({}));
+    let responses = executor.execute(&msg_write).await.unwrap();
+    assert_eq!(
+        responses.len(),
+        0,
+        "matcher 'Bash' should skip tool_name 'Write'"
+    );
 }

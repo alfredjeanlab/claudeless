@@ -23,7 +23,10 @@ pub fn load_hooks(settings: &ClaudeSettings) -> std::io::Result<HookExecutor> {
             "PostToolUse" => Some(HookEvent::PostToolExecution),
             "PostToolUseFailure" => Some(HookEvent::PostToolExecutionFailure),
             "SessionStart" => Some(HookEvent::SessionStart),
+            "SessionEnd" => Some(HookEvent::SessionEnd),
             "Notification" => Some(HookEvent::Notification),
+            "UserPromptSubmit" => Some(HookEvent::PromptSubmit),
+            "PermissionRequest" => Some(HookEvent::PermissionRequest),
             _ => None,
         };
 

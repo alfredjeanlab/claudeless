@@ -78,7 +78,7 @@ async fn test_register_logger() {
         .register_logger(HookEvent::SessionStart, &log_path)
         .unwrap();
 
-    let message = HookMessage::session("test_session", HookEvent::SessionStart, None);
+    let message = HookMessage::session("test_session", HookEvent::SessionStart, None, None);
 
     let responses = registry.executor().execute(&message).await.unwrap();
     assert_eq!(responses.len(), 1);

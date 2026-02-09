@@ -33,10 +33,16 @@ impl Runtime {
         self.write_queue_operation()?;
 
         // Fire session start hook
-        self.fire_session_start_hook().await;
+        self.fire_session_start_hook("startup").await;
+
+        // Fire prompt submit hook
+        self.fire_prompt_submit_hook(&prompt).await;
 
         // Execute the response loop
         self.execute_response_loop(&prompt).await?;
+
+        // Fire session end hook
+        self.fire_session_end_hook("other").await;
 
         // Shutdown MCP servers gracefully
         self.shutdown_mcp().await;

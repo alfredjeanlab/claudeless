@@ -497,15 +497,115 @@ impl TuiAppState {
         }
 
         // Take runtime, fire hook, put it back
-        let runtime = {
+        let (runtime, source) = {
             let mut inner = self.inner.lock();
             inner.session_start_hook_fired = true;
+            let source = if inner.config.show_welcome_back {
+                "resume"
+            } else {
+                "startup"
+            };
+            (inner.runtime.take(), source.to_string())
+        };
+
+        if let Some(rt) = runtime {
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(rt.fire_session_start_hook(&source));
+            });
+            let mut inner = self.inner.lock();
+            inner.runtime = Some(rt);
+        }
+    }
+
+    /// Fire SessionEnd hook (fire-and-forget).
+    ///
+    /// Takes runtime via take/restore pattern to avoid holding the lock
+    /// across the async hook execution.
+    pub fn fire_session_end_hook(&self, reason: &str) {
+        let runtime = {
+            let mut inner = self.inner.lock();
+            inner.runtime.take()
+        };
+
+        if let Some(rt) = runtime {
+            let r = reason.to_string();
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(rt.fire_session_end_hook(&r));
+            });
+            let mut inner = self.inner.lock();
+            inner.runtime = Some(rt);
+        }
+    }
+
+    /// Fire UserPromptSubmit hook (fire-and-forget).
+    ///
+    /// Takes runtime via take/restore pattern to avoid holding the lock
+    /// across the async hook execution.
+    pub fn fire_prompt_submit_hook(&self, prompt: &str) {
+        let runtime = {
+            let mut inner = self.inner.lock();
+            inner.runtime.take()
+        };
+
+        if let Some(rt) = runtime {
+            let p = prompt.to_string();
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(rt.fire_prompt_submit_hook(&p));
+            });
+            let mut inner = self.inner.lock();
+            inner.runtime = Some(rt);
+        }
+    }
+
+    /// Fire PermissionRequest hook (fire-and-forget).
+    ///
+    /// Extracts tool_name and tool_input from the PermissionType.
+    pub fn fire_permission_request_hook(
+        &self,
+        permission_type: &crate::tui::widgets::permission::PermissionType,
+    ) {
+        let (tool_name, tool_input) = match permission_type {
+            crate::tui::widgets::permission::PermissionType::Bash {
+                command,
+                description,
+            } => {
+                let mut input = serde_json::json!({ "command": command });
+                if let Some(desc) = description {
+                    input["description"] = serde_json::json!(desc);
+                }
+                ("Bash".to_string(), input)
+            }
+            crate::tui::widgets::permission::PermissionType::Edit {
+                file_path,
+                diff_lines,
+            } => (
+                "Edit".to_string(),
+                serde_json::json!({
+                    "file_path": file_path,
+                    "changes": diff_lines.len()
+                }),
+            ),
+            crate::tui::widgets::permission::PermissionType::Write {
+                file_path,
+                content_lines,
+            } => (
+                "Write".to_string(),
+                serde_json::json!({
+                    "file_path": file_path,
+                    "content": content_lines.join("\n")
+                }),
+            ),
+        };
+
+        let runtime = {
+            let mut inner = self.inner.lock();
             inner.runtime.take()
         };
 
         if let Some(rt) = runtime {
             tokio::task::block_in_place(|| {
-                tokio::runtime::Handle::current().block_on(rt.fire_session_start_hook());
+                tokio::runtime::Handle::current()
+                    .block_on(rt.fire_permission_request_hook(&tool_name, tool_input));
             });
             let mut inner = self.inner.lock();
             inner.runtime = Some(rt);

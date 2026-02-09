@@ -3,7 +3,7 @@
 
 //! Hook execution engine.
 
-use super::protocol::{HookEvent, HookMessage, HookPayload, HookResponse};
+use super::protocol::{HookEvent, HookMessage, HookResponse};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -113,21 +113,7 @@ impl HookExecutor {
             // Empty or "*" matchers mean "match all" (same as omitting matcher).
             if let Some(ref matcher_pattern) = hook.matcher {
                 if !matcher_pattern.is_empty() && matcher_pattern != "*" {
-                    let subject = match &message.payload {
-                        // For Notification events, match against notification_type
-                        HookPayload::Notification {
-                            ref notification_type,
-                            ..
-                        } => Some(notification_type.as_str()),
-                        // For tool events, match against tool_name
-                        HookPayload::ToolExecution { ref tool_name, .. } => {
-                            Some(tool_name.as_str())
-                        }
-                        HookPayload::ToolExecutionFailure { ref tool_name, .. } => {
-                            Some(tool_name.as_str())
-                        }
-                        _ => None,
-                    };
+                    let subject = message.payload.matcher_subject();
                     if let Some(subject) = subject {
                         let matches = matcher_pattern
                             .split('|')
