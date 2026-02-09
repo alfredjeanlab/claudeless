@@ -4,7 +4,7 @@
 //! Output format handling for text, JSON, and streaming JSON modes.
 
 use crate::cli::OutputFormat;
-use crate::config::{ResponseSpec, ToolCallSpec, UsageSpec};
+use crate::config::{Response, ToolCall, UsageSpec};
 use crate::state::{to_io_json, ContentBlock};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
@@ -266,8 +266,8 @@ impl<W: Write> OutputWriter<W> {
     /// Write a response in the configured format
     pub fn write_response(
         &mut self,
-        response: &ResponseSpec,
-        tool_calls: &[ToolCallSpec],
+        response: &Response,
+        tool_calls: &[ToolCall],
     ) -> std::io::Result<()> {
         match self.format {
             OutputFormat::Text => self.write_text(response),
@@ -276,26 +276,20 @@ impl<W: Write> OutputWriter<W> {
         }
     }
 
-    fn write_text(&mut self, response: &ResponseSpec) -> std::io::Result<()> {
-        let text = match response {
-            ResponseSpec::Simple(s) => s.as_str(),
-            ResponseSpec::Detailed { text, .. } => text.as_str(),
-        };
+    fn write_text(&mut self, response: &Response) -> std::io::Result<()> {
+        let text = response.say.as_deref().unwrap_or("");
         writeln!(self.writer, "{}", text)
     }
 
-    fn write_json(
-        &mut self,
-        response: &ResponseSpec,
-        tool_calls: &[ToolCallSpec],
-    ) -> std::io::Result<()> {
-        let (text, usage) = response.text_and_usage();
+    fn write_json(&mut self, response: &Response, tool_calls: &[ToolCall]) -> std::io::Result<()> {
+        let text = response.say.clone().unwrap_or_default();
+        let usage = response.usage.clone();
 
         let mut content = vec![ContentBlock::Text { text: text.clone() }];
         for tc in tool_calls {
             content.push(ContentBlock::ToolUse {
                 id: format!("toolu_{}", uuid_stub()),
-                name: tc.tool.clone(),
+                name: tc.call.clone(),
                 input: tc.input.clone(),
             });
         }
@@ -324,10 +318,11 @@ impl<W: Write> OutputWriter<W> {
 
     fn write_stream_json(
         &mut self,
-        response: &ResponseSpec,
-        tool_calls: &[ToolCallSpec],
+        response: &Response,
+        tool_calls: &[ToolCall],
     ) -> std::io::Result<()> {
-        let (text, usage) = response.text_and_usage();
+        let text = response.say.clone().unwrap_or_default();
+        let usage = response.usage.clone();
 
         let msg_id = format!("msg_{}", uuid_stub());
 
@@ -377,7 +372,7 @@ impl<W: Write> OutputWriter<W> {
                 index: idx,
                 content_block: ContentBlock::ToolUse {
                     id: format!("toolu_{}", uuid_stub()),
-                    name: tc.tool.clone(),
+                    name: tc.call.clone(),
                     input: serde_json::Value::Object(Default::default()),
                 },
             };
@@ -436,7 +431,7 @@ impl<W: Write> OutputWriter<W> {
     /// Write a complete response in real Claude format
     pub fn write_real_response(
         &mut self,
-        response: &ResponseSpec,
+        response: &Response,
         session_id: &str,
         tools: Vec<String>,
     ) -> std::io::Result<()> {
@@ -446,7 +441,7 @@ impl<W: Write> OutputWriter<W> {
     /// Write a complete response in real Claude format with MCP servers
     pub fn write_real_response_with_mcp(
         &mut self,
-        response: &ResponseSpec,
+        response: &Response,
         session_id: &str,
         tools: Vec<String>,
         mcp_servers: Vec<McpServerInfo>,
@@ -461,12 +456,9 @@ impl<W: Write> OutputWriter<W> {
     }
 
     /// Write JSON in real Claude's result wrapper format
-    fn write_real_json(
-        &mut self,
-        response: &ResponseSpec,
-        session_id: &str,
-    ) -> std::io::Result<()> {
-        let (text, usage_spec) = response.text_and_usage();
+    fn write_real_json(&mut self, response: &Response, session_id: &str) -> std::io::Result<()> {
+        let text = response.say.clone().unwrap_or_default();
+        let usage_spec = response.usage.clone();
 
         let result = if let Some(usage) = usage_spec {
             ResultOutput::success_with_usage(
@@ -492,13 +484,14 @@ impl<W: Write> OutputWriter<W> {
     /// 3. Result event
     fn write_real_stream_json(
         &mut self,
-        response: &ResponseSpec,
+        response: &Response,
         session_id: &str,
         tools: Vec<String>,
         mcp_servers: Vec<McpServerInfo>,
     ) -> std::io::Result<()> {
-        let (text, usage) = response.text_and_usage();
-        let tool_calls = response.tool_calls();
+        let text = response.say.clone().unwrap_or_default();
+        let usage = response.usage.clone();
+        let tool_calls = &response.tools;
 
         let msg_id = format!("msg_{}", uuid_stub());
 
@@ -518,7 +511,7 @@ impl<W: Write> OutputWriter<W> {
             content_blocks.push(serde_json::json!({
                 "type": "tool_use",
                 "id": format!("toolu_{:08x}", i),
-                "name": call.tool,
+                "name": call.call,
                 "input": call.input,
             }));
         }

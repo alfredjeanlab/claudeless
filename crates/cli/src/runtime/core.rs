@@ -9,7 +9,7 @@ use std::time::Duration;
 use parking_lot::RwLock;
 
 use crate::cli::Cli;
-use crate::config::{FailureSpec, ResolvedTimeouts, ResponseSpec, ToolCallSpec};
+use crate::config::{FailureSpec, ResolvedTimeouts, Response, ScenarioConfig, ToolCall, UsageSpec};
 use crate::failure::FailureExecutor;
 use crate::hooks::{HookEvent, HookExecutor, HookMessage, StopHookResponse};
 use crate::mcp::McpManager;
@@ -23,7 +23,7 @@ use super::RuntimeContext;
 #[derive(Debug)]
 pub struct PendingPermission {
     /// The tool call specification.
-    pub tool_call: ToolCallSpec,
+    pub tool_call: ToolCall,
     /// The tool use ID for this call.
     pub tool_use_id: String,
 }
@@ -37,8 +37,12 @@ pub struct PendingPermission {
 /// - Handle hook continuations
 #[derive(Debug)]
 pub struct TurnResult {
-    /// The full response from the assistant (includes usage stats for JSON output).
-    pub response: ResponseSpec,
+    /// Response text (say).
+    pub say: Option<String>,
+    /// Tool calls in the response.
+    pub tools: Vec<ToolCall>,
+    /// Token usage stats (for JSON output).
+    pub usage: Option<UsageSpec>,
     /// Results from tool execution (if any tools were called).
     pub tool_results: Vec<ToolExecutionResult>,
     /// If a Stop hook blocked, this contains the continuation prompt.
@@ -53,7 +57,17 @@ pub struct TurnResult {
 impl TurnResult {
     /// Get the response text.
     pub fn response_text(&self) -> &str {
-        self.response.text()
+        self.say.as_deref().unwrap_or("")
+    }
+
+    /// Convert to a `Response` for output writing.
+    pub fn to_response(&self) -> crate::config::Response {
+        crate::config::Response {
+            say: self.say.clone(),
+            tools: self.tools.clone(),
+            usage: self.usage.clone(),
+            delay_ms: None,
+        }
     }
 }
 
@@ -145,15 +159,15 @@ impl Runtime {
     }
 
     /// Get the scenario config (for TUI mode config extraction).
-    pub fn scenario_config(&self) -> &crate::config::ScenarioConfig {
+    pub fn scenario_config(&self) -> &ScenarioConfig {
         self.scenario
             .as_ref()
             .map(|s| s.config())
             .unwrap_or_else(|| {
                 // Use a static default config if no scenario
-                static DEFAULT_CONFIG: std::sync::OnceLock<crate::config::ScenarioConfig> =
+                static DEFAULT_CONFIG: std::sync::OnceLock<ScenarioConfig> =
                     std::sync::OnceLock::new();
-                DEFAULT_CONFIG.get_or_init(crate::config::ScenarioConfig::default)
+                DEFAULT_CONFIG.get_or_init(ScenarioConfig::default)
             })
     }
 
@@ -187,15 +201,16 @@ impl Runtime {
         // When a response step has tool calls that all auto-execute (no permission needed)
         // and the scenario has pending turns, we continue to the next turn automatically.
         // This simulates the real Claude agent loop: tool result → next API call → next tool.
-        let mut all_tool_calls: Vec<ToolCallSpec> = Vec::new();
+        let mut all_tool_calls: Vec<ToolCall> = Vec::new();
         let mut all_tool_results: Vec<ToolExecutionResult> = Vec::new();
         let mut current_prompt = prompt.to_string();
         let mut final_text;
+        let mut final_usage;
 
         loop {
             // Match prompt to get response (or failure)
-            let response_spec = match self.match_prompt_for_turn(&current_prompt) {
-                Ok(spec) => spec,
+            let matched = match self.match_prompt_for_turn(&current_prompt) {
+                Ok(m) => m,
                 Err(failure_spec) => {
                     // Record error to JSONL before returning
                     self.record_failure_to_jsonl(&failure_spec);
@@ -203,16 +218,17 @@ impl Runtime {
                 }
             };
 
-            // Get response delay from spec if detailed
-            let response_delay = response_spec.as_ref().and_then(|r| r.delay_ms());
+            // Get response delay from matched response
+            let response_delay = matched.as_ref().and_then(|r| r.delay_ms);
             if let Some(delay) = response_delay {
                 tokio::time::sleep(Duration::from_millis(delay)).await;
             }
 
-            // Get response and tool calls
-            let response = response_spec.unwrap_or(ResponseSpec::Simple(String::new()));
-            let response_text = response.text().to_string();
-            let tool_calls = response.tool_calls().to_vec();
+            // Get response fields
+            let response = matched.unwrap_or_default();
+            let response_text = response.say.as_deref().unwrap_or("").to_string();
+            let tool_calls = response.tools;
+            final_usage = response.usage;
 
             // Execute tools and collect results
             let (tool_results, pending_permission) = self
@@ -233,14 +249,10 @@ impl Runtime {
 
             // If a tool needs permission, stop and return everything accumulated so far
             if pending_permission.is_some() {
-                let merged = ResponseSpec::Detailed {
-                    text: final_text,
-                    tool_calls: all_tool_calls,
-                    usage: None,
-                    delay_ms: None,
-                };
                 return Ok(TurnResult {
-                    response: merged,
+                    say: Some(final_text),
+                    tools: all_tool_calls,
+                    usage: None,
                     tool_results: all_tool_results,
                     hook_continuation: None,
                     is_hook_continuation: self.stop_hook_active,
@@ -267,18 +279,6 @@ impl Runtime {
             break;
         }
 
-        // Build merged response with all accumulated tool calls
-        let response = if all_tool_calls.is_empty() {
-            ResponseSpec::Simple(final_text)
-        } else {
-            ResponseSpec::Detailed {
-                text: final_text,
-                tool_calls: all_tool_calls,
-                usage: None,
-                delay_ms: None,
-            }
-        };
-
         // Skip stop hook when a permission prompt is pending (already handled above)
         let hook_continuation = self.fire_stop_hook().await;
 
@@ -289,7 +289,9 @@ impl Runtime {
         self.stop_hook_active = hook_continuation.is_some();
 
         Ok(TurnResult {
-            response,
+            say: Some(final_text),
+            tools: all_tool_calls,
+            usage: final_usage,
             tool_results: all_tool_results,
             hook_continuation,
             is_hook_continuation,
@@ -298,7 +300,7 @@ impl Runtime {
     }
 
     /// Match prompt against scenario (for execute()).
-    fn match_prompt_for_turn(&mut self, prompt: &str) -> Result<Option<ResponseSpec>, FailureSpec> {
+    fn match_prompt_for_turn(&mut self, prompt: &str) -> Result<Option<Response>, FailureSpec> {
         if let Some(ref mut scenario) = self.scenario {
             if let Some(result) = scenario.match_prompt(prompt) {
                 // Check for failure in rule
@@ -306,7 +308,12 @@ impl Runtime {
                     return Err(failure_spec.clone());
                 }
 
-                Ok(scenario.get_response(&result).cloned())
+                Ok(Some(Response {
+                    say: scenario.get_say(&result).map(String::from),
+                    tools: scenario.get_tools(&result).to_vec(),
+                    usage: scenario.get_usage(&result).cloned(),
+                    delay_ms: scenario.get_delay_ms(&result),
+                }))
             } else if let Some(default) = scenario.default_response() {
                 Ok(Some(default.clone()))
             } else {
@@ -314,9 +321,10 @@ impl Runtime {
             }
         } else {
             // No scenario - use a default response
-            Ok(Some(ResponseSpec::Simple(
-                "Hello! I'm Claudeless!".to_string(),
-            )))
+            Ok(Some(Response {
+                say: Some("Hello! I'm Claudeless!".to_string()),
+                ..Default::default()
+            }))
         }
     }
 
@@ -339,7 +347,7 @@ impl Runtime {
         &mut self,
         prompt: &str,
         response_text: &str,
-        tool_calls: &[ToolCallSpec],
+        tool_calls: &[ToolCall],
     ) -> (Vec<ToolExecutionResult>, Option<PendingPermission>) {
         if tool_calls.is_empty() {
             return (vec![], None);
@@ -380,7 +388,7 @@ impl Runtime {
                     let pre_msg = HookMessage::tool_execution(
                         self.context.session_id.to_string(),
                         HookEvent::PreToolExecution,
-                        &call.tool,
+                        &call.call,
                         call.input.clone(),
                         None,
                         Some(tool_use_id.clone()),
@@ -405,7 +413,7 @@ impl Runtime {
             }
 
             // For ExitPlanMode: return as pending for TUI mode interactive dialog
-            if call.tool == "ExitPlanMode" && self.cli.should_use_tui() {
+            if call.call == "ExitPlanMode" && self.cli.should_use_tui() {
                 // TUI mode — return as pending for plan approval dialog
                 pending_permission = Some(PendingPermission {
                     tool_call: call.clone(),
@@ -416,7 +424,7 @@ impl Runtime {
 
             // For AskUserQuestion: inject scenario-configured answers or
             // return as pending for TUI mode interactive dialog
-            let call = if call.tool == "AskUserQuestion" {
+            let call = if call.call == "AskUserQuestion" {
                 let has_answers = call.input.get("answers").is_some();
                 if !has_answers {
                     // Check scenario for configured answers first (works in both TUI and print mode)
@@ -443,7 +451,7 @@ impl Runtime {
 
             // Inject canned result/error from scenario tool_execution.tools config
             let call = if call.result.is_none() {
-                if let Some(tool_cfg) = self.get_scenario_tool_config(&call.tool) {
+                if let Some(tool_cfg) = self.get_scenario_tool_config(&call.call) {
                     if tool_cfg.result.is_some() || tool_cfg.error.is_some() {
                         let mut modified = call.into_owned();
                         if let Some(ref result) = tool_cfg.result {
@@ -468,7 +476,7 @@ impl Runtime {
                 if let (Some(ref state_writer), Some(ref uuid)) = (&self.state, &user_uuid) {
                     let tool_use_block = ContentBlock::ToolUse {
                         id: tool_use_id.clone(),
-                        name: call.tool.clone(),
+                        name: call.call.clone(),
                         input: call.input.clone(),
                     };
                     state_writer
@@ -511,7 +519,7 @@ impl Runtime {
                     if hook_executor.has_hooks(&HookEvent::PostToolExecutionFailure) {
                         let post_msg = HookMessage::tool_execution_failure(
                             self.context.session_id.to_string(),
-                            &call.tool,
+                            &call.call,
                             call.input.clone(),
                             Some(tool_use_id.clone()),
                             result.text().unwrap_or("Unknown error"),
@@ -527,7 +535,7 @@ impl Runtime {
                         let post_msg = HookMessage::tool_execution(
                             self.context.session_id.to_string(),
                             HookEvent::PostToolExecution,
-                            &call.tool,
+                            &call.call,
                             call.input.clone(),
                             result
                                 .text()
@@ -560,16 +568,16 @@ impl Runtime {
 
     /// Get pre-configured answers from scenario tool config.
     fn get_scenario_answers(&self, tool_name: &str) -> Option<serde_json::Value> {
-        let tool_exec = self.scenario.as_ref()?.config().tool_execution.as_ref()?;
-        let tool_config = tool_exec.tools.get(tool_name)?;
+        let tools_cfg = self.scenario.as_ref()?.config().tools.as_ref()?;
+        let tool_config = tools_cfg.tools.get(tool_name)?;
         let answers = tool_config.answers.as_ref()?;
         Some(serde_json::json!(answers))
     }
 
     /// Get per-tool scenario config (canned result, error, etc.).
     fn get_scenario_tool_config(&self, tool_name: &str) -> Option<&crate::config::ToolConfig> {
-        let tool_exec = self.scenario.as_ref()?.config().tool_execution.as_ref()?;
-        tool_exec.tools.get(tool_name)
+        let tools_cfg = self.scenario.as_ref()?.config().tools.as_ref()?;
+        tools_cfg.tools.get(tool_name)
     }
 
     /// Fire Stop hook and return continuation prompt if blocked.

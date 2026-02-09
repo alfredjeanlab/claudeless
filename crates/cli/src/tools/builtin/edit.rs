@@ -5,7 +5,7 @@
 
 use std::fs;
 
-use crate::config::ToolCallSpec;
+use crate::config::ToolCall;
 use crate::tools::result::ToolExecutionResult;
 
 use super::{
@@ -21,7 +21,7 @@ pub struct EditExecutor;
 impl BuiltinToolExecutor for EditExecutor {
     fn execute(
         &self,
-        call: &ToolCallSpec,
+        call: &ToolCall,
         tool_use_id: &str,
         _ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
@@ -29,21 +29,21 @@ impl BuiltinToolExecutor for EditExecutor {
             call.input,
             extract_file_path => "'file_path' or 'path'",
             tool_use_id,
-            call.tool
+            call.call
         );
         let old_string = require_field!(
             call.input,
             "old_string",
             extract_str,
             tool_use_id,
-            call.tool
+            call.call
         );
         let new_string = require_field!(
             call.input,
             "new_string",
             extract_str,
             tool_use_id,
-            call.tool
+            call.call
         );
 
         let resolved_path = std::path::PathBuf::from(path);

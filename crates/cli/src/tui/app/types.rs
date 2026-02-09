@@ -87,7 +87,6 @@ impl TuiConfig {
             cli.permissions.permission_mode.clone()
         } else {
             config
-                .environment
                 .permission_mode
                 .as_deref()
                 .and_then(|s| clap::ValueEnum::from_str(s, true).ok())
@@ -99,23 +98,23 @@ impl TuiConfig {
             .simulator
             .claude_version
             .clone()
-            .or_else(|| config.identity.claude_version.clone());
+            .or_else(|| config.claude.version.clone());
 
         Self {
-            trusted: config.environment.trusted,
-            logged_in: config.environment.logged_in,
+            trusted: config.trusted,
+            logged_in: config.logged_in,
             user_name: config
-                .identity
-                .user_name
+                .claude
+                .username
                 .clone()
                 .unwrap_or_else(|| DEFAULT_USER_NAME.to_string()),
             model: config
-                .identity
-                .default_model
+                .claude
+                .model
                 .clone()
                 .unwrap_or_else(|| cli.model.clone()),
             working_directory: config
-                .environment
+                .claude
                 .working_directory
                 .as_ref()
                 .map(PathBuf::from)
@@ -127,10 +126,10 @@ impl TuiConfig {
             claude_version,
             is_tty,
             initial_prompt: cli.prompt.clone(),
-            placeholder: config.identity.placeholder.clone(),
-            provider: config.identity.provider.clone(),
-            show_welcome_back: config.identity.show_welcome_back.unwrap_or(false),
-            welcome_back_right_panel: config.identity.welcome_back_right_panel.clone(),
+            placeholder: config.claude.placeholder.clone(),
+            provider: config.claude.provider.clone(),
+            show_welcome_back: config.claude.show_welcome_back.unwrap_or(false),
+            welcome_back_right_panel: config.claude.welcome_back_right_panel.clone(),
         }
     }
 
@@ -151,7 +150,6 @@ impl TuiConfig {
             cli_permission_mode.clone()
         } else {
             config
-                .environment
                 .permission_mode
                 .as_deref()
                 .and_then(|s| clap::ValueEnum::from_str(s, true).ok())
@@ -161,22 +159,22 @@ impl TuiConfig {
         // CLI claude_version overrides scenario
         let claude_version = cli_claude_version
             .map(|s| s.to_string())
-            .or_else(|| config.identity.claude_version.clone());
+            .or_else(|| config.claude.version.clone());
 
         Self {
-            trusted: config.environment.trusted,
-            logged_in: config.environment.logged_in,
+            trusted: config.trusted,
+            logged_in: config.logged_in,
             user_name: config
-                .identity
-                .user_name
+                .claude
+                .username
                 .clone()
                 .unwrap_or_else(|| DEFAULT_USER_NAME.to_string()),
             model: cli_model
                 .map(|s| s.to_string())
-                .or_else(|| config.identity.default_model.clone())
+                .or_else(|| config.claude.model.clone())
                 .unwrap_or_else(|| DEFAULT_MODEL.to_string()),
             working_directory: config
-                .environment
+                .claude
                 .working_directory
                 .as_ref()
                 .map(PathBuf::from)
@@ -184,14 +182,14 @@ impl TuiConfig {
             permission_mode,
             allow_bypass_permissions,
             bypass_confirmation_needed,
-            timeouts: ResolvedTimeouts::resolve(config.timing.timeouts.as_ref()),
+            timeouts: ResolvedTimeouts::resolve(config.claude.timeouts.as_ref()),
             claude_version,
             is_tty,
             initial_prompt,
-            placeholder: config.identity.placeholder.clone(),
-            provider: config.identity.provider.clone(),
-            show_welcome_back: config.identity.show_welcome_back.unwrap_or(false),
-            welcome_back_right_panel: config.identity.welcome_back_right_panel.clone(),
+            placeholder: config.claude.placeholder.clone(),
+            provider: config.claude.provider.clone(),
+            show_welcome_back: config.claude.show_welcome_back.unwrap_or(false),
+            welcome_back_right_panel: config.claude.welcome_back_right_panel.clone(),
         }
     }
 }

@@ -10,8 +10,7 @@ use std::collections::HashMap;
 
 use crate::cli::{Cli, FORCE_TUI};
 use crate::config::{
-    ResolvedTimeouts, ScenarioConfig, ToolCallSpec, ToolConfig, ToolExecutionConfig,
-    ToolExecutionMode,
+    ResolvedTimeouts, ScenarioConfig, ToolCall, ToolConfig, ToolExecutionMode, ToolsConfig,
 };
 use crate::hooks::{HookConfig, HookEvent, HookExecutor};
 use crate::scenario::Scenario;
@@ -82,8 +81,8 @@ async fn pre_tool_use_hook_fires_for_exit_plan_mode_in_tui() {
     // Force TUI mode so ExitPlanMode triggers the early return
     FORCE_TUI.set(Some(true));
 
-    let tool_calls = vec![ToolCallSpec {
-        tool: "ExitPlanMode".to_string(),
+    let tool_calls = vec![ToolCall {
+        call: "ExitPlanMode".to_string(),
         input: serde_json::json!({}),
         result: None,
     }];
@@ -125,8 +124,8 @@ async fn pre_tool_use_hook_fires_for_ask_user_question_in_tui() {
     // Force TUI mode so AskUserQuestion triggers the early return
     FORCE_TUI.set(Some(true));
 
-    let tool_calls = vec![ToolCallSpec {
-        tool: "AskUserQuestion".to_string(),
+    let tool_calls = vec![ToolCall {
+        call: "AskUserQuestion".to_string(),
         input: serde_json::json!({"questions": []}),
         result: None,
     }];
@@ -170,8 +169,8 @@ async fn pre_tool_use_hook_blocking_prevents_tui_pending_permission() {
     // Force TUI mode
     FORCE_TUI.set(Some(true));
 
-    let tool_calls = vec![ToolCallSpec {
-        tool: "ExitPlanMode".to_string(),
+    let tool_calls = vec![ToolCall {
+        call: "ExitPlanMode".to_string(),
         input: serde_json::json!({}),
         result: None,
     }];
@@ -203,8 +202,8 @@ async fn pre_tool_use_hook_fires_for_regular_tools() {
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
     let mut runtime = build_test_runtime(Some(hook_executor), cli);
 
-    let tool_calls = vec![ToolCallSpec {
-        tool: "Read".to_string(),
+    let tool_calls = vec![ToolCall {
+        call: "Read".to_string(),
         input: serde_json::json!({"file_path": "/dev/null"}),
         result: Some("file content".to_string()),
     }];
@@ -250,8 +249,8 @@ async fn post_tool_use_hook_fires_on_success() {
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
     let mut runtime = build_test_runtime(Some(hook_executor), cli);
 
-    let tool_calls = vec![ToolCallSpec {
-        tool: "Read".to_string(),
+    let tool_calls = vec![ToolCall {
+        call: "Read".to_string(),
         input: serde_json::json!({"file_path": "/dev/null"}),
         result: Some("file content".to_string()),
     }];
@@ -295,8 +294,8 @@ async fn post_tool_use_hook_does_not_fire_on_error() {
     let mut runtime = build_test_runtime(Some(hook_executor), cli);
 
     // Tool with no result configured => MockExecutor returns error
-    let tool_calls = vec![ToolCallSpec {
-        tool: "Read".to_string(),
+    let tool_calls = vec![ToolCall {
+        call: "Read".to_string(),
         input: serde_json::json!({"file_path": "/dev/null"}),
         result: None,
     }];
@@ -343,8 +342,8 @@ async fn post_tool_use_failure_hook_fires_on_error() {
     let mut runtime = build_test_runtime(Some(hook_executor), cli);
 
     // Tool with no result configured => MockExecutor returns error
-    let tool_calls = vec![ToolCallSpec {
-        tool: "Read".to_string(),
+    let tool_calls = vec![ToolCall {
+        call: "Read".to_string(),
         input: serde_json::json!({"file_path": "/dev/null"}),
         result: None,
     }];
@@ -390,8 +389,8 @@ async fn post_tool_use_failure_hook_does_not_fire_on_success() {
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
     let mut runtime = build_test_runtime(Some(hook_executor), cli);
 
-    let tool_calls = vec![ToolCallSpec {
-        tool: "Read".to_string(),
+    let tool_calls = vec![ToolCall {
+        call: "Read".to_string(),
         input: serde_json::json!({"file_path": "/dev/null"}),
         result: Some("file content".to_string()),
     }];
@@ -416,7 +415,7 @@ fn build_test_runtime_with_scenario(
     cli: Cli,
 ) -> Runtime {
     let config = ScenarioConfig {
-        tool_execution: Some(ToolExecutionConfig {
+        tools: Some(ToolsConfig {
             mode: ToolExecutionMode::Mock,
             tools: tool_configs,
         }),
@@ -451,8 +450,8 @@ async fn scenario_canned_result_injected_into_tool_call() {
     let mut runtime = build_test_runtime_with_scenario(tools, None, cli);
 
     // Tool call has no inline result — should get canned result from scenario
-    let tool_calls = vec![ToolCallSpec {
-        tool: "Read".to_string(),
+    let tool_calls = vec![ToolCall {
+        call: "Read".to_string(),
         input: serde_json::json!({"file_path": "/nonexistent"}),
         result: None,
     }];
@@ -480,8 +479,8 @@ async fn scenario_canned_error_injected_into_tool_call() {
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
     let mut runtime = build_test_runtime_with_scenario(tools, None, cli);
 
-    let tool_calls = vec![ToolCallSpec {
-        tool: "Write".to_string(),
+    let tool_calls = vec![ToolCall {
+        call: "Write".to_string(),
         input: serde_json::json!({"file_path": "/tmp/out", "content": "hi"}),
         result: None,
     }];
@@ -512,8 +511,8 @@ async fn inline_result_takes_precedence_over_scenario_config() {
     let mut runtime = build_test_runtime_with_scenario(tools, None, cli);
 
     // Tool call has an inline result — should NOT be overridden
-    let tool_calls = vec![ToolCallSpec {
-        tool: "Read".to_string(),
+    let tool_calls = vec![ToolCall {
+        call: "Read".to_string(),
         input: serde_json::json!({"file_path": "/dev/null"}),
         result: Some("inline result".to_string()),
     }];
@@ -561,8 +560,8 @@ async fn scenario_canned_result_fires_post_tool_use_hook() {
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
     let mut runtime = build_test_runtime_with_scenario(tools, Some(hook_executor), cli);
 
-    let tool_calls = vec![ToolCallSpec {
-        tool: "Read".to_string(),
+    let tool_calls = vec![ToolCall {
+        call: "Read".to_string(),
         input: serde_json::json!({"file_path": "/nonexistent"}),
         result: None,
     }];
@@ -585,8 +584,8 @@ async fn no_scenario_config_leaves_tool_call_unchanged() {
     let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
     let mut runtime = build_test_runtime(None, cli);
 
-    let tool_calls = vec![ToolCallSpec {
-        tool: "Read".to_string(),
+    let tool_calls = vec![ToolCall {
+        call: "Read".to_string(),
         input: serde_json::json!({"file_path": "/dev/null"}),
         result: None,
     }];
@@ -666,7 +665,7 @@ async fn ask_user_question_with_scenario_answers_in_tui_executes_directly() {
     tools.insert(
         "AskUserQuestion".to_string(),
         ToolConfig {
-            auto_approve: true,
+            approve: true,
             answers: Some({
                 let mut m = HashMap::new();
                 m.insert("Which DB?".to_string(), "PostgreSQL".to_string());
@@ -682,8 +681,8 @@ async fn ask_user_question_with_scenario_answers_in_tui_executes_directly() {
     // Force TUI mode — scenario answers should still be used instead of pending_permission
     FORCE_TUI.set(Some(true));
 
-    let tool_calls = vec![ToolCallSpec {
-        tool: "AskUserQuestion".to_string(),
+    let tool_calls = vec![ToolCall {
+        call: "AskUserQuestion".to_string(),
         input: serde_json::json!({
             "questions": [{
                 "question": "Which DB?",
@@ -726,8 +725,8 @@ async fn ask_user_question_without_scenario_answers_in_tui_returns_pending() {
 
     FORCE_TUI.set(Some(true));
 
-    let tool_calls = vec![ToolCallSpec {
-        tool: "AskUserQuestion".to_string(),
+    let tool_calls = vec![ToolCall {
+        call: "AskUserQuestion".to_string(),
         input: serde_json::json!({
             "questions": [{
                 "question": "Which DB?",

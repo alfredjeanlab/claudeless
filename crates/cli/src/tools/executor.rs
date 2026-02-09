@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use crate::config::{ToolCallSpec, ToolExecutionMode};
+use crate::config::{ToolCall, ToolExecutionMode};
 use crate::mcp::McpManager;
 use crate::permission::{PermissionChecker, PermissionResult};
 use crate::state::StateWriter;
@@ -48,7 +48,7 @@ pub trait ToolExecutor: Send + Sync {
     /// Execute a tool call and return the result.
     fn execute(
         &self,
-        call: &ToolCallSpec,
+        call: &ToolCall,
         tool_use_id: &str,
         ctx: &ExecutionContext,
     ) -> ToolExecutionResult;
@@ -71,13 +71,13 @@ impl MockExecutor {
 impl ToolExecutor for MockExecutor {
     fn execute(
         &self,
-        call: &ToolCallSpec,
+        call: &ToolCall,
         tool_use_id: &str,
         _ctx: &ExecutionContext,
     ) -> ToolExecutionResult {
         match &call.result {
             Some(result) => ToolExecutionResult::success(tool_use_id, result),
-            None => ToolExecutionResult::no_mock_result(tool_use_id, &call.tool),
+            None => ToolExecutionResult::no_mock_result(tool_use_id, &call.call),
         }
     }
 
@@ -111,12 +111,12 @@ impl PermissionCheckingExecutor {
 impl ToolExecutor for PermissionCheckingExecutor {
     fn execute(
         &self,
-        call: &ToolCallSpec,
+        call: &ToolCall,
         tool_use_id: &str,
         ctx: &ExecutionContext,
     ) -> ToolExecutionResult {
-        let action = self.get_action(&call.tool);
-        match self.checker.check(&call.tool, action) {
+        let action = self.get_action(&call.call);
+        match self.checker.check(&call.call, action) {
             PermissionResult::Allowed => self.inner.execute(call, tool_use_id, ctx),
             PermissionResult::Denied { reason } => {
                 ToolExecutionResult::permission_denied(tool_use_id, reason)

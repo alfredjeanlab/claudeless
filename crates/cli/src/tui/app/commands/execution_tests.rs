@@ -3,15 +3,15 @@
 
 use serde_json::json;
 
-use crate::config::ToolCallSpec;
+use crate::config::ToolCall;
 use crate::tui::widgets::permission::{DiffKind, PermissionType};
 
 use super::tool_call_to_permission_type;
 
 #[test]
 fn bash_tool_converts_to_bash_permission() {
-    let call = ToolCallSpec {
-        tool: "Bash".to_string(),
+    let call = ToolCall {
+        call: "Bash".to_string(),
         input: json!({
             "command": "ls -la",
             "description": "List files"
@@ -34,8 +34,8 @@ fn bash_tool_converts_to_bash_permission() {
 
 #[test]
 fn bash_tool_without_description() {
-    let call = ToolCallSpec {
-        tool: "Bash".to_string(),
+    let call = ToolCall {
+        call: "Bash".to_string(),
         input: json!({ "command": "echo hi" }),
         result: None,
     };
@@ -55,8 +55,8 @@ fn bash_tool_without_description() {
 
 #[test]
 fn bash_tool_without_command_returns_none() {
-    let call = ToolCallSpec {
-        tool: "Bash".to_string(),
+    let call = ToolCall {
+        call: "Bash".to_string(),
         input: json!({}),
         result: None,
     };
@@ -66,8 +66,8 @@ fn bash_tool_without_command_returns_none() {
 
 #[test]
 fn write_tool_converts_to_write_permission() {
-    let call = ToolCallSpec {
-        tool: "Write".to_string(),
+    let call = ToolCall {
+        call: "Write".to_string(),
         input: json!({
             "file_path": "/tmp/test.txt",
             "content": "line1\nline2\nline3"
@@ -90,8 +90,8 @@ fn write_tool_converts_to_write_permission() {
 
 #[test]
 fn edit_tool_converts_to_edit_permission() {
-    let call = ToolCallSpec {
-        tool: "Edit".to_string(),
+    let call = ToolCall {
+        call: "Edit".to_string(),
         input: json!({
             "file_path": "src/main.rs",
             "old_string": "old line",
@@ -122,8 +122,8 @@ fn edit_tool_converts_to_edit_permission() {
 
 #[test]
 fn read_completed_display_uses_read_prefix() {
-    let call = ToolCallSpec {
-        tool: "Read".to_string(),
+    let call = ToolCall {
+        call: "Read".to_string(),
         input: json!({ "file_path": "test.txt" }),
         result: Some("1 file".to_string()),
     };
@@ -133,8 +133,8 @@ fn read_completed_display_uses_read_prefix() {
 
 #[test]
 fn read_streaming_display_uses_reading_prefix() {
-    let call = ToolCallSpec {
-        tool: "Read".to_string(),
+    let call = ToolCall {
+        call: "Read".to_string(),
         input: json!({ "file_path": "test.txt" }),
         result: Some("1 file\u{2026}".to_string()),
     };
@@ -144,8 +144,8 @@ fn read_streaming_display_uses_reading_prefix() {
 
 #[test]
 fn unknown_tool_returns_none() {
-    let call = ToolCallSpec {
-        tool: "UnknownTool".to_string(),
+    let call = ToolCall {
+        call: "UnknownTool".to_string(),
         input: json!({}),
         result: None,
     };
@@ -157,7 +157,6 @@ fn unknown_tool_returns_none() {
 // handle_turn_result sets correct mode for dialog-based pending permissions
 // =========================================================================
 
-use crate::config::ResponseSpec;
 use crate::runtime::{PendingPermission, TurnResult};
 use crate::state::session::SessionManager;
 use crate::time::ClockHandle;
@@ -178,32 +177,29 @@ fn handle_turn_result_sets_elicitation_mode_with_response_text() {
 
     // Simulate a turn result with response text AND a pending AskUserQuestion
     let result = TurnResult {
-        response: ResponseSpec::Detailed {
-            text: "Let me ask you a question.".to_string(),
-            tool_calls: vec![ToolCallSpec {
-                tool: "AskUserQuestion".to_string(),
-                input: json!({
-                    "questions": [{
-                        "question": "Which DB?",
-                        "header": "DB",
-                        "options": [
-                            { "label": "PostgreSQL", "description": "Relational" },
-                            { "label": "SQLite", "description": "Embedded" }
-                        ],
-                        "multiSelect": false
-                    }]
-                }),
-                result: None,
-            }],
-            usage: None,
-            delay_ms: None,
-        },
+        say: Some("Let me ask you a question.".to_string()),
+        tools: vec![ToolCall {
+            call: "AskUserQuestion".to_string(),
+            input: json!({
+                "questions": [{
+                    "question": "Which DB?",
+                    "header": "DB",
+                    "options": [
+                        { "label": "PostgreSQL", "description": "Relational" },
+                        { "label": "SQLite", "description": "Embedded" }
+                    ],
+                    "multiSelect": false
+                }]
+            }),
+            result: None,
+        }],
+        usage: None,
         tool_results: vec![],
         hook_continuation: None,
         is_hook_continuation: false,
         pending_permission: Some(PendingPermission {
-            tool_call: ToolCallSpec {
-                tool: "AskUserQuestion".to_string(),
+            tool_call: ToolCall {
+                call: "AskUserQuestion".to_string(),
                 input: json!({
                     "questions": [{
                         "question": "Which DB?",
@@ -253,22 +249,19 @@ fn handle_turn_result_sets_plan_approval_mode_with_response_text() {
     let mut inner = state.inner.lock();
 
     let result = TurnResult {
-        response: ResponseSpec::Detailed {
-            text: "Here is my plan.".to_string(),
-            tool_calls: vec![ToolCallSpec {
-                tool: "ExitPlanMode".to_string(),
-                input: json!({}),
-                result: None,
-            }],
-            usage: None,
-            delay_ms: None,
-        },
+        say: Some("Here is my plan.".to_string()),
+        tools: vec![ToolCall {
+            call: "ExitPlanMode".to_string(),
+            input: json!({}),
+            result: None,
+        }],
+        usage: None,
         tool_results: vec![],
         hook_continuation: None,
         is_hook_continuation: false,
         pending_permission: Some(PendingPermission {
-            tool_call: ToolCallSpec {
-                tool: "ExitPlanMode".to_string(),
+            tool_call: ToolCall {
+                call: "ExitPlanMode".to_string(),
                 input: json!({}),
                 result: None,
             },

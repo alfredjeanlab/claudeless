@@ -249,7 +249,7 @@ mod permission_checker_integration {
         overrides.insert(
             "Bash".to_string(),
             ToolConfig {
-                auto_approve: true,
+                approve: true,
                 result: None,
                 error: None,
                 answers: None,
@@ -281,7 +281,7 @@ mod permission_checker_integration {
         overrides.insert(
             "Bash".to_string(),
             ToolConfig {
-                auto_approve: false,
+                approve: false,
                 result: None,
                 error: Some("Simulated failure".to_string()),
                 answers: None,
@@ -324,7 +324,7 @@ mod priority_order {
         overrides.insert(
             "Bash".to_string(),
             ToolConfig {
-                auto_approve: false,
+                approve: false,
                 result: None,
                 error: Some("Error".to_string()),
                 answers: None,

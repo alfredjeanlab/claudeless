@@ -7,8 +7,8 @@ use serde_json::json;
 #[test]
 fn test_builtin_executor_with_mock_result() {
     let executor = BuiltinExecutor::new();
-    let call = ToolCallSpec {
-        tool: "Bash".to_string(),
+    let call = ToolCall {
+        call: "Bash".to_string(),
         input: json!({ "command": "ls" }),
         result: Some("mock output".to_string()),
     };
@@ -22,8 +22,8 @@ fn test_builtin_executor_with_mock_result() {
 #[test]
 fn test_builtin_executor_unknown_tool() {
     let executor = BuiltinExecutor::new();
-    let call = ToolCallSpec {
-        tool: "UnknownTool".to_string(),
+    let call = ToolCall {
+        call: "UnknownTool".to_string(),
         input: json!({}),
         result: None,
     };

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 use super::*;
-use crate::config::ToolCallSpec;
+use crate::config::ToolCall;
 use crate::mcp::config::{McpServerDef, McpToolDef};
 use crate::mcp::server::{McpManager, McpServer, McpServerStatus};
 use parking_lot::RwLock;
@@ -64,8 +64,8 @@ fn composite_routes_to_builtin_for_unknown_mcp_tool() {
     let builtin = BuiltinExecutor::new();
     let composite = CompositeExecutor::new(Some(mcp), builtin);
 
-    let call = ToolCallSpec {
-        tool: "Read".to_string(),
+    let call = ToolCall {
+        call: "Read".to_string(),
         input: serde_json::json!({"file_path": "/tmp/test"}),
         result: Some("test content".to_string()),
     };
@@ -93,8 +93,8 @@ fn composite_without_mcp_works() {
     let builtin = BuiltinExecutor::new();
     let composite = CompositeExecutor::builtin_only(builtin);
 
-    let call = ToolCallSpec {
-        tool: "Read".to_string(),
+    let call = ToolCall {
+        call: "Read".to_string(),
         input: serde_json::json!({"file_path": "/tmp/test"}),
         result: Some("test content".to_string()),
     };
@@ -187,8 +187,8 @@ fn composite_routes_qualified_mcp_tool_to_mcp() {
     let composite = CompositeExecutor::new(Some(mcp), builtin);
 
     // Qualified MCP tool name should be recognized
-    let call = ToolCallSpec {
-        tool: "mcp__filesystem__read_file".to_string(),
+    let call = ToolCall {
+        call: "mcp__filesystem__read_file".to_string(),
         input: serde_json::json!({"path": "/tmp/test"}),
         result: None,
     };

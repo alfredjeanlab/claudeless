@@ -8,7 +8,10 @@ fn test_text_output() {
     let mut buf = Vec::new();
     let mut writer = OutputWriter::new(&mut buf, OutputFormat::Text, "claude-test".to_string());
 
-    let response = ResponseSpec::Simple("Hello, world!".to_string());
+    let response = Response {
+        say: Some("Hello, world!".to_string()),
+        ..Default::default()
+    };
     writer.write_response(&response, &[]).unwrap();
 
     let output = String::from_utf8(buf).unwrap();
@@ -20,9 +23,9 @@ fn test_text_output_detailed() {
     let mut buf = Vec::new();
     let mut writer = OutputWriter::new(&mut buf, OutputFormat::Text, "claude-test".to_string());
 
-    let response = ResponseSpec::Detailed {
-        text: "Detailed response".to_string(),
-        tool_calls: vec![],
+    let response = Response {
+        say: Some("Detailed response".to_string()),
+        tools: vec![],
         usage: None,
         delay_ms: None,
     };
@@ -37,7 +40,10 @@ fn test_json_output() {
     let mut buf = Vec::new();
     let mut writer = OutputWriter::new(&mut buf, OutputFormat::Json, "claude-test".to_string());
 
-    let response = ResponseSpec::Simple("Test response".to_string());
+    let response = Response {
+        say: Some("Test response".to_string()),
+        ..Default::default()
+    };
     writer.write_response(&response, &[]).unwrap();
 
     let output = String::from_utf8(buf).unwrap();
@@ -56,9 +62,12 @@ fn test_json_output_with_tool_calls() {
     let mut buf = Vec::new();
     let mut writer = OutputWriter::new(&mut buf, OutputFormat::Json, "claude-test".to_string());
 
-    let response = ResponseSpec::Simple("Running command".to_string());
-    let tool_calls = vec![ToolCallSpec {
-        tool: "Bash".to_string(),
+    let response = Response {
+        say: Some("Running command".to_string()),
+        ..Default::default()
+    };
+    let tool_calls = vec![ToolCall {
+        call: "Bash".to_string(),
         input: serde_json::json!({ "command": "ls -la" }),
         result: None,
     }];
@@ -77,9 +86,9 @@ fn test_json_output_with_usage() {
     let mut buf = Vec::new();
     let mut writer = OutputWriter::new(&mut buf, OutputFormat::Json, "claude-test".to_string());
 
-    let response = ResponseSpec::Detailed {
-        text: "Response".to_string(),
-        tool_calls: vec![],
+    let response = Response {
+        say: Some("Response".to_string()),
+        tools: vec![],
         usage: Some(UsageSpec {
             input_tokens: 50,
             output_tokens: 25,
@@ -104,7 +113,10 @@ fn test_stream_json_output() {
         "claude-test".to_string(),
     );
 
-    let response = ResponseSpec::Simple("Hello!".to_string());
+    let response = Response {
+        say: Some("Hello!".to_string()),
+        ..Default::default()
+    };
     writer.write_response(&response, &[]).unwrap();
 
     let output = String::from_utf8(buf).unwrap();
@@ -132,9 +144,12 @@ fn test_stream_json_with_tool_calls() {
         "claude-test".to_string(),
     );
 
-    let response = ResponseSpec::Simple("Running".to_string());
-    let tool_calls = vec![ToolCallSpec {
-        tool: "Bash".to_string(),
+    let response = Response {
+        say: Some("Running".to_string()),
+        ..Default::default()
+    };
+    let tool_calls = vec![ToolCall {
+        call: "Bash".to_string(),
         input: serde_json::json!({ "command": "pwd" }),
         result: None,
     }];
@@ -375,7 +390,10 @@ fn test_write_real_json_response() {
     let mut buf = Vec::new();
     let mut writer = OutputWriter::new(&mut buf, OutputFormat::Json, "claude-test".to_string());
 
-    let response = ResponseSpec::Simple("Hello!".to_string());
+    let response = Response {
+        say: Some("Hello!".to_string()),
+        ..Default::default()
+    };
     writer
         .write_real_response(&response, "session-123", vec![])
         .unwrap();
@@ -399,7 +417,10 @@ fn test_write_real_stream_json_response() {
         "claude-test".to_string(),
     );
 
-    let response = ResponseSpec::Simple("Hello!".to_string());
+    let response = Response {
+        say: Some("Hello!".to_string()),
+        ..Default::default()
+    };
     let tools = vec!["Bash".to_string(), "Read".to_string()];
     writer
         .write_real_response(&response, "session-123", tools)
@@ -428,7 +449,10 @@ fn test_real_stream_json_event_sequence() {
         "claude-test".to_string(),
     );
 
-    let response = ResponseSpec::Simple("Hi".to_string());
+    let response = Response {
+        say: Some("Hi".to_string()),
+        ..Default::default()
+    };
     writer
         .write_real_response(&response, "session-123", vec!["Bash".to_string()])
         .unwrap();

@@ -148,10 +148,12 @@ fn test_multiple_rules_order() {
 #[test]
 fn test_scenario_from_config() {
     let config = ScenarioConfig {
-        name: "test".to_string(),
-        default_response: Some(ResponseSpec::Simple("default".to_string())),
+        default: Some(Response {
+            say: Some("default".to_string()),
+            ..Default::default()
+        }),
         responses: vec![],
-        tool_execution: None,
+        tools: None,
         ..Default::default()
     };
 

@@ -2,14 +2,13 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 use super::*;
-use crate::config::{ConversationTurn, ResponseRule, ResponseSpec};
+use crate::config::{ClaudeConfig, Pattern, ResponseRule, Turn};
 
 fn simple_config(responses: Vec<ResponseRule>) -> ScenarioConfig {
     ScenarioConfig {
-        name: "test".to_string(),
-        default_response: None,
+        default: None,
         responses,
-        tool_execution: None,
+        tools: None,
         ..Default::default()
     }
 }
@@ -17,13 +16,14 @@ fn simple_config(responses: Vec<ResponseRule>) -> ScenarioConfig {
 #[test]
 fn test_exact_match() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Exact {
-            text: "hello".to_string(),
-        },
-        response: Some(ResponseSpec::Simple("Hi!".to_string())),
+        on: Pattern::Glob("hello".to_string()),
+        say: Some("Hi!".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: None,
-        turns: Vec::new(),
+        max: None,
+        then: Vec::new(),
     }]);
 
     let mut scenario = Scenario::from_config(config).unwrap();
@@ -36,13 +36,14 @@ fn test_exact_match() {
 #[test]
 fn test_regex_match() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Regex {
-            pattern: r"(?i)^hello\s+\w+$".to_string(),
-        },
-        response: Some(ResponseSpec::Simple("Matched!".to_string())),
+        on: Pattern::Regexp(r"(?i)^hello\s+\w+$".to_string()),
+        say: Some("Matched!".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: None,
-        turns: Vec::new(),
+        max: None,
+        then: Vec::new(),
     }]);
 
     let mut scenario = Scenario::from_config(config).unwrap();
@@ -56,13 +57,14 @@ fn test_regex_match() {
 #[test]
 fn test_glob_match() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Glob {
-            pattern: "*.txt".to_string(),
-        },
-        response: Some(ResponseSpec::Simple("File!".to_string())),
+        on: Pattern::Glob("*.txt".to_string()),
+        say: Some("File!".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: None,
-        turns: Vec::new(),
+        max: None,
+        then: Vec::new(),
     }]);
 
     let mut scenario = Scenario::from_config(config).unwrap();
@@ -75,13 +77,14 @@ fn test_glob_match() {
 #[test]
 fn test_contains_match() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Contains {
-            text: "error".to_string(),
-        },
-        response: Some(ResponseSpec::Simple("Found error!".to_string())),
+        on: Pattern::Contains("error".to_string()),
+        say: Some("Found error!".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: None,
-        turns: Vec::new(),
+        max: None,
+        then: Vec::new(),
     }]);
 
     let mut scenario = Scenario::from_config(config).unwrap();
@@ -94,11 +97,14 @@ fn test_contains_match() {
 #[test]
 fn test_any_match() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Any,
-        response: Some(ResponseSpec::Simple("Anything!".to_string())),
+        on: Pattern::Glob("*".to_string()),
+        say: Some("Anything!".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: None,
-        turns: Vec::new(),
+        max: None,
+        then: Vec::new(),
     }]);
 
     let mut scenario = Scenario::from_config(config).unwrap();
@@ -111,11 +117,14 @@ fn test_any_match() {
 #[test]
 fn test_max_matches() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Any,
-        response: Some(ResponseSpec::Simple("Limited!".to_string())),
+        on: Pattern::Glob("*".to_string()),
+        say: Some("Limited!".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: Some(2),
-        turns: Vec::new(),
+        max: Some(2),
+        then: Vec::new(),
     }]);
 
     let mut scenario = Scenario::from_config(config).unwrap();
@@ -129,29 +138,34 @@ fn test_max_matches() {
 fn test_rule_ordering() {
     let config = simple_config(vec![
         ResponseRule {
-            pattern: PatternSpec::Exact {
-                text: "specific".to_string(),
-            },
-            response: Some(ResponseSpec::Simple("Exact!".to_string())),
+            on: Pattern::Glob("specific".to_string()),
+            say: Some("Exact!".to_string()),
+            tools: Vec::new(),
+            usage: None,
+            delay_ms: None,
             failure: None,
-            max_matches: None,
-            turns: Vec::new(),
+            max: None,
+            then: Vec::new(),
         },
         ResponseRule {
-            pattern: PatternSpec::Contains {
-                text: "spec".to_string(),
-            },
-            response: Some(ResponseSpec::Simple("Contains!".to_string())),
+            on: Pattern::Contains("spec".to_string()),
+            say: Some("Contains!".to_string()),
+            tools: Vec::new(),
+            usage: None,
+            delay_ms: None,
             failure: None,
-            max_matches: None,
-            turns: Vec::new(),
+            max: None,
+            then: Vec::new(),
         },
         ResponseRule {
-            pattern: PatternSpec::Any,
-            response: Some(ResponseSpec::Simple("Any!".to_string())),
+            on: Pattern::Glob("*".to_string()),
+            say: Some("Any!".to_string()),
+            tools: Vec::new(),
+            usage: None,
+            delay_ms: None,
             failure: None,
-            max_matches: None,
-            turns: Vec::new(),
+            max: None,
+            then: Vec::new(),
         },
     ]);
 
@@ -160,37 +174,37 @@ fn test_rule_ordering() {
     // Exact match takes priority
     let result = scenario.match_prompt("specific").unwrap();
     assert_eq!(result, MatchResult::Response { rule_index: 0 });
-    let response = scenario.get_response(&result);
-    assert!(matches!(response, Some(ResponseSpec::Simple(s)) if s == "Exact!"));
+    assert_eq!(scenario.get_say(&result), Some("Exact!"));
 
     // Contains match for non-exact
     let result = scenario.match_prompt("specification").unwrap();
     assert_eq!(result, MatchResult::Response { rule_index: 1 });
-    let response = scenario.get_response(&result);
-    assert!(matches!(response, Some(ResponseSpec::Simple(s)) if s == "Contains!"));
+    assert_eq!(scenario.get_say(&result), Some("Contains!"));
 
     // Any match for other
     let result = scenario.match_prompt("other").unwrap();
     assert_eq!(result, MatchResult::Response { rule_index: 2 });
-    let response = scenario.get_response(&result);
-    assert!(matches!(response, Some(ResponseSpec::Simple(s)) if s == "Any!"));
+    assert_eq!(scenario.get_say(&result), Some("Any!"));
 }
 
 #[test]
 fn test_default_response() {
     let config = ScenarioConfig {
-        name: "with-default".to_string(),
-        default_response: Some(ResponseSpec::Simple("Default!".to_string())),
+        default: Some(Response {
+            say: Some("Default!".to_string()),
+            ..Default::default()
+        }),
         responses: vec![ResponseRule {
-            pattern: PatternSpec::Exact {
-                text: "match".to_string(),
-            },
-            response: Some(ResponseSpec::Simple("Matched!".to_string())),
+            on: Pattern::Glob("match".to_string()),
+            say: Some("Matched!".to_string()),
+            tools: Vec::new(),
+            usage: None,
+            delay_ms: None,
             failure: None,
-            max_matches: None,
-            turns: Vec::new(),
+            max: None,
+            then: Vec::new(),
         }],
-        tool_execution: None,
+        tools: None,
         ..Default::default()
     };
 
@@ -207,11 +221,14 @@ fn test_default_response() {
 #[test]
 fn test_reset_counts() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Any,
-        response: Some(ResponseSpec::Simple("Limited!".to_string())),
+        on: Pattern::Glob("*".to_string()),
+        say: Some("Limited!".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: Some(1),
-        turns: Vec::new(),
+        max: Some(1),
+        then: Vec::new(),
     }]);
 
     let mut scenario = Scenario::from_config(config).unwrap();
@@ -227,13 +244,14 @@ fn test_reset_counts() {
 #[test]
 fn test_invalid_regex() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Regex {
-            pattern: "[invalid".to_string(),
-        },
-        response: Some(ResponseSpec::Simple("Never!".to_string())),
+        on: Pattern::Regexp("[invalid".to_string()),
+        say: Some("Never!".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: None,
-        turns: Vec::new(),
+        max: None,
+        then: Vec::new(),
     }]);
 
     let result = Scenario::from_config(config);
@@ -244,13 +262,14 @@ fn test_invalid_regex() {
 #[test]
 fn test_invalid_glob() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Glob {
-            pattern: "[invalid".to_string(),
-        },
-        response: Some(ResponseSpec::Simple("Never!".to_string())),
+        on: Pattern::Glob("[invalid".to_string()),
+        say: Some("Never!".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: None,
-        turns: Vec::new(),
+        max: None,
+        then: Vec::new(),
     }]);
 
     let result = Scenario::from_config(config);
@@ -260,11 +279,8 @@ fn test_invalid_glob() {
 
 #[test]
 fn test_invalid_session_id() {
-    use crate::config::IdentityConfig;
-
     let config = ScenarioConfig {
-        name: "test".to_string(),
-        identity: IdentityConfig {
+        claude: ClaudeConfig {
             session_id: Some("not-a-uuid".to_string()),
             ..Default::default()
         },
@@ -281,11 +297,8 @@ fn test_invalid_session_id() {
 
 #[test]
 fn test_valid_session_id() {
-    use crate::config::IdentityConfig;
-
     let config = ScenarioConfig {
-        name: "test".to_string(),
-        identity: IdentityConfig {
+        claude: ClaudeConfig {
             session_id: Some("550e8400-e29b-41d4-a716-446655440000".to_string()),
             ..Default::default()
         },
@@ -298,11 +311,8 @@ fn test_valid_session_id() {
 
 #[test]
 fn test_invalid_launch_timestamp() {
-    use crate::config::TimingConfig;
-
     let config = ScenarioConfig {
-        name: "test".to_string(),
-        timing: TimingConfig {
+        claude: ClaudeConfig {
             launch_timestamp: Some("not-a-timestamp".to_string()),
             ..Default::default()
         },
@@ -319,11 +329,8 @@ fn test_invalid_launch_timestamp() {
 
 #[test]
 fn test_valid_launch_timestamp() {
-    use crate::config::TimingConfig;
-
     let config = ScenarioConfig {
-        name: "test".to_string(),
-        timing: TimingConfig {
+        claude: ClaudeConfig {
             launch_timestamp: Some("2025-01-15T10:30:00Z".to_string()),
             ..Default::default()
         },
@@ -336,11 +343,8 @@ fn test_valid_launch_timestamp() {
 
 #[test]
 fn test_launch_timestamp_with_timezone() {
-    use crate::config::TimingConfig;
-
     let config = ScenarioConfig {
-        name: "test".to_string(),
-        timing: TimingConfig {
+        claude: ClaudeConfig {
             launch_timestamp: Some("2025-01-15T10:30:00-08:00".to_string()),
             ..Default::default()
         },
@@ -353,14 +357,8 @@ fn test_launch_timestamp_with_timezone() {
 
 #[test]
 fn test_invalid_permission_mode() {
-    use crate::config::EnvironmentConfig;
-
     let config = ScenarioConfig {
-        name: "test".to_string(),
-        environment: EnvironmentConfig {
-            permission_mode: Some("invalid-mode".to_string()),
-            ..Default::default()
-        },
+        permission_mode: Some("invalid-mode".to_string()),
         ..Default::default()
     };
 
@@ -374,8 +372,6 @@ fn test_invalid_permission_mode() {
 
 #[test]
 fn test_valid_permission_modes() {
-    use crate::config::EnvironmentConfig;
-
     for mode in [
         "default",
         "plan",
@@ -385,11 +381,7 @@ fn test_valid_permission_modes() {
         "delegate",
     ] {
         let config = ScenarioConfig {
-            name: "test".to_string(),
-            environment: EnvironmentConfig {
-                permission_mode: Some(mode.to_string()),
-                ..Default::default()
-            },
+            permission_mode: Some(mode.to_string()),
             ..Default::default()
         };
 
@@ -403,21 +395,28 @@ fn test_valid_permission_modes() {
 #[test]
 fn test_turn_sequence_advances() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Contains {
-            text: "start".to_string(),
-        },
-        response: Some(ResponseSpec::Simple("Step 1".to_string())),
+        on: Pattern::Contains("start".to_string()),
+        say: Some("Step 1".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: None,
-        turns: vec![
-            ConversationTurn {
-                expect: PatternSpec::Any,
-                response: ResponseSpec::Simple("Step 2".to_string()),
+        max: None,
+        then: vec![
+            Turn {
+                on: Pattern::Glob("*".to_string()),
+                say: Some("Step 2".to_string()),
+                tools: Vec::new(),
+                usage: None,
+                delay_ms: None,
                 failure: None,
             },
-            ConversationTurn {
-                expect: PatternSpec::Any,
-                response: ResponseSpec::Simple("Step 3".to_string()),
+            Turn {
+                on: Pattern::Glob("*".to_string()),
+                say: Some("Step 3".to_string()),
+                tools: Vec::new(),
+                usage: None,
+                delay_ms: None,
                 failure: None,
             },
         ],
@@ -428,8 +427,7 @@ fn test_turn_sequence_advances() {
     // First prompt activates sequence
     let r1 = scenario.match_prompt("start").unwrap();
     assert_eq!(r1, MatchResult::Response { rule_index: 0 });
-    let resp1 = scenario.get_response(&r1);
-    assert!(matches!(resp1, Some(ResponseSpec::Simple(s)) if s == "Step 1"));
+    assert_eq!(scenario.get_say(&r1), Some("Step 1"));
     assert!(scenario.has_active_sequence());
 
     // Second prompt advances to turn 0
@@ -441,8 +439,7 @@ fn test_turn_sequence_advances() {
             turn_index: 0
         }
     );
-    let resp2 = scenario.get_response(&r2);
-    assert!(matches!(resp2, Some(ResponseSpec::Simple(s)) if s == "Step 2"));
+    assert_eq!(scenario.get_say(&r2), Some("Step 2"));
     assert!(scenario.has_active_sequence());
 
     // Third prompt advances to turn 1 and completes
@@ -454,8 +451,7 @@ fn test_turn_sequence_advances() {
             turn_index: 1
         }
     );
-    let resp3 = scenario.get_response(&r3);
-    assert!(matches!(resp3, Some(ResponseSpec::Simple(s)) if s == "Step 3"));
+    assert_eq!(scenario.get_say(&r3), Some("Step 3"));
     assert!(!scenario.has_active_sequence());
 }
 
@@ -463,26 +459,31 @@ fn test_turn_sequence_advances() {
 fn test_turn_mismatch_deactivates_and_falls_through() {
     let config = simple_config(vec![
         ResponseRule {
-            pattern: PatternSpec::Contains {
-                text: "start".to_string(),
-            },
-            response: Some(ResponseSpec::Simple("Started".to_string())),
+            on: Pattern::Contains("start".to_string()),
+            say: Some("Started".to_string()),
+            tools: Vec::new(),
+            usage: None,
+            delay_ms: None,
             failure: None,
-            max_matches: None,
-            turns: vec![ConversationTurn {
-                expect: PatternSpec::Contains {
-                    text: "continue".to_string(),
-                },
-                response: ResponseSpec::Simple("Continued".to_string()),
+            max: None,
+            then: vec![Turn {
+                on: Pattern::Contains("continue".to_string()),
+                say: Some("Continued".to_string()),
+                tools: Vec::new(),
+                usage: None,
+                delay_ms: None,
                 failure: None,
             }],
         },
         ResponseRule {
-            pattern: PatternSpec::Any,
-            response: Some(ResponseSpec::Simple("Fallback".to_string())),
+            on: Pattern::Glob("*".to_string()),
+            say: Some("Fallback".to_string()),
+            tools: Vec::new(),
+            usage: None,
+            delay_ms: None,
             failure: None,
-            max_matches: None,
-            turns: Vec::new(),
+            max: None,
+            then: Vec::new(),
         },
     ]);
 
@@ -496,8 +497,7 @@ fn test_turn_mismatch_deactivates_and_falls_through() {
     let result = scenario.match_prompt("wrong input").unwrap();
     assert!(!scenario.has_active_sequence());
     assert_eq!(result, MatchResult::Response { rule_index: 1 });
-    let response = scenario.get_response(&result);
-    assert!(matches!(response, Some(ResponseSpec::Simple(s)) if s == "Fallback"));
+    assert_eq!(scenario.get_say(&result), Some("Fallback"));
 }
 
 #[test]
@@ -505,15 +505,19 @@ fn test_turns_with_failures() {
     use crate::config::FailureSpec;
 
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Contains {
-            text: "start".to_string(),
-        },
-        response: Some(ResponseSpec::Simple("Started".to_string())),
+        on: Pattern::Contains("start".to_string()),
+        say: Some("Started".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: None,
-        turns: vec![ConversationTurn {
-            expect: PatternSpec::Any,
-            response: ResponseSpec::Simple(String::new()),
+        max: None,
+        then: vec![Turn {
+            on: Pattern::Glob("*".to_string()),
+            say: None,
+            tools: Vec::new(),
+            usage: None,
+            delay_ms: None,
             failure: Some(FailureSpec::AuthError {
                 message: "Session expired".to_string(),
             }),
@@ -530,15 +534,19 @@ fn test_turns_with_failures() {
 #[test]
 fn test_max_matches_applies_to_sequence_entry() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Contains {
-            text: "start".to_string(),
-        },
-        response: Some(ResponseSpec::Simple("Started".to_string())),
+        on: Pattern::Contains("start".to_string()),
+        say: Some("Started".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: Some(1),
-        turns: vec![ConversationTurn {
-            expect: PatternSpec::Any,
-            response: ResponseSpec::Simple("Turn 1".to_string()),
+        max: Some(1),
+        then: vec![Turn {
+            on: Pattern::Glob("*".to_string()),
+            say: Some("Turn 1".to_string()),
+            tools: Vec::new(),
+            usage: None,
+            delay_ms: None,
             failure: None,
         }],
     }]);
@@ -556,15 +564,19 @@ fn test_max_matches_applies_to_sequence_entry() {
 #[test]
 fn test_reset_counts_also_resets_turns() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Contains {
-            text: "start".to_string(),
-        },
-        response: Some(ResponseSpec::Simple("Started".to_string())),
+        on: Pattern::Contains("start".to_string()),
+        say: Some("Started".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: None,
-        turns: vec![ConversationTurn {
-            expect: PatternSpec::Any,
-            response: ResponseSpec::Simple("Turn 1".to_string()),
+        max: None,
+        then: vec![Turn {
+            on: Pattern::Glob("*".to_string()),
+            say: Some("Turn 1".to_string()),
+            tools: Vec::new(),
+            usage: None,
+            delay_ms: None,
             failure: None,
         }],
     }]);
@@ -583,11 +595,14 @@ fn test_reset_counts_also_resets_turns() {
 #[test]
 fn test_response_text_extracts_text() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Any,
-        response: Some(ResponseSpec::Simple("Hello!".to_string())),
+        on: Pattern::Glob("*".to_string()),
+        say: Some("Hello!".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: None,
-        turns: Vec::new(),
+        max: None,
+        then: Vec::new(),
     }]);
 
     let mut scenario = Scenario::from_config(config).unwrap();
@@ -598,11 +613,14 @@ fn test_response_text_extracts_text() {
 #[test]
 fn test_response_text_returns_empty_for_none() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Any,
-        response: None, // No response
+        on: Pattern::Glob("*".to_string()),
+        say: None, // No response
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: None,
-        turns: Vec::new(),
+        max: None,
+        then: Vec::new(),
     }]);
 
     let mut scenario = Scenario::from_config(config).unwrap();
@@ -613,13 +631,14 @@ fn test_response_text_returns_empty_for_none() {
 #[test]
 fn test_response_text_or_default_matched() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Contains {
-            text: "hello".to_string(),
-        },
-        response: Some(ResponseSpec::Simple("Matched!".to_string())),
+        on: Pattern::Contains("hello".to_string()),
+        say: Some("Matched!".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: None,
-        turns: Vec::new(),
+        max: None,
+        then: Vec::new(),
     }]);
 
     let mut scenario = Scenario::from_config(config).unwrap();
@@ -629,18 +648,21 @@ fn test_response_text_or_default_matched() {
 #[test]
 fn test_response_text_or_default_falls_back() {
     let config = ScenarioConfig {
-        name: "test".to_string(),
-        default_response: Some(ResponseSpec::Simple("Default!".to_string())),
+        default: Some(Response {
+            say: Some("Default!".to_string()),
+            ..Default::default()
+        }),
         responses: vec![ResponseRule {
-            pattern: PatternSpec::Exact {
-                text: "specific".to_string(),
-            },
-            response: Some(ResponseSpec::Simple("Matched!".to_string())),
+            on: Pattern::Glob("specific".to_string()),
+            say: Some("Matched!".to_string()),
+            tools: Vec::new(),
+            usage: None,
+            delay_ms: None,
             failure: None,
-            max_matches: None,
-            turns: Vec::new(),
+            max: None,
+            then: Vec::new(),
         }],
-        tool_execution: None,
+        tools: None,
         ..Default::default()
     };
 
@@ -651,13 +673,14 @@ fn test_response_text_or_default_falls_back() {
 #[test]
 fn test_response_text_or_default_returns_empty_when_no_default() {
     let config = simple_config(vec![ResponseRule {
-        pattern: PatternSpec::Exact {
-            text: "specific".to_string(),
-        },
-        response: Some(ResponseSpec::Simple("Matched!".to_string())),
+        on: Pattern::Glob("specific".to_string()),
+        say: Some("Matched!".to_string()),
+        tools: Vec::new(),
+        usage: None,
+        delay_ms: None,
         failure: None,
-        max_matches: None,
-        turns: Vec::new(),
+        max: None,
+        then: Vec::new(),
     }]);
 
     let mut scenario = Scenario::from_config(config).unwrap();

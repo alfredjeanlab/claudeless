@@ -14,7 +14,7 @@ use parking_lot::RwLock;
 use super::builtin::BuiltinExecutor;
 use super::executor::{ExecutionContext, ToolExecutor};
 use super::result::ToolExecutionResult;
-use crate::config::ToolCallSpec;
+use crate::config::ToolCall;
 use crate::mcp::config::McpToolDef;
 use crate::mcp::McpManager;
 
@@ -55,19 +55,19 @@ impl McpToolExecutor {
 impl ToolExecutor for McpToolExecutor {
     fn execute(
         &self,
-        call: &ToolCallSpec,
+        call: &ToolCall,
         tool_use_id: &str,
         _ctx: &ExecutionContext,
     ) -> ToolExecutionResult {
         // Extract raw tool name from potentially qualified name (mcp__server__tool)
-        let raw_tool_name = Self::get_raw_tool_name(&call.tool);
+        let raw_tool_name = Self::get_raw_tool_name(&call.call);
 
         // Check if we handle this tool
         let manager = self.manager.read();
         if !manager.has_tool(&raw_tool_name) {
             return ToolExecutionResult::error(
                 tool_use_id,
-                format!("MCP tool not found: {}", call.tool),
+                format!("MCP tool not found: {}", call.call),
             );
         }
 
@@ -192,15 +192,15 @@ impl CompositeExecutor {
 impl ToolExecutor for CompositeExecutor {
     fn execute(
         &self,
-        call: &ToolCallSpec,
+        call: &ToolCall,
         tool_use_id: &str,
         ctx: &ExecutionContext,
     ) -> ToolExecutionResult {
         // Check if this is an MCP tool (qualified name or known raw name)
         if let Some(ref mcp) = self.mcp {
             // Check for qualified name (mcp__server__tool) or raw MCP tool name
-            let is_mcp_qualified = call.tool.starts_with("mcp__");
-            let is_mcp_tool = mcp.has_tool(&call.tool);
+            let is_mcp_qualified = call.call.starts_with("mcp__");
+            let is_mcp_tool = mcp.has_tool(&call.call);
 
             if is_mcp_qualified || is_mcp_tool {
                 return mcp.execute(call, tool_use_id, ctx);

@@ -5,7 +5,7 @@
 //!
 //! These tools write to the state directory and require a `StateWriter`.
 
-use crate::config::ToolCallSpec;
+use crate::config::ToolCall;
 use crate::state::{StateWriter, TodoItem, TodoStatus};
 use crate::tools::result::{ToolExecutionResult, ToolResultContent};
 
@@ -13,7 +13,7 @@ use crate::tools::result::{ToolExecutionResult, ToolResultContent};
 ///
 /// Parses todo items from the tool call input and writes them to the
 /// state directory in Claude CLI format.
-pub fn execute_todo_write(call: &ToolCallSpec, state_writer: &StateWriter) -> ToolExecutionResult {
+pub fn execute_todo_write(call: &ToolCall, state_writer: &StateWriter) -> ToolExecutionResult {
     // Parse todo items from call.input
     let todos: Vec<TodoItem> = match call.input.get("todos") {
         Some(serde_json::Value::Array(arr)) => arr.iter().filter_map(parse_todo_item).collect(),
@@ -122,10 +122,7 @@ pub fn execute_enter_plan_mode() -> ToolExecutionResult {
 /// Creates a plan file in markdown format with word-based naming.
 /// In TUI mode, this returns as a PendingPermission so the TUI can
 /// show a plan approval dialog. In print mode, it auto-approves.
-pub fn execute_exit_plan_mode(
-    call: &ToolCallSpec,
-    state_writer: &StateWriter,
-) -> ToolExecutionResult {
+pub fn execute_exit_plan_mode(call: &ToolCall, state_writer: &StateWriter) -> ToolExecutionResult {
     // Real Claude Code always uses "plan" as the field name
     let content = call
         .input
@@ -165,7 +162,7 @@ pub fn execute_exit_plan_mode(
 ///
 /// In mock/print mode: uses pre-configured answers from `call.input["answers"]`
 /// or auto-selects the first option for each question.
-pub fn execute_ask_user_question(call: &ToolCallSpec) -> ToolExecutionResult {
+pub fn execute_ask_user_question(call: &ToolCall) -> ToolExecutionResult {
     let questions = call
         .input
         .get("questions")

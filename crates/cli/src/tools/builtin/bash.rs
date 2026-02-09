@@ -5,7 +5,7 @@
 
 use std::process::Command;
 
-use crate::config::ToolCallSpec;
+use crate::config::ToolCall;
 use crate::tools::result::ToolExecutionResult;
 
 use super::{extract_str, require_field, BuiltinContext, BuiltinToolExecutor};
@@ -60,11 +60,11 @@ impl BashExecutor {
 impl BuiltinToolExecutor for BashExecutor {
     fn execute(
         &self,
-        call: &ToolCallSpec,
+        call: &ToolCall,
         tool_use_id: &str,
         ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let command = require_field!(call.input, "command", extract_str, tool_use_id, call.tool);
+        let command = require_field!(call.input, "command", extract_str, tool_use_id, call.call);
 
         Self::execute_real(command, ctx, tool_use_id)
     }

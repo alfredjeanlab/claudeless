@@ -257,8 +257,8 @@ impl RuntimeBuilder {
         let execution_mode = self
             .scenario
             .as_ref()
-            .and_then(|s| s.config().tool_execution.as_ref())
-            .map(|te| te.mode.clone())
+            .and_then(|s| s.config().tools.as_ref())
+            .map(|t| t.mode.clone())
             .unwrap_or_default();
 
         // Build permission checker from runtime context
@@ -269,8 +269,8 @@ impl RuntimeBuilder {
         let scenario_tools = self
             .scenario
             .as_ref()
-            .and_then(|s| s.config().tool_execution.as_ref())
-            .map(|te| te.tools.clone())
+            .and_then(|s| s.config().tools.as_ref())
+            .map(|t| t.tools.clone())
             .unwrap_or_default();
         let checker = runtime_ctx.permission_checker_with_overrides(bypass, scenario_tools);
 
@@ -286,7 +286,7 @@ impl RuntimeBuilder {
         let timeouts = ResolvedTimeouts::resolve(
             self.scenario
                 .as_ref()
-                .and_then(|s| s.config().timing.timeouts.as_ref()),
+                .and_then(|s| s.config().claude.timeouts.as_ref()),
         );
 
         Ok(Runtime::new(

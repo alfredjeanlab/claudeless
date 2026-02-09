@@ -28,7 +28,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::config::ToolCallSpec;
+use crate::config::ToolCall;
 use crate::state::StateWriter;
 use crate::tools::executor::{ExecutionContext, ToolExecutor};
 use crate::tools::result::ToolExecutionResult;
@@ -90,19 +90,19 @@ impl BuiltinExecutor {
 impl ToolExecutor for BuiltinExecutor {
     fn execute(
         &self,
-        call: &ToolCallSpec,
+        call: &ToolCall,
         tool_use_id: &str,
         ctx: &ExecutionContext,
     ) -> ToolExecutionResult {
         // Handle AskUserQuestion (no state writer needed)
-        if ToolName::parse(&call.tool) == Some(ToolName::AskUserQuestion) {
+        if ToolName::parse(&call.call) == Some(ToolName::AskUserQuestion) {
             let mut result = execute_ask_user_question(call);
             result.tool_use_id = tool_use_id.to_string();
             return result;
         }
 
         // Handle EnterPlanMode (no state writer needed)
-        if ToolName::parse(&call.tool) == Some(ToolName::EnterPlanMode) {
+        if ToolName::parse(&call.call) == Some(ToolName::EnterPlanMode) {
             let mut result = execute_enter_plan_mode();
             result.tool_use_id = tool_use_id.to_string();
             return result;
@@ -110,7 +110,7 @@ impl ToolExecutor for BuiltinExecutor {
 
         // Handle stateful tools FIRST (before mock fallback) - these always write to state dir
         if let Some(ref writer) = self.state_writer {
-            if let Some(tool_name) = ToolName::parse(&call.tool) {
+            if let Some(tool_name) = ToolName::parse(&call.call) {
                 match tool_name {
                     ToolName::TodoWrite => {
                         let guard = writer.read();
@@ -135,7 +135,7 @@ impl ToolExecutor for BuiltinExecutor {
         }
 
         // Look up the tool executor
-        if let Some(executor) = self.executors.get(&call.tool) {
+        if let Some(executor) = self.executors.get(&call.call) {
             let builtin_ctx = BuiltinContext {
                 cwd: ctx.cwd.clone(),
             };
@@ -143,7 +143,7 @@ impl ToolExecutor for BuiltinExecutor {
         } else {
             // Return mock result for unknown stateful tools
             let is_stateful = matches!(
-                ToolName::parse(&call.tool),
+                ToolName::parse(&call.call),
                 Some(
                     ToolName::TodoWrite
                         | ToolName::EnterPlanMode
@@ -155,12 +155,12 @@ impl ToolExecutor for BuiltinExecutor {
                 // No state writer, return success with note
                 ToolExecutionResult::success(
                     tool_use_id,
-                    format!("{} executed (no state writer configured)", call.tool),
+                    format!("{} executed (no state writer configured)", call.call),
                 )
             } else {
                 ToolExecutionResult::error(
                     tool_use_id,
-                    format!("Unknown built-in tool: {}", call.tool),
+                    format!("Unknown built-in tool: {}", call.call),
                 )
             }
         }
@@ -183,7 +183,7 @@ pub trait BuiltinToolExecutor: Send + Sync {
     /// Execute the tool and return the result.
     fn execute(
         &self,
-        call: &ToolCallSpec,
+        call: &ToolCall,
         tool_use_id: &str,
         ctx: &BuiltinContext,
     ) -> ToolExecutionResult;

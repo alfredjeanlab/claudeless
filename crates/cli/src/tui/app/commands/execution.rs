@@ -346,13 +346,13 @@ fn handle_failure(inner: &mut TuiAppStateInner, failure_spec: &crate::config::Fa
 /// Returns a `TurnAction` indicating what side-effect to fire.
 fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> TurnAction {
     // Build display parts from completed tool calls
-    let tool_calls = result.response.tool_calls().to_vec();
+    let tool_calls = result.tools.clone();
     let completed_count = result.tool_results.len();
 
     // Check for pending permission before displaying response
     if let Some(ref pending) = result.pending_permission {
         // ExitPlanMode uses plan approval dialog
-        if pending.tool_call.tool == "ExitPlanMode" {
+        if pending.tool_call.call == "ExitPlanMode" {
             // Extract plan file path from the tool call's pre-configured result
             // or generate a placeholder path
             let plan_file_path = pending
@@ -395,7 +395,7 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> TurnA
         }
 
         // AskUserQuestion uses elicitation dialog instead of permission dialog
-        if pending.tool_call.tool == "AskUserQuestion" {
+        if pending.tool_call.call == "AskUserQuestion" {
             let state = ElicitationState::from_tool_input(
                 &pending.tool_call.input,
                 pending.tool_use_id.clone(),
@@ -445,7 +445,7 @@ fn handle_turn_result(inner: &mut TuiAppStateInner, result: TurnResult) -> TurnA
             // Add pending tool call context display.
             // For Bash, only show "Running…" display when it's the sole tool;
             // for Edit/Write, always show the pending tool name.
-            if completed_count == 0 || pending.tool_call.tool != "Bash" {
+            if completed_count == 0 || pending.tool_call.call != "Bash" {
                 parts.push(format_tool_call_display(&pending.tool_call));
             }
 

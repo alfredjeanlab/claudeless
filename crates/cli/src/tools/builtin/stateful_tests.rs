@@ -57,8 +57,8 @@ fn test_parse_todo_item_completed() {
 #[test]
 fn test_execute_todo_write() {
     let writer = create_test_state_writer();
-    let call = ToolCallSpec {
-        tool: "TodoWrite".to_string(),
+    let call = ToolCall {
+        call: "TodoWrite".to_string(),
         input: json!({
             "todos": [
                 {
@@ -90,8 +90,8 @@ fn test_execute_todo_write() {
 #[test]
 fn test_execute_exit_plan_mode() {
     let writer = create_test_state_writer();
-    let call = ToolCallSpec {
-        tool: "ExitPlanMode".to_string(),
+    let call = ToolCall {
+        call: "ExitPlanMode".to_string(),
         input: json!({
             "plan": "# My Plan\n\n## Steps\n\n1. Do this\n2. Do that"
         }),
@@ -107,8 +107,8 @@ fn test_execute_exit_plan_mode() {
 #[test]
 fn test_execute_exit_plan_mode_no_content() {
     let writer = create_test_state_writer();
-    let call = ToolCallSpec {
-        tool: "ExitPlanMode".to_string(),
+    let call = ToolCall {
+        call: "ExitPlanMode".to_string(),
         input: json!({}),
         result: None,
     };
@@ -121,8 +121,8 @@ fn test_execute_exit_plan_mode_no_content() {
 
 #[test]
 fn test_ask_user_question_with_provided_answers() {
-    let call = ToolCallSpec {
-        tool: "AskUserQuestion".to_string(),
+    let call = ToolCall {
+        call: "AskUserQuestion".to_string(),
         input: json!({
             "questions": [
                 {
@@ -157,8 +157,8 @@ fn test_ask_user_question_with_provided_answers() {
 
 #[test]
 fn test_ask_user_question_auto_select_first() {
-    let call = ToolCallSpec {
-        tool: "AskUserQuestion".to_string(),
+    let call = ToolCall {
+        call: "AskUserQuestion".to_string(),
         input: json!({
             "questions": [
                 {
@@ -190,8 +190,8 @@ fn test_ask_user_question_auto_select_first() {
 
 #[test]
 fn test_ask_user_question_multi_select_auto() {
-    let call = ToolCallSpec {
-        tool: "AskUserQuestion".to_string(),
+    let call = ToolCall {
+        call: "AskUserQuestion".to_string(),
         input: json!({
             "questions": [
                 {
@@ -221,8 +221,8 @@ fn test_ask_user_question_multi_select_auto() {
 
 #[test]
 fn test_ask_user_question_empty_questions() {
-    let call = ToolCallSpec {
-        tool: "AskUserQuestion".to_string(),
+    let call = ToolCall {
+        call: "AskUserQuestion".to_string(),
         input: json!({
             "questions": []
         }),
@@ -241,8 +241,8 @@ fn test_ask_user_question_empty_questions() {
 
 #[test]
 fn test_ask_user_question_malformed_input() {
-    let call = ToolCallSpec {
-        tool: "AskUserQuestion".to_string(),
+    let call = ToolCall {
+        call: "AskUserQuestion".to_string(),
         input: json!({}),
         result: None,
     };
@@ -286,8 +286,8 @@ fn test_execute_enter_plan_mode() {
 #[test]
 fn test_execute_exit_plan_mode_plan_field() {
     let writer = create_test_state_writer();
-    let call = ToolCallSpec {
-        tool: "ExitPlanMode".to_string(),
+    let call = ToolCall {
+        call: "ExitPlanMode".to_string(),
         input: json!({
             "plan": "# My Plan\n\n1. Step one\n2. Step two"
         }),

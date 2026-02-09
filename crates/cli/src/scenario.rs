@@ -3,7 +3,7 @@
 
 //! Scenario matching and loading.
 
-use crate::config::{FailureSpec, PatternSpec, ResponseSpec, ScenarioConfig, ToolCallSpec};
+use crate::config::{FailureSpec, Pattern, Response, ScenarioConfig, ToolCall};
 use std::path::Path;
 use std::sync::Arc;
 use thiserror::Error;
@@ -106,15 +106,21 @@ impl Scenario {
     /// File paths are resolved relative to the scenario file's directory.
     pub fn load(path: &Path) -> Result<Self, ScenarioError> {
         let content = std::fs::read_to_string(path)?;
-        let mut config: ScenarioConfig = if path.extension().is_some_and(|e| e == "json") {
-            serde_json::from_str(&content)?
-        } else {
-            toml::from_str(&content)?
-        };
 
-        // Resolve file references relative to scenario directory
+        // Parse as v1 TOML/JSON first
+        let mut v1_config: crate::config::v1::ScenarioConfig =
+            if path.extension().is_some_and(|e| e == "json") {
+                serde_json::from_str(&content)?
+            } else {
+                toml::from_str(&content)?
+            };
+
+        // Resolve file references relative to scenario directory (v1 parsing concern)
         let scenario_dir = path.parent().unwrap_or(Path::new("."));
-        resolve_file_references_in_config(&mut config, scenario_dir)?;
+        resolve_file_references_in_config(&mut v1_config, scenario_dir)?;
+
+        // Convert v1 → canonical types
+        let config: ScenarioConfig = v1_config.into();
 
         Self::from_config(config)
     }
@@ -128,7 +134,7 @@ impl Scenario {
         let mut compiled_turns = Vec::new();
 
         for (idx, rule) in config.responses.iter().enumerate() {
-            let matcher = compile_pattern(&rule.pattern)?;
+            let matcher = compile_pattern(&rule.on)?;
             compiled.push(CompiledRule {
                 matcher,
                 rule_index: idx,
@@ -136,8 +142,8 @@ impl Scenario {
 
             // Compile turn patterns for this rule
             let mut turn_matchers = Vec::new();
-            for turn in &rule.turns {
-                turn_matchers.push(compile_pattern(&turn.expect)?);
+            for turn in &rule.then {
+                turn_matchers.push(compile_pattern(&turn.on)?);
             }
             compiled_turns.push(turn_matchers);
         }
@@ -161,13 +167,13 @@ impl Scenario {
             let turn_idx = self.current_turn;
             let rule = &self.config.responses[rule_idx];
 
-            if turn_idx < rule.turns.len() {
+            if turn_idx < rule.then.len() {
                 let matcher = &self.compiled_turns[rule_idx][turn_idx];
                 if matcher(prompt) {
                     self.current_turn += 1;
 
                     // Deactivate if we've completed all turns
-                    if self.current_turn >= rule.turns.len() {
+                    if self.current_turn >= rule.then.len() {
                         self.active_rule = None;
                         self.current_turn = 0;
                     }
@@ -188,8 +194,8 @@ impl Scenario {
         for compiled in &self.compiled_patterns {
             let rule = &self.config.responses[compiled.rule_index];
 
-            // Check max_matches limit
-            if let Some(max) = rule.max_matches {
+            // Check max limit
+            if let Some(max) = rule.max {
                 if self.match_counts[compiled.rule_index] >= max {
                     continue;
                 }
@@ -199,7 +205,7 @@ impl Scenario {
                 self.match_counts[compiled.rule_index] += 1;
 
                 // If this rule has turns, activate the sequence
-                if !rule.turns.is_empty() {
+                if !rule.then.is_empty() {
                     self.active_rule = Some(compiled.rule_index);
                     self.current_turn = 0;
                 }
@@ -213,16 +219,55 @@ impl Scenario {
         None
     }
 
-    /// Get response for a match result
-    pub fn get_response(&self, result: &MatchResult) -> Option<&ResponseSpec> {
+    /// Get the say text for a match result
+    pub fn get_say(&self, result: &MatchResult) -> Option<&str> {
         match result {
             MatchResult::Response { rule_index } => {
-                self.config.responses[*rule_index].response.as_ref()
+                self.config.responses[*rule_index].say.as_deref()
             }
             MatchResult::Turn {
                 rule_index,
                 turn_index,
-            } => Some(&self.config.responses[*rule_index].turns[*turn_index].response),
+            } => self.config.responses[*rule_index].then[*turn_index]
+                .say
+                .as_deref(),
+        }
+    }
+
+    /// Get tool calls for a match result
+    pub fn get_tools(&self, result: &MatchResult) -> &[ToolCall] {
+        match result {
+            MatchResult::Response { rule_index } => &self.config.responses[*rule_index].tools,
+            MatchResult::Turn {
+                rule_index,
+                turn_index,
+            } => &self.config.responses[*rule_index].then[*turn_index].tools,
+        }
+    }
+
+    /// Get delay_ms for a match result
+    pub fn get_delay_ms(&self, result: &MatchResult) -> Option<u64> {
+        match result {
+            MatchResult::Response { rule_index } => self.config.responses[*rule_index].delay_ms,
+            MatchResult::Turn {
+                rule_index,
+                turn_index,
+            } => self.config.responses[*rule_index].then[*turn_index].delay_ms,
+        }
+    }
+
+    /// Get usage for a match result
+    pub fn get_usage(&self, result: &MatchResult) -> Option<&crate::config::UsageSpec> {
+        match result {
+            MatchResult::Response { rule_index } => {
+                self.config.responses[*rule_index].usage.as_ref()
+            }
+            MatchResult::Turn {
+                rule_index,
+                turn_index,
+            } => self.config.responses[*rule_index].then[*turn_index]
+                .usage
+                .as_ref(),
         }
     }
 
@@ -235,7 +280,7 @@ impl Scenario {
             MatchResult::Turn {
                 rule_index,
                 turn_index,
-            } => self.config.responses[*rule_index].turns[*turn_index]
+            } => self.config.responses[*rule_index].then[*turn_index]
                 .failure
                 .as_ref(),
         }
@@ -253,13 +298,8 @@ impl Scenario {
     }
 
     /// Get the default response if configured
-    pub fn default_response(&self) -> Option<&ResponseSpec> {
-        self.config.default_response.as_ref()
-    }
-
-    /// Get the scenario name
-    pub fn name(&self) -> &str {
-        &self.config.name
+    pub fn default_response(&self) -> Option<&Response> {
+        self.config.default.as_ref()
     }
 
     /// Get the scenario configuration
@@ -277,9 +317,7 @@ impl Scenario {
 
     /// Get response text for a match result, or empty string if none.
     pub fn response_text(&self, result: &MatchResult) -> String {
-        self.get_response(result)
-            .map(|r| r.text().to_string())
-            .unwrap_or_default()
+        self.get_say(result).unwrap_or_default().to_string()
     }
 
     /// Get response text, falling back to default response.
@@ -287,14 +325,14 @@ impl Scenario {
         if let Some(result) = self.match_prompt(prompt) {
             self.response_text(&result)
         } else if let Some(default) = self.default_response() {
-            default.text().to_string()
+            default.say.as_deref().unwrap_or_default().to_string()
         } else {
             String::new()
         }
     }
 }
 
-/// Resolve file references in the scenario config.
+/// Resolve file references in the v1 scenario config.
 ///
 /// File references use the `$file` key to load content from external files:
 /// ```json
@@ -304,7 +342,7 @@ impl Scenario {
 /// The file content replaces the entire object containing `$file`.
 /// For JSON files (`.json`), content is parsed as JSON; otherwise loaded as string.
 fn resolve_file_references_in_config(
-    config: &mut ScenarioConfig,
+    config: &mut crate::config::v1::ScenarioConfig,
     base_dir: &Path,
 ) -> Result<(), ScenarioError> {
     // Resolve in default_response
@@ -327,10 +365,10 @@ fn resolve_file_references_in_config(
 }
 
 fn resolve_file_references_in_response(
-    response: &mut ResponseSpec,
+    response: &mut crate::config::v1::ResponseSpec,
     base_dir: &Path,
 ) -> Result<(), ScenarioError> {
-    if let ResponseSpec::Detailed { tool_calls, .. } = response {
+    if let crate::config::v1::ResponseSpec::Detailed { tool_calls, .. } = response {
         for tool_call in tool_calls {
             resolve_file_references_in_tool_call(tool_call, base_dir)?;
         }
@@ -339,7 +377,7 @@ fn resolve_file_references_in_response(
 }
 
 fn resolve_file_references_in_tool_call(
-    tool_call: &mut ToolCallSpec,
+    tool_call: &mut crate::config::v1::ToolCallSpec,
     base_dir: &Path,
 ) -> Result<(), ScenarioError> {
     tool_call.input = resolve_file_references_in_value(tool_call.input.take(), base_dir)?;
@@ -388,25 +426,28 @@ fn resolve_file_references_in_value(
     }
 }
 
-fn compile_pattern(spec: &PatternSpec) -> Result<Matcher, ScenarioError> {
+fn compile_pattern(spec: &Pattern) -> Result<Matcher, ScenarioError> {
     match spec {
-        PatternSpec::Exact { text } => {
-            let text = text.clone();
-            Ok(Arc::new(move |prompt| prompt == text))
+        Pattern::Glob(pattern) => {
+            if pattern == "*" {
+                Ok(Arc::new(|_| true))
+            } else if !pattern.contains('*') && !pattern.contains('?') && !pattern.contains('[') {
+                // No glob metacharacters → exact match
+                let text = pattern.clone();
+                Ok(Arc::new(move |prompt| prompt == text))
+            } else {
+                let glob = glob::Pattern::new(pattern)?;
+                Ok(Arc::new(move |prompt| glob.matches(prompt)))
+            }
         }
-        PatternSpec::Regex { pattern } => {
-            let re = regex::Regex::new(pattern)?;
-            Ok(Arc::new(move |prompt| re.is_match(prompt)))
-        }
-        PatternSpec::Glob { pattern } => {
-            let glob = glob::Pattern::new(pattern)?;
-            Ok(Arc::new(move |prompt| glob.matches(prompt)))
-        }
-        PatternSpec::Contains { text } => {
+        Pattern::Contains(text) => {
             let text = text.clone();
             Ok(Arc::new(move |prompt| prompt.contains(&text)))
         }
-        PatternSpec::Any => Ok(Arc::new(|_| true)),
+        Pattern::Regexp(pattern) => {
+            let re = regex::Regex::new(pattern)?;
+            Ok(Arc::new(move |prompt| re.is_match(prompt)))
+        }
     }
 }
 

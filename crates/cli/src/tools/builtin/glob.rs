@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use glob::glob as glob_match;
 
-use crate::config::ToolCallSpec;
+use crate::config::ToolCall;
 use crate::tools::result::ToolExecutionResult;
 
 use super::{extract_directory, extract_str, require_field, BuiltinContext, BuiltinToolExecutor};
@@ -20,11 +20,11 @@ pub struct GlobExecutor;
 impl BuiltinToolExecutor for GlobExecutor {
     fn execute(
         &self,
-        call: &ToolCallSpec,
+        call: &ToolCall,
         tool_use_id: &str,
         ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
-        let pattern = require_field!(call.input, "pattern", extract_str, tool_use_id, call.tool);
+        let pattern = require_field!(call.input, "pattern", extract_str, tool_use_id, call.call);
 
         // Get the base directory
         let base_dir = extract_directory(&call.input)

@@ -9,7 +9,7 @@
 //! by code expecting real Claude CLI responses.
 
 use claudeless::cli::OutputFormat;
-use claudeless::config::ResponseSpec;
+use claudeless::config::Response;
 use claudeless::output::{OutputWriter, ResultOutput};
 use claudeless::validation::{
     AccuracyReport, CliAudit, FeatureCategory, ValidationItem, ValidationStatus,
@@ -114,7 +114,10 @@ fn test_stream_json_produces_valid_ndjson() {
         "claude-test".to_string(),
     );
 
-    let response = ResponseSpec::Simple("Hello, world!".to_string());
+    let response = Response {
+        say: Some("Hello, world!".to_string()),
+        ..Default::default()
+    };
     writer
         .write_real_response(&response, "session-123", vec!["Bash".to_string()])
         .unwrap();
@@ -142,7 +145,10 @@ fn test_stream_json_has_system_init() {
         "claude-test".to_string(),
     );
 
-    let response = ResponseSpec::Simple("Hello!".to_string());
+    let response = Response {
+        say: Some("Hello!".to_string()),
+        ..Default::default()
+    };
     writer
         .write_real_response(&response, "session-123", vec!["Bash".to_string()])
         .unwrap();
@@ -164,7 +170,10 @@ fn test_stream_json_ends_with_result() {
         "claude-test".to_string(),
     );
 
-    let response = ResponseSpec::Simple("Hello!".to_string());
+    let response = Response {
+        say: Some("Hello!".to_string()),
+        ..Default::default()
+    };
     writer
         .write_real_response(&response, "session-123", vec![])
         .unwrap();

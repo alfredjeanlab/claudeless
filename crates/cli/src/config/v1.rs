@@ -6,13 +6,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Default model to report in output
-pub const DEFAULT_MODEL: &str = "claude-opus-4-5-20251101";
-/// Default Claude version string
-pub const DEFAULT_CLAUDE_VERSION: &str = "2.1.12";
-/// Default user display name
-pub const DEFAULT_USER_NAME: &str = "Alfred";
-
 fn default_true() -> bool {
     true
 }
@@ -56,18 +49,6 @@ pub struct IdentityConfig {
     pub welcome_back_right_panel: Option<Vec<String>>,
 }
 
-impl IdentityConfig {
-    /// Validate the identity configuration.
-    pub fn validate(&self) -> Result<(), String> {
-        if let Some(ref id) = self.session_id {
-            if uuid::Uuid::parse_str(id).is_err() {
-                return Err(format!("Invalid session_id '{}': must be a valid UUID", id));
-            }
-        }
-        Ok(())
-    }
-}
-
 /// Environment configuration
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct EnvironmentConfig {
@@ -107,32 +88,6 @@ impl Default for EnvironmentConfig {
     }
 }
 
-impl EnvironmentConfig {
-    /// Valid permission mode values
-    pub const VALID_PERMISSION_MODES: &'static [&'static str] = &[
-        "default",
-        "plan",
-        "bypass-permissions",
-        "accept-edits",
-        "dont-ask",
-        "delegate",
-    ];
-
-    /// Validate the environment configuration.
-    pub fn validate(&self) -> Result<(), String> {
-        if let Some(ref mode) = self.permission_mode {
-            if !Self::VALID_PERMISSION_MODES.contains(&mode.to_lowercase().as_str()) {
-                return Err(format!(
-                    "Invalid permission_mode '{}': must be one of {:?}",
-                    mode,
-                    Self::VALID_PERMISSION_MODES
-                ));
-            }
-        }
-        Ok(())
-    }
-}
-
 /// Timing configuration
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct TimingConfig {
@@ -144,21 +99,6 @@ pub struct TimingConfig {
     /// Timeout configuration
     #[serde(default)]
     pub timeouts: Option<TimeoutOverrides>,
-}
-
-impl TimingConfig {
-    /// Validate the timing configuration.
-    pub fn validate(&self) -> Result<(), String> {
-        if let Some(ref ts) = self.launch_timestamp {
-            if chrono::DateTime::parse_from_rfc3339(ts).is_err() {
-                return Err(format!(
-                    "Invalid launch_timestamp '{}': must be ISO 8601 format (e.g., 2025-01-15T10:30:00Z)",
-                    ts
-                ));
-            }
-        }
-        Ok(())
-    }
 }
 
 /// Top-level scenario configuration
@@ -192,16 +132,6 @@ pub struct ScenarioConfig {
     /// Timing configuration
     #[serde(flatten)]
     pub timing: TimingConfig,
-}
-
-impl ScenarioConfig {
-    /// Validate all sub-configurations.
-    pub fn validate(&self) -> Result<(), String> {
-        self.identity.validate()?;
-        self.environment.validate()?;
-        self.timing.validate()?;
-        Ok(())
-    }
 }
 
 /// Tool execution configuration
@@ -325,48 +255,6 @@ impl Default for ResponseSpec {
     }
 }
 
-impl ResponseSpec {
-    /// Extract just the text content.
-    pub fn text(&self) -> &str {
-        match self {
-            ResponseSpec::Simple(s) => s,
-            ResponseSpec::Detailed { text, .. } => text,
-        }
-    }
-
-    /// Extract text content as owned String.
-    pub fn into_text(self) -> String {
-        match self {
-            ResponseSpec::Simple(s) => s,
-            ResponseSpec::Detailed { text, .. } => text,
-        }
-    }
-
-    /// Get tool calls if any.
-    pub fn tool_calls(&self) -> &[ToolCallSpec] {
-        match self {
-            ResponseSpec::Simple(_) => &[],
-            ResponseSpec::Detailed { tool_calls, .. } => tool_calls,
-        }
-    }
-
-    /// Get delay if specified.
-    pub fn delay_ms(&self) -> Option<u64> {
-        match self {
-            ResponseSpec::Simple(_) => None,
-            ResponseSpec::Detailed { delay_ms, .. } => *delay_ms,
-        }
-    }
-
-    /// Extract text and optional usage from a response.
-    pub fn text_and_usage(&self) -> (String, Option<UsageSpec>) {
-        match self {
-            ResponseSpec::Simple(s) => (s.clone(), None),
-            ResponseSpec::Detailed { text, usage, .. } => (text.clone(), usage.clone()),
-        }
-    }
-}
-
 /// Simulated tool call
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -469,5 +357,5 @@ impl Default for ResolvedTimeouts {
 }
 
 #[cfg(test)]
-#[path = "config_tests.rs"]
+#[path = "v1_tests.rs"]
 mod tests;

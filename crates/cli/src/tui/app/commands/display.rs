@@ -9,7 +9,7 @@
 //! - `format_tool_call_display` - Format tool calls for permission dialogs
 //! - `tool_call_to_permission_type` - Convert tool calls to permission types
 
-use crate::config::ToolCallSpec;
+use crate::config::ToolCall;
 use crate::tui::widgets::permission::{DiffKind, DiffLine, PermissionType};
 
 // ============================================================================
@@ -77,11 +77,8 @@ pub(super) fn join_display_parts(parts: &[String]) -> String {
 }
 
 /// Format a completed tool call with its result for display.
-pub(super) fn format_completed_tool_display(
-    call: &ToolCallSpec,
-    result_text: Option<&str>,
-) -> String {
-    match call.tool.as_str() {
+pub(super) fn format_completed_tool_display(call: &ToolCall, result_text: Option<&str>) -> String {
+    match call.call.as_str() {
         "Write" => {
             let file_path = call
                 .input
@@ -128,15 +125,15 @@ pub(super) fn format_completed_tool_display(
             if let Some(result) = result_text {
                 result.to_string()
             } else {
-                call.tool.clone()
+                call.call.clone()
             }
         }
     }
 }
 
 /// Format a tool call for display above the permission dialog.
-pub(super) fn format_tool_call_display(call: &ToolCallSpec) -> String {
-    match call.tool.as_str() {
+pub(super) fn format_tool_call_display(call: &ToolCall) -> String {
+    match call.call.as_str() {
         "Bash" => {
             let command = call
                 .input
@@ -161,7 +158,7 @@ pub(super) fn format_tool_call_display(call: &ToolCallSpec) -> String {
                 .unwrap_or("");
             format!("Write({})", file_path)
         }
-        _ => call.tool.clone(),
+        _ => call.call.clone(),
     }
 }
 
@@ -169,12 +166,12 @@ pub(super) fn format_tool_call_display(call: &ToolCallSpec) -> String {
 // Tool Call → Permission Type Conversion
 // ============================================================================
 
-/// Convert a `ToolCallSpec` into a `PermissionType` for the TUI permission dialog.
+/// Convert a `ToolCall` into a `PermissionType` for the TUI permission dialog.
 ///
 /// Returns `None` for unknown tool names (e.g., MCP tools that don't have
 /// a corresponding permission dialog).
-pub(crate) fn tool_call_to_permission_type(call: &ToolCallSpec) -> Option<PermissionType> {
-    match call.tool.as_str() {
+pub(crate) fn tool_call_to_permission_type(call: &ToolCall) -> Option<PermissionType> {
+    match call.call.as_str() {
         "Bash" => {
             let command = call.input.get("command")?.as_str()?.to_string();
             let description = call

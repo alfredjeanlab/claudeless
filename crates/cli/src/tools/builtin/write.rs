@@ -5,7 +5,7 @@
 
 use std::fs;
 
-use crate::config::ToolCallSpec;
+use crate::config::ToolCall;
 use crate::state::io::ensure_parent_exists;
 use crate::tools::result::ToolExecutionResult;
 
@@ -19,7 +19,7 @@ pub struct WriteExecutor;
 impl BuiltinToolExecutor for WriteExecutor {
     fn execute(
         &self,
-        call: &ToolCallSpec,
+        call: &ToolCall,
         tool_use_id: &str,
         _ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
@@ -27,9 +27,9 @@ impl BuiltinToolExecutor for WriteExecutor {
             call.input,
             extract_file_path => "'file_path' or 'path'",
             tool_use_id,
-            call.tool
+            call.call
         );
-        let content = require_field!(call.input, "content", extract_str, tool_use_id, call.tool);
+        let content = require_field!(call.input, "content", extract_str, tool_use_id, call.call);
 
         let resolved_path = std::path::PathBuf::from(path);
 

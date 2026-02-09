@@ -73,7 +73,7 @@ impl RuntimeContext {
             .map(PathBuf::from)
             .or_else(|| {
                 scenario
-                    .and_then(|s| s.environment.working_directory.as_ref())
+                    .and_then(|s| s.claude.working_directory.as_ref())
                     .map(PathBuf::from)
             })
             .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
@@ -107,18 +107,18 @@ impl RuntimeContext {
             cli.model.clone()
         } else {
             scenario
-                .and_then(|s| s.identity.default_model.clone())
+                .and_then(|s| s.claude.model.clone())
                 .unwrap_or_else(|| cli.model.clone())
         };
 
         // Claude version: scenario config or default
         let claude_version = scenario
-            .and_then(|s| s.identity.claude_version.clone())
+            .and_then(|s| s.claude.version.clone())
             .unwrap_or_else(|| DEFAULT_CLAUDE_VERSION.to_string());
 
         // User name: scenario config or default
         let user_name = scenario
-            .and_then(|s| s.identity.user_name.clone())
+            .and_then(|s| s.claude.username.clone())
             .unwrap_or_else(|| DEFAULT_USER_NAME.to_string());
 
         // Session ID: --resume has highest priority, then --session-id, scenario, or generate random
@@ -135,7 +135,7 @@ impl RuntimeContext {
             })
             .or_else(|| {
                 scenario
-                    .and_then(|s| s.identity.session_id.as_ref())
+                    .and_then(|s| s.claude.session_id.as_ref())
                     .and_then(|s| Uuid::parse_str(s).ok())
             })
             .unwrap_or_else(Uuid::new_v4);
@@ -147,30 +147,30 @@ impl RuntimeContext {
             .map(PathBuf::from)
             .or_else(|| {
                 scenario
-                    .and_then(|s| s.environment.working_directory.as_ref())
+                    .and_then(|s| s.claude.working_directory.as_ref())
                     .map(PathBuf::from)
             })
             .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
 
         // Project path: scenario config or working directory
         let project_path = scenario
-            .and_then(|s| s.environment.project_path.as_ref())
+            .and_then(|s| s.claude.project_path.as_ref())
             .map(PathBuf::from)
             .unwrap_or_else(|| working_directory.clone());
 
         // Launch timestamp: scenario config or current time
         let launch_timestamp = scenario
-            .and_then(|s| s.timing.launch_timestamp.as_ref())
+            .and_then(|s| s.claude.launch_timestamp.as_ref())
             .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
             .map(|dt: DateTime<chrono::FixedOffset>| dt.with_timezone(&Utc))
             .unwrap_or_else(Utc::now);
 
         // Trusted: scenario config (default true)
-        let trusted = scenario.map(|s| s.environment.trusted).unwrap_or(true);
+        let trusted = scenario.map(|s| s.trusted).unwrap_or(true);
 
         // Permission mode: scenario config or CLI default
         let permission_mode = scenario
-            .and_then(|s| s.environment.permission_mode.as_ref())
+            .and_then(|s| s.permission_mode.as_ref())
             .and_then(|s| parse_permission_mode(s))
             .unwrap_or_else(|| cli.permissions.permission_mode.clone());
 

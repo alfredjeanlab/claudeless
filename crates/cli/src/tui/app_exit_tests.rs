@@ -233,11 +233,11 @@ fn header_shows_claudeless_when_no_version_specified() {
 
 #[test]
 fn header_shows_claude_code_when_version_specified() {
-    use crate::config::{IdentityConfig, ScenarioConfig};
+    use crate::config::{ClaudeConfig, ScenarioConfig};
 
     let config = ScenarioConfig {
-        identity: IdentityConfig {
-            claude_version: Some("2.1.12".to_string()),
+        claude: ClaudeConfig {
+            version: Some("2.1.12".to_string()),
             ..Default::default()
         },
         ..Default::default()
@@ -269,11 +269,11 @@ fn header_shows_claude_code_when_version_specified() {
 
 #[test]
 fn cli_version_overrides_scenario() {
-    use crate::config::{IdentityConfig, ScenarioConfig};
+    use crate::config::{ClaudeConfig, ScenarioConfig};
 
     let scenario_config = ScenarioConfig {
-        identity: IdentityConfig {
-            claude_version: Some("1.0.0".to_string()),
+        claude: ClaudeConfig {
+            version: Some("1.0.0".to_string()),
             ..Default::default()
         },
         ..Default::default()

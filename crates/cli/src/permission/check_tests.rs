@@ -185,7 +185,7 @@ fn test_scenario_override_auto_approve() {
     overrides.insert(
         "Bash".to_string(),
         ToolConfig {
-            auto_approve: true,
+            approve: true,
             result: None,
             error: None,
             answers: None,
@@ -211,7 +211,7 @@ fn test_scenario_override_error() {
     overrides.insert(
         "Bash".to_string(),
         ToolConfig {
-            auto_approve: false,
+            approve: false,
             result: None,
             error: Some("Simulated error".to_string()),
             answers: None,
@@ -244,7 +244,7 @@ fn test_scenario_overrides_beat_settings() {
     overrides.insert(
         "Bash".to_string(),
         ToolConfig {
-            auto_approve: true,
+            approve: true,
             result: None,
             error: None,
             answers: None,
@@ -282,7 +282,7 @@ fn test_bypass_beats_everything() {
     overrides.insert(
         "Bash".to_string(),
         ToolConfig {
-            auto_approve: false,
+            approve: false,
             result: None,
             error: Some("Error".to_string()),
             answers: None,

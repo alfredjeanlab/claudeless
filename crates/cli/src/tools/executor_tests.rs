@@ -7,8 +7,8 @@ use serde_json::json;
 #[test]
 fn test_mock_executor_with_result() {
     let executor = MockExecutor::new();
-    let call = ToolCallSpec {
-        tool: "Bash".to_string(),
+    let call = ToolCall {
+        call: "Bash".to_string(),
         input: json!({ "command": "ls" }),
         result: Some("file1.txt\nfile2.txt".to_string()),
     };
@@ -23,8 +23,8 @@ fn test_mock_executor_with_result() {
 #[test]
 fn test_mock_executor_without_result() {
     let executor = MockExecutor::new();
-    let call = ToolCallSpec {
-        tool: "Read".to_string(),
+    let call = ToolCall {
+        call: "Read".to_string(),
         input: json!({ "path": "/tmp/test.txt" }),
         result: None,
     };
@@ -68,8 +68,8 @@ fn test_permission_checking_executor_allowed() {
     );
     let executor = PermissionCheckingExecutor::new(inner, checker);
 
-    let call = ToolCallSpec {
-        tool: "Bash".to_string(),
+    let call = ToolCall {
+        call: "Bash".to_string(),
         input: json!({ "command": "ls" }),
         result: Some("output".to_string()),
     };
@@ -88,8 +88,8 @@ fn test_permission_checking_executor_denied() {
     let checker = PermissionChecker::new(PermissionMode::DontAsk, PermissionBypass::default());
     let executor = PermissionCheckingExecutor::new(inner, checker);
 
-    let call = ToolCallSpec {
-        tool: "Bash".to_string(),
+    let call = ToolCall {
+        call: "Bash".to_string(),
         input: json!({ "command": "rm -rf /" }),
         result: Some("never executed".to_string()),
     };
@@ -108,8 +108,8 @@ fn test_permission_checking_executor_needs_prompt() {
     let checker = PermissionChecker::new(PermissionMode::Default, PermissionBypass::default());
     let executor = PermissionCheckingExecutor::new(inner, checker);
 
-    let call = ToolCallSpec {
-        tool: "Bash".to_string(),
+    let call = ToolCall {
+        call: "Bash".to_string(),
         input: json!({ "command": "ls" }),
         result: Some("never executed".to_string()),
     };

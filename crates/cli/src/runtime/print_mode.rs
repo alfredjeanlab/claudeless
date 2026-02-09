@@ -122,7 +122,7 @@ impl Runtime {
         let mcp_servers = self.mcp_server_info();
 
         writer.write_real_response_with_mcp(
-            &result.response,
+            &result.to_response(),
             &self.context.session_id.to_string(),
             tools,
             mcp_servers,

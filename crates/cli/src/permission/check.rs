@@ -102,7 +102,7 @@ impl PermissionChecker {
 
         // 2. Scenario overrides take next priority
         if let Some(config) = self.scenario_overrides.get(tool_name) {
-            if config.auto_approve {
+            if config.approve {
                 return PermissionResult::Allowed;
             }
             if let Some(ref error) = config.error {

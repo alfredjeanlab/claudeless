@@ -3,6 +3,7 @@
 
 use super::*;
 use crate::cli::{McpOptions, OutputOptions, PermissionOptions, SessionOptions, SimulatorOptions};
+use crate::config::ClaudeConfig;
 use chrono::Datelike;
 
 fn default_cli() -> Cli {
@@ -62,26 +63,17 @@ fn test_defaults_applied() {
 
 #[test]
 fn test_scenario_overrides_defaults() {
-    use crate::config::{EnvironmentConfig, IdentityConfig};
-
     let cli = default_cli();
     let scenario = ScenarioConfig {
-        name: "test".to_string(),
-        identity: IdentityConfig {
-            default_model: Some("custom-model".to_string()),
-            claude_version: Some("3.0.0".to_string()),
-            user_name: Some("TestUser".to_string()),
+        claude: ClaudeConfig {
+            model: Some("custom-model".to_string()),
+            version: Some("3.0.0".to_string()),
+            username: Some("TestUser".to_string()),
             session_id: Some("550e8400-e29b-41d4-a716-446655440000".to_string()),
-            placeholder: None,
-            provider: None,
-            show_welcome_back: None,
-            welcome_back_right_panel: None,
-        },
-        environment: EnvironmentConfig {
-            trusted: false,
-            permission_mode: Some("plan".to_string()),
             ..Default::default()
         },
+        trusted: false,
+        permission_mode: Some("plan".to_string()),
         ..Default::default()
     };
 
@@ -100,21 +92,15 @@ fn test_scenario_overrides_defaults() {
 
 #[test]
 fn test_cli_overrides_scenario() {
-    use crate::config::{EnvironmentConfig, IdentityConfig};
-
     let mut cli = default_cli();
     cli.model = "cli-model".to_string();
     cli.cwd = Some("/cli/path".to_string());
     cli.session.session_id = Some("12345678-1234-1234-1234-123456789012".to_string());
 
     let scenario = ScenarioConfig {
-        name: "test".to_string(),
-        identity: IdentityConfig {
-            default_model: Some("scenario-model".to_string()),
+        claude: ClaudeConfig {
+            model: Some("scenario-model".to_string()),
             session_id: Some("550e8400-e29b-41d4-a716-446655440000".to_string()),
-            ..Default::default()
-        },
-        environment: EnvironmentConfig {
             working_directory: Some("/scenario/path".to_string()),
             ..Default::default()
         },
@@ -134,12 +120,9 @@ fn test_cli_overrides_scenario() {
 
 #[test]
 fn test_launch_timestamp_parsing() {
-    use crate::config::TimingConfig;
-
     let cli = default_cli();
     let scenario = ScenarioConfig {
-        name: "test".to_string(),
-        timing: TimingConfig {
+        claude: ClaudeConfig {
             launch_timestamp: Some("2025-01-15T10:30:00Z".to_string()),
             ..Default::default()
         },
@@ -158,10 +141,7 @@ fn test_project_path_defaults_to_working_dir() {
     let mut cli = default_cli();
     cli.cwd = Some("/work/dir".to_string());
 
-    let scenario = ScenarioConfig {
-        name: "test".to_string(),
-        ..Default::default()
-    };
+    let scenario = ScenarioConfig::default();
 
     let ctx = RuntimeContext::build(Some(&scenario), &cli);
 
@@ -171,12 +151,9 @@ fn test_project_path_defaults_to_working_dir() {
 
 #[test]
 fn test_project_path_override() {
-    use crate::config::EnvironmentConfig;
-
     let cli = default_cli();
     let scenario = ScenarioConfig {
-        name: "test".to_string(),
-        environment: EnvironmentConfig {
+        claude: ClaudeConfig {
             project_path: Some("/project/path".to_string()),
             working_directory: Some("/work/dir".to_string()),
             ..Default::default()
@@ -339,7 +316,7 @@ fn test_permission_checker_with_overrides() {
     overrides.insert(
         "Bash".to_string(),
         ToolConfig {
-            auto_approve: true,
+            approve: true,
             result: None,
             error: None,
             answers: None,
@@ -399,14 +376,11 @@ fn test_resume_session_id_priority() {
 
 #[test]
 fn test_resume_overrides_scenario() {
-    use crate::config::IdentityConfig;
-
     let mut cli = default_cli();
     cli.session.resume = Some("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa".to_string());
 
     let scenario = ScenarioConfig {
-        name: "test".to_string(),
-        identity: IdentityConfig {
+        claude: ClaudeConfig {
             session_id: Some("cccccccc-cccc-cccc-cccc-cccccccccccc".to_string()),
             ..Default::default()
         },

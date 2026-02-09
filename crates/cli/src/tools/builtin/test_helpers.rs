@@ -4,7 +4,7 @@
 //! Shared test helpers for builtin tool executor tests.
 
 use super::*;
-use crate::config::ToolCallSpec;
+use crate::config::ToolCall;
 use crate::tools::result::ToolExecutionResult;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -63,9 +63,9 @@ impl TestDir {
 }
 
 /// Create a tool call spec with the given tool name and input.
-pub fn tool_call(tool: &str, input: serde_json::Value) -> ToolCallSpec {
-    ToolCallSpec {
-        tool: tool.to_string(),
+pub fn tool_call(tool: &str, input: serde_json::Value) -> ToolCall {
+    ToolCall {
+        call: tool.to_string(),
         input,
         result: None,
     }

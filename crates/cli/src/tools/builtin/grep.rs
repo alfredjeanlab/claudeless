@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use regex::Regex;
 
-use crate::config::ToolCallSpec;
+use crate::config::ToolCall;
 use crate::tools::result::ToolExecutionResult;
 
 use super::{extract_bool, extract_str, require_field, BuiltinContext, BuiltinToolExecutor};
@@ -58,12 +58,12 @@ impl GrepExecutor {
 impl BuiltinToolExecutor for GrepExecutor {
     fn execute(
         &self,
-        call: &ToolCallSpec,
+        call: &ToolCall,
         tool_use_id: &str,
         ctx: &BuiltinContext,
     ) -> ToolExecutionResult {
         let pattern_str =
-            require_field!(call.input, "pattern", extract_str, tool_use_id, call.tool);
+            require_field!(call.input, "pattern", extract_str, tool_use_id, call.call);
 
         // Build regex
         let case_insensitive = extract_bool(&call.input, "-i", false);
