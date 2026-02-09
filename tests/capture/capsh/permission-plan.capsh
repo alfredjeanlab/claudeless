@@ -6,9 +6,9 @@
 wait "─\n❯" 10s
 
 # Send Shift+Tab (BackTab) escape sequence twice to cycle to plan mode
-send <Esc> "[Z"
+send <BackTab>
 wait "accept edits" 3s
-send <Esc> "[Z"
+send <BackTab>
 wait "plan" 3s
 snapshot "permission_plan"
 

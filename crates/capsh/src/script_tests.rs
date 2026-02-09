@@ -88,6 +88,29 @@ fn parse_send_special_keys() {
 }
 
 #[test]
+fn parse_send_shift_arrow_keys() {
+    let cmds = parse("send <S-Up> <S-Down>").unwrap();
+    if let Command::Send(parts) = &cmds[0] {
+        assert_eq!(
+            parts,
+            &[SendPart::Bytes(b"\x1b[1;2A\x1b[1;2B".to_vec())]
+        );
+    } else {
+        panic!("expected Send");
+    }
+}
+
+#[test]
+fn parse_send_backtab() {
+    let cmds = parse("send <BackTab>").unwrap();
+    if let Command::Send(parts) = &cmds[0] {
+        assert_eq!(parts, &[SendPart::Bytes(b"\x1b[Z".to_vec())]);
+    } else {
+        panic!("expected Send");
+    }
+}
+
+#[test]
 fn parse_send_with_delay() {
     let cmds = parse(r#"send "hello" 150 <Enter>"#).unwrap();
     if let Command::Send(parts) = &cmds[0] {

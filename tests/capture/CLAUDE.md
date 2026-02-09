@@ -268,7 +268,10 @@ kill TERM
 | `<Enter>` | Submit input |
 | `<Esc>` | Cancel/clear |
 | `<Tab>` | Tab complete |
+| `<BackTab>` | Shift+Tab (reverse tab) |
 | `<C-u>` | Clear input line |
+| `<C-t>` | Toggle teammate panel |
+| `<S-Up>` / `<S-Down>` | Navigate teammate panel |
 | `<M-p>` | Model picker |
 | `<M-t>` | Thinking toggle |
 

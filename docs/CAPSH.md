@@ -106,6 +106,11 @@ Inline delays (numbers in milliseconds) pause between sends without a separate `
 | `<Down>` | Arrow down |
 | `<Left>` | Arrow left |
 | `<Right>` | Arrow right |
+| `<S-Up>` | Shift + Arrow up |
+| `<S-Down>` | Shift + Arrow down |
+| `<S-Left>` | Shift + Arrow left |
+| `<S-Right>` | Shift + Arrow right |
+| `<BackTab>` | Shift + Tab (reverse tab) |
 | `<C-a>` ... `<C-z>` | Ctrl + letter |
 | `<M-a>` ... `<M-z>` | Meta/Option + letter |
 | `<A-a>` ... `<A-z>` | Alt + letter (same as Meta) |

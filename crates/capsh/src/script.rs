@@ -498,6 +498,15 @@ fn parse_special_key(key: &str) -> Result<Vec<u8>> {
         "Right" => b"\x1b[C",
         "Left" => b"\x1b[D",
 
+        // Shift+Arrow keys (xterm modifyOtherKeys: CSI 1;2 + direction)
+        "S-Up" => b"\x1b[1;2A",
+        "S-Down" => b"\x1b[1;2B",
+        "S-Right" => b"\x1b[1;2C",
+        "S-Left" => b"\x1b[1;2D",
+
+        // Reverse Tab (Shift+Tab)
+        "BackTab" => b"\x1b[Z",
+
         // Common keys
         "Enter" => b"\r",
         "Tab" => b"\t",
