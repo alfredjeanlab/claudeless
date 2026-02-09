@@ -383,8 +383,9 @@ impl Drop for TuiTestSession {
 }
 
 /// Helper to start claudeless TUI and capture initial state
-pub fn capture_tui_initial(session: impl AsRef<str>, extra_args: &str) -> String {
-    let session = session.as_ref();
+pub fn capture_tui_initial(prefix: impl AsRef<str>, extra_args: &str) -> String {
+    let session = tmux::unique_session(prefix.as_ref());
+    let session = session.as_str();
     tmux::require_tmux();
     let scenario = simple_scenario("ok");
 

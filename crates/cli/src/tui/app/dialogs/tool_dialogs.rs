@@ -96,6 +96,12 @@ impl TuiAppState {
                         .get(state.current_question)
                         .is_some_and(|q| q.multi_select);
                     if !is_multi {
+                        // Single question: select and immediately submit (no review page)
+                        if state.questions.len() == 1 {
+                            drop(inner);
+                            self.confirm_elicitation();
+                            return;
+                        }
                         state.next_question();
                     }
                 }
@@ -160,12 +166,27 @@ impl TuiAppState {
                     } else if on_free_text {
                         // Free-text: Enter submits the free-text answer, advance
                         if let Some(state) = inner.dialog.as_elicitation_mut() {
+                            // Single question: submit immediately
+                            if state.questions.len() == 1 {
+                                drop(inner);
+                                self.confirm_elicitation();
+                                return;
+                            }
                             state.next_question();
                         }
                     } else {
                         // Single-select: select at cursor and advance
-                        if let Some(state) = inner.dialog.as_elicitation_mut() {
-                            state.select_and_advance();
+                        let auto_submit = inner
+                            .dialog
+                            .as_elicitation_mut()
+                            .is_some_and(|state| {
+                                state.select_and_advance();
+                                // Single question: submit immediately (no review page)
+                                state.questions.len() == 1
+                            });
+                        if auto_submit {
+                            drop(inner);
+                            self.confirm_elicitation();
                         }
                     }
                 }
