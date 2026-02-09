@@ -91,10 +91,7 @@ fn parse_send_special_keys() {
 fn parse_send_shift_arrow_keys() {
     let cmds = parse("send <S-Up> <S-Down>").unwrap();
     if let Command::Send(parts) = &cmds[0] {
-        assert_eq!(
-            parts,
-            &[SendPart::Bytes(b"\x1b[1;2A\x1b[1;2B".to_vec())]
-        );
+        assert_eq!(parts, &[SendPart::Bytes(b"\x1b[1;2A\x1b[1;2B".to_vec())]);
     } else {
         panic!("expected Send");
     }
