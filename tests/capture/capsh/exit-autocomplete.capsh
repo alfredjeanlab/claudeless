@@ -1,6 +1,6 @@
 # Capture /exit autocomplete menu.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 send "/exit"
 wait "Exit the REPL" 3s

@@ -1,6 +1,6 @@
 # Capture fork error when no conversation exists.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Send /fork command and wait for error
 send "/fork"
@@ -9,7 +9,7 @@ send <Enter>
 wait "No conversation to fork" 5s
 
 # Wait for command to complete (status bar returns to idle)
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 snapshot "fork_no_conversation"
 
 # Exit

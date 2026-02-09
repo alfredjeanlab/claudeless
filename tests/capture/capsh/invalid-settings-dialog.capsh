@@ -7,7 +7,7 @@ snapshot "invalid_settings_dialog"
 
 # Select "Continue without these settings" (arrow down then enter)
 send <Down> 200 <Enter>
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 snapshot "after_continue"
 
 # Exit cleanly

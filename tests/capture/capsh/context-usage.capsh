@@ -1,6 +1,6 @@
 # Capture context usage display.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Type /context and submit to show context usage
 send "/context"
@@ -9,7 +9,7 @@ send <Enter>
 wait "Estimated usage" 10s
 
 # Wait for idle state (ensure no background response is running)
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 snapshot "context_usage"
 
 # Exit

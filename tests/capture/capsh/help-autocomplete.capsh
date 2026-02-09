@@ -1,6 +1,6 @@
 # Capture /help autocomplete suggestion (before pressing Enter).
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 send "/help"
 wait "Show help" 3s

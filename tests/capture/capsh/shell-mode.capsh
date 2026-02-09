@@ -1,6 +1,6 @@
 # Capture shell mode (! prefix) states.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Type shell mode prefix and wait for it to render
 send "!"

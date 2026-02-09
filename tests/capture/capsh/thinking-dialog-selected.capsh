@@ -4,13 +4,13 @@
 # Args: --model haiku
 # Timeout: 120
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
+wait 1s
 
 # Build up conversation to make it mid-conversation
-send "What is 2+2? Just give me the number."
-wait 100
-send <Enter>
-wait "4" 60s
+send "What is 2+2? Just give me the number." 1000 <Enter>
+wait "esc to interrupt" 30s
+wait !"esc to interrupt" 30s
 
 # Open thinking dialog (Meta+T / Option+T)
 send <M-t>

@@ -1,6 +1,6 @@
 # Capture todos empty state (no todos tracked).
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Type /todos and submit
 send "/todos"
@@ -9,7 +9,7 @@ send <Enter>
 wait "No todos currently tracked" 10s
 
 # Wait for idle state (processing complete)
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 snapshot "todos_empty"
 
 # Exit

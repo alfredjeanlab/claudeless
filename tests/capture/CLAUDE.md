@@ -64,7 +64,7 @@ tmux kill-session -t claude-test
 # Captures help dialog
 # Args: --model haiku
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 send "/help" 100 <Enter>
 wait "claude.com" 10s
 snapshot "help_response"
@@ -107,7 +107,7 @@ wait "trust this folder" 10s
 snapshot "trust_dialog"
 
 send <Enter>
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 snapshot "after_trust"
 
 send <C-u> 100 "/exit" 100 <Enter>
@@ -164,7 +164,7 @@ source tests/capture/.env
 workspace=$(mktemp -d)
 cd "$workspace"
 capsh --frames /tmp/explore -- claude --model haiku <<'EOF'
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 wait 30s
 EOF
 
@@ -220,7 +220,7 @@ See [docs/CAPSH.md](../../docs/CAPSH.md) for full DSL reference.
 # Description of what this script captures.
 # Args: --model haiku
 
-wait "for shortcuts" 10s    # Wait for Claude to be ready
+wait "─\n❯" 10s             # Wait for Claude to be ready
 
 # Perform actions
 send "/help"
@@ -236,10 +236,20 @@ kill TERM
 ### Key patterns
 
 ```capsh
-# Wait for Claude ready state
-wait "for shortcuts" 10s
+# Wait for Claude ready state (two separator lines with ❯ prompt)
+wait "─\n❯" 10s
 
-# Send text with inline delays
+# IMPORTANT: When submitting prompts (not slash commands), add a settling
+# delay after the ready wait — the TUI needs time to fully initialize
+# or Enter will create a newline instead of submitting.
+wait 1s
+send "prompt text" 1000 <Enter>
+
+# Wait for response to start and complete
+wait "esc to interrupt" 30s
+wait !"esc to interrupt" 30s
+
+# Send slash commands (no settling delay needed)
 send "/help" 100 <Enter>
 
 # Named snapshots become fixtures

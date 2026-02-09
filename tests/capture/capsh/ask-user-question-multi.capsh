@@ -3,10 +3,11 @@
 # Args: --model haiku
 # Timeout: 60
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
+wait 1s
 
 # Ask Claude to use AskUserQuestion with 4 questions
-send "Use the AskUserQuestion tool to ask me 4 questions: programming language (Rust/Python), project type (CLI/Web), CI/CD (GitHub Actions/None), and license (MIT/Apache). Use separate questions, not multi-select." 100 <Enter>
+send "Use the AskUserQuestion tool to ask me 4 questions: programming language (Rust/Python), project type (CLI/Web), CI/CD (GitHub Actions/None), and license (MIT/Apache). Use separate questions, not multi-select." 1000 <Enter>
 
 # Wait for the elicitation dialog with tab bar
 wait "Language" 30s

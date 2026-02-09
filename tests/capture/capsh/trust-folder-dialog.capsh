@@ -6,15 +6,14 @@
 # Handle initial trust dialog if it appears, then wait for ready state
 if wait "trust this folder" 5s
     send <Enter>
-    wait "for shortcuts" 3s
+    wait "─\n❯" 3s
 else
-    wait "for shortcuts" 3s
+    wait "─\n❯" 3s
 end
+wait 1s
 
 # Ask Claude to access an external folder (outside project directory)
-send "list files in ~/Downloads"
-wait 100
-send <Enter>
+send "list files in ~/Downloads" 1000 <Enter>
 
 # Wait for permission dialog to appear - could be bash or trust folder
 # Match handles both types of dialogs

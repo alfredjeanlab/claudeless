@@ -1,6 +1,6 @@
 # Capture /export autocomplete menu.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 send "/export"
 wait "Export the current" 3s

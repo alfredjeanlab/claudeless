@@ -5,21 +5,22 @@
 # Args: --model haiku
 # Timeout: 90
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
+wait 1s
 
 # First prompt
-send "What is 2+2? Just give me the number." 500 <Enter>
+send "What is 2+2? Just give me the number." 1000 <Enter>
 
 # Wait for response to complete
-wait !"for shortcuts" 10s
-wait "for shortcuts" 30s
+wait "esc to interrupt" 30s
+wait !"esc to interrupt" 30s
 
 # Second prompt - asks Claude to read the hook log
-send "Read the file .hook-log and show me its exact contents. Nothing else." 500 <Enter>
+send "Read the file .hook-log and show me its exact contents. Nothing else." 1000 <Enter>
 
 # Wait for response to complete
-wait !"for shortcuts" 10s
-wait "for shortcuts" 30s
+wait "esc to interrupt" 30s
+wait !"esc to interrupt" 30s
 snapshot "hook_stop_after_response"
 
 # Exit cleanly

@@ -1,6 +1,6 @@
 # Capture keyboard shortcuts display.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 send "?"
 wait "for bash mode" 3s

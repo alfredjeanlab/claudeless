@@ -6,23 +6,21 @@
 # Handle trust dialog if it appears, then wait for ready state
 if wait "trust this folder" 5s
     send <Enter>
-    wait "for shortcuts" 3s
+    wait "─\n❯" 3s
 else
-    wait "for shortcuts" 3s
+    wait "─\n❯" 3s
 end
+wait 1s
 
 # First create a file
-send "Create a file called test.txt with the content: Hello World"
-wait 100
-send <Enter>
+send "Create a file called test.txt with the content: Hello World" 1000 <Enter>
 wait "Create file" 30s
 send <Enter>
-wait "for shortcuts" 5s
+wait "─\n❯" 5s
+wait 1s
 
 # Now ask Claude to edit the existing file
-send "Edit test.txt and change Hello to Goodbye"
-wait 100
-send <Enter>
+send "Edit test.txt and change Hello to Goodbye" 1000 <Enter>
 
 # Wait for Edit permission dialog to appear
 wait "Edit file" 45s

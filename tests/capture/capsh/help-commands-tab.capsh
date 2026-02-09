@@ -1,6 +1,6 @@
 # Capture help dialog with commands tab selected.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Type /help and submit
 send "/help"

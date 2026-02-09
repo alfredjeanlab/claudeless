@@ -1,6 +1,6 @@
 # Capture Ctrl-S stash active state with input stashed.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Type some text
 send "Try \"refactor mod.rs\""

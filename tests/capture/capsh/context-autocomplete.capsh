@@ -1,6 +1,6 @@
 # Capture /context autocomplete dropdown.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 send "/context"
 wait "Visualize current context" 3s

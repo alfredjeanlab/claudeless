@@ -1,6 +1,6 @@
 # Capture empty background tasks dialog.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Open tasks dialog (via slash command)
 send "/tasks"

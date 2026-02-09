@@ -3,10 +3,11 @@
 # Args: --model haiku
 # Timeout: 60
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
+wait 1s
 
 # Ask Claude to use AskUserQuestion to present options
-send "Use the AskUserQuestion tool to ask me what programming language I prefer. Provide two options: Rust and Python." 100 <Enter>
+send "Use the AskUserQuestion tool to ask me what programming language I prefer. Provide two options: Rust and Python." 1000 <Enter>
 
 # Wait for the elicitation dialog to appear
 wait "language" 30s

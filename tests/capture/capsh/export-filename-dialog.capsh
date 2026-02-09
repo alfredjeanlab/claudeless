@@ -1,7 +1,7 @@
 # Capture export filename dialog.
 # Args: --model haiku
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Open export dialog and navigate to filename input
 send "/export"

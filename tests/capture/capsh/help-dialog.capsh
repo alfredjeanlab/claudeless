@@ -1,6 +1,6 @@
 # Capture help response.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Type /help and wait for autocomplete, then submit
 send "/help"

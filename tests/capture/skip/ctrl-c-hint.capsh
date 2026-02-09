@@ -1,7 +1,7 @@
 # Capture the "Press Ctrl-C again to exit" hint.
 # Note: Ctrl-C cannot be sent correctly via PTY in raw mode.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Type some text
 send "hello world"

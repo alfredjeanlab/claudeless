@@ -1,6 +1,6 @@
 # Capture slash command menu and filtering behavior.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 send "/"
 wait "add-dir" 3s

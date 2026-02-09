@@ -1,6 +1,6 @@
 # Capture hooks matcher dialog (PreToolUse - Tool Matchers).
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Open hooks dialog
 send "/hooks"

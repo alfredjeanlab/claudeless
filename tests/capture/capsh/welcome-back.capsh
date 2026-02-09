@@ -1,7 +1,7 @@
 # Capture the "Welcome back!" splash screen shown on first startup.
 # Config: welcome-back
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 snapshot "welcome_back"
 
 send <C-u> 100 "/exit" 100 <Enter>

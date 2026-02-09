@@ -1,6 +1,6 @@
 # Capture hooks dialog.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Type /hooks and wait for autocomplete
 send "/hooks"

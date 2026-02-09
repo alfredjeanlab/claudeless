@@ -1,6 +1,6 @@
 # Capture "Esc to clear again" hint.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Type some text first
 send "hello world"

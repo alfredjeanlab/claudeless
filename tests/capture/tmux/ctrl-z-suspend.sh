@@ -39,7 +39,7 @@ tmux send-keys -t "$SESSION" 'claude --model haiku' Enter
 
 # Wait for Claude to be ready (look for the prompt)
 for i in {1..30}; do
-    if tmux capture-pane -t "$SESSION" -p | grep -q "for shortcuts"; then
+    if tmux capture-pane -t "$SESSION" -p | grep -q "❯"; then
         break
     fi
     sleep 0.5

@@ -6,21 +6,20 @@
 # Handle trust dialog if it appears, then wait for ready state
 if wait "trust this folder" 5s
     send <Enter>
-    wait "for shortcuts" 3s
+    wait "─\n❯" 3s
 else
-    wait "for shortcuts" 3s
+    wait "─\n❯" 3s
 end
+wait 1s
 
 # Build up conversation with two turns (need context to compact)
-send "what is 2 + 2?"
-wait 120
-send <Enter>
-wait "= 4" 30s
+send "what is 2 + 2?" 1000 <Enter>
+wait "esc to interrupt" 30s
+wait !"esc to interrupt" 30s
 
-send "and 3 + 3?"
-wait 120
-send <Enter>
-wait "= 6" 30s
+send "and 3 + 3?" 1000 <Enter>
+wait "esc to interrupt" 30s
+wait !"esc to interrupt" 30s
 
 # Wait for response to complete and prompt to be ready
 wait 2s

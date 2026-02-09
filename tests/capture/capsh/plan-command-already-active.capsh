@@ -1,7 +1,7 @@
 # Capture /plan command when already in plan mode (no plan written yet).
 # Args: --model haiku
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Enable plan mode first (wait for autocomplete, then Enter selects+submits)
 send "/plan"

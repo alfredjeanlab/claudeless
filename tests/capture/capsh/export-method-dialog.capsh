@@ -1,6 +1,6 @@
 # Capture export method dialog.
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Type /export and wait for autocomplete, then submit
 send "/export"

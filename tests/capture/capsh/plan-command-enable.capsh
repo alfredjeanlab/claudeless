@@ -1,7 +1,7 @@
 # Capture /plan command enabling plan mode from normal state.
 # Args: --model haiku
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 
 # Ensure not in plan mode (shift-tab cycles: default -> accept-edits -> plan -> default)
 # Send once to cycle away if in plan mode
@@ -14,7 +14,7 @@ wait 1s
 
 # One more to be sure we're in default mode
 send <Esc> "[Z"
-wait "for shortcuts" 3s
+wait "─\n❯" 3s
 
 # Now send /plan to enable plan mode (wait for autocomplete, then Enter selects+submits)
 send "/plan"

@@ -11,7 +11,7 @@
 #   4. Complete login
 #   5. Run this script
 
-wait "for shortcuts" 10s
+wait "─\n❯" 10s
 snapshot "api_usage_billing"
 
 send <C-u> 100 "/exit" 100 <Enter>
