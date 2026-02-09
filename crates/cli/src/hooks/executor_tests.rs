@@ -146,6 +146,66 @@ async fn test_context_fields_in_wire_json() {
     assert_eq!(wire["permission_mode"], "acceptEdits");
 }
 
+#[tokio::test]
+async fn test_empty_matcher_matches_all_tools() {
+    // An empty matcher "" means "match all" (same as omitting matcher)
+    let dir = tempfile::tempdir().unwrap();
+    let script_path = dir.path().join("hook.sh");
+    std::fs::write(&script_path, "#!/bin/bash\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    let mut executor = HookExecutor::new();
+    executor.register(
+        HookEvent::PostToolExecution,
+        HookConfig::new(&script_path, 5000).with_matcher(Some("".to_string())),
+    );
+
+    let message = HookMessage::tool_execution(
+        "test",
+        HookEvent::PostToolExecution,
+        "Read",
+        serde_json::json!({"file_path": "/tmp/test"}),
+        None,
+        None,
+    );
+    let responses = executor.execute(&message).await.unwrap();
+    assert_eq!(responses.len(), 1, "empty matcher should match all tools");
+}
+
+#[tokio::test]
+async fn test_star_matcher_matches_all_tools() {
+    // A "*" matcher means "match all"
+    let dir = tempfile::tempdir().unwrap();
+    let script_path = dir.path().join("hook.sh");
+    std::fs::write(&script_path, "#!/bin/bash\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    let mut executor = HookExecutor::new();
+    executor.register(
+        HookEvent::PostToolExecution,
+        HookConfig::new(&script_path, 5000).with_matcher(Some("*".to_string())),
+    );
+
+    let message = HookMessage::tool_execution(
+        "test",
+        HookEvent::PostToolExecution,
+        "Bash",
+        serde_json::json!({"command": "ls"}),
+        None,
+        None,
+    );
+    let responses = executor.execute(&message).await.unwrap();
+    assert_eq!(responses.len(), 1, "star matcher should match all tools");
+}
+
 #[test]
 fn test_matcher_filtering_no_matcher_registers_for_all() {
     let mut executor = HookExecutor::new();

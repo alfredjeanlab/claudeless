@@ -109,27 +109,32 @@ impl HookExecutor {
 
         let mut responses = Vec::new();
         for hook in hooks {
-            // Matcher filtering: skip hooks whose pattern doesn't match the sub-event
+            // Matcher filtering: skip hooks whose pattern doesn't match the sub-event.
+            // Empty or "*" matchers mean "match all" (same as omitting matcher).
             if let Some(ref matcher_pattern) = hook.matcher {
-                let subject = match &message.payload {
-                    // For Notification events, match against notification_type
-                    HookPayload::Notification {
-                        ref notification_type,
-                        ..
-                    } => Some(notification_type.as_str()),
-                    // For tool events, match against tool_name
-                    HookPayload::ToolExecution { ref tool_name, .. } => Some(tool_name.as_str()),
-                    HookPayload::ToolExecutionFailure { ref tool_name, .. } => {
-                        Some(tool_name.as_str())
-                    }
-                    _ => None,
-                };
-                if let Some(subject) = subject {
-                    let matches = matcher_pattern
-                        .split('|')
-                        .any(|segment| segment.trim() == subject);
-                    if !matches {
-                        continue;
+                if !matcher_pattern.is_empty() && matcher_pattern != "*" {
+                    let subject = match &message.payload {
+                        // For Notification events, match against notification_type
+                        HookPayload::Notification {
+                            ref notification_type,
+                            ..
+                        } => Some(notification_type.as_str()),
+                        // For tool events, match against tool_name
+                        HookPayload::ToolExecution { ref tool_name, .. } => {
+                            Some(tool_name.as_str())
+                        }
+                        HookPayload::ToolExecutionFailure { ref tool_name, .. } => {
+                            Some(tool_name.as_str())
+                        }
+                        _ => None,
+                    };
+                    if let Some(subject) = subject {
+                        let matches = matcher_pattern
+                            .split('|')
+                            .any(|segment| segment.trim() == subject);
+                        if !matches {
+                            continue;
+                        }
                     }
                 }
             }
