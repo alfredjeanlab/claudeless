@@ -6,9 +6,15 @@
 use clap::Parser;
 use std::fs;
 
+use std::collections::HashMap;
+
 use crate::cli::{Cli, FORCE_TUI};
-use crate::config::{ResolvedTimeouts, ToolCallSpec};
+use crate::config::{
+    ResolvedTimeouts, ScenarioConfig, ToolCallSpec, ToolConfig, ToolExecutionConfig,
+    ToolExecutionMode,
+};
 use crate::hooks::{HookConfig, HookEvent, HookExecutor};
+use crate::scenario::Scenario;
 use crate::tools::executor::MockExecutor;
 
 use super::{Runtime, RuntimeContext};
@@ -401,4 +407,195 @@ async fn post_tool_use_failure_hook_does_not_fire_on_success() {
     );
     assert_eq!(results.len(), 1);
     assert!(!results[0].is_error);
+}
+
+/// Build a Runtime with a scenario that has per-tool configs (canned results/errors).
+fn build_test_runtime_with_scenario(
+    tool_configs: HashMap<String, ToolConfig>,
+    hook_executor: Option<HookExecutor>,
+    cli: Cli,
+) -> Runtime {
+    let config = ScenarioConfig {
+        tool_execution: Some(ToolExecutionConfig {
+            mode: ToolExecutionMode::Mock,
+            tools: tool_configs,
+        }),
+        ..Default::default()
+    };
+    let scenario = Scenario::from_config(config).unwrap();
+    let context = RuntimeContext::build(None, &cli);
+    Runtime::new(
+        context,
+        Some(scenario),
+        Box::new(MockExecutor::new()),
+        None,
+        hook_executor,
+        None,
+        cli,
+        ResolvedTimeouts::default(),
+    )
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn scenario_canned_result_injected_into_tool_call() {
+    let mut tools = HashMap::new();
+    tools.insert(
+        "Read".to_string(),
+        ToolConfig {
+            result: Some("canned content".to_string()),
+            ..Default::default()
+        },
+    );
+
+    let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
+    let mut runtime = build_test_runtime_with_scenario(tools, None, cli);
+
+    // Tool call has no inline result — should get canned result from scenario
+    let tool_calls = vec![ToolCallSpec {
+        tool: "Read".to_string(),
+        input: serde_json::json!({"file_path": "/nonexistent"}),
+        result: None,
+    }];
+
+    let (results, _) = runtime
+        .execute_tools_for_turn("test", "", &tool_calls)
+        .await;
+
+    assert_eq!(results.len(), 1);
+    assert!(!results[0].is_error, "canned result should produce success");
+    assert_eq!(results[0].text(), Some("canned content"));
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn scenario_canned_error_injected_into_tool_call() {
+    let mut tools = HashMap::new();
+    tools.insert(
+        "Write".to_string(),
+        ToolConfig {
+            error: Some("Permission denied".to_string()),
+            ..Default::default()
+        },
+    );
+
+    let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
+    let mut runtime = build_test_runtime_with_scenario(tools, None, cli);
+
+    let tool_calls = vec![ToolCallSpec {
+        tool: "Write".to_string(),
+        input: serde_json::json!({"file_path": "/tmp/out", "content": "hi"}),
+        result: None,
+    }];
+
+    let (results, _) = runtime
+        .execute_tools_for_turn("test", "", &tool_calls)
+        .await;
+
+    assert_eq!(results.len(), 1);
+    // MockExecutor sees the injected result string "Error: Permission denied"
+    // and returns it as success (the error semantics are for the simulated tool)
+    assert!(!results[0].is_error);
+    assert_eq!(results[0].text(), Some("Error: Permission denied"));
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn inline_result_takes_precedence_over_scenario_config() {
+    let mut tools = HashMap::new();
+    tools.insert(
+        "Read".to_string(),
+        ToolConfig {
+            result: Some("scenario canned".to_string()),
+            ..Default::default()
+        },
+    );
+
+    let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
+    let mut runtime = build_test_runtime_with_scenario(tools, None, cli);
+
+    // Tool call has an inline result — should NOT be overridden
+    let tool_calls = vec![ToolCallSpec {
+        tool: "Read".to_string(),
+        input: serde_json::json!({"file_path": "/dev/null"}),
+        result: Some("inline result".to_string()),
+    }];
+
+    let (results, _) = runtime
+        .execute_tools_for_turn("test", "", &tool_calls)
+        .await;
+
+    assert_eq!(results.len(), 1);
+    assert!(!results[0].is_error);
+    assert_eq!(results[0].text(), Some("inline result"));
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn scenario_canned_result_fires_post_tool_use_hook() {
+    let tmp = tempfile::tempdir().unwrap();
+    let marker = tmp.path().join("post_hook_fired");
+    let script = tmp.path().join("post_hook.sh");
+    fs::write(
+        &script,
+        format!(
+            "#!/bin/bash\necho \"fired\" >> {}\n",
+            marker.to_string_lossy()
+        ),
+    )
+    .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    let mut hook_executor = HookExecutor::new();
+    hook_executor.register(HookEvent::PostToolExecution, HookConfig::new(&script, 5000));
+
+    let mut tools = HashMap::new();
+    tools.insert(
+        "Read".to_string(),
+        ToolConfig {
+            result: Some("canned content".to_string()),
+            ..Default::default()
+        },
+    );
+
+    let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
+    let mut runtime = build_test_runtime_with_scenario(tools, Some(hook_executor), cli);
+
+    let tool_calls = vec![ToolCallSpec {
+        tool: "Read".to_string(),
+        input: serde_json::json!({"file_path": "/nonexistent"}),
+        result: None,
+    }];
+
+    let (results, _) = runtime
+        .execute_tools_for_turn("test", "", &tool_calls)
+        .await;
+
+    assert!(
+        marker.exists(),
+        "PostToolUse should fire when canned result is injected from scenario"
+    );
+    assert_eq!(results.len(), 1);
+    assert!(!results[0].is_error);
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn no_scenario_config_leaves_tool_call_unchanged() {
+    // Runtime without scenario — tool call with no result stays as-is
+    let cli = Cli::try_parse_from(["claude", "-p", "test"]).unwrap();
+    let mut runtime = build_test_runtime(None, cli);
+
+    let tool_calls = vec![ToolCallSpec {
+        tool: "Read".to_string(),
+        input: serde_json::json!({"file_path": "/dev/null"}),
+        result: None,
+    }];
+
+    let (results, _) = runtime
+        .execute_tools_for_turn("test", "", &tool_calls)
+        .await;
+
+    // MockExecutor returns error for tool calls with no result
+    assert_eq!(results.len(), 1);
+    assert!(results[0].is_error);
 }

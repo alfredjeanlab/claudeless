@@ -441,6 +441,27 @@ impl Runtime {
             } else {
                 std::borrow::Cow::Borrowed(call)
             };
+
+            // Inject canned result/error from scenario tool_execution.tools config
+            let call = if call.result.is_none() {
+                if let Some(tool_cfg) = self.get_scenario_tool_config(&call.tool) {
+                    if tool_cfg.result.is_some() || tool_cfg.error.is_some() {
+                        let mut modified = call.into_owned();
+                        if let Some(ref result) = tool_cfg.result {
+                            modified.result = Some(result.clone());
+                        } else if let Some(ref error) = tool_cfg.error {
+                            modified.result = Some(format!("Error: {error}"));
+                        }
+                        std::borrow::Cow::Owned(modified)
+                    } else {
+                        call
+                    }
+                } else {
+                    call
+                }
+            } else {
+                call
+            };
             let call = call.as_ref();
 
             // Record assistant message with tool_use block
@@ -544,6 +565,12 @@ impl Runtime {
         let tool_config = tool_exec.tools.get(tool_name)?;
         let answers = tool_config.answers.as_ref()?;
         Some(serde_json::json!(answers))
+    }
+
+    /// Get per-tool scenario config (canned result, error, etc.).
+    fn get_scenario_tool_config(&self, tool_name: &str) -> Option<&crate::config::ToolConfig> {
+        let tool_exec = self.scenario.as_ref()?.config().tool_execution.as_ref()?;
+        tool_exec.tools.get(tool_name)
     }
 
     /// Fire Stop hook and return continuation prompt if blocked.
