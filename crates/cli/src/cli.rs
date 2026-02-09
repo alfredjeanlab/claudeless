@@ -291,8 +291,7 @@ pub struct SimulatorOptions {
     pub claude_version: Option<String>,
 }
 
-// Thread-local override for `should_use_tui()` in tests.
-#[cfg(test)]
+// Thread-local override for `should_use_tui()` — only set in tests.
 thread_local! {
     pub(crate) static FORCE_TUI: std::cell::Cell<Option<bool>> = const { std::cell::Cell::new(None) };
 }
@@ -300,7 +299,6 @@ thread_local! {
 impl Cli {
     /// Determine if TUI mode should be used
     pub fn should_use_tui(&self) -> bool {
-        #[cfg(test)]
         if let Some(force) = FORCE_TUI.get() {
             return force;
         }
