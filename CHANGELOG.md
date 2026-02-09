@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-02-09
+
+### Refactored
+
+- **Config**: Introduce v2 canonical types with v1 conversion layer
+- **Config**: Flatten ToolsConfig, update docs to v2 scenario format
+
+### Chores
+
+- Add aarch64 release target
+- Prefer dense heuristics
+
 ## [0.2.5] - 2026-02-08
 
 ### Features
