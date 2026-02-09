@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Config**: Introduce v2 canonical types with v1 conversion layer
 - **Config**: Flatten ToolsConfig, update docs to v2 scenario format
 
+### Fixed
+
+- **Packaging**: Restore doc symlinks for crates.io publish compatibility
+
 ### Chores
 
 - Add aarch64 release target
