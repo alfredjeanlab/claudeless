@@ -1,31 +1,27 @@
-name = "write-permission-dialog"
-
+[claude]
+trusted = true
 session_id = "00000000-0000-0000-0000-000000000001"
 project_path = "/test/project"
 launch_timestamp = "2025-01-01T00:00:00Z"
-user_name = "TestUser"
-claude_version = "2.1.29"
+username = "TestUser"
+version = "2.1.29"
 provider = "Claude API"
 
-trusted = true
-
 [[responses]]
-pattern = { type = "contains", text = "Create a new file called newfile.txt with the content hello" }
+on = { contains = "Create a new file called newfile.txt with the content hello" }
+say = ""
 
-[responses.response]
-text = ""
-
-[[responses.response.tool_calls]]
-tool = "Write"
+[[responses.tools]]
+call = "Write"
 result = "Wrote 1 lines to newfile.txt"
 
-[responses.response.tool_calls.input]
+[responses.tools.input]
 file_path = "newfile.txt"
 content = "hello"
 
 
-[default_response]
-text = "I understand. Let me help with that."
+[default]
+say = "I understand. Let me help with that."
 
-[tool_execution]
+[tools]
 mode = "mock"

@@ -94,7 +94,9 @@ impl Scenario {
     ///
     /// Supports file references in tool call inputs using the `$file` key:
     /// ```toml
-    /// [default_response.tool_calls.input]
+    /// [[responses.tools]]
+    /// call = "Read"
+    /// [responses.tools.input]
     /// plan = { "$file" = "plan.md" }
     /// ```
     ///
@@ -102,20 +104,15 @@ impl Scenario {
     pub fn load(path: &Path) -> Result<Self, ScenarioError> {
         let content = std::fs::read_to_string(path)?;
 
-        // Parse as v1 TOML/JSON first
-        let mut v1_config: crate::config::v1::ScenarioConfig =
-            if path.extension().is_some_and(|e| e == "json") {
-                serde_json::from_str(&content)?
-            } else {
-                toml::from_str(&content)?
-            };
+        let mut config: ScenarioConfig = if path.extension().is_some_and(|e| e == "json") {
+            serde_json::from_str(&content)?
+        } else {
+            toml::from_str(&content)?
+        };
 
-        // Resolve file references relative to scenario directory (v1 parsing concern)
+        // Resolve file references relative to scenario directory
         let scenario_dir = path.parent().unwrap_or(Path::new("."));
-        resolve_file_references_in_config(&mut v1_config, scenario_dir)?;
-
-        // Convert v1 → canonical types
-        let config: ScenarioConfig = v1_config.into();
+        resolve_file_references_in_config(&mut config, scenario_dir)?;
 
         Self::from_config(config)
     }
@@ -308,7 +305,7 @@ impl Scenario {
     }
 }
 
-/// Resolve file references in the v1 scenario config.
+/// Resolve file references in a scenario config.
 ///
 /// File references use the `$file` key to load content from external files:
 /// ```json
@@ -318,45 +315,32 @@ impl Scenario {
 /// The file content replaces the entire object containing `$file`.
 /// For JSON files (`.json`), content is parsed as JSON; otherwise loaded as string.
 fn resolve_file_references_in_config(
-    config: &mut crate::config::v1::ScenarioConfig,
+    config: &mut ScenarioConfig,
     base_dir: &Path,
 ) -> Result<(), ScenarioError> {
-    // Resolve in default_response
-    if let Some(ref mut response) = config.default_response {
-        resolve_file_references_in_response(response, base_dir)?;
+    // Resolve in default response
+    if let Some(ref mut response) = config.default {
+        resolve_file_references_in_tool_calls(&mut response.tools, base_dir)?;
     }
 
     // Resolve in responses and their turns
     for rule in &mut config.responses {
-        if let Some(ref mut response) = rule.response {
-            resolve_file_references_in_response(response, base_dir)?;
-        }
-        // Resolve in turns
-        for turn in &mut rule.turns {
-            resolve_file_references_in_response(&mut turn.response, base_dir)?;
+        resolve_file_references_in_tool_calls(&mut rule.tools, base_dir)?;
+        for turn in &mut rule.then {
+            resolve_file_references_in_tool_calls(&mut turn.tools, base_dir)?;
         }
     }
 
     Ok(())
 }
 
-fn resolve_file_references_in_response(
-    response: &mut crate::config::v1::ResponseSpec,
+fn resolve_file_references_in_tool_calls(
+    tool_calls: &mut [ToolCall],
     base_dir: &Path,
 ) -> Result<(), ScenarioError> {
-    if let crate::config::v1::ResponseSpec::Detailed { tool_calls, .. } = response {
-        for tool_call in tool_calls {
-            resolve_file_references_in_tool_call(tool_call, base_dir)?;
-        }
+    for tool_call in tool_calls {
+        tool_call.input = resolve_file_references_in_value(tool_call.input.take(), base_dir)?;
     }
-    Ok(())
-}
-
-fn resolve_file_references_in_tool_call(
-    tool_call: &mut crate::config::v1::ToolCallSpec,
-    base_dir: &Path,
-) -> Result<(), ScenarioError> {
-    tool_call.input = resolve_file_references_in_value(tool_call.input.take(), base_dir)?;
     Ok(())
 }
 

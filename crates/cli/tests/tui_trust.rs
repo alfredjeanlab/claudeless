@@ -16,8 +16,8 @@ use common::{TuiTestSession, TUI_READY_PATTERN};
 
 const UNTRUSTED_SCENARIO: &str = r#"
     {
-        "default_response": "Hello!",
-        "trusted": false
+        "default": { "say": "Hello!" },
+        "claude": { "trusted": false }
     }
 "#;
 

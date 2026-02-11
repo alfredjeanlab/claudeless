@@ -35,10 +35,9 @@ mod common;
 use common::TuiTestSession;
 
 const SCENARIO: &str = r#"
-    name = "test"
     [[responses]]
-    pattern = { type = "any" }
-    response = "Hello!"
+    on = "*"
+    say = "Hello!"
 "#;
 
 // =============================================================================

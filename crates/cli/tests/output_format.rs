@@ -30,10 +30,9 @@ fn claudeless_bin() -> PathBuf {
 fn test_basic_text_output_with_scenario() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "contains", text = "hello" }
-        response = "Hello! How can I help you today?"
+        on = { contains = "hello" }
+        say = "Hello! How can I help you today?"
         "#,
     );
 
@@ -56,10 +55,9 @@ fn test_basic_text_output_with_scenario() {
 fn test_text_output_is_plain_text_no_json() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "Simple response"
+        on = "*"
+        say = "Simple response"
         "#,
     );
 
@@ -80,10 +78,9 @@ fn test_text_output_is_plain_text_no_json() {
 fn test_text_output_exit_code_zero_on_success() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -116,10 +113,9 @@ fn test_text_output_exit_code_zero_on_success() {
 fn test_json_output_uses_result_wrapper_format() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "Test response"
+        on = "*"
+        say = "Test response"
         "#,
     );
 
@@ -154,10 +150,9 @@ fn test_json_output_uses_result_wrapper_format() {
 fn test_json_output_result_contains_response_text() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "Expected response text"
+        on = "*"
+        say = "Expected response text"
         "#,
     );
 
@@ -186,10 +181,9 @@ fn test_json_output_result_contains_response_text() {
 fn test_json_output_exit_code_zero_on_success() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 

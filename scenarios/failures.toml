@@ -1,41 +1,33 @@
 # Failure injection scenarios for testing error handling
-name = "failure-scenarios"
 
 [[responses]]
-pattern = { type = "contains", text = "trigger-timeout" }
-response = ""
+on = { contains = "trigger-timeout" }
 failure = { type = "connection_timeout", after_ms = 100 }
 
 [[responses]]
-pattern = { type = "contains", text = "trigger-auth-error" }
-response = ""
+on = { contains = "trigger-auth-error" }
 failure = { type = "auth_error", message = "API key expired" }
 
 [[responses]]
-pattern = { type = "contains", text = "trigger-rate-limit" }
-response = ""
+on = { contains = "trigger-rate-limit" }
 failure = { type = "rate_limit", retry_after = 30 }
 
 [[responses]]
-pattern = { type = "contains", text = "trigger-network-error" }
-response = ""
+on = { contains = "trigger-network-error" }
 failure = { type = "network_unreachable" }
 
 [[responses]]
-pattern = { type = "contains", text = "trigger-credits" }
-response = ""
+on = { contains = "trigger-credits" }
 failure = { type = "out_of_credits" }
 
 [[responses]]
-pattern = { type = "contains", text = "trigger-partial" }
-response = ""
+on = { contains = "trigger-partial" }
 failure = { type = "partial_response", partial_text = "I was about to say something important..." }
 
 [[responses]]
-pattern = { type = "contains", text = "trigger-malformed" }
-response = ""
+on = { contains = "trigger-malformed" }
 failure = { type = "malformed_json", raw = "{\"type\":\"message\",\"content\":[{" }
 
 [[responses]]
-pattern = { type = "any" }
-response = "Normal response - no failure triggered"
+on = "*"
+say = "Normal response - no failure triggered"

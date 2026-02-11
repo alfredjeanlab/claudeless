@@ -22,10 +22,9 @@ use common::TuiTestSession;
 
 const SCENARIO: &str = r#"
     {
-        "trusted": true,
-        "claude_version": "2.1.29",
+        "claude": { "trusted": true, "version": "2.1.29" },
         "responses": [
-            { "pattern": { "type": "any" }, "response": "ok" }
+            { "on": "*", "say": "ok" }
         ]
     }
 "#;

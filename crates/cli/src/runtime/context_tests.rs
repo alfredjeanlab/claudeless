@@ -70,10 +70,10 @@ fn test_scenario_overrides_defaults() {
             version: Some("3.0.0".to_string()),
             username: Some("TestUser".to_string()),
             session_id: Some("550e8400-e29b-41d4-a716-446655440000".to_string()),
+            trusted: false,
+            permission_mode: Some("plan".to_string()),
             ..Default::default()
         },
-        trusted: false,
-        permission_mode: Some("plan".to_string()),
         ..Default::default()
     };
 

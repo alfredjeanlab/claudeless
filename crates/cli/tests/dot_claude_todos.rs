@@ -25,11 +25,11 @@ fn claudeless_bin() -> PathBuf {
 fn create_todo_scenario(dir: &TempDir) -> PathBuf {
     let scenario_path = dir.path().join("scenario.json");
     let scenario = serde_json::json!({
-        "default_response": {
-            "text": "I'll create a todo list for you.",
-            "tool_calls": [
+        "default": {
+            "say": "I'll create a todo list for you.",
+            "tools": [
                 {
-                    "tool": "TodoWrite",
+                    "call": "TodoWrite",
                     "input": {
                         "todos": [
                             {
@@ -47,12 +47,10 @@ fn create_todo_scenario(dir: &TempDir) -> PathBuf {
                 }
             ]
         },
-        "tool_execution": {
+        "tools": {
             "mode": "live",
-            "tools": {
-                "TodoWrite": {
-                    "auto_approve": true
-                }
+            "TodoWrite": {
+                "approve": true
             }
         }
     });
@@ -189,7 +187,7 @@ fn test_empty_todo_list_format() {
 
     // Scenario that doesn't trigger todos
     let scenario_path = state_dir.path().join("scenario.json");
-    let scenario = serde_json::json!({"default_response": "Hello!"});
+    let scenario = serde_json::json!({"default": { "say": "Hello!" }});
     std::fs::write(&scenario_path, serde_json::to_string(&scenario).unwrap()).unwrap();
 
     let output = Command::new(claudeless_bin())

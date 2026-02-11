@@ -68,8 +68,8 @@ fn test_tui_escape_shows_clear_hint_with_input() {
         "escape-hint",
         r#"
         {
-            "default_response": "Hello!",
-            "trusted": true
+            "default": { "say": "Hello!" },
+            "claude": { "trusted": true }
         }
         "#,
     );
@@ -104,8 +104,8 @@ fn test_tui_double_escape_clears_input() {
         "double-escape",
         r#"
         {
-            "default_response": "Hello!",
-            "trusted": true
+            "default": { "say": "Hello!" },
+            "claude": { "trusted": true }
         }
         "#,
     );
@@ -145,8 +145,8 @@ fn test_tui_escape_on_empty_input_does_nothing() {
         "escape-empty",
         r#"
         {
-            "default_response": "Hello!",
-            "trusted": true
+            "default": { "say": "Hello!" },
+            "claude": { "trusted": true }
         }
         "#,
     );
@@ -174,8 +174,8 @@ fn test_tui_escape_clear_hint_timeout() {
         "escape-timeout",
         r#"
         {
-            "default_response": "Hello!",
-            "trusted": true
+            "default": { "say": "Hello!" },
+            "claude": { "trusted": true }
         }
         "#,
     );
@@ -229,8 +229,8 @@ fn test_tui_ctrl_underscore_undoes_last_word() {
         "ctrl-underscore-word",
         r#"
         {
-            "default_response": "Hello!",
-            "trusted": true
+            "default": { "say": "Hello!" },
+            "claude": { "trusted": true }
         }
         "#,
     );
@@ -274,8 +274,8 @@ fn test_tui_ctrl_underscore_clears_all_input() {
         "ctrl-underscore-clear",
         r#"
         {
-            "default_response": "Hello!",
-            "trusted": true
+            "default": { "say": "Hello!" },
+            "claude": { "trusted": true }
         }
         "#,
     );
@@ -314,8 +314,8 @@ fn test_tui_ctrl_underscore_on_empty_input_does_nothing() {
         "ctrl-underscore-empty",
         r#"
         {
-            "default_response": "Hello!",
-            "trusted": true
+            "default": { "say": "Hello!" },
+            "claude": { "trusted": true }
         }
         "#,
     );

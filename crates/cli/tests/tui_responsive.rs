@@ -18,7 +18,7 @@ fn find_separator_line(capture: &str) -> Option<&str> {
     capture.lines().find(|line| line.chars().all(|c| c == '─') && line.chars().count() > 50)
 }
 
-const JSON_SCENARIO: &str = r#"{ "default_response": "ok", "trusted": true }"#;
+const JSON_SCENARIO: &str = r#"{ "default": { "say": "ok" }, "claude": { "trusted": true } }"#;
 
 /// Separator should span full terminal width at 80 columns
 #[test]
@@ -72,9 +72,8 @@ fn test_compact_separator_width() {
     let tui = TuiTestSession::with_dimensions(
         "compact-width",
         r#"{
-        "default_response": "ok",
-        "trusted": true,
-        "timeouts": { "compact_delay_ms": 100 }
+        "default": { "say": "ok" },
+        "claude": { "trusted": true, "timeouts": { "compact_delay_ms": 100 } }
     }"#,
         100,
         24,

@@ -49,10 +49,9 @@ fn test_no_prompt_non_tty_errors() {
 fn test_positional_prompt_non_tty_succeeds() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "contains", text = "hello" }
-        response = "Hello! How can I help you today?"
+        on = { contains = "hello" }
+        say = "Hello! How can I help you today?"
         "#,
     );
 
@@ -75,10 +74,9 @@ fn test_positional_prompt_non_tty_succeeds() {
 fn test_success_exit_code_0() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 

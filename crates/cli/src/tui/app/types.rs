@@ -87,6 +87,7 @@ impl TuiConfig {
             cli.permissions.permission_mode.clone()
         } else {
             config
+                .claude
                 .permission_mode
                 .as_deref()
                 .and_then(|s| clap::ValueEnum::from_str(s, true).ok())
@@ -98,8 +99,8 @@ impl TuiConfig {
             cli.simulator.claude_version.clone().or_else(|| config.claude.version.clone());
 
         Self {
-            trusted: config.trusted,
-            logged_in: config.logged_in,
+            trusted: config.claude.trusted,
+            logged_in: config.claude.logged_in,
             user_name: config
                 .claude
                 .username
@@ -143,6 +144,7 @@ impl TuiConfig {
             cli_permission_mode.clone()
         } else {
             config
+                .claude
                 .permission_mode
                 .as_deref()
                 .and_then(|s| clap::ValueEnum::from_str(s, true).ok())
@@ -154,8 +156,8 @@ impl TuiConfig {
             cli_claude_version.map(|s| s.to_string()).or_else(|| config.claude.version.clone());
 
         Self {
-            trusted: config.trusted,
-            logged_in: config.logged_in,
+            trusted: config.claude.trusted,
+            logged_in: config.claude.logged_in,
             user_name: config
                 .claude
                 .username

@@ -37,10 +37,9 @@ fn test_runtime_builder_validation() {
 async fn test_runtime_with_scenario() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "Hello from test!"
+        on = "*"
+        say = "Hello from test!"
         "#,
     );
 

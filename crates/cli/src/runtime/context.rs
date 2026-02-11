@@ -155,11 +155,11 @@ impl RuntimeContext {
             .unwrap_or_else(Utc::now);
 
         // Trusted: scenario config (default true)
-        let trusted = scenario.map(|s| s.trusted).unwrap_or(true);
+        let trusted = scenario.map(|s| s.claude.trusted).unwrap_or(true);
 
         // Permission mode: scenario config or CLI default
         let permission_mode = scenario
-            .and_then(|s| s.permission_mode.as_ref())
+            .and_then(|s| s.claude.permission_mode.as_ref())
             .and_then(|s| parse_permission_mode(s))
             .unwrap_or_else(|| cli.permissions.permission_mode.clone());
 

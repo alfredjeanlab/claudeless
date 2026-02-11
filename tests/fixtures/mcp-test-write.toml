@@ -1,21 +1,17 @@
 # Scenario: MCP Write File Test
 # Simulates writing a file via MCP filesystem tools
 
-name = "mcp-write-test"
-
-[tool_execution]
+[tools]
 mode = "mock"
 
-[tool_execution.tools.mcp__filesystem__write_file]
-auto_approve = true
+[tools.mcp__filesystem__write_file]
+approve = true
 
 [[responses]]
-pattern = { type = "contains", text = "create" }
+on = { contains = "create" }
+say = "I'll create that file for you."
 
-[responses.response]
-text = "I'll create that file for you."
-
-[[responses.response.tool_calls]]
-tool = "mcp__filesystem__write_file"
+[[responses.tools]]
+call = "mcp__filesystem__write_file"
 input = { path = "/tmp/mcp-test/test-output.txt", content = "written by mcp" }
 result = "Successfully wrote to /tmp/mcp-test/test-output.txt"

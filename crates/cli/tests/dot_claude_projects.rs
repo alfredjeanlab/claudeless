@@ -23,7 +23,7 @@ fn claudeless_bin() -> PathBuf {
 fn create_scenario(dir: &TempDir, response: &str) -> PathBuf {
     let scenario_path = dir.path().join("scenario.json");
     let scenario = serde_json::json!({
-        "default_response": response
+        "default": { "say": response }
     });
     std::fs::write(&scenario_path, serde_json::to_string(&scenario).unwrap()).unwrap();
     scenario_path

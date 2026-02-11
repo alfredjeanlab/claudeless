@@ -25,8 +25,9 @@ pub const TUI_READY_PATTERN: &str = "? for shortcuts";
 /// Create a temporary scenario file
 /// Detects JSON vs TOML content and uses appropriate extension
 pub fn write_scenario(content: &str) -> NamedTempFile {
-    // Check if content looks like JSON (starts with { or [)
-    let is_json = content.trim().starts_with('{') || content.trim().starts_with('[');
+    // Check if content looks like JSON (starts with {)
+    // Note: [ is NOT a JSON indicator here because TOML tables use [section] and [[array]]
+    let is_json = content.trim().starts_with('{');
 
     let mut file = if is_json {
         tempfile::Builder::new().suffix(".json").tempfile().unwrap()
@@ -58,7 +59,7 @@ pub enum Pattern {
 ///
 /// # Example
 /// ```ignore
-/// let scenario = ScenarioBuilder::new("test")
+/// let scenario = ScenarioBuilder::new()
 ///     .any_response("Hello!")
 ///     .build();
 ///
@@ -66,15 +67,14 @@ pub enum Pattern {
 /// let scenario = simple_scenario("Hello!");
 /// ```
 pub struct ScenarioBuilder {
-    name: String,
     responses: Vec<(Pattern, String, Option<u64>)>, // (pattern, response, delay_ms)
     response_delay_ms: Option<u64>,
 }
 
 impl ScenarioBuilder {
-    /// Create a new scenario builder with the given name.
-    pub fn new(name: &str) -> Self {
-        Self { name: name.to_string(), responses: vec![], response_delay_ms: None }
+    /// Create a new scenario builder.
+    pub fn new(_name: &str) -> Self {
+        Self { responses: vec![], response_delay_ms: None }
     }
 
     /// Add a response that matches any input.
@@ -109,10 +109,10 @@ impl ScenarioBuilder {
 
     /// Build the scenario and write it to a temp file.
     pub fn build(self) -> NamedTempFile {
-        let mut toml = format!("name = \"{}\"\n", self.name);
+        let mut toml = String::new();
 
         if let Some(delay) = self.response_delay_ms {
-            toml.push_str(&format!("[timeouts]\nresponse_delay_ms = {}\n", delay));
+            toml.push_str(&format!("[claude.timeouts]\nresponse_delay_ms = {}\n\n", delay));
         }
 
         for (pattern, response, delay_ms) in &self.responses {
@@ -120,33 +120,29 @@ impl ScenarioBuilder {
 
             match pattern {
                 Pattern::Any => {
-                    toml.push_str("pattern = { type = \"any\" }\n");
+                    toml.push_str("on = \"*\"\n");
                 }
                 Pattern::Contains(text) => {
                     toml.push_str(&format!(
-                        "pattern = {{ type = \"contains\", text = \"{}\" }}\n",
+                        "on = {{ contains = \"{}\" }}\n",
                         text.replace('\\', "\\\\").replace('"', "\\\"")
                     ));
                 }
                 Pattern::Regex(pat) => {
                     toml.push_str(&format!(
-                        "pattern = {{ type = \"regex\", pattern = \"{}\" }}\n",
+                        "on = {{ regexp = \"{}\" }}\n",
                         pat.replace('\\', "\\\\").replace('"', "\\\"")
                     ));
                 }
             }
 
+            toml.push_str(&format!(
+                "say = \"{}\"\n",
+                response.replace('\\', "\\\\").replace('"', "\\\"")
+            ));
+
             if let Some(delay) = delay_ms {
-                toml.push_str(&format!(
-                    "response = {{ text = \"{}\", delay_ms = {} }}\n",
-                    response.replace('\\', "\\\\").replace('"', "\\\""),
-                    delay
-                ));
-            } else {
-                toml.push_str(&format!(
-                    "response = \"{}\"\n",
-                    response.replace('\\', "\\\\").replace('"', "\\\"")
-                ));
+                toml.push_str(&format!("delay_ms = {}\n", delay));
             }
         }
 
@@ -169,10 +165,9 @@ pub fn simple_scenario(response: &str) -> NamedTempFile {
 /// This is useful for `TuiTestSession::new()` which takes a string directly.
 pub fn simple_scenario_toml(response: &str) -> String {
     format!(
-        r#"name = "test"
-[[responses]]
-pattern = {{ type = "any" }}
-response = "{}""#,
+        r#"[[responses]]
+on = "*"
+say = "{}""#,
         response.replace('\\', "\\\\").replace('"', "\\\"")
     )
 }
@@ -226,10 +221,9 @@ use std::time::Duration;
 /// # Example
 /// ```ignore
 /// let tui = TuiTestSession::new("my-test", r#"
-///     name = "test"
 ///     [[responses]]
-///     pattern = { type = "any" }
-///     response = "Hello!"
+///     on = "*"
+///     say = "Hello!"
 /// "#);
 ///
 /// tui.send_keys("hello");

@@ -32,10 +32,9 @@ fn claudeless_bin() -> PathBuf {
 fn test_add_dir_flag_should_be_accepted() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -56,10 +55,9 @@ fn test_add_dir_flag_should_be_accepted() {
 fn test_json_schema_flag_should_be_accepted() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -86,10 +84,9 @@ fn test_json_schema_flag_should_be_accepted() {
 fn test_tools_flag_should_be_accepted() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -116,10 +113,9 @@ fn test_tools_flag_should_be_accepted() {
 fn test_agent_flag_should_be_accepted() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -146,10 +142,9 @@ fn test_agent_flag_should_be_accepted() {
 fn test_append_system_prompt_flag_should_be_accepted() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -177,10 +172,9 @@ fn test_append_system_prompt_flag_should_be_accepted() {
 fn test_model_flag_accepted() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "response regardless of model"
+        on = "*"
+        say = "response regardless of model"
         "#,
     );
 
@@ -204,10 +198,9 @@ fn test_model_flag_accepted() {
 fn test_full_model_name_accepted() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 

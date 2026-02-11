@@ -19,10 +19,9 @@ use common::TuiTestSession;
 
 const SCENARIO: &str = r#"
     {
-        "trusted": true,
-        "claude_version": "2.1.12",
+        "claude": { "trusted": true, "version": "2.1.12" },
         "responses": [
-            { "pattern": { "type": "any" }, "response": "ok" }
+            { "on": "*", "say": "ok" }
         ]
     }
 "#;
@@ -85,11 +84,10 @@ fn test_fork_success_with_conversation() {
         "fork-success",
         r#"
         {
-            "trusted": true,
-            "claude_version": "2.1.12",
+            "claude": { "trusted": true, "version": "2.1.12" },
             "responses": [
-                { "pattern": { "type": "contains", "text": "hello" }, "response": "Hello! How can I help you today?" },
-                { "pattern": { "type": "any" }, "response": "ok" }
+                { "on": { "contains": "hello" }, "say": "Hello! How can I help you today?" },
+                { "on": "*", "say": "ok" }
             ]
         }
         "#,

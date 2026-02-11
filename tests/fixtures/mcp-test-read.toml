@@ -1,21 +1,17 @@
 # Scenario: MCP Read File Test
 # Simulates reading a file via MCP filesystem tools
 
-name = "mcp-read-test"
-
-[tool_execution]
+[tools]
 mode = "mock"
 
-[tool_execution.tools.mcp__filesystem__read_file]
-auto_approve = true
+[tools.mcp__filesystem__read_file]
+approve = true
 
 [[responses]]
-pattern = { type = "contains", text = "read" }
+on = { contains = "read" }
+say = "I'll read the file for you."
 
-[responses.response]
-text = "I'll read the file for you."
-
-[[responses.response.tool_calls]]
-tool = "mcp__filesystem__read_file"
+[[responses.tools]]
+call = "mcp__filesystem__read_file"
 input = { path = "/tmp/mcp-test/sample.txt" }
 result = "hello world"

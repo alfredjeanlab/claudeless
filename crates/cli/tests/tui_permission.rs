@@ -18,10 +18,9 @@ use common::{start_tui_ext, tmux, write_scenario, TUI_READY_PATTERN};
 fn capture_after_shift_tabs(session: &str, num_tabs: usize) -> String {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
     let mut previous = start_tui_ext(&session, &scenario, 120, 20, TUI_READY_PATTERN);

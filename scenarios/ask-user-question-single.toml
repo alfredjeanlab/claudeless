@@ -1,16 +1,15 @@
 # AskUserQuestion scenario (single question)
 # Demonstrates the elicitation tool with a single question (no tab bar)
 
-name = "ask-user-question-single"
+[claude]
 session_id = "550e8400-e29b-41d4-a716-446655440002"
 
 [[responses]]
-pattern = { type = "contains", text = "help me" }
-[responses.response]
-text = "Let me ask you a few questions first."
-[[responses.response.tool_calls]]
-tool = "AskUserQuestion"
-[responses.response.tool_calls.input]
+on = { contains = "help me" }
+say = "Let me ask you a few questions first."
+[[responses.tools]]
+call = "AskUserQuestion"
+[responses.tools.input]
 questions = [
     { question = "What language?", header = "Language", options = [
         { label = "Rust", description = "Systems programming" },
@@ -19,14 +18,14 @@ questions = [
 ]
 
 [[responses]]
-pattern = { type = "any" }
-response = "Got it, I'll use the language you selected."
+on = "*"
+say = "Got it, I'll use the language you selected."
 
-[tool_execution]
+[tools]
 mode = "live"
 
-[tool_execution.tools.AskUserQuestion]
-auto_approve = true
+[tools.AskUserQuestion]
+approve = true
 
-[tool_execution.tools.AskUserQuestion.answers]
+[tools.AskUserQuestion.answers]
 "What language?" = "Rust"

@@ -3,7 +3,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-//! Integration tests for new scenario fields.
+//! Integration tests for scenario fields.
 //!
 //! Tests verify that all configuration fields specified in the scenario format
 //! parse correctly and affect simulator behavior as expected.
@@ -32,14 +32,14 @@ mod session_identity {
     use super::*;
 
     #[test]
-    fn test_default_model_field_parses() {
+    fn test_model_field_parses() {
         let scenario = write_scenario(
             r#"
-            name = "test"
-            default_model = "claude-opus-4-20250514"
+            [claude]
+            model = "claude-opus-4-20250514"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -52,14 +52,14 @@ mod session_identity {
     }
 
     #[test]
-    fn test_claude_version_field_parses() {
+    fn test_version_field_parses() {
         let scenario = write_scenario(
             r#"
-            name = "test"
-            claude_version = "2.2.0"
+            [claude]
+            version = "2.2.0"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -72,14 +72,14 @@ mod session_identity {
     }
 
     #[test]
-    fn test_user_name_field_parses() {
+    fn test_username_field_parses() {
         let scenario = write_scenario(
             r#"
-            name = "test"
-            user_name = "TestUser"
+            [claude]
+            username = "TestUser"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -95,11 +95,11 @@ mod session_identity {
     fn test_session_id_field_parses() {
         let scenario = write_scenario(
             r#"
-            name = "test"
+            [claude]
             session_id = "550e8400-e29b-41d4-a716-446655440000"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -115,11 +115,11 @@ mod session_identity {
     fn test_project_path_field_parses() {
         let scenario = write_scenario(
             r#"
-            name = "test"
+            [claude]
             project_path = "/Users/test/myproject"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -141,11 +141,11 @@ mod session_identity {
         ] {
             let scenario = write_scenario(&format!(
                 r#"
-                name = "test"
+                [claude]
                 session_id = "{}"
                 [[responses]]
-                pattern = {{ type = "any" }}
-                response = "ok"
+                on = "*"
+                say = "ok"
                 "#,
                 uuid
             ));
@@ -171,11 +171,11 @@ mod timing {
     fn test_launch_timestamp_field_parses() {
         let scenario = write_scenario(
             r#"
-            name = "test"
+            [claude]
             launch_timestamp = "2025-01-15T10:30:00Z"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -191,11 +191,11 @@ mod timing {
     fn test_launch_timestamp_with_timezone_offset() {
         let scenario = write_scenario(
             r#"
-            name = "test"
+            [claude]
             launch_timestamp = "2025-01-15T10:30:00-08:00"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -219,11 +219,11 @@ mod environment {
     fn test_working_directory_field_parses() {
         let scenario = write_scenario(
             r#"
-            name = "test"
+            [claude]
             working_directory = "/Users/test/myproject"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -239,11 +239,11 @@ mod environment {
     fn test_trusted_field_parses() {
         let scenario = write_scenario(
             r#"
-            name = "test"
+            [claude]
             trusted = true
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -259,11 +259,11 @@ mod environment {
     fn test_permission_mode_default() {
         let scenario = write_scenario(
             r#"
-            name = "test"
+            [claude]
             permission_mode = "default"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -279,11 +279,11 @@ mod environment {
     fn test_permission_mode_plan() {
         let scenario = write_scenario(
             r#"
-            name = "test"
+            [claude]
             permission_mode = "plan"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -299,11 +299,11 @@ mod environment {
     fn test_permission_mode_bypass() {
         let scenario = write_scenario(
             r#"
-            name = "test"
+            [claude]
             permission_mode = "bypass-permissions"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -324,19 +324,18 @@ mod tool_config {
     use super::*;
 
     #[test]
-    fn test_per_tool_auto_approve_parses() {
+    fn test_tool_approve_parses() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
 
-            [tool_execution]
+            [tools]
             mode = "live"
 
-            [tool_execution.tools.Bash]
-            auto_approve = true
+            [tools.Bash]
+            approve = true
             "#,
         );
 
@@ -349,18 +348,17 @@ mod tool_config {
     }
 
     #[test]
-    fn test_per_tool_result_parses() {
+    fn test_tool_result_parses() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
 
-            [tool_execution]
+            [tools]
             mode = "mock"
 
-            [tool_execution.tools.Read]
+            [tools.Read]
             result = "canned file contents"
             "#,
         );
@@ -374,18 +372,17 @@ mod tool_config {
     }
 
     #[test]
-    fn test_per_tool_error_parses() {
+    fn test_tool_error_parses() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
 
-            [tool_execution]
+            [tools]
             mode = "mock"
 
-            [tool_execution.tools.Write]
+            [tools.Write]
             error = "Permission denied"
             "#,
         );
@@ -402,23 +399,22 @@ mod tool_config {
     fn test_multiple_tool_configs() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
 
-            [tool_execution]
+            [tools]
             mode = "live"
 
-            [tool_execution.tools.Bash]
-            auto_approve = true
+            [tools.Bash]
+            approve = true
 
-            [tool_execution.tools.Read]
-            auto_approve = true
+            [tools.Read]
+            approve = true
             result = "file contents"
 
-            [tool_execution.tools.Write]
-            auto_approve = false
+            [tools.Write]
+            approve = false
             "#,
         );
 
@@ -442,39 +438,30 @@ mod full_featured {
     fn test_all_fields_together() {
         let scenario = write_scenario(
             r#"
-            name = "full-featured-test"
-
-            # Session identity
-            default_model = "claude-sonnet-4-20250514"
-            claude_version = "2.1.12"
-            user_name = "Alfred"
+            [claude]
+            model = "claude-sonnet-4-20250514"
+            version = "2.1.12"
+            username = "Alfred"
             session_id = "550e8400-e29b-41d4-a716-446655440000"
             project_path = "/Users/test/myproject"
-
-            # Timing
             launch_timestamp = "2025-01-15T10:30:00Z"
-
-            # Environment
             working_directory = "/Users/test/myproject"
             trusted = true
             permission_mode = "default"
 
-            # Default response
-            [default_response]
-            text = "Default response"
+            [default]
+            say = "Default response"
             delay_ms = 10
 
-            # Responses
             [[responses]]
-            pattern = { type = "contains", text = "hello" }
-            response = "Hello!"
+            on = { contains = "hello" }
+            say = "Hello!"
 
-            # Tool execution
-            [tool_execution]
+            [tools]
             mode = "live"
 
-            [tool_execution.tools.Bash]
-            auto_approve = true
+            [tools.Bash]
+            approve = true
             "#,
         );
 
@@ -493,14 +480,15 @@ mod full_featured {
         // Verify a deterministic scenario with all fixed values parses and runs
         let scenario = write_scenario(
             r#"
-            name = "deterministic"
+            [claude]
             session_id = "00000000-0000-0000-0000-000000000001"
             launch_timestamp = "2025-01-01T00:00:00Z"
-            user_name = "TestUser"
+            username = "TestUser"
             trusted = true
+
             [[responses]]
-            pattern = { type = "any" }
-            response = "Test response"
+            on = "*"
+            say = "Test response"
             "#,
         );
 

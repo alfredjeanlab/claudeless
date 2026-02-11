@@ -1,18 +1,14 @@
 # Scenario: MCP Read File Test (using raw tool name)
 # Uses raw MCP tool name for routing
 
-name = "mcp-read-raw-test"
-
-[tool_execution]
+[tools]
 mode = "mock"
 
 [[responses]]
-pattern = { type = "contains", text = "read" }
+on = { contains = "read" }
+say = "I'll read the file for you."
 
-[responses.response]
-text = "I'll read the file for you."
-
-[[responses.response.tool_calls]]
-tool = "read_file"  # Raw MCP tool name (not qualified)
+[[responses.tools]]
+call = "read_file"  # Raw MCP tool name (not qualified)
 input = { path = "/tmp/mcp-test/sample.txt" }
 result = "file contents from mock"

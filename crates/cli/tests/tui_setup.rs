@@ -45,7 +45,6 @@ fn test_tui_setup_theme_selection_dark_mode_default() {
     let tui = TuiTestSession::with_custom_wait(
         "setup-theme-dark",
         r#"
-        name = "setup-test"
         [setup]
         enabled = true
         "#,
@@ -105,7 +104,6 @@ fn test_tui_setup_theme_selection_light_mode() {
     let tui = TuiTestSession::with_custom_wait(
         "setup-theme-light",
         r#"
-        name = "setup-test"
         [setup]
         enabled = true
         "#,
@@ -143,7 +141,6 @@ fn test_tui_setup_theme_selection_ansi_mode() {
     let tui = TuiTestSession::with_custom_wait(
         "setup-theme-ansi",
         r#"
-        name = "setup-test"
         [setup]
         enabled = true
         "#,
@@ -183,7 +180,6 @@ fn test_tui_setup_theme_ctrl_t_toggles_syntax_highlighting() {
     let tui = TuiTestSession::with_custom_wait(
         "setup-theme-toggle",
         r#"
-        name = "setup-test"
         [setup]
         enabled = true
         "#,
@@ -229,7 +225,6 @@ fn test_tui_setup_login_method_shows_options() {
     let tui = TuiTestSession::with_custom_wait(
         "setup-login-method",
         r#"
-        name = "setup-test"
         [setup]
         enabled = true
         "#,
@@ -285,7 +280,6 @@ fn test_tui_setup_full_login_flow_to_initial_state() {
     let tui = TuiTestSession::with_custom_wait(
         "setup-full-flow",
         r#"
-        name = "setup-test"
         [setup]
         enabled = true
         auto_login = "user@example.com"
@@ -376,10 +370,9 @@ fn test_tui_slash_logout_exits_to_shell() {
     let tui = TuiTestSession::new(
         "logout",
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "Hello!"
+        on = "*"
+        say = "Hello!"
         "#,
     );
 
@@ -421,7 +414,6 @@ fn test_tui_failed_to_open_socket_exits() {
     let tui = TuiTestSession::with_custom_wait(
         "socket-fail",
         r#"
-        name = "no-internet-test"
         [connection]
         simulate_failure = "FailedToOpenSocket"
         "#,
@@ -462,7 +454,6 @@ fn test_tui_failed_to_open_socket_shows_helpful_message() {
     let tui = TuiTestSession::with_custom_wait(
         "socket-fail-msg",
         r#"
-        name = "no-internet-test"
         [connection]
         simulate_failure = "FailedToOpenSocket"
         "#,

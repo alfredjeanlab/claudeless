@@ -1,21 +1,17 @@
 # Scenario: MCP List Directory Test
 # Simulates listing directory via MCP filesystem tools
 
-name = "mcp-list-test"
-
-[tool_execution]
+[tools]
 mode = "mock"
 
-[tool_execution.tools.mcp__filesystem__list_directory]
-auto_approve = true
+[tools.mcp__filesystem__list_directory]
+approve = true
 
 [[responses]]
-pattern = { type = "contains", text = "list" }
+on = { contains = "list" }
+say = "Here are the files in the directory:"
 
-[responses.response]
-text = "Here are the files in the directory:"
-
-[[responses.response.tool_calls]]
-tool = "mcp__filesystem__list_directory"
+[[responses.tools]]
+call = "mcp__filesystem__list_directory"
 input = { path = "/tmp/mcp-test" }
 result = "[FILE] sample.txt\n[FILE] test-output.txt"

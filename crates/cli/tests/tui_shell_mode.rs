@@ -25,21 +25,21 @@ fn scenario() -> String {
 }
 
 const BYPASS_SCENARIO: &str = r#"
-    name = "test"
+    [claude]
     trusted = true
     permission_mode = "bypass-permissions"
     [[responses]]
-    pattern = { type = "any" }
-    response = "Command executed"
+    on = "*"
+    say = "Command executed"
 "#;
 
 const BYPASS_DONE_SCENARIO: &str = r#"
-    name = "test"
+    [claude]
     trusted = true
     permission_mode = "bypass-permissions"
     [[responses]]
-    pattern = { type = "any" }
-    response = "Done"
+    on = "*"
+    say = "Done"
 "#;
 
 /// Pattern for bypass mode status bar

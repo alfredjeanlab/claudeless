@@ -173,10 +173,9 @@ fn test_tui_stash_auto_restores_after_submit() {
     let tui = TuiTestSession::new(
         "stash-auto-restore",
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "Quick response"
+        on = "*"
+        say = "Quick response"
         "#,
     );
     let previous = tui.capture();

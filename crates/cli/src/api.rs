@@ -57,8 +57,7 @@ impl SimulatorBuilder {
     /// Load scenario from file
     pub fn scenario_file(mut self, path: impl AsRef<Path>) -> Result<Self, SimulatorError> {
         let content = std::fs::read_to_string(path.as_ref())?;
-        let v1_config: crate::config::v1::ScenarioConfig = toml::from_str(&content)?;
-        self.scenario = v1_config.into();
+        self.scenario = toml::from_str(&content)?;
         Ok(self)
     }
 
@@ -133,13 +132,8 @@ impl SimulatorBuilder {
     pub fn build_binary(self) -> Result<BinarySimulatorHandle, SimulatorError> {
         let temp_dir = TempDir::new()?;
 
-        // Convert back to v1 for TOML serialization
-        // For now, write an empty scenario since binary mode re-parses from file
         let scenario_path = temp_dir.path().join("scenario.toml");
-        // Note: binary mode loads via Scenario::load() which parses v1 TOML
-        // The v1 types support serde, so we serialize as v1
-        let v1_config = crate::config::v1::ScenarioConfig::default();
-        let scenario_toml = toml::to_string(&v1_config)?;
+        let scenario_toml = toml::to_string(&self.scenario)?;
         std::fs::write(&scenario_path, scenario_toml)?;
 
         Ok(BinarySimulatorHandle { _temp_dir: temp_dir, scenario_path })

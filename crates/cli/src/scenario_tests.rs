@@ -346,8 +346,13 @@ fn test_launch_timestamp_with_timezone() {
 
 #[test]
 fn test_invalid_permission_mode() {
-    let config =
-        ScenarioConfig { permission_mode: Some("invalid-mode".to_string()), ..Default::default() };
+    let config = ScenarioConfig {
+        claude: ClaudeConfig {
+            permission_mode: Some("invalid-mode".to_string()),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
 
     let result = Scenario::from_config(config);
     assert!(result.is_err());
@@ -360,8 +365,10 @@ fn test_invalid_permission_mode() {
 #[test]
 fn test_valid_permission_modes() {
     for mode in ["default", "plan", "bypass-permissions", "accept-edits", "dont-ask", "delegate"] {
-        let config =
-            ScenarioConfig { permission_mode: Some(mode.to_string()), ..Default::default() };
+        let config = ScenarioConfig {
+            claude: ClaudeConfig { permission_mode: Some(mode.to_string()), ..Default::default() },
+            ..Default::default()
+        };
 
         let result = Scenario::from_config(config);
         assert!(result.is_ok(), "Failed for mode: {}", mode);

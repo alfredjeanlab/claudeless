@@ -31,10 +31,9 @@ fn claudeless_bin() -> PathBuf {
 fn test_connection_timeout_via_scenario() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = ""
+        on = "*"
+        say = ""
         failure = { type = "connection_timeout", after_ms = 50 }
         "#,
     );
@@ -134,12 +133,11 @@ fn test_malformed_json_exit_code() {
 fn test_response_delay_via_scenario_timeouts() {
     let scenario = write_scenario(
         r#"
-        name = "test"
-        [timeouts]
+        [claude.timeouts]
         response_delay_ms = 200
         [[responses]]
-        pattern = { type = "any" }
-        response = "delayed"
+        on = "*"
+        say = "delayed"
         "#,
     );
 
@@ -167,10 +165,10 @@ fn test_response_delay_via_scenario_timeouts() {
 fn test_delay_ms_via_scenario_response() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = { text = "delayed via scenario", delay_ms = 150 }
+        on = "*"
+        say = "delayed via scenario"
+        delay_ms = 150
         "#,
     );
 

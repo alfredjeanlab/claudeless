@@ -101,10 +101,9 @@ fn error_jsonl_rate_limit() {
     let state_dir = TempDir::new().unwrap();
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -141,10 +140,9 @@ fn error_jsonl_network_unreachable() {
     let state_dir = TempDir::new().unwrap();
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -181,15 +179,14 @@ fn error_jsonl_scenario_failure() {
     let state_dir = TempDir::new().unwrap();
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "contains", text = "fail" }
-        response = ""
+        on = { contains = "fail" }
+        say = ""
         failure = { type = "rate_limit", retry_after = 120 }
 
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -215,10 +212,9 @@ fn error_jsonl_scenario_network_failure() {
     let state_dir = TempDir::new().unwrap();
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = ""
+        on = "*"
+        say = ""
         failure = { type = "network_unreachable" }
         "#,
     );
@@ -249,10 +245,9 @@ fn error_jsonl_auth_error() {
     let state_dir = TempDir::new().unwrap();
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -285,10 +280,9 @@ fn error_jsonl_out_of_credits() {
     let state_dir = TempDir::new().unwrap();
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -323,10 +317,9 @@ fn error_jsonl_connection_timeout() {
     // Use a short timeout scenario to keep test fast
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = ""
+        on = "*"
+        say = ""
         failure = { type = "connection_timeout", after_ms = 50 }
         "#,
     );
@@ -353,10 +346,9 @@ fn error_jsonl_partial_response() {
     let state_dir = TempDir::new().unwrap();
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -393,10 +385,9 @@ fn error_jsonl_no_session_persistence() {
     let state_dir = TempDir::new().unwrap();
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -434,10 +425,9 @@ fn error_jsonl_malformed_json_no_entry() {
     let state_dir = TempDir::new().unwrap();
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 

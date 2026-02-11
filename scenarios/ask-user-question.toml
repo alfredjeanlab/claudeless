@@ -1,16 +1,15 @@
 # AskUserQuestion scenario
 # Demonstrates the elicitation tool with multi-question interview and tab bar
 
-name = "ask-user-question"
+[claude]
 session_id = "550e8400-e29b-41d4-a716-446655440001"
 
 [[responses]]
-pattern = { type = "contains", text = "help me" }
-[responses.response]
-text = "Let me ask you a few questions to get started."
-[[responses.response.tool_calls]]
-tool = "AskUserQuestion"
-[responses.response.tool_calls.input]
+on = { contains = "help me" }
+say = "Let me ask you a few questions to get started."
+[[responses.tools]]
+call = "AskUserQuestion"
+[responses.tools.input]
 questions = [
     { question = "Which programming language would you like to use?", header = "Language", options = [
         { label = "Rust", description = "Systems programming language" },
@@ -33,16 +32,16 @@ questions = [
 ]
 
 [[responses]]
-pattern = { type = "any" }
-response = "Got it, I'll set up your project with those choices."
+on = "*"
+say = "Got it, I'll set up your project with those choices."
 
-[tool_execution]
+[tools]
 mode = "live"
 
-[tool_execution.tools.AskUserQuestion]
-auto_approve = true
+[tools.AskUserQuestion]
+approve = true
 
-[tool_execution.tools.AskUserQuestion.answers]
+[tools.AskUserQuestion.answers]
 "Which programming language would you like to use?" = "Rust"
 "What type of project are you building?" = "CLI"
 "Which CI/CD platform?" = "GitHub Actions"

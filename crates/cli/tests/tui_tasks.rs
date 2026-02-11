@@ -21,10 +21,9 @@ use common::TuiTestSession;
 
 const JSON_SCENARIO: &str = r#"
     {
-        "trusted": true,
-        "claude_version": "2.1.12",
+        "claude": { "trusted": true, "version": "2.1.12" },
         "responses": [
-            { "pattern": { "type": "any" }, "response": "ok" }
+            { "on": "*", "say": "ok" }
         ]
     }
 "#;

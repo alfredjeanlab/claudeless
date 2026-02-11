@@ -83,11 +83,13 @@ All timeouts can also be set via environment variables:
 
 ### Environment
 
+These fields are part of the `[claude]` section:
+
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `trusted` | bool | `true` | Whether directory is trusted |
-| `logged_in` | bool | `true` | Whether user is logged in (shows setup wizard when false) |
-| `permission_mode` | string | `"default"` | Permission mode override |
+| `claude.trusted` | bool | `true` | Whether directory is trusted |
+| `claude.logged_in` | bool | `true` | Whether user is logged in (shows setup wizard when false) |
+| `claude.permission_mode` | string | `"default"` | Permission mode override |
 
 **Permission Mode Values:**
 
@@ -454,9 +456,8 @@ say = "I'm not sure what you mean."
 ### Deterministic Testing
 
 ```toml
-trusted = true
-
 [claude]
+trusted = true
 session_id = "550e8400-e29b-41d4-a716-446655440000"
 launch_timestamp = "2025-01-15T10:30:00Z"
 username = "TestUser"
@@ -517,10 +518,9 @@ approve = true
 ### Full-Featured
 
 ```toml
+[claude]
 trusted = true
 permission_mode = "accept-edits"
-
-[claude]
 model = "claude-opus-4-5-20251101"
 version = "2.1.12"
 username = "Developer"

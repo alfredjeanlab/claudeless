@@ -26,24 +26,24 @@ fn claudeless_bin() -> PathBuf {
 fn create_plan_scenario(dir: &TempDir) -> PathBuf {
     let scenario_path = dir.path().join("scenario.json");
     let scenario = serde_json::json!({
-        "default_response": {
-            "text": "I'll create a plan for you.",
-            "tool_calls": [
+        "claude": {
+            "permission_mode": "plan"
+        },
+        "default": {
+            "say": "I'll create a plan for you.",
+            "tools": [
                 {
-                    "tool": "ExitPlanMode",
+                    "call": "ExitPlanMode",
                     "input": {
                         "plan": "# Test Plan\n\n## Overview\n\nThis is a test plan for the feature.\n\n## Steps\n\n1. First step\n2. Second step\n3. Third step"
                     }
                 }
             ]
         },
-        "permission_mode": "plan",
-        "tool_execution": {
+        "tools": {
             "mode": "live",
-            "tools": {
-                "ExitPlanMode": {
-                    "auto_approve": true
-                }
+            "ExitPlanMode": {
+                "approve": true
             }
         }
     });

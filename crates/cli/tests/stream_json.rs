@@ -56,10 +56,9 @@ fn test_stream_json_print_requires_verbose() {
 fn test_stream_json_print_with_verbose_succeeds() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -91,10 +90,9 @@ fn test_stream_json_print_with_verbose_succeeds() {
 fn test_stream_json_is_ndjson() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "Streamed response"
+        on = "*"
+        say = "Streamed response"
         "#,
     );
 
@@ -128,10 +126,9 @@ fn test_stream_json_is_ndjson() {
 fn test_stream_json_starts_with_system_init() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -166,10 +163,9 @@ fn test_stream_json_starts_with_system_init() {
 fn test_stream_json_ends_with_result() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 
@@ -200,10 +196,9 @@ fn test_stream_json_ends_with_result() {
 fn test_stream_json_exit_code_zero_on_success() {
     let scenario = write_scenario(
         r#"
-        name = "test"
         [[responses]]
-        pattern = { type = "any" }
-        response = "ok"
+        on = "*"
+        say = "ok"
         "#,
     );
 

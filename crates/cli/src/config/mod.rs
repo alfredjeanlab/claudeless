@@ -3,8 +3,6 @@
 
 //! Scenario configuration types for TOML/JSON scenario files.
 
-mod convert;
 mod types;
-pub(crate) mod v1;
 
 pub use types::*;

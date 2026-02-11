@@ -35,11 +35,10 @@ mod unknown_fields {
     fn test_unknown_top_level_field_rejected() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             unknown_field = "value"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -61,11 +60,10 @@ mod unknown_fields {
     fn test_typo_in_field_name_rejected() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             defualt_model = "claude-sonnet-4"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -87,12 +85,11 @@ mod unknown_fields {
     fn test_unknown_tool_execution_field_rejected() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
 
-            [tool_execution]
+            [tools]
             moode = "mock"
             "#,
         );
@@ -105,8 +102,10 @@ mod unknown_fields {
         assert!(!output.status.success(), "Expected failure: {:?}", output);
         let stderr = String::from_utf8_lossy(&output.stderr);
         assert!(
-            stderr.contains("moode") || stderr.contains("unknown field"),
-            "Expected stderr to mention 'moode' or 'unknown field': {}",
+            stderr.contains("moode")
+                || stderr.contains("unknown field")
+                || stderr.contains("invalid type"),
+            "Expected stderr to mention 'moode', 'unknown field', or 'invalid type': {}",
             stderr
         );
     }
@@ -115,15 +114,14 @@ mod unknown_fields {
     fn test_unknown_tool_config_field_rejected() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
 
-            [tool_execution]
+            [tools]
             mode = "mock"
 
-            [tool_execution.tools.Bash]
+            [tools.tools.Bash]
             auto_aprove = true
             "#,
         );
@@ -154,11 +152,10 @@ mod session_id_validation {
     fn test_invalid_session_id_produces_clear_error() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             session_id = "not-a-valid-uuid"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -180,11 +177,10 @@ mod session_id_validation {
     fn test_empty_session_id_produces_clear_error() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             session_id = ""
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -206,11 +202,10 @@ mod session_id_validation {
     fn test_malformed_uuid_produces_clear_error() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             session_id = "550e8400-e29b-41d4-a716"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -240,11 +235,10 @@ mod timestamp_validation {
     fn test_invalid_timestamp_produces_clear_error() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             launch_timestamp = "not-a-timestamp"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -268,11 +262,10 @@ mod timestamp_validation {
         // US date format instead of ISO 8601
         let scenario = write_scenario(
             r#"
-            name = "test"
             launch_timestamp = "01/15/2025 10:30:00"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -295,11 +288,10 @@ mod timestamp_validation {
         // ISO 8601 requires timezone
         let scenario = write_scenario(
             r#"
-            name = "test"
             launch_timestamp = "2025-01-15T10:30:00"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -329,11 +321,11 @@ mod permission_mode_validation {
     fn test_invalid_permission_mode_produces_clear_error() {
         let scenario = write_scenario(
             r#"
-            name = "test"
+            [claude]
             permission_mode = "invalid-mode"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -355,11 +347,11 @@ mod permission_mode_validation {
     fn test_typo_in_permission_mode_produces_clear_error() {
         let scenario = write_scenario(
             r#"
-            name = "test"
+            [claude]
             permission_mode = "full_auto"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -389,10 +381,9 @@ mod pattern_validation {
     fn test_invalid_regex_produces_clear_error() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             [[responses]]
-            pattern = { type = "regex", pattern = "[invalid(regex" }
-            response = "ok"
+            on = { regexp = "[invalid(regex" }
+            say = "ok"
             "#,
         );
 
@@ -414,10 +405,9 @@ mod pattern_validation {
     fn test_invalid_glob_produces_clear_error() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             [[responses]]
-            pattern = { type = "glob", pattern = "[invalid" }
-            response = "ok"
+            on = "[invalid"
+            say = "ok"
             "#,
         );
 
@@ -447,11 +437,11 @@ mod type_validation {
     fn test_trusted_wrong_type_produces_clear_error() {
         let scenario = write_scenario(
             r#"
-            name = "test"
+            [claude]
             trusted = "yes"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -473,10 +463,10 @@ mod type_validation {
     fn test_delay_ms_wrong_type_produces_clear_error() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             [[responses]]
-            pattern = { type = "any" }
-            response = { text = "ok", delay_ms = "fast" }
+            on = "*"
+            say = "ok"
+            delay_ms = "fast"
             "#,
         );
 
@@ -513,12 +503,11 @@ mod json_validation {
     fn test_valid_json_scenario_parses() {
         let scenario = write_json_scenario(
             r#"{
-                "name": "test",
-                "session_id": "550e8400-e29b-41d4-a716-446655440000",
+                "claude": { "session_id": "550e8400-e29b-41d4-a716-446655440000" },
                 "responses": [
                     {
-                        "pattern": { "type": "any" },
-                        "response": "ok"
+                        "on": "*",
+                        "say": "ok"
                     }
                 ]
             }"#,
@@ -536,12 +525,11 @@ mod json_validation {
     fn test_invalid_json_session_id_produces_clear_error() {
         let scenario = write_json_scenario(
             r#"{
-                "name": "test",
-                "session_id": "invalid-uuid",
+                "claude": { "session_id": "invalid-uuid" },
                 "responses": [
                     {
-                        "pattern": { "type": "any" },
-                        "response": "ok"
+                        "on": "*",
+                        "say": "ok"
                     }
                 ]
             }"#,
@@ -565,12 +553,11 @@ mod json_validation {
     fn test_unknown_json_field_rejected() {
         let scenario = write_json_scenario(
             r#"{
-                "name": "test",
                 "unknown_field": "value",
                 "responses": [
                     {
-                        "pattern": { "type": "any" },
-                        "response": "ok"
+                        "on": "*",
+                        "say": "ok"
                     }
                 ]
             }"#,
@@ -602,11 +589,10 @@ mod error_message_quality {
     fn test_error_includes_field_name() {
         let scenario = write_scenario(
             r#"
-            name = "test"
             session_id = "bad"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
@@ -628,11 +614,11 @@ mod error_message_quality {
     fn test_error_is_actionable() {
         let scenario = write_scenario(
             r#"
-            name = "test"
+            [claude]
             permission_mode = "wrong"
             [[responses]]
-            pattern = { type = "any" }
-            response = "ok"
+            on = "*"
+            say = "ok"
             "#,
         );
 
