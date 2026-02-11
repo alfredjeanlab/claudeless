@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-02-10
+
+### Features
+
+- **Config**: Remove v1 scenario format, parse v2 directly
+
+### Fixed
+
+- **Hooks**: Fire Notification(idle_prompt) hook after turn completion
+- **Tests**: Fix flaky TUI tests using wait_for_change with race-prone assertions
+
 ## [0.3.1] - 2026-02-09
 
 ### Features

@@ -100,8 +100,9 @@ fn test_context_in_autocomplete() {
     // Type /context to trigger autocomplete
     tui.send_keys("/context");
 
-    // Wait for autocomplete to appear
-    let capture = tui.wait_for("/context");
+    // Wait for autocomplete description to appear
+    let capture =
+        tui.wait_for_any(&["Visualize current context usage", "context usage as a colored grid"]);
 
     // Should show /context in autocomplete
     assert!(

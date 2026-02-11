@@ -76,7 +76,30 @@ fn test_shift_tab_cycles_to_plan_mode() {
 /// default -> acceptEdits -> plan -> default
 #[test]
 fn test_shift_tab_cycles_back_to_default() {
-    let capture = capture_after_shift_tabs("claudeless-shift-tab-3", 3);
+    let scenario = write_scenario(
+        r#"
+        [[responses]]
+        on = "*"
+        say = "ok"
+        "#,
+    );
+    let mut previous =
+        start_tui_ext("claudeless-shift-tab-3", &scenario, 120, 20, TUI_READY_PATTERN);
+
+    // Send 3 shift+tabs to cycle: default -> acceptEdits -> plan -> default
+    for _ in 0..3 {
+        tmux::send_keys("claudeless-shift-tab-3", "BTab");
+        previous = tmux::wait_for_change("claudeless-shift-tab-3", &previous);
+    }
+
+    // After cycling back to default, wait for the shortcuts footer to render
+    let capture = tmux::wait_for_content("claudeless-shift-tab-3", "shortcut");
+
+    // Cleanup
+    tmux::send_keys("claudeless-shift-tab-3", "C-c");
+    let _ = tmux::wait_for_change("claudeless-shift-tab-3", &capture);
+    tmux::send_keys("claudeless-shift-tab-3", "C-c");
+    tmux::kill_session("claudeless-shift-tab-3");
 
     assert!(
         capture.contains("?") && capture.to_lowercase().contains("shortcut"),

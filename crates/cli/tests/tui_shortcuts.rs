@@ -46,11 +46,9 @@ fn scenario() -> String {
 #[test]
 fn test_tui_question_mark_shows_shortcuts_on_empty_input() {
     let tui = TuiTestSession::new("shortcuts-empty", &scenario());
-    let previous = tui.capture();
-
     // Press '?' to show shortcuts
     tui.send_keys("?");
-    let capture = tui.wait_for_change(&previous);
+    let capture = tui.wait_for("! for bash mode");
 
     // Should show shortcuts panel with key bindings
     assert!(

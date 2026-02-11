@@ -94,9 +94,8 @@ fn test_tui_ctrl_z_returns_to_shell() {
     // Send Ctrl+Z to suspend
     tui.send_keys("C-z");
 
-    // Wait for the shell prompt or suspend indicator
-    // Note: The exact shell prompt varies, but we should see "suspended" in the output
-    let capture = tui.wait_for_any(&["suspended", "$", "%", "❯"]);
+    // Wait for the shell's suspended message
+    let capture = tui.wait_for("suspended");
 
     // Should have returned to shell (suspended message from shell)
     assert!(
