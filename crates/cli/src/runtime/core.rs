@@ -11,7 +11,9 @@ use parking_lot::RwLock;
 use crate::cli::Cli;
 use crate::config::{FailureSpec, ResolvedTimeouts, Response, ScenarioConfig, ToolCall, UsageSpec};
 use crate::failure::FailureExecutor;
-use crate::hooks::{HookEvent, HookExecutor, HookMessage, StopHookResponse};
+use crate::hooks::{
+    HookEvent, HookExecutor, HookMessage, StopHookResponse, NOTIFICATION_IDLE_PROMPT,
+};
 use crate::mcp::McpManager;
 use crate::scenario::Scenario;
 use crate::state::{ContentBlock, StateWriter};
@@ -270,6 +272,16 @@ impl Runtime {
 
         // Skip stop hook when a permission prompt is pending (already handled above)
         let hook_continuation = self.fire_stop_hook().await;
+
+        // Fire idle_prompt notification after stop hook when agent is truly idle
+        if hook_continuation.is_none() {
+            self.fire_notification_hook(
+                NOTIFICATION_IDLE_PROMPT,
+                "Agent Idle",
+                "Claude is waiting for input",
+            )
+            .await;
+        }
 
         // Capture whether THIS turn was a hook continuation (before updating for next turn)
         let is_hook_continuation = self.stop_hook_active;

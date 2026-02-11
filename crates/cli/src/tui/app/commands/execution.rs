@@ -303,11 +303,7 @@ impl TuiAppState {
                 self.show_permission_request(perm);
             }
             TurnAction::Done => {
-                self.fire_notification(
-                    NOTIFICATION_IDLE_PROMPT,
-                    "Agent Idle",
-                    "Claude is waiting for input",
-                );
+                // idle_prompt notification already fired by Runtime::execute()
             }
             TurnAction::Notify(notification_type) => {
                 self.fire_notification(notification_type, notification_type, "");
