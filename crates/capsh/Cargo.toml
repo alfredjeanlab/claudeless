@@ -14,10 +14,10 @@ path = "src/main.rs"
 
 [dependencies]
 # PTY handling
-nix = { version = "0.28", features = ["term", "process", "fs", "signal"] }
+nix = { version = "0.31", features = ["term", "process", "fs", "signal"] }
 
 # Terminal emulation
-avt = "0.16"
+avt = "0.17"
 
 # CLI
 clap = { version = "4", features = ["derive"] }
@@ -33,4 +33,4 @@ regex = "1"
 
 [dev-dependencies]
 tempfile = "3"
-similar-asserts = "1"
+similar-asserts = "2"
